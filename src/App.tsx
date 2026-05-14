@@ -50,9 +50,12 @@ import {
   BarChart3,
   Smartphone,
   ChevronRight,
-  Filter
+  Filter,
+  Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { GoogleGenAI } from "@google/genai";
+import Markdown from 'react-markdown';
 
 // --- Types ---
 interface YouTubeConfig {
@@ -83,6 +86,7 @@ interface ChannelResult {
   videos: number;
   score: string;
   keywordTitle: string;
+  lastVideoId?: string; // Add this
 }
 
 interface KeywordIdea {
@@ -108,6 +112,11 @@ interface SpyResult {
   channelInfo: any;
   videos: any[];
   report: string;
+  recentAnalyzed?: string;
+  avgViewsPerDay?: number;
+  maxViewsPerDay?: number;
+  topTags?: any[];
+  topKeywords?: any[];
 }
 
 interface SavedSpyReport {
@@ -247,6 +256,9 @@ export default function App() {
   const [showKeyHistory, setShowKeyHistory] = useState(false);
   const [showKeyInputModal, setShowKeyInputModal] = useState(false);
   const [manualKeysInput, setManualKeysInput] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [selectedHistoryKeys, setSelectedHistoryKeys] = useState<string[]>([]);
   const [showNicheModal, setShowNicheModal] = useState(false);
   const clearHistory = () => {
@@ -399,6 +411,9 @@ export default function App() {
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
+    const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
+    if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
+
     // Load daily quota and clear if it's a new day
     const savedQuotaTotal = localStorage.getItem('youtube_quota_today');
     if (savedQuotaTotal) {
@@ -434,6 +449,10 @@ export default function App() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
+  }, [geminiApiKey]);
 
   // Save exhausted keys whenever they change
   useEffect(() => {
@@ -725,6 +744,62 @@ export default function App() {
       alert('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key or Quota.');
     } finally {
       setIsNicheSearching(false);
+    }
+  };
+
+  const analyzeWithAI = async () => {
+    if (!geminiApiKey) {
+      setStatus('Lỗi: Vui lòng nhập Gemini API Key ở trên header.');
+      return;
+    }
+    if (!nicheResults) return;
+
+    setIsAiAnalyzing(true);
+    setAiAnalysisResult(null);
+    setStatus('Đang phân tích ngách bằng trí tuệ nhân tạo (Gemini)...');
+    setProgress(30);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+      const prompt = `Bạn là một chuyên gia marketing và nghiên cứu thị trường YouTube hàng đầu Việt Nam. 
+      Hãy phân tích dữ liệu sau về ngách "${nicheResults.summary.keyword}" và đưa ra đánh giá chiến lược:
+      
+      Dữ liệu hệ thống đã quét được:
+      - Điểm tổng quan tiềm năng: ${nicheResults.summary.keywordScore}/100
+      - Nhu cầu thị trường: ${nicheResults.summary.interest}
+      - Mức độ cạnh tranh: ${nicheResults.summary.competition}
+      - Lợi nhuận dự kiến (Profitability): ${nicheResults.summary.profitability}
+      - Video đang trending: ${nicheResults.summary.trendVideos}
+      - Đối thủ cùng ngách: ${nicheResults.summary.uniqueChannels}
+      - Tốc độ xem bình quân (VPH): ${nicheResults.summary.avgVPH.toLocaleString()} lượt xem/giờ
+      
+      Top 8 từ khóa quan trọng liên quan: ${nicheResults.keywords.slice(0, 8).map((k: any) => k.text).join(', ')}
+      
+      Hãy đưa ra các nội dung sau bằng tiếng Việt theo phong cách chuyên gia, quyết đoán và sắc bén:
+      1. Khẳng định: Có nên đầu tư vào ngách này lúc này không? (Tại sao?)
+      2. Phân tích điểm yếu của các đối thủ hiện tại trong ngách này.
+      3. 5 ý tưởng nội dung (Concept video) độc bản giúp bứt phá nhanh nhất.
+      4. Chiến lược tối ưu hóa kênh (Niche-specific) để thu hút đúng tệp người xem.
+      5. Nhận định về khả năng kiếm tiền (Adsense, Affiliate, Brand Deal) của ngách này.
+      
+      Trả về định dạng Markdown chuyên nghiệp, có các tiêu đề (Heading), danh sách gạch đầu dòng và nhấn mạnh (bold) các từ khóa quan trọng. Trình bày đẹp mắt.`;
+
+      setProgress(60);
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: [{ role: "user", parts: [{ text: prompt }] }]
+      });
+      const text = response.text || "Lỗi: Không có phản hồi từ AI.";
+      setAiAnalysisResult(text);
+      setProgress(100);
+      setStatus('AI đã phân tích xong. Xem báo cáo chi tiết bên dưới.');
+    } catch (error: any) {
+      console.error(error);
+      setStatus(`Lỗi khi gọi AI: ${error.message}`);
+      setProgress(0);
+    } finally {
+      setIsAiAnalyzing(false);
     }
   };
 
@@ -1135,7 +1210,8 @@ export default function App() {
                       views,
                       videos,
                       score: calculateNicheScore(channel),
-                      keywordTitle: config.keyword
+                      keywordTitle: config.keyword,
+                      lastVideoId: searchRes.items.find((v: any) => v.snippet.channelId === channel.id)?.id?.videoId
                     };
                     
                     setResults(prev => {
@@ -1644,7 +1720,7 @@ ${topKeywordsStr}`;
     
     if (typeof targetId === 'string') {
       setVideoInput(targetId);
-      setActiveTab(5); // Switch to Analyze tab
+      setActiveTab(4); // Switch to Video Analysis tab
     }
     
     setIsAnalyzingVideo(true);
@@ -1780,14 +1856,16 @@ ${topKeywordsStr}`;
         <h1 className="text-[17px] font-bold text-[#333] flex items-center gap-2">
           <img src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" alt="Văn Thế Web" /> YouTube Niche & Analyze Pro (Văn Thế Web)
         </h1>
-        <button 
-          onClick={resetConfig}
-          className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-          title="Làm mới cài đặt & kết quả"
-        >
-          <RotateCcw size={16} />
-          <span>LÀM MỚI</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={resetConfig}
+            className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
+            title="Làm mới cài đặt & kết quả"
+          >
+            <RotateCcw size={16} />
+            <span>LÀM MỚI</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Container */}
@@ -1956,101 +2034,54 @@ ${topKeywordsStr}`;
                   </div>
                 </div>
 
-                {/* API Keys & Actions */}
-                <div className="col-span-12 lg:col-span-3 flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <div className="flex flex-col h-full bg-white border border-[#999] p-1">
-                        <div className="flex justify-between items-center border-b border-[#eee] pb-1 mb-1">
-                            <div className="flex items-center gap-1">
-                              <span className="text-[9px] font-bold uppercase text-gray-500">YOUTUBE API KEYS ({config.apiKeys.filter(k => k.trim()).length})</span>
-                              <button 
-                                onClick={() => setShowApiKeys(!showApiKeys)}
-                                className="text-[8px] bg-gray-100 text-gray-600 px-2 rounded hover:bg-gray-200 font-bold ml-1 border border-gray-300 transition-colors uppercase"
-                              >
-                                {showApiKeys ? 'Ẩn' : 'Hiện'}
-                              </button>
-                              <div className="flex gap-1">
-                                {exhaustedKeys.length > 0 && (
-                                  <button 
-                                    onClick={() => setExhaustedKeys([])}
-                                    className="text-[8px] bg-red-500 text-white px-1 rounded hover:bg-red-700 font-bold"
-                                    title="Đặt lại trạng thái các Key bị lỗi"
-                                  >
-                                    RESET LỖI
-                                  </button>
-                                )}
-                                <button 
-                                  onClick={() => {
-                                    setManualKeysInput(config.apiKeys.join('\n'));
-                                    setShowKeyInputModal(true);
-                                  }}
-                                  className={`text-[8px] px-1 rounded font-bold transition-colors ${showKeyInputModal ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                                  title="Nhập danh sách mã API"
-                                >
-                                  NHẬP KEY
-                                </button>
-                                <button 
-                                  onClick={() => setShowKeyHistory(true)}
-                                  className={`text-[8px] px-1 rounded font-bold transition-colors ${showKeyHistory ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                                  title="Xem lịch sử các Key đã dùng"
-                                >
-                                  LỊCH SỬ KEY
-                                </button>
-                              </div>
-                            </div>
-                         </div>
-                          <div className="flex-1 overflow-y-auto min-h-[120px] max-h-[150px] space-y-1 relative">
-                          {config.apiKeys.filter(k => k.trim()).length === 0 && <p className="text-[10px] text-gray-400 italic">Dán key vào đây...</p>}
-                          {config.apiKeys.filter(k => k.trim()).map((k, idx) => (
-                            <div 
-                              key={idx} 
-                              className={`flex justify-between items-center text-[10px] px-1 py-1 border-b border-[#eee] ${
-                                exhaustedKeys.includes(k.trim()) 
-                                  ? 'bg-red-50' 
-                                  : idx === apiKeyIndex && isHunting
-                                    ? 'bg-blue-100 font-bold'
-                                    : 'bg-white'
-                              }`}
-                            >
-                              <span className={`truncate flex-1 font-mono tracking-tighter ${exhaustedKeys.includes(k.trim()) ? 'text-red-600 font-bold' : 'text-gray-700'}`}>
-                                {idx + 1}. {showApiKeys ? k : '••••••••••••••••••••'} {exhaustedKeys.includes(k.trim()) && <span className="text-[8px] bg-red-100 px-1 rounded ml-1 italic font-normal text-red-500 whitespace-nowrap">! HẾT CHI PHÍ</span>}
-                              </span>
-                              <button 
-                                onClick={() => {
-                                  const next = config.apiKeys.filter((_, i) => i !== idx);
-                                  setConfig(prev => ({ ...prev, apiKeys: next }));
-                                  localStorage.setItem('youtube_api_keys', JSON.stringify(next));
-                                }} 
-                                className="text-white bg-red-600 px-1 py-0.5 rounded text-[8px] hover:bg-red-800 ml-1 font-bold shadow-sm"
-                              >
-                                XÓA
-                              </button>
-                            </div>
-                          ))}
-                          <textarea 
-                             className="w-full border-t border-[#eee] mt-1 pt-1 font-mono text-[10px] outline-none"
-                             rows={2}
-                             value={config.apiKeys.join('\n')}
-                             onChange={(e) => {
-                               const keys = e.target.value.split('\n').filter(k => k.trim());
-                               setConfig(prev => ({ ...prev, apiKeys: keys }));
-                             }}
-                             placeholder="Dán thêm mã API (mỗi dòng 1 mã)..."
-                          />
+                {/* API Keys & Actions - REFACTORED TO BE COMPACT AND UNIFIED */}
+                <div className="col-span-12 lg:col-span-3 flex items-start justify-end">
+                   <div 
+                     id="api-status-card"
+                     className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden group relative"
+                     style={{ height: '100px', width: '245px' }} // Exactly as requested
+                   >
+                      <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:scale-110 transition-transform text-blue-600">
+                        <Settings size={60} />
+                      </div>
+                      
+                      <div className="flex flex-col gap-1.5 relative z-10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Hệ thống API</span>
+                          <div className="flex gap-1.5">
+                             <div className={`w-2 h-2 rounded-full ${config.apiKeys.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
+                             <div className={`w-2 h-2 rounded-full ${geminiApiKey ? 'bg-indigo-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Video size={12} className="text-red-500" /> YouTube V3:</span>
+                            <span className="text-[11px] font-black text-blue-600">{config.apiKeys.length} Keys ({exhaustedKeys.length} Lỗi)</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Bot size={12} className="text-indigo-500" /> Gemini AI:</span>
+                            <span className={`text-[11px] font-black ${geminiApiKey ? 'text-green-600' : 'text-gray-400'}`}>{geminiApiKey ? 'Sẵn sàng' : 'Chưa có'}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <button 
-                        onClick={saveConfig}
-                        className="bg-[#3498db] text-white p-2 rounded-sm hover:bg-[#2980b9] active:scale-95 transition-all flex flex-col items-center justify-center gap-1 min-w-[50px] flex-1"
-                      >
-                        <Save size={16} />
-                        <span className="text-[9px] font-bold text-center leading-tight">LƯU<br/>CONFIG</span>
-                      </button>
-                    </div>
-                  </div>
+
+                      <div className="mt-auto flex gap-2 relative z-10">
+                        <button 
+                          onClick={() => setShowKeyInputModal(true)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1"
+                        >
+                          <Settings size={12} /> CÀI ĐẶT
+                        </button>
+                        <button 
+                          onClick={() => setShowKeyHistory(true)}
+                          className="bg-orange-50 hover:bg-orange-100 text-orange-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-orange-100 transition-all flex items-center justify-center"
+                          title="Lịch sử Key"
+                        >
+                          <HistoryIcon size={12} />
+                        </button>
+                      </div>
+                   </div>
                 </div>
               </div>
 
@@ -2262,26 +2293,44 @@ ${topKeywordsStr}`;
                             <td className="px-2 py-1 text-right text-gray-800">{r.videos.toLocaleString()}</td>
                             <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
                             <td className="px-2 py-1 text-center">
-                              <button 
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerConfirm('Xác nhận xóa', `Xóa kết quả kênh "${r.name}"?`, () => {
-                                    setResults(prev => {
-                                      const next = prev.filter(item => item.id !== r.id);
-                                      resultsRef.current = next;
-                                      localStorage.removeItem('youtube_hunter_results');
-                                      localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
-                                      return next;
+                              <div className="flex items-center justify-center gap-1">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); goToSpy(r.id); }}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[9px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                                  title="Phân tích chiến lược kênh (Spy)"
+                                >
+                                  SPY
+                                </button>
+                                {r.lastVideoId && (
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); analyzeVideo(r.lastVideoId); }}
+                                    className="bg-orange-600 hover:bg-orange-700 text-white px-2 py-1 rounded text-[9px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                                    title="Phân tích video vừa tìm thấy (Check Video)"
+                                  >
+                                    CHECK
+                                  </button>
+                                )}
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerConfirm('Xác nhận xóa', `Xóa kết quả kênh "${r.name}"?`, () => {
+                                      setResults(prev => {
+                                        const next = prev.filter(item => item.id !== r.id);
+                                        resultsRef.current = next;
+                                        localStorage.removeItem('youtube_hunter_results');
+                                        localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
+                                        return next;
+                                      });
+                                      setStatus(`Đã xóa kênh ${r.name}`);
                                     });
-                                    setStatus(`Đã xóa kênh ${r.name}`);
-                                  });
-                                }}
-                                className="text-red-500 hover:text-red-700 active:scale-125 transition-all p-1"
-                                title="Xóa kết quả này"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                                  }}
+                                  className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-125"
+                                  title="Xóa"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -2952,7 +3001,7 @@ ${topKeywordsStr}`;
                        <div className="relative">
                           <div className="text-[11px] uppercase font-black text-blue-500 tracking-tighter mb-1">KẾT QUẢ PHÂN TÍCH CHO</div>
                           <h2 className="text-4xl font-black text-gray-900 uppercase">{nicheResults.summary.keyword}</h2>
-                          <div className="flex gap-4 mt-4">
+                          <div className="flex gap-4 mt-4 items-center">
                             <div className="flex flex-col">
                                <span className="text-[10px] text-gray-400 font-bold">NHU CẦU THỊ TRƯỜNG</span>
                                <span className="text-xl font-black text-gray-800">{nicheResults.summary.interest}</span>
@@ -2962,6 +3011,14 @@ ${topKeywordsStr}`;
                                <span className="text-[10px] text-gray-400 font-bold">MỨC ĐỘ CẠNH TRANH</span>
                                <span className="text-xl font-black text-gray-800">{nicheResults.summary.competition}</span>
                             </div>
+                            <button 
+                              onClick={analyzeWithAI}
+                              disabled={isAiAnalyzing}
+                              className="ml-4 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+                            >
+                              {isAiAnalyzing ? <RotateCcw size={16} className="animate-spin" /> : <Bot size={18} />}
+                              {isAiAnalyzing ? 'ĐANG TƯ DUY...' : 'AI PHÂN TÍCH CHIẾN LƯỢC'}
+                            </button>
                           </div>
                        </div>
                        <div className="flex flex-col items-center gap-1 relative">
@@ -2972,6 +3029,41 @@ ${topKeywordsStr}`;
                           <span className="text-[10px] font-bold text-gray-400 uppercase">YouTube Score API</span>
                        </div>
                     </div>
+
+                    {aiAnalysisResult && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white border-2 border-blue-500/20 rounded-3xl p-8 shadow-2xl relative overflow-hidden"
+                      >
+                         <div className="absolute top-0 right-0 p-4 opacity-10">
+                           <Bot size={120} />
+                         </div>
+                         <div className="flex items-center gap-3 mb-6 relative">
+                           <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg">
+                             <Bot size={24} />
+                           </div>
+                           <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">BÁO CÁO CHIẾN LƯỢC AI (GEMINI)</h3>
+                           <div className="ml-auto flex gap-2">
+                              <button 
+                               onClick={() => copyToClipboard(aiAnalysisResult)}
+                               className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-[10px] font-black uppercase transition-all"
+                              >
+                                Copy kết quả
+                              </button>
+                              <button 
+                               onClick={() => setAiAnalysisResult(null)}
+                               className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-black uppercase transition-all"
+                              >
+                                Đóng báo cáo
+                              </button>
+                           </div>
+                         </div>
+                         <div className="markdown-body prose max-w-none prose-blue prose-sm text-gray-700 font-medium leading-relaxed bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
+                            <Markdown>{aiAnalysisResult}</Markdown>
+                         </div>
+                      </motion.div>
+                    )}
 
                     <div className="grid grid-cols-4 gap-4">
                        {[
@@ -3032,8 +3124,14 @@ ${topKeywordsStr}`;
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                   </div>
                                   <div className="flex flex-col justify-between overflow-hidden">
-                                     <h4 className="text-[10px] font-black text-gray-900 uppercase">
-                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600">{v.snippet.title}</a>
+                                     <h4 className="text-[10px] font-black text-gray-900 uppercase flex items-center justify-between gap-2">
+                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 truncate">{v.snippet.title}</a>
+                                        <button 
+                                          onClick={() => analyzeVideo(v.id)}
+                                          className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
+                                        >
+                                          PHÂN TÍCH
+                                        </button>
                                      </h4>
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
@@ -3129,10 +3227,16 @@ ${topKeywordsStr}`;
                                      SCORE {v.trendScore}
                                   </div>
                                </div>
-                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight">
+                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
+                                  <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
                                      <ExternalLink size={14} /> Xem ngay video này
                                   </a>
+                                  <button 
+                                     onClick={() => analyzeVideo(v.id)}
+                                     className="w-full bg-orange-600 text-white py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
+                                  >
+                                     <Video size={14} /> Phân tích Video (Check)
+                                  </button>
                                </div>
                             </div>
                             <div className="p-4">
@@ -3181,8 +3285,17 @@ ${topKeywordsStr}`;
                                      <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">VPH</span>
                                   </div>
                                </div>
-                               <h4 className="text-[10px] text-white font-bold leading-tight uppercase mb-2">{v.snippet.title}</h4>
-                               <a href={`https://youtube.com/shorts/${v.id}`} target="_blank" rel="noreferrer" className="block w-full bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md">Phát Shorts</a>
+                               <h4 className="text-[10px] text-white font-bold leading-tight uppercase mb-2 line-clamp-2">{v.snippet.title}</h4>
+                               <div className="flex gap-2">
+                                 <a href={`https://youtube.com/shorts/${v.id}`} target="_blank" rel="noreferrer" className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md">Phát Shorts</a>
+                                 <button 
+                                    onClick={() => analyzeVideo(v.id)}
+                                    className="bg-orange-600 hover:bg-orange-700 text-white px-2 rounded-lg text-[10px] font-black uppercase transition-all"
+                                    title="Phân tích chi tiết"
+                                 >
+                                    <Video size={14} />
+                                 </button>
+                               </div>
                             </div>
                          </div>
                       ))}
@@ -3920,93 +4033,126 @@ ${topKeywordsStr}`;
         )}
 
         {showKeyInputModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100 flex flex-col"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 flex justify-between items-center text-white">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <PlusCircle size={24} />
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
+                    <Settings size={28} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">Nhập YouTube API Keys</h2>
+                    <h2 className="text-2xl font-black uppercase tracking-tight">CÀI ĐẶT API HỆ THỐNG</h2>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs opacity-80">Dán danh sách mã API để sử dụng cho công cụ</p>
+                      <p className="text-[11px] font-bold opacity-80 uppercase tracking-tighter">Quản lý kết nối YouTube & Gemini AI</p>
                       <button 
                         onClick={() => setShowApiKeys(!showApiKeys)}
-                        className="text-[10px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded font-bold border border-white/20 transition-all flex items-center gap-1"
+                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
                       >
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
-                        {showApiKeys ? 'ẨN' : 'HIỆN'}
+                        {showApiKeys ? 'ẨN' : 'HIỆN'} KEY
                       </button>
                     </div>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowKeyInputModal(false)}
-                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all group"
                 >
-                  <X size={24} />
+                  <X size={20} className="group-hover:rotate-90 transition-transform" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-4">
-                <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800 flex gap-3">
-                  <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold mb-1">Hướng dẫn dán mã:</p>
-                    <ul className="list-disc list-inside space-y-1 opacity-90">
-                      <li>Mỗi mã API dán trên một dòng riêng biệt.</li>
-                      <li>Công cụ sẽ tự động bỏ qua các dòng trống.</li>
-                      <li>Các mã sẽ được lưu vào trình duyệt của bạn (LocalStorage).</li>
-                    </ul>
+              <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
+                {/* Section Gemini */}
+                <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                    <Bot size={100} />
+                  </div>
+                  <div className="flex items-center gap-3 mb-4 relative z-10">
+                    <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
+                      <Bot size={20} />
+                    </div>
+                    <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none">1. Google Gemini API Key</label>
+                  </div>
+                  <div className="relative z-10">
+                    <input 
+                      type={showApiKeys ? "text" : "password"}
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      className="w-full px-5 py-4 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-sm shadow-inner"
+                      placeholder="AIzaSy... (Dùng cho AI Phân tích chiến lược)"
+                    />
+                    <div className="mt-3 flex items-center gap-2 text-[10px] text-indigo-600 font-bold uppercase tracking-tight bg-white/50 w-fit px-3 py-1 rounded-full border border-indigo-100">
+                      <Zap size={12} fill="currentColor" />
+                      Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Dán danh sách mã tại đây:</label>
+                {/* Section YouTube */}
+                <div className="bg-red-50/30 p-6 rounded-3xl border-2 border-red-100/50 shadow-sm relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform text-red-600">
+                    <Video size={100} />
+                  </div>
+                  <div className="flex items-center gap-3 mb-4 relative z-10">
+                    <div className="p-2 bg-red-600 rounded-xl text-white shadow-lg">
+                      <Video size={20} />
+                    </div>
+                    <label className="text-[13px] font-black text-red-900 uppercase tracking-widest leading-none">2. YouTube API Keys v3</label>
+                  </div>
+                  
+                  <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
+                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
+                    <ul className="space-y-1 font-medium opacity-90">
+                      <li className="flex items-center gap-2">🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
+                      <li className="flex items-center gap-2">🔹 Hệ thống sẽ <b>tự động xoay vòng Key</b> để quét dữ liệu mượt mà hơn.</li>
+                      <li className="flex items-center gap-2">🔹 Dữ liệu được bảo mật và lưu cục bộ trên trình duyệt của bạn.</li>
+                    </ul>
+                  </div>
+
                   <textarea 
                     value={manualKeysInput}
                     onChange={(e) => setManualKeysInput(e.target.value)}
-                    className="w-full h-64 p-4 font-mono text-sm border-2 border-gray-100 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition-all custom-scrollbar bg-gray-50"
+                    className="w-full h-48 p-5 font-mono text-sm border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10"
                     style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
-                    placeholder="AIzaSy...&#10;AIzaSy...&#10;AIzaSy..."
+                    placeholder="Key 1&#10;Key 2&#10;Key 3..."
                   />
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 shrink-0">
                 <button 
                   onClick={() => setShowKeyInputModal(false)}
-                  className="px-6 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+                  className="px-8 py-3 rounded-2xl font-black text-gray-500 hover:bg-gray-200 transition-all uppercase text-[12px] tracking-widest active:scale-95"
                 >
-                  Hủy bỏ
+                  ĐÓNG
                 </button>
                 <button 
                   onClick={() => {
                     const keys = manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean);
                     setConfig(prev => ({ ...prev, apiKeys: keys }));
                     localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
+                    localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
                     
-                    // Add to history too
                     const newHistory = [...new Set([...apiKeysHistory, ...keys])];
                     setApiKeysHistory(newHistory);
                     localStorage.setItem('youtube_api_keys_history', JSON.stringify(newHistory));
                     
                     setShowKeyInputModal(false);
-                    setStatus(`Đã cập nhật ${keys.length} API Keys và lưu vào lịch sử.`);
+                    setStatus(`Đã cập nhật hệ thống API thành công.`);
                   }}
-                  className="bg-blue-600 text-white px-8 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-100 active:scale-95 transition-all flex items-center gap-2"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-10 py-3 rounded-2xl font-black uppercase tracking-[0.2em] hover:scale-105 shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center gap-3 text-[12px]"
                 >
-                  <CheckCircle2 size={18} />
-                  XÁC NHẬN & LƯU KEY
+                  <CheckCircle2 size={20} />
+                  CẬP NHẬT CẤU HÌNH
                 </button>
               </div>
             </motion.div>
