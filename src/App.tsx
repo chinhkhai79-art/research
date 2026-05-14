@@ -108,6 +108,33 @@ interface TrackingChannel {
   }>;
 }
 
+// --- Components ---
+const LinkifyText = ({ text }: { text: string }) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return (
+    <>
+      {parts.map((part, i) => 
+        urlRegex.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            {part}
+          </a>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
 interface SpyResult {
   channelInfo: any;
   videos: any[];
@@ -233,6 +260,8 @@ export default function App() {
     isOpen: boolean;
     title: string;
     message: string;
+    confirmText?: string;
+    isDestructive?: boolean;
     onConfirm: () => void;
   }>({
     isOpen: false,
@@ -242,11 +271,13 @@ export default function App() {
   });
 
   // Modal trigger helper
-  const triggerConfirm = (title: string, message: string, onConfirm: () => void) => {
+  const triggerConfirm = (title: string, message: string, onConfirm: () => void, confirmText = 'XÁC NHẬN', isDestructive = true) => {
     setConfirmModal({
       isOpen: true,
       title,
       message,
+      confirmText,
+      isDestructive,
       onConfirm: () => {
         onConfirm();
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -268,7 +299,8 @@ export default function App() {
       () => {
         setApiKeysHistory([]);
         localStorage.removeItem('youtube_api_keys_history');
-      }
+      },
+      "XÁC NHẬN XÓA"
     );
   };
 
@@ -336,7 +368,7 @@ export default function App() {
   }, [results]);
 
   const [showKeywordIdeas, setShowKeywordIdeas] = useState(true);
-  const [showApiKeys, setShowApiKeys] = useState(false);
+  const [showApiKeys, setShowApiKeys] = useState(true);
   const [keywordIdeas, setKeywordIdeas] = useState<KeywordIdea[]>([]);
   const [trackingChannels, setTrackingChannels] = useState<TrackingChannel[]>([]);
   const [spyInput, setSpyInput] = useState('');
@@ -344,8 +376,9 @@ export default function App() {
   // --- Niche Research State ---
   const [nicheInput, setNicheInput] = useState('');
   const [nicheRegion, setNicheRegion] = useState('VN');
-  const [nicheTime, setNicheTime] = useState('month');
+  const [nicheTime, setNicheTime] = useState('day');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
+  const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
   const [nicheSortBy, setNicheSortBy] = useState('relevance');
@@ -604,7 +637,7 @@ export default function App() {
     try {
       // 1. Search videos
       const publishedAfter = getPublishedAfterDate(nicheTime);
-      const searchParams: any = {
+      const initialSearchParams: any = {
         q: kw,
         type: 'video',
         regionCode: nicheRegion,
@@ -613,11 +646,27 @@ export default function App() {
         order: nicheSortBy
       };
 
-      if (nicheVideoType === 'short') searchParams.videoDuration = 'short';
-      else if (nicheVideoType === 'video') searchParams.videoDuration = 'medium';
+      if (nicheVideoType === 'short') initialSearchParams.videoDuration = 'short';
+      else if (nicheVideoType === 'video') initialSearchParams.videoDuration = 'medium';
 
-      const searchRes = await youtubeFetch('search', searchParams);
-      const videoIds = searchRes.items.map((i: any) => i.id.videoId);
+      const searchRes = await youtubeFetch('search', initialSearchParams);
+      let videoItems = [...searchRes.items];
+
+      // Pagination for up to 100 items
+      if (nicheVideoCount > 50 && searchRes.nextPageToken && videoItems.length < nicheVideoCount) {
+        setStatus(`Đang lấy thêm dữ liệu (Trang 2)...`);
+        const secondSearchParams = {
+          ...initialSearchParams,
+          maxResults: Math.min(50, nicheVideoCount - 50),
+          pageToken: searchRes.nextPageToken
+        };
+        const secondSearchRes = await youtubeFetch('search', secondSearchParams);
+        if (secondSearchRes.items) {
+          videoItems = [...videoItems, ...secondSearchRes.items];
+        }
+      }
+
+      const videoIds = videoItems.map((i: any) => i.id.videoId);
 
       if (videoIds.length === 0) {
         alert('Không tìm thấy dữ liệu thật từ YouTube API cho từ khóa này.');
@@ -625,24 +674,40 @@ export default function App() {
         return;
       }
 
-      // 2. Get detailed video stats
-      const videoRes = await youtubeFetch('videos', {
-        id: videoIds.join(','),
-        part: 'snippet,statistics,contentDetails'
-      });
+      // 2. Get detailed video stats (Chunked as YouTube API limit is 50 IDs per request)
+      let allDetailedVideos: any[] = [];
+      for (let i = 0; i < videoIds.length; i += 50) {
+        const chunk = videoIds.slice(i, i + 50);
+        const res = await youtubeFetch('videos', {
+          id: chunk.join(','),
+          part: 'snippet,statistics,contentDetails'
+        });
+        if (res.items) allDetailedVideos = [...allDetailedVideos, ...res.items];
+      }
 
-      // 3. Get channel stats
-      const channelIds = [...new Set(videoRes.items.map((v: any) => v.snippet.channelId))];
-      const channelRes = await youtubeFetch('channels', {
-        id: channelIds.join(','),
-        part: 'snippet,statistics'
-      });
+      if (allDetailedVideos.length === 0) {
+        alert('Không lấy được thông tin chi tiết video.');
+        setIsNicheSearching(false);
+        return;
+      }
+
+      // 3. Get channel stats (Chunked as YouTube API limit is 50 IDs per request)
+      const channelIds = [...new Set(allDetailedVideos.map((v: any) => v.snippet.channelId))];
+      let allChannels: any[] = [];
+      for (let i = 0; i < channelIds.length; i += 50) {
+        const chunk = channelIds.slice(i, i + 50);
+        const res = await youtubeFetch('channels', {
+          id: chunk.join(','),
+          part: 'snippet,statistics'
+        });
+        if (res.items) allChannels = [...allChannels, ...res.items];
+      }
 
       const channelsMap = new Map();
-      channelRes.items.forEach((c: any) => channelsMap.set(c.id, c));
+      allChannels.forEach((c: any) => channelsMap.set(c.id, c));
 
       // 4. Process data
-      const processedVideos = videoRes.items.map((v: any) => {
+      const processedVideos = allDetailedVideos.map((v: any) => {
         const chan = channelsMap.get(v.snippet.channelId);
         const stats = v.statistics || {};
         const views = parseInt(stats.viewCount) || 0;
@@ -675,14 +740,31 @@ export default function App() {
       });
 
       // 5. Keyword analysis
-      const allTags = processedVideos.flatMap((v: any) => v.snippet.tags || []);
+      const allTags = processedVideos.flatMap((v: any) => {
+        const tags = v.snippet.tags || [];
+        // Complement tags with title words (3+ chars) to ensure more results
+        const titleWords = v.snippet.title.split(/[\s,._\-()[\]{}]+/)
+          .filter((w: string) => w.length > 2)
+          .map((w: string) => w.toLowerCase());
+        return [...tags, ...titleWords];
+      });
       const tagCounts: any = {};
-      allTags.forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1);
+      allTags.forEach(t => {
+        const cleaned = t.trim().toLowerCase();
+        if (cleaned && cleaned.length > 1) {
+          tagCounts[cleaned] = (tagCounts[cleaned] || 0) + 1;
+        }
+      });
+      
       const topKeywords = Object.entries(tagCounts)
         .sort((a: any, b: any) => b[1] - a[1])
-        .slice(0, 15)
+        .slice(0, 200) // Changed from 15 to 200 to allow user to see more keywords
         .map(([text, count]) => {
-          const relatedVideos = processedVideos.filter((v: any) => (v.snippet.tags || []).includes(text));
+          const relatedVideos = processedVideos.filter((v: any) => {
+             const tags = (v.snippet.tags || []).map((t:string) => t.toLowerCase());
+             const title = v.snippet.title.toLowerCase();
+             return tags.includes(text) || title.includes(text);
+          });
           const avgVPH = relatedVideos.reduce((acc, curr) => acc + curr.vph, 0) / Math.max(1, relatedVideos.length);
           const trendVideosCount = relatedVideos.filter(v => v.trendScore > 60).length;
           
@@ -718,7 +800,7 @@ export default function App() {
         keywords: topKeywords,
         videos: processedVideos,
         shorts,
-        channels: channelRes.items.map((c: any) => {
+        channels: allChannels.map((c: any) => {
           const chanVideos = processedVideos.filter(v => v.snippet.channelId === c.id);
           return {
             ...c,
@@ -846,7 +928,18 @@ export default function App() {
 
       if (response.status === 400) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Yêu cầu không hợp lệ (400): ${errorData.error?.message || "Vui lòng kiểm tra lại tham số."}`);
+        const errorMsg = errorData.error?.message || "Vui lòng kiểm tra lại tham số.";
+        
+        // If the error message indicates an invalid key, mark it as exhausted and remove from active rotation
+        if (errorMsg.toLowerCase().includes("api key not valid") || errorMsg.toLowerCase().includes("invalid key") || errorMsg.toLowerCase().includes("key")) {
+          setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
+          setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
+          setStatus(`XOÁ KEY LỖI: ${activeKey.slice(0,8)}...`);
+          if (rotateApiKey()) {
+            return youtubeFetch(endpoint, params, retryCount + 1);
+          }
+        }
+        throw new Error(`Yêu cầu không hợp lệ (400): ${errorMsg}`);
       }
 
       const data = await response.json();
@@ -855,7 +948,13 @@ export default function App() {
         const reason = data.error.errors[0]?.reason;
         if (['quotaExceeded', 'dailyLimitExceeded', 'keyInvalid', 'forbidden', 'unauthorized', 'accessNotConfigured'].includes(reason)) {
           setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-          setStatus(`BỎ QUA KEY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+          
+          if (['keyInvalid', 'unauthorized', 'forbidden'].includes(reason)) {
+            setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
+            setStatus(`XOÁ KEY CHẾT: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+          } else {
+            setStatus(`BỎ QUA KEY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+          }
           
           if (rotateApiKey()) {
             return youtubeFetch(endpoint, params, retryCount + 1);
@@ -2604,7 +2703,7 @@ ${topKeywordsStr}`;
                                 <img src={v.thumbnail} className="w-20 h-14 object-cover rounded shadow-sm border border-[#ccc]" />
                               </td>
                               <td className="px-2 py-1 font-mono text-[10px] text-gray-500">
-                                <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 hover:underline">
+                                <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
                                   {v.id}
                                 </a>
                               </td>
@@ -2617,7 +2716,7 @@ ${topKeywordsStr}`;
                                 </button>
                               </td>
                               <td className="px-2 py-1 font-bold text-black">
-                                <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-700 hover:underline transition-colors uppercase">
+                                <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline transition-colors uppercase">
                                   {v.title}
                                 </a>
                               </td>
@@ -2625,7 +2724,7 @@ ${topKeywordsStr}`;
                               <td className="px-2 py-1 text-right font-medium">{v.views.toLocaleString()}</td>
                               <td className="px-2 py-1 text-right text-blue-600 font-bold">{v.viewsPerDay.toLocaleString()}</td>
                               <td className="px-2 py-1 text-blue-600 underline truncate max-w-[200px]">
-                                <a href={v.url} target="_blank" rel="noreferrer" className="flex items-center gap-1">
+                                <a href={v.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600">
                                   Link <ExternalLink size={10} />
                                 </a>
                               </td>
@@ -2763,7 +2862,7 @@ ${topKeywordsStr}`;
                                 <span className="text-[10px] text-gray-400 font-normal">N/A</span>
                               </div>
                             )}
-                            <a href={`https://youtube.com/channel/${c.id}`} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline leading-tight">
+                            <a href={`https://youtube.com/channel/${c.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline leading-tight">
                               {c.name}
                             </a>
                           </div>
@@ -2887,19 +2986,12 @@ ${topKeywordsStr}`;
                       <div className="relative flex-1">
                         <input 
                           type="text"
-                          placeholder="Ví dụ: mini cooking, pet grooming..."
+                          placeholder="Ví dụ: nấu ăn, chăm sóc thú cưng..."
                           className="w-full bg-[#34495e] border border-[#45627d] rounded px-3 py-2 text-[12px] text-white outline-none focus:border-blue-400 placeholder:text-gray-400"
                           value={nicheInput}
                           onChange={(e) => setNicheInput(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && runNicheResearch()}
                         />
-                        <button 
-                          onClick={() => runNicheResearch()}
-                          disabled={isNicheSearching}
-                          className="absolute right-1 top-1 bottom-1 px-3 bg-blue-500 rounded text-white hover:bg-blue-600 disabled:bg-gray-600 transition-colors"
-                        >
-                          {isNicheSearching ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={16} />}
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -2940,14 +3032,52 @@ ${topKeywordsStr}`;
                     </label>
                     <input 
                       type="range"
-                      min="5"
-                      max="50"
-                      step="5"
+                      min="10"
+                      max="100"
+                      step="10"
                       value={nicheVideoCount}
                       onChange={(e) => setNicheVideoCount(parseInt(e.target.value))}
-                      className="w-full accent-blue-500"
+                      className="w-full accent-blue-500 cursor-pointer"
                     />
+                    <div className="flex justify-between text-[8px] text-[#7f8c8d] px-1 font-bold">
+                       <span>10</span>
+                       <span>30</span>
+                       <span>50</span>
+                       <span>100</span>
+                    </div>
                   </div>
+
+                  <div className="space-y-2 mt-2">
+                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
+                      Hiển thị từ khóa <span>{displayKeywordLimit === 'all' ? 'Toàn bộ' : `${displayKeywordLimit} items`}</span>
+                    </label>
+                    <select 
+                      value={displayKeywordLimit}
+                      onChange={(e) => setDisplayKeywordLimit(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                      className="w-full bg-[#34495e] border border-[#45627d] rounded px-2 py-1.5 text-[11px] outline-none text-white font-bold"
+                    >
+                      <option value="10">10 từ khóa</option>
+                      <option value="50">50 từ khóa</option>
+                      <option value="100">100 từ khóa</option>
+                      <option value="all">Toàn bộ (Tất cả)</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    onClick={() => runNicheResearch()}
+                    disabled={isNicheSearching}
+                    className="w-full bg-blue-600 py-3 rounded-xl text-white font-black text-[12px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:bg-gray-600 flex items-center justify-center gap-2 mt-2"
+                  >
+                    {isNicheSearching ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> ĐANG PHÂN TÍCH...
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={16} fill="currentColor" /> PHÂN TÍCH NGAY
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-2">
@@ -3060,7 +3190,13 @@ ${topKeywordsStr}`;
                            </div>
                          </div>
                          <div className="markdown-body prose max-w-none prose-blue prose-sm text-gray-700 font-medium leading-relaxed bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
-                            <Markdown>{aiAnalysisResult}</Markdown>
+                            <Markdown
+                              components={{
+                                a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" />
+                              }}
+                            >
+                              {aiAnalysisResult}
+                            </Markdown>
                          </div>
                       </motion.div>
                     )}
@@ -3125,7 +3261,7 @@ ${topKeywordsStr}`;
                                   </div>
                                   <div className="flex flex-col justify-between overflow-hidden">
                                      <h4 className="text-[10px] font-black text-gray-900 uppercase flex items-center justify-between gap-2">
-                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 truncate">{v.snippet.title}</a>
+                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">{v.snippet.title}</a>
                                         <button 
                                           onClick={() => analyzeVideo(v.id)}
                                           className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
@@ -3180,7 +3316,7 @@ ${topKeywordsStr}`;
                                   </tr>
                                </thead>
                                <tbody className="divide-y divide-gray-100">
-                                  {nicheResults.keywords.map((kw: any, i: number) => (
+                                  {nicheResults.keywords.slice(0, displayKeywordLimit === 'all' ? undefined : (displayKeywordLimit as number)).map((kw: any, i: number) => (
                                      <tr key={i} className="hover:bg-gray-50 transition-colors group">
                                         <td className="px-6 py-4">
                                            <div className="flex items-center gap-2">
@@ -3241,9 +3377,9 @@ ${topKeywordsStr}`;
                             </div>
                             <div className="p-4">
                                <div className="flex items-center gap-2 mb-2">
-                                  <a href={`https://youtube.com/channel/${v.snippet.channelId}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                                  <a href={`https://youtube.com/channel/${v.snippet.channelId}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:opacity-80 transition-opacity">
                                     <img src={`https://ui-avatars.com/api/?name=${v.snippet.channelTitle}&background=random`} className="w-5 h-5 rounded-full" />
-                                    <span className="text-[10px] font-bold text-gray-500 truncate uppercase tracking-tighter">{v.snippet.channelTitle}</span>
+                                    <span className="text-[10px] font-bold text-blue-600 truncate uppercase tracking-tighter">{v.snippet.channelTitle}</span>
                                   </a>
                                </div>
                                <h4 className="text-[12px] font-black text-gray-900 uppercase mb-4 leading-tight">
@@ -3718,7 +3854,7 @@ ${topKeywordsStr}`;
                           <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 group-hover:text-blue-500 transition-colors">{item.label}</div>
                           {item.isLink ? (
                             <div className="flex items-center gap-2">
-                              <div className="text-[14px] font-black text-blue-600 break-all flex-1 leading-tight">{item.value}</div>
+                              <a href={item.value} target="_blank" rel="noreferrer" className="text-[14px] font-black text-blue-600 break-all flex-1 leading-tight hover:underline">{item.value}</a>
                               <button onClick={() => copyToClipboard(item.value)} className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"><Copy size={12}/></button>
                             </div>
                           ) : (
@@ -3758,7 +3894,7 @@ ${topKeywordsStr}`;
                       </div>
                       <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-left">
                         <pre className="text-[14px] font-medium text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">
-                          {videoResult.snippet.description}
+                          <LinkifyText text={videoResult.snippet.description} />
                         </pre>
                       </div>
                     </div>
@@ -3826,7 +3962,7 @@ ${topKeywordsStr}`;
                       </div>
                     </div>
                     <div className="p-8 bg-gray-50/30">
-                      <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2">
+                      <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
                         {videoResult._comments && videoResult._comments.length > 0 ? (
                           videoResult._comments.map((comment: any, idx: number) => (
                             <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
@@ -3849,7 +3985,7 @@ ${topKeywordsStr}`;
                                     </div>
                                   </div>
                                   <div className="text-[13px] font-medium text-gray-600 leading-snug whitespace-pre-wrap">
-                                    {comment.textDisplay.replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, "")}
+                                    <LinkifyText text={comment.textDisplay.replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, "")} />
                                   </div>
                                 </div>
                               </div>
@@ -3915,7 +4051,7 @@ ${topKeywordsStr}`;
                     onClick={() => {
                       triggerConfirm("Dùng Tất Cả", "Bạn muốn dùng toàn bộ key trong lịch sử (bao gồm cả key chưa chọn)?", () => {
                         addKeysToActive(apiKeysHistory);
-                      });
+                      }, "XÁC NHẬN DÙNG", false);
                     }}
                     className="flex items-center gap-2 bg-[#3498db] hover:bg-[#2980b9] text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95"
                   >
@@ -3984,7 +4120,7 @@ ${topKeywordsStr}`;
                             <div className="flex gap-2">
                               {exhaustedKeys.includes(key.trim()) && (
                                 <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                  HẾT CHI PHÍ
+                                  LỖI / HẾT HẠN
                                 </span>
                               )}
                               {config.apiKeys.includes(key.trim()) && (
@@ -3996,7 +4132,7 @@ ${topKeywordsStr}`;
                             </div>
                           </div>
                           <div className={`font-mono text-sm break-all p-2 rounded border select-all ${exhaustedKeys.includes(key.trim()) ? 'text-red-600 bg-red-50 border-red-200 font-bold' : 'text-gray-800 bg-gray-50 border-gray-100'}`}>
-                            {showApiKeys ? key : '••••••••••••••••••••••••••••••'}
+                            {key}
                           </div>
                         </div>
                         <button 
@@ -4005,7 +4141,8 @@ ${topKeywordsStr}`;
                             triggerConfirm(
                               "Xóa Key",
                               "Bạn có chắc chắn muốn xóa Key này khỏi lịch sử không?",
-                              () => removeFromHistory(key)
+                              () => removeFromHistory(key),
+                              "XÁC NHẬN XÓA"
                             );
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -4082,13 +4219,22 @@ ${topKeywordsStr}`;
                     <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none">1. Google Gemini API Key</label>
                   </div>
                   <div className="relative z-10">
-                    <input 
-                      type={showApiKeys ? "text" : "password"}
-                      value={geminiApiKey}
-                      onChange={(e) => setGeminiApiKey(e.target.value)}
-                      className="w-full px-5 py-4 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-sm shadow-inner"
-                      placeholder="AIzaSy... (Dùng cho AI Phân tích chiến lược)"
-                    />
+                    <div className="relative">
+                      <input 
+                        type={showApiKeys ? "text" : "password"}
+                        value={geminiApiKey}
+                        onChange={(e) => setGeminiApiKey(e.target.value)}
+                        className="w-full px-5 py-4 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-sm shadow-inner"
+                        placeholder="AIzaSy... (Dùng cho AI Phân tích chiến lược)"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowApiKeys(!showApiKeys)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-indigo-400 hover:text-indigo-600 transition-colors"
+                      >
+                        {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
                     <div className="mt-3 flex items-center gap-2 text-[10px] text-indigo-600 font-bold uppercase tracking-tight bg-white/50 w-fit px-3 py-1 rounded-full border border-indigo-100">
                       <Zap size={12} fill="currentColor" />
                       Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
@@ -4117,13 +4263,22 @@ ${topKeywordsStr}`;
                     </ul>
                   </div>
 
-                  <textarea 
-                    value={manualKeysInput}
-                    onChange={(e) => setManualKeysInput(e.target.value)}
-                    className="w-full h-48 p-5 font-mono text-sm border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10"
-                    style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
-                    placeholder="Key 1&#10;Key 2&#10;Key 3..."
-                  />
+                  <div className="relative">
+                    <textarea 
+                      value={manualKeysInput}
+                      onChange={(e) => setManualKeysInput(e.target.value)}
+                      className="w-full h-48 p-5 font-mono text-sm border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10"
+                      style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
+                      placeholder="Key 1&#10;Key 2&#10;Key 3..."
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowApiKeys(!showApiKeys)}
+                      className="absolute right-4 bottom-4 z-20 p-2 bg-white/80 backdrop-blur rounded-full shadow-md text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -4282,9 +4437,13 @@ ${topKeywordsStr}`;
                 </button>
                 <button 
                   onClick={confirmModal.onConfirm}
-                  className="px-6 py-2 text-[12px] font-bold bg-red-600 text-white rounded hover:bg-red-700 shadow-sm active:scale-95 transition-all"
+                  className={`px-6 py-2 text-[12px] font-bold text-white rounded shadow-sm active:scale-95 transition-all ${
+                    confirmModal.isDestructive 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  XÁC NHẬN XÓA
+                  {confirmModal.confirmText || 'XÁC NHẬN'}
                 </button>
               </div>
             </motion.div>
