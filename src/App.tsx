@@ -197,37 +197,40 @@ const REGIONS = [
 ];
 
 const SUGGESTED_NICHES = [
-  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog năng suất'] },
-  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm'] },
-  { category: 'CÔNG NGHỆ & AI', items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI'] },
-  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập'] },
-  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè'] },
-  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng'] },
-  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme'] },
-  { category: 'THỂ THAO & THỂ HÌNH', items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym'] },
-  { category: 'PETS & ĐỘNG VẬT', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng'] },
-  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa'] },
-  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình'] },
-  { category: 'CÔNG NGHỆ Ô TÔ & XE MÁY', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'bảo dưỡng xe tay ga', 'độ xe kiểng', 'phượt bằng mô tô', 'học lái xe ô tô B2', 'phụ kiện ô tô cần thiết', 'luật giao thông đường bộ', 'so sánh các dòng xe'] },
-  { category: 'TÂM LÝ HỌC & MỐI QUAN HỆ', items: ['tâm lý học thú vị', 'chữa lành tổn thương', 'vượt qua chia tay', 'nghệ thuật quyến rũ', 'nhận biết người độc hại', 'bài test tính cách MBTI', 'cách hiểu tâm lý nam giới', 'giữ lửa hôn nhân', 'kỹ năng lắng nghe thấu cảm', 'tâm lý tội phạm'] },
-  { category: 'ESPORTS & GAMING', items: ['highlight liên quân', 'build đồ tft mùa mới', 'review game mobile hay', 'giáo trình valorant', 'mẹo leo rank csgo', 'phân tích meta lol', 'game kinh dị việt nam', 'streamer tiktok', 'thi đấu pubg mobile', 'genshin impact hướng dẫn'] },
-  { category: 'HUYỀN BÍ & TÂM LINH', items: ['giải mã những giấc mơ', 'luật nhân quả', 'bí ẩn vũ trụ', 'chuyện rùng rợn có thật', 'bói bài tarot tình yêu', 'phong thủy nhà ở', 'năng lượng luân xa', 'kỳ quan thế giới', 'hiện tượng siêu nhiên', 'câu chuyện tâm linh tuổi thơ'] },
-  { category: 'MẸO VẶT CUỘC SỐNG', items: ['mẹo vặt nhà bếp', 'tái chế đồ nhựa', 'sửa chữa đồ điện gia dụng', 'gấp quần áo nhanh', 'làm sạch vết bẩn cứng đầu', 'mẹo bảo quản thực phẩm', 'ứng dụng hữu ích trên điện thoại', 'mẹo chống muỗi tự nhiên', 'sử dụng lò vi sóng', 'mẹo vặt cho sinh viên'] },
-  { category: 'VĂN HÓA & LỊCH SỬ', items: ['lịch sử việt nam tóm tắt', 'khám phá các triều đại', 'sự kiện lịch sử thế giới', 'văn hóa người á đông', 'trang phục truyền thống', 'nhân vật lịch sử nổi tiếng', 'chiến tranh thế giới thứ 2', 'văn hóa nhật bản', 'phong tục tập quán việt nam', 'di tích lịch sử hà nội'] },
-  { category: 'THỜI TRANG & PHONG CÁCH', items: ['phối đồ cho nam gầy', 'thời trang mùa đông nữ', 'review local brand việt nam', 'cách chọn kính cận phù hợp', 'phong cách vintage', 'mẹo chọn giày sneaker', 'phối đồ đi học đại học', 'xu hướng thời trang 2024', 'thời trang công sở nữ', 'phối đồ với quần ống rộng'] },
-  { category: 'NÔNG NGHIỆP CÔNG NGHỆ CAO', items: ['trồng rau thủy canh', 'mô hình nuôi tôm thẻ', 'kỹ thuật trồng sầu riêng', 'nông nghiệp tuần hoàn', 'trồng hoa lan hồ điệp', 'review máy nông nghiệp', 'chăm sóc cây cảnh', 'nông nghiệp hữu cơ', 'nuôi cá bống tượng', 'kỹ thuật ghép cây'] },
-  { category: 'REVIEW SẢN PHẨM & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'trải nghiệm tai nghe bluetooth', 'review bàn phím cơ dưới 1 triệu', 'đồ decor phòng giá rẻ', 'review sách hay nên đọc', 'đánh giá smartwatch', 'unboxing đồ công nghệ độc lạ', 'review máy chiếu mini'] },
-  { category: 'NHẠC & COVER', items: ['nhạc lofi chill', 'acoustic cover', 'hướng dẫn hát karaoke', 'beat rap free', 'nhạc tiktok remix', 'cover nhạc trẻ', 'nhạc thiền tịnh tâm', 'học thanh nhạc cơ bản', 'nhạc nền không bản quyền', 'nhạc edm sôi động'] },
-  { category: 'BẤT ĐỘNG SẢN & NHÀ CỬA', items: ['kinh nghiệm mua căn hộ', 'review nhà phố', 'thiết kế nội thất chung cư', 'phong thủy phòng khách', 'tin tức bất động sản', 'mẫu nhà cấp 4 đẹp', 'hướng dẫn xin giấy phép xây dựng', 'cách định giá nhà đất', 'hợp đồng thuê nhà', 'review đồ nội thất thông minh'] },
-  { category: 'CÂU CHUYỆN KHỞI NGHIỆP', items: ['kinh nghiệm mở quán cafe', 'bài học kinh doanh', 'khởi nghiệp ít vốn', 'câu chuyện startup việt', 'chiến lược marketing 0 đồng', 'nghệ thuật bán hàng', 'mở shop quần áo', 'kỹ năng đàm phán', 'quản lý nhân sự', 'ý tưởng kinh doanh 2024'] },
-  { category: 'CHUYỆN LẠ BỐN PHƯƠNG', items: ['video thỏa mãn thị giác', 'kỷ lục guinness', 'sinh vật biển kỳ lạ', 'hiện tượng thiên nhiên hiếm gặp', 'người có siêu năng lực', 'khám phá đáy đại dương', 'review ẩm thực độc lạ', 'clip hài hước động vật', 'công trình kiến trúc độc đáo', 'những nơi nguy hiểm nhất'] },
-  { category: 'ASMR & MUKBANG', items: ['asmr ăn uống', 'mukbang gà rán', 'asmr gõ phím', 'asmr nấu ăn', 'mukbang hải sản', 'asmr thư giãn giấc ngủ', 'mukbang đồ ăn cay', 'asmr trang điểm', 'asmr âm thanh tự nhiên', 'mukbang ăn vặt trung quốc'] },
-  { category: 'XÂY DỰNG & KIẾN TRÚC', items: ['tiến độ thi công', 'kiến trúc cổ đại', 'kỹ thuật chống thấm nhà', 'quá trình xây dựng tòa nhà', 'review xi măng', 'kiến trúc hiện đại việt nam', 'máy xúc đất', 'thi công nội thất', 'xây nhà tiết kiệm', 'trải nghiệm thợ xây'] },
-  { category: 'MARKETING & TRUYỀN THÔNG', items: ['cách làm affiliate tiktok', 'kiến thức seo website', 'chạy ads facebook', 'kinh nghiệm shopee', 'chia sẻ marketing thực chiến', 'đánh giá case study', 'chiến lược giá', 'câu nói viral', 'chất lượng content', 'tin tức marketing'] },
-  { category: 'TRỊ LIỆU ÂM THANH', items: ['tần số chữa lành 432hz', 'tiếng mưa rơi dễ ngủ', 'âm thanh rừng tự nhiên', 'tiếng sóng biển 8 tiếng', 'tiếng ồn trắng cho em bé', 'nhạc thiền om', 'tiếng nhạc không lời', 'bowl singing tây tạng', 'tần số tập trung', 'tiếng suối chảy chim hót'] },
-  { category: 'ĐAN LEN & THÊU THÙA', items: ['học móc len cơ bản', 'đan áo len nam', 'thêu hoa nổi', 'cách đọc chart móc', 'review kim móc crochet', 'móc gấu bông tỏi', 'thêu chỉ mế', 'đan len mũi hạt gạo', 'móc túi xách len', 'cách khâu mũi chữ thập'] },
-  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024'] }
+  { category: 'PHÁT TRIỂN & TÂM LÝ', items: ['vượt qua sự trì hoãn', 'thói quen tốt', 'xây dựng sự tự tin', 'chữa lành tổn thương', 'tâm lý học thú vị'] },
+  { category: 'SỨC KHỎE & THỂ HÌNH', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ'] },
+  { category: 'CÔNG NGHỆ & AI', items: ['hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'review điện thoại giá rẻ', 'mẹo dùng iPhone', 'tự động hóa công việc bằng AI'] },
+  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS', 'học lập trình python', 'quản lý thời gian'] },
+  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh'] },
+  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch', 'khám phá ẩm thực', 'mẹo săn vé máy bay'] },
+  { category: 'GIẢI TRÍ & GAMING', items: ['phim hài ngắn', 'review phim rạp mới', 'tổng hợp video meme', 'highlight liên quân', 'review game mobile hay'] },
+  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'mẹo vặt nhà bếp', 'tài chính gia đình trẻ'] },
+  { category: 'VẬT NUÔI & NÔNG NGHIỆP', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'trồng rau thủy canh', 'kỹ thuật trồng cây', 'nuôi cá bống tượng'] },
+  { category: 'NGHỆ THUẬT & THỜI TRANG', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar cơ bản', 'phối đồ cho nam gầy', 'thời trang mùa đông nữ'] },
+  { category: 'TÀI CHÍNH & KINH DOANH', items: ['đầu tư chứng khoán', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'khởi nghiệp ít vốn', 'chiến lược marketing'] },
+  { category: 'REVIEW & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'review đồ công nghệ', 'review máy chiếu mini'] },
+  { category: 'HUYỀN BÍ & VĂN HÓA', items: ['giải mã những giấc mơ', 'bí ẩn vũ trụ', 'lịch sử việt nam tóm tắt', 'văn hóa người á đông', 'chuyện rùng rợn có thật'] },
+  { category: 'XE CỘ & XÂY DỰNG', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'tiến độ thi công', 'xây nhà tiết kiệm'] },
+  { category: 'NHẠC & TRỊ LIỆU', items: ['nhạc lofi chill', 'acoustic cover', 'nhạc thiền tịnh tâm', 'tần số chữa lành', 'tiếng mưa rơi dễ ngủ'] }
 ];
+
+const CATEGORY_SEARCH_MAP: Record<string, string> = {
+  'PHÁT TRIỂN & TÂM LÝ': 'Personal Development',
+  'SỨC KHỎE & THỂ HÌNH': 'Health and Fitness',
+  'CÔNG NGHỆ & AI': 'Technology AI',
+  'GIÁO DỤC & HỌC TẬP': 'Education Learning',
+  'ẨM THỰC & NẤU ĂN': 'Cooking Food',
+  'DU LỊCH & KHÁM PHÁ': 'Travel Vlog',
+  'GIẢI TRÍ & GAMING': 'Entertainment Gaming',
+  'GIA ĐÌNH & ĐỜI SỐNG': 'Family Life',
+  'VẬT NUÔI & NÔNG NGHIỆP': 'Pets Farming',
+  'NGHỆ THUẬT & THỜI TRANG': 'Art Fashion',
+  'TÀI CHÍNH & KINH DOANH': 'Finance Business',
+  'REVIEW & UNBOXING': 'Product Review',
+  'HUYỀN BÍ & VĂN HÓA': 'Mystery Culture',
+  'XE CỘ & XÂY DỰNG': 'Vehicles Construction',
+  'NHẠC & TRỊ LIỆU': 'Music Therapy'
+};
 
 const STOP_LIMIT = 10;
 
@@ -280,6 +283,9 @@ export default function App() {
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [selectedHistoryKeys, setSelectedHistoryKeys] = useState<string[]>([]);
   const [showNicheModal, setShowNicheModal] = useState(false);
+  const nicheModalRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
+  const keyInputRef = useRef<HTMLDivElement>(null);
   const clearHistory = () => {
     triggerConfirm(
       "Xóa lịch sử",
@@ -323,14 +329,17 @@ export default function App() {
   // Click outside to close boards
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (showNicheModal && nicheModalRef.current && !nicheModalRef.current.contains(event.target as Node)) {
+        setShowNicheModal(false);
+      }
       if (showRegionList && regionRef.current && !regionRef.current.contains(event.target as Node)) {
         setShowRegionList(false);
       }
-      if (showKeyInputModal && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
-        setShowKeyInputModal(false);
-      }
-      if (showKeyHistory && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
+      if (showKeyHistory && historyRef.current && !historyRef.current.contains(event.target as Node)) {
         setShowKeyHistory(false);
+      }
+      if (showKeyInputModal && keyInputRef.current && !keyInputRef.current.contains(event.target as Node)) {
+        setShowKeyInputModal(false);
       }
       if (menuPos.visible && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuPos(prev => ({ ...prev, visible: false }));
@@ -338,7 +347,7 @@ export default function App() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyHistory, menuPos.visible]);
+  }, [showRegionList, showKeyHistory, menuPos.visible, showNicheModal, showKeyInputModal]);
 
   const [status, setStatus] = useState('Sẵn sàng.');
   const [progress, setProgress] = useState(0);
@@ -400,6 +409,20 @@ export default function App() {
     const savedConfig = localStorage.getItem('youtube_hunter_config');
     const savedResults = localStorage.getItem('youtube_hunter_results');
     const savedTracking = localStorage.getItem('youtube_tracking_channels');
+
+    const savedNiches = localStorage.getItem('youtube_suggested_niches');
+    if (savedNiches) {
+      const parsed = JSON.parse(savedNiches);
+      // Migrate if length is different to adopt the new structure
+      if (parsed.length !== 15) {
+        setSuggestedNiches(SUGGESTED_NICHES);
+        localStorage.setItem('youtube_suggested_niches', JSON.stringify(SUGGESTED_NICHES));
+      } else {
+        setSuggestedNiches(parsed);
+      }
+    } else {
+      setSuggestedNiches(SUGGESTED_NICHES);
+    }
 
     if (savedKeys) {
       const keys = JSON.parse(savedKeys);
@@ -615,6 +638,7 @@ export default function App() {
       alert("Vui lòng nhập API Key để sử dụng tính năng này!");
       return;
     }
+    setQuotaUsed(0);
     setIsFetchingDailyTrending(true);
     
     try {
@@ -631,26 +655,29 @@ export default function App() {
         await Promise.all(batch.map(async (niche, idx) => {
           const actualIdx = i + idx;
           try {
+             const isVN = trendingRegion === 'VN';
+             const searchQuery = isVN ? niche.category : (CATEGORY_SEARCH_MAP[niche.category] || niche.category);
+             
              // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
              let searchRes = await youtubeFetch('search', {
                part: 'snippet',
-               q: niche.category,
+               q: searchQuery,
                type: 'video',
                regionCode: trendingRegion,
                order: 'viewCount', // hottest
                publishedAfter: publishedAfter,
-               maxResults: 6
+               maxResults: 4
              });
              
              // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
              if (!searchRes.items || searchRes.items.length === 0) {
                  searchRes = await youtubeFetch('search', {
                    part: 'snippet',
-                   q: niche.category,
+                   q: searchQuery,
                    type: 'video',
                    regionCode: trendingRegion,
                    order: 'viewCount', // hottest all-time
-                   maxResults: 6
+                   maxResults: 4
                  });
              }
              
@@ -692,7 +719,7 @@ export default function App() {
              const topTags = Object.entries(countMap)
                .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
                .map(x => x[0])
-               .slice(0, 10); // Lấy 10 keys (như cũ)
+               .slice(0, 5); // Lấy 5 keys (như mới)
                
              if (topTags.length > 0) {
                newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
@@ -704,6 +731,7 @@ export default function App() {
       }
 
       setSuggestedNiches(newNiches);
+      localStorage.setItem('youtube_suggested_niches', JSON.stringify(newNiches));
       alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
     } catch(e) {
       console.error(e);
@@ -725,6 +753,7 @@ export default function App() {
       return;
     }
 
+    setQuotaUsed(0);
     setIsNicheSearching(true);
     setStatus(`Đang nghiên cứu ngách: ${kw}...`);
     
@@ -1264,6 +1293,7 @@ export default function App() {
       return;
     }
 
+    setQuotaUsed(0);
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
     setIsHunting(true);
@@ -1512,6 +1542,7 @@ export default function App() {
     const input = query.trim();
     if (!input) return;
 
+    setQuotaUsed(0);
     setStatus('Đang phân tích đối thủ...');
     setSpyResult(null);
 
@@ -4197,8 +4228,9 @@ ${topKeywordsStr}`;
       {/* Modal Lịch sử Key */}
       <AnimatePresence>
         {showKeyHistory && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50">
             <motion.div 
+              ref={historyRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -4358,8 +4390,9 @@ ${topKeywordsStr}`;
         )}
 
         {showKeyInputModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 shadow-2xl">
             <motion.div 
+              ref={keyInputRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -4641,8 +4674,9 @@ ${topKeywordsStr}`;
 
       <AnimatePresence>
         {showNicheModal && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4">
             <motion.div 
+              ref={nicheModalRef}
               className="bg-[#f8f9fa] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
