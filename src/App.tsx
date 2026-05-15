@@ -51,7 +51,8 @@ import {
   Smartphone,
   ChevronRight,
   Filter,
-  Bot
+  Bot,
+  Flame
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -391,8 +392,11 @@ export default function App() {
     channels: any[];
     thumbnails: any[];
   } | null>(null);
-  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('keywords');
+  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
+  const [videoFilters, setVideoFilters] = useState({ trendScore: 0, views: 0, vph: 0 });
+  const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
+  const [channelFilters, setChannelFilters] = useState({ views: 0, subscribers: 0, videosCount: 0 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -766,7 +770,8 @@ export default function App() {
              return tags.includes(text) || title.includes(text);
           });
           const avgVPH = relatedVideos.reduce((acc, curr) => acc + curr.vph, 0) / Math.max(1, relatedVideos.length);
-          const trendVideosCount = relatedVideos.filter(v => v.trendScore > 60).length;
+          const trendVideos = relatedVideos.filter(v => v.trendScore > 60);
+          const trendVideosCount = trendVideos.length;
           
           let kwScore = (avgVPH * 2) + (trendVideosCount * 5) + (relatedVideos.length * 2);
           return {
@@ -774,6 +779,7 @@ export default function App() {
             count,
             vph: avgVPH,
             trendVideosCount,
+            trendVideos,
             score: Math.min(100, Math.round(kwScore))
           };
         });
@@ -805,6 +811,7 @@ export default function App() {
           return {
             ...c,
             chanVideosCount: chanVideos.length,
+            chanVideos, // Pass video data to display in modal
             bestVideo: chanVideos.sort((a: any, b: any) => b.trendScore - a.trendScore)[0]
           };
         }),
@@ -2138,7 +2145,7 @@ ${topKeywordsStr}`;
                    <div 
                      id="api-status-card"
                      className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden group relative"
-                     style={{ height: '100px', width: '245px' }} // Exactly as requested
+                     style={{ width: '500px', height: '110px' }}
                    >
                       <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:scale-110 transition-transform text-blue-600">
                         <Settings size={60} />
@@ -2174,10 +2181,10 @@ ${topKeywordsStr}`;
                         </button>
                         <button 
                           onClick={() => setShowKeyHistory(true)}
-                          className="bg-orange-50 hover:bg-orange-100 text-orange-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-orange-100 transition-all flex items-center justify-center"
+                          className="bg-orange-50 hover:bg-orange-100 text-orange-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-orange-100 transition-all flex items-center justify-center gap-1.5"
                           title="Lịch sử Key"
                         >
-                          <HistoryIcon size={12} />
+                          <HistoryIcon size={12} /> LỊCH SỬ
                         </button>
                       </div>
                    </div>
@@ -3103,9 +3110,7 @@ ${topKeywordsStr}`;
                   </nav>
                 </div>
 
-                <div className="p-4 border-t border-[#34495e] bg-[#22313f] text-[10px] text-gray-400 text-center uppercase tracking-tight">
-                  Design by <span className="font-bold text-blue-400">Văn Thế Web</span>
-                </div>
+
               </div>
 
               {/* Main Content Area */}
@@ -3253,21 +3258,12 @@ ${topKeywordsStr}`;
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
                                <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
-                                  <div className="absolute top-2 right-2 bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg z-10">
-                                     TREND SCORE: {v.trendScore}
-                                  </div>
                                   <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200">
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                   </div>
-                                  <div className="flex flex-col justify-between overflow-hidden">
+                                  <div className="flex flex-col justify-between overflow-hidden flex-1">
                                      <h4 className="text-[10px] font-black text-gray-900 uppercase flex items-center justify-between gap-2">
-                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">{v.snippet.title}</a>
-                                        <button 
-                                          onClick={() => analyzeVideo(v.id)}
-                                          className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
-                                        >
-                                          PHÂN TÍCH
-                                        </button>
+                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate w-full" title={v.snippet.title}>{v.snippet.title}</a>
                                      </h4>
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
@@ -3277,6 +3273,17 @@ ${topKeywordsStr}`;
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">VPH (Tốc độ)</span>
                                            <span className="text-[10px] font-black text-blue-600">+{v.vph.toFixed(0)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-auto mt-1 z-20">
+                                          <button 
+                                            onClick={() => analyzeVideo(v.id)}
+                                            className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
+                                          >
+                                            PHÂN TÍCH
+                                          </button>
+                                          <div className="bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm whitespace-nowrap">
+                                             TREND SCORE: {v.trendScore}
+                                          </div>
                                         </div>
                                      </div>
                                   </div>
@@ -3330,7 +3337,12 @@ ${topKeywordsStr}`;
                                            <div className="text-[13px] font-black text-blue-600">+{kw.vph.toLocaleString()} VPH</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                           <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black">{kw.trendVideosCount} clips</span>
+                                           <button 
+                                              onClick={() => setModalTrendingVideos({ title: kw.text, subtitle: 'Danh sách các video có Trend Score > 60 chứa từ khóa này', videos: kw.trendVideos })}
+                                              className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black hover:bg-orange-200 transition-colors shadow-sm cursor-pointer"
+                                           >
+                                              {kw.trendVideosCount} clips
+                                           </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <div className="flex flex-col items-center">
@@ -3350,13 +3362,50 @@ ${topKeywordsStr}`;
                 )}
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-500">
-                      {nicheResults.videos.map((v: any, i: number) => (
+                   <div className="animate-in slide-in-from-right duration-500">
+                    <div className="mb-6">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 pt-2">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
+                           <button onClick={() => setVideoFilters({ trendScore: 0, views: 0, vph: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Outlier Score <span className="text-[10px] text-gray-400 font-normal block">Range (0-100+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.trendScore}</span>
+                              </div>
+                              <input type="range" min="0" max="100" value={videoFilters.trendScore} onChange={(e) => setVideoFilters({...videoFilters, trendScore: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.views >= 1000000 ? (videoFilters.views/1000000).toFixed(1) + 'M+' : videoFilters.views >= 1000 ? (videoFilters.views/1000).toFixed(0) + 'K+' : videoFilters.views}</span>
+                              </div>
+                              <input type="range" min="0" max="10000000" step="50000" value={videoFilters.views} onChange={(e) => setVideoFilters({...videoFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Views Per Hour (VPH) <span className="text-[10px] text-gray-400 font-normal block">Range (0-1000+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.vph >= 1000 ? (videoFilters.vph/1000).toFixed(1) + 'K+' : videoFilters.vph}</span>
+                              </div>
+                              <input type="range" min="0" max="10000" step="50" value={videoFilters.vph} onChange={(e) => setVideoFilters({...videoFilters, vph: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {nicheResults.videos.filter((v: any) => {
+                         if (v.trendScore < videoFilters.trendScore) return false;
+                         if (parseInt(v.statistics.viewCount) < videoFilters.views) return false;
+                         if (v.vph < videoFilters.vph) return false;
+                         return true;
+                      }).map((v: any, i: number) => (
                          <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                  {v.contentDetails.duration.replace('PT', '').toLowerCase()}
+                                  {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
                                </div>
                                <div className="absolute top-2 left-2 flex gap-1">
                                   <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
@@ -3399,6 +3448,7 @@ ${topKeywordsStr}`;
                          </div>
                       ))}
                    </div>
+                  </div>
                 )}
 
                 {nicheActiveSubTab === 'shorts' && nicheResults && (
@@ -3439,8 +3489,45 @@ ${topKeywordsStr}`;
                 )}
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
-                   <div className="space-y-4 animate-in slide-in-from-left duration-500">
-                      {nicheResults.channels.map((c: any, i: number) => (
+                   <div className="animate-in slide-in-from-left duration-500">
+                    <div className="mb-6">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 pt-2">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
+                           <button onClick={() => setChannelFilters({ views: 0, subscribers: 0, videosCount: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Subscribers <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.subscribers >= 1000000 ? (channelFilters.subscribers/1000000).toFixed(1) + 'M+' : channelFilters.subscribers >= 1000 ? (channelFilters.subscribers/1000).toFixed(0) + 'K+' : channelFilters.subscribers}</span>
+                              </div>
+                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.subscribers} onChange={(e) => setChannelFilters({...channelFilters, subscribers: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.views >= 1000000 ? (channelFilters.views/1000000).toFixed(1) + 'M+' : channelFilters.views >= 1000 ? (channelFilters.views/1000).toFixed(0) + 'K+' : channelFilters.views}</span>
+                              </div>
+                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.views} onChange={(e) => setChannelFilters({...channelFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Video Count <span className="text-[10px] text-gray-400 font-normal block">Range (0-10,000+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.videosCount >= 1000 ? (channelFilters.videosCount/1000).toFixed(1) + 'K+' : channelFilters.videosCount}</span>
+                              </div>
+                              <input type="range" min="0" max="10000" step="100" value={channelFilters.videosCount} onChange={(e) => setChannelFilters({...channelFilters, videosCount: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                   <div className="space-y-4">
+                      {nicheResults.channels.filter((c: any) => {
+                         if ((parseInt(c.statistics.subscriberCount) || 0) < channelFilters.subscribers) return false;
+                         if ((parseInt(c.statistics.viewCount) || 0) < channelFilters.views) return false;
+                         if ((parseInt(c.statistics.videoCount) || 0) < channelFilters.videosCount) return false;
+                         return true;
+                      }).map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
@@ -3464,21 +3551,31 @@ ${topKeywordsStr}`;
                                         <Video size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.videoCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">videos</span></span>
                                      </div>
+                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                                     <div className="flex gap-2 items-center">
+                                        <Eye size={14} className="text-gray-400" />
+                                        <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.viewCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">views</span></span>
+                                     </div>
                                   </div>
                                </div>
                             </div>
                             <div className="flex items-center gap-10">
-                               <div className="flex flex-col items-center">
-                                  <span className="text-[10px] text-gray-400 font-bold uppercase mb-1">Items Trending</span>
-                                  <div className="flex -space-x-2">
-                                     {[...Array(Math.min(3, c.chanVideosCount))].map((_, idx) => (
-                                       <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
-                                          +
-                                       </div>
-                                     ))}
-                                     <span className="ml-3 text-[14px] font-black text-blue-600">{c.chanVideosCount}</span>
+                               <button 
+                                 onClick={() => setModalTrendingVideos({ title: c.snippet.title, subtitle: 'Danh sách các video của kênh này lọt top trending', videos: c.chanVideos })}
+                                 className="flex flex-col items-center bg-blue-50/50 px-4 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 cursor-pointer transition-colors"
+                               >
+                                  <span className="text-[10px] text-blue-500 font-bold uppercase mb-1">Video Lọt Top Trending</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex -space-x-2">
+                                       {[...Array(Math.min(3, c.chanVideosCount))].map((_, idx) => (
+                                         <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center shadow-sm relative z-10">
+                                            <Flame size={14} className="text-orange-500" />
+                                         </div>
+                                       ))}
+                                    </div>
+                                    <span className="text-[18px] font-black text-blue-600 leading-none flex items-center"><span className="text-[12px] font-bold text-gray-500 mr-1 mt-1">x</span>{c.chanVideosCount}</span>
                                   </div>
-                               </div>
+                               </button>
                                <button 
                                  onClick={() => { setSpyInput(c.id); setActiveTab(2); }}
                                  className="px-6 py-3 bg-[#e67e22] text-white rounded-2xl text-[12px] font-black uppercase tracking-tight shadow-md hover:bg-[#d35400] active:scale-95 transition-all flex items-center gap-2"
@@ -3489,6 +3586,7 @@ ${topKeywordsStr}`;
                          </div>
                       ))}
                    </div>
+                  </div>
                 )}
 
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
@@ -4321,9 +4419,9 @@ ${topKeywordsStr}`;
           <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
           <div className="flex items-center gap-3">
             <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Chi phí phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
+            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
             <span className="text-gray-400">|</span>
-            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng chi phí hôm nay (đã dùng): {totalQuotaToday.toLocaleString()} units</span>
+            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {totalQuotaToday.toLocaleString()} units</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -4511,6 +4609,82 @@ ${topKeywordsStr}`;
 
               <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
                 Mẹo: Bạn có thể nhập từ khóa bất kỳ vào ô tìm kiếm nếu không tìm thấy chủ đề ưng ý tại đây.
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modalTrendingVideos && (
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            >
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white flex justify-between items-center shadow-lg relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10">
+                   <div className="absolute rotate-45 transform bg-white w-full h-full -top-1/2 -left-1/2 animate-pulse"></div>
+                </div>
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                    <Flame size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xl uppercase tracking-wider">VIDEO TRENDING: {modalTrendingVideos.title}</h3>
+                    <p className="text-[11px] text-orange-100 font-bold uppercase tracking-tighter">{modalTrendingVideos.subtitle}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setModalTrendingVideos(null)}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/30 flex items-center justify-center transition-all group z-10 relative"
+                >
+                  <X size={20} className="group-hover:rotate-90 transition-transform" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
+                {modalTrendingVideos.videos.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 font-medium italic">Không tìm thấy video nào.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {modalTrendingVideos.videos.map((v: any, i: number) => (
+                      <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                         <div className="relative aspect-video">
+                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                               {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
+                            </div>
+                            <div className="absolute top-2 left-2 flex gap-1">
+                               <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
+                                  SCORE {v.trendScore}
+                               </div>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
+                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
+                                  <ExternalLink size={14} /> Xem trên YouTube
+                               </a>
+                            </div>
+                         </div>
+                         <div className="p-4">
+                            <h4 className="text-[11px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
+                            <div className="flex items-center justify-between mt-3 bg-gray-50 p-2 rounded-lg">
+                               <div className="flex flex-col">
+                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
+                                  <span className="text-[10px] font-black text-blue-600 truncate max-w-[100px]">{v.snippet.channelTitle}</span>
+                               </div>
+                               <div className="flex flex-col items-end">
+                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views / VPH</span>
+                                  <span className="text-[11px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()} / <span className="text-orange-500">+{v.vph.toFixed(0)}</span></span>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
