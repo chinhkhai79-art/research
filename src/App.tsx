@@ -52,7 +52,9 @@ import {
   ChevronRight,
   Filter,
   Bot,
-  Flame
+  Flame,
+  RefreshCw,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -195,54 +197,36 @@ const REGIONS = [
 ];
 
 const SUGGESTED_NICHES = [
-  {
-    category: 'SỨC KHỎE & LÀM ĐẸP',
-    items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm']
-  },
-  {
-    category: 'TÀI CHÍNH & ĐẦU TƯ',
-    items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024']
-  },
-  {
-    category: 'CÔNG NGHỆ & AI',
-    items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI']
-  },
-  {
-    category: 'GIÁO DỤC & HỌC TẬP',
-    items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập']
-  },
-  {
-    category: 'ẨM THỰ & NẤU ĂN',
-    items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè']
-  },
-  {
-    category: 'DU LỊCH & KHÁM PHÁ',
-    items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng']
-  },
-  {
-    category: 'GIẢI TRÍ & HÀI HƯỚC',
-    items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme']
-  },
-  {
-    category: 'THỂ THAO & THỂ HÌNH',
-    items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym']
-  },
-  {
-    category: 'PETS & ĐỘNG VẬT',
-    items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng']
-  },
-  {
-    category: 'PHÁT TRIỂN BẢN THÂN (SELF-HELP)',
-    items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog một ngày làm việc năng suất']
-  },
-  {
-    category: 'GIA ĐÌNH & ĐỜI SỐNG',
-    items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa']
-  },
-  {
-    category: 'NGHỆ THUẬT & SÁNG TẠO',
-    items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình']
-  }
+  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog năng suất'] },
+  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm'] },
+  { category: 'CÔNG NGHỆ & AI', items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI'] },
+  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập'] },
+  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè'] },
+  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng'] },
+  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme'] },
+  { category: 'THỂ THAO & THỂ HÌNH', items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym'] },
+  { category: 'PETS & ĐỘNG VẬT', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng'] },
+  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa'] },
+  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình'] },
+  { category: 'CÔNG NGHỆ Ô TÔ & XE MÁY', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'bảo dưỡng xe tay ga', 'độ xe kiểng', 'phượt bằng mô tô', 'học lái xe ô tô B2', 'phụ kiện ô tô cần thiết', 'luật giao thông đường bộ', 'so sánh các dòng xe'] },
+  { category: 'TÂM LÝ HỌC & MỐI QUAN HỆ', items: ['tâm lý học thú vị', 'chữa lành tổn thương', 'vượt qua chia tay', 'nghệ thuật quyến rũ', 'nhận biết người độc hại', 'bài test tính cách MBTI', 'cách hiểu tâm lý nam giới', 'giữ lửa hôn nhân', 'kỹ năng lắng nghe thấu cảm', 'tâm lý tội phạm'] },
+  { category: 'ESPORTS & GAMING', items: ['highlight liên quân', 'build đồ tft mùa mới', 'review game mobile hay', 'giáo trình valorant', 'mẹo leo rank csgo', 'phân tích meta lol', 'game kinh dị việt nam', 'streamer tiktok', 'thi đấu pubg mobile', 'genshin impact hướng dẫn'] },
+  { category: 'HUYỀN BÍ & TÂM LINH', items: ['giải mã những giấc mơ', 'luật nhân quả', 'bí ẩn vũ trụ', 'chuyện rùng rợn có thật', 'bói bài tarot tình yêu', 'phong thủy nhà ở', 'năng lượng luân xa', 'kỳ quan thế giới', 'hiện tượng siêu nhiên', 'câu chuyện tâm linh tuổi thơ'] },
+  { category: 'MẸO VẶT CUỘC SỐNG', items: ['mẹo vặt nhà bếp', 'tái chế đồ nhựa', 'sửa chữa đồ điện gia dụng', 'gấp quần áo nhanh', 'làm sạch vết bẩn cứng đầu', 'mẹo bảo quản thực phẩm', 'ứng dụng hữu ích trên điện thoại', 'mẹo chống muỗi tự nhiên', 'sử dụng lò vi sóng', 'mẹo vặt cho sinh viên'] },
+  { category: 'VĂN HÓA & LỊCH SỬ', items: ['lịch sử việt nam tóm tắt', 'khám phá các triều đại', 'sự kiện lịch sử thế giới', 'văn hóa người á đông', 'trang phục truyền thống', 'nhân vật lịch sử nổi tiếng', 'chiến tranh thế giới thứ 2', 'văn hóa nhật bản', 'phong tục tập quán việt nam', 'di tích lịch sử hà nội'] },
+  { category: 'THỜI TRANG & PHONG CÁCH', items: ['phối đồ cho nam gầy', 'thời trang mùa đông nữ', 'review local brand việt nam', 'cách chọn kính cận phù hợp', 'phong cách vintage', 'mẹo chọn giày sneaker', 'phối đồ đi học đại học', 'xu hướng thời trang 2024', 'thời trang công sở nữ', 'phối đồ với quần ống rộng'] },
+  { category: 'NÔNG NGHIỆP CÔNG NGHỆ CAO', items: ['trồng rau thủy canh', 'mô hình nuôi tôm thẻ', 'kỹ thuật trồng sầu riêng', 'nông nghiệp tuần hoàn', 'trồng hoa lan hồ điệp', 'review máy nông nghiệp', 'chăm sóc cây cảnh', 'nông nghiệp hữu cơ', 'nuôi cá bống tượng', 'kỹ thuật ghép cây'] },
+  { category: 'REVIEW SẢN PHẨM & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'trải nghiệm tai nghe bluetooth', 'review bàn phím cơ dưới 1 triệu', 'đồ decor phòng giá rẻ', 'review sách hay nên đọc', 'đánh giá smartwatch', 'unboxing đồ công nghệ độc lạ', 'review máy chiếu mini'] },
+  { category: 'NHẠC & COVER', items: ['nhạc lofi chill', 'acoustic cover', 'hướng dẫn hát karaoke', 'beat rap free', 'nhạc tiktok remix', 'cover nhạc trẻ', 'nhạc thiền tịnh tâm', 'học thanh nhạc cơ bản', 'nhạc nền không bản quyền', 'nhạc edm sôi động'] },
+  { category: 'BẤT ĐỘNG SẢN & NHÀ CỬA', items: ['kinh nghiệm mua căn hộ', 'review nhà phố', 'thiết kế nội thất chung cư', 'phong thủy phòng khách', 'tin tức bất động sản', 'mẫu nhà cấp 4 đẹp', 'hướng dẫn xin giấy phép xây dựng', 'cách định giá nhà đất', 'hợp đồng thuê nhà', 'review đồ nội thất thông minh'] },
+  { category: 'CÂU CHUYỆN KHỞI NGHIỆP', items: ['kinh nghiệm mở quán cafe', 'bài học kinh doanh', 'khởi nghiệp ít vốn', 'câu chuyện startup việt', 'chiến lược marketing 0 đồng', 'nghệ thuật bán hàng', 'mở shop quần áo', 'kỹ năng đàm phán', 'quản lý nhân sự', 'ý tưởng kinh doanh 2024'] },
+  { category: 'CHUYỆN LẠ BỐN PHƯƠNG', items: ['video thỏa mãn thị giác', 'kỷ lục guinness', 'sinh vật biển kỳ lạ', 'hiện tượng thiên nhiên hiếm gặp', 'người có siêu năng lực', 'khám phá đáy đại dương', 'review ẩm thực độc lạ', 'clip hài hước động vật', 'công trình kiến trúc độc đáo', 'những nơi nguy hiểm nhất'] },
+  { category: 'ASMR & MUKBANG', items: ['asmr ăn uống', 'mukbang gà rán', 'asmr gõ phím', 'asmr nấu ăn', 'mukbang hải sản', 'asmr thư giãn giấc ngủ', 'mukbang đồ ăn cay', 'asmr trang điểm', 'asmr âm thanh tự nhiên', 'mukbang ăn vặt trung quốc'] },
+  { category: 'XÂY DỰNG & KIẾN TRÚC', items: ['tiến độ thi công', 'kiến trúc cổ đại', 'kỹ thuật chống thấm nhà', 'quá trình xây dựng tòa nhà', 'review xi măng', 'kiến trúc hiện đại việt nam', 'máy xúc đất', 'thi công nội thất', 'xây nhà tiết kiệm', 'trải nghiệm thợ xây'] },
+  { category: 'MARKETING & TRUYỀN THÔNG', items: ['cách làm affiliate tiktok', 'kiến thức seo website', 'chạy ads facebook', 'kinh nghiệm shopee', 'chia sẻ marketing thực chiến', 'đánh giá case study', 'chiến lược giá', 'câu nói viral', 'chất lượng content', 'tin tức marketing'] },
+  { category: 'TRỊ LIỆU ÂM THANH', items: ['tần số chữa lành 432hz', 'tiếng mưa rơi dễ ngủ', 'âm thanh rừng tự nhiên', 'tiếng sóng biển 8 tiếng', 'tiếng ồn trắng cho em bé', 'nhạc thiền om', 'tiếng nhạc không lời', 'bowl singing tây tạng', 'tần số tập trung', 'tiếng suối chảy chim hót'] },
+  { category: 'ĐAN LEN & THÊU THÙA', items: ['học móc len cơ bản', 'đan áo len nam', 'thêu hoa nổi', 'cách đọc chart móc', 'review kim móc crochet', 'móc gấu bông tỏi', 'thêu chỉ mế', 'đan len mũi hạt gạo', 'móc túi xách len', 'cách khâu mũi chữ thập'] },
+  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024'] }
 ];
 
 const STOP_LIMIT = 10;
@@ -288,6 +272,9 @@ export default function App() {
   const [showKeyHistory, setShowKeyHistory] = useState(false);
   const [showKeyInputModal, setShowKeyInputModal] = useState(false);
   const [manualKeysInput, setManualKeysInput] = useState('');
+  const [suggestedNiches, setSuggestedNiches] = useState<{ category: string, items: string[] }[]>(SUGGESTED_NICHES);
+  const [trendingRegion, setTrendingRegion] = useState(config.region);
+  const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
@@ -621,6 +608,109 @@ export default function App() {
     else if (filter === 'year') d.setFullYear(d.getFullYear() - 1);
     else return undefined;
     return d.toISOString();
+  };
+
+  const fetchDailyTrendingFromYouTube = async () => {
+    if (config.apiKeys.length === 0) {
+      alert("Vui lòng nhập API Key để sử dụng tính năng này!");
+      return;
+    }
+    setIsFetchingDailyTrending(true);
+    
+    try {
+      const newNiches = [...suggestedNiches]; // always start with original or current categories
+      const batchSize = 3; // run limited batches to avoid hitting youtube rate limits quickly
+      
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      const publishedAfter = lastMonth.toISOString();
+
+      for (let i = 0; i < newNiches.length; i += batchSize) {
+        const batch = newNiches.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (niche, idx) => {
+          const actualIdx = i + idx;
+          try {
+             // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
+             let searchRes = await youtubeFetch('search', {
+               part: 'snippet',
+               q: niche.category,
+               type: 'video',
+               regionCode: trendingRegion,
+               order: 'viewCount', // hottest
+               publishedAfter: publishedAfter,
+               maxResults: 6
+             });
+             
+             // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
+             if (!searchRes.items || searchRes.items.length === 0) {
+                 searchRes = await youtubeFetch('search', {
+                   part: 'snippet',
+                   q: niche.category,
+                   type: 'video',
+                   regionCode: trendingRegion,
+                   order: 'viewCount', // hottest all-time
+                   maxResults: 6
+                 });
+             }
+             
+             if (!searchRes.items || searchRes.items.length === 0) return; // Keep original if completely empty
+             
+             const videoIds = searchRes.items.map((item: any) => item.id.videoId).join(',');
+             
+             // 2. Fetch details (tags) for these exact videos
+             const videoRes = await youtubeFetch('videos', {
+               part: 'snippet',
+               id: videoIds
+             });
+             
+             if (!videoRes.items) return;
+             
+             const countMap: Record<string, number> = {};
+             videoRes.items.forEach((v: any) => {
+               if (v.snippet.tags) {
+                 v.snippet.tags.forEach((t: string) => {
+                   const cleaned = t.trim().toLowerCase();
+                   if (cleaned.length > 2 && !cleaned.includes('shorts')) {
+                     countMap[cleaned] = (countMap[cleaned] || 0) + 1;
+                   }
+                 });
+               }
+             });
+             
+             // Fallback if the videos strangely had zero tags combined
+             if (Object.keys(countMap).length === 0) {
+                 videoRes.items.forEach((v: any) => {
+                    const words = v.snippet.title.toLowerCase().split(/[\s,._\-()[\]{}|]+/);
+                    words.forEach((w: string) => {
+                       if (w.length > 4) countMap[w] = (countMap[w] || 0) + 1;
+                    });
+                 });
+             }
+
+             // Sort them by frequency (hottest keywords within the hottest videos top)
+             const topTags = Object.entries(countMap)
+               .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
+               .map(x => x[0])
+               .slice(0, 10); // Lấy 10 keys (như cũ)
+               
+             if (topTags.length > 0) {
+               newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
+             }
+          } catch(e) {
+             console.error(`Error niche ${niche.category}:`, e);
+          }
+        }));
+      }
+
+      setSuggestedNiches(newNiches);
+      alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
+    } catch(e) {
+      console.error(e);
+      alert("Không thể tải trending từ YouTube lúc này. Vui lòng kiểm tra API Key.");
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
   };
 
   const runNicheResearch = async (customKeyword?: string) => {
@@ -2986,7 +3076,7 @@ ${topKeywordsStr}`;
                         onClick={() => setShowNicheModal(true)}
                         className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-400/20 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 font-bold shadow-sm"
                       >
-                        <LayoutGrid size={10} /> 120 NGÁCH
+                        <LayoutGrid size={10} /> XEM GỢI Ý NGÁCH
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
@@ -4564,7 +4654,7 @@ ${topKeywordsStr}`;
                     <LayoutGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH 120 NGÁCH CHỦ ĐỀ GỢI Ý</h3>
+                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
                     <p className="text-[11px] text-blue-200 font-bold opacity-80 uppercase tracking-tighter">Click vào từ khóa để tự động điền và phân tích nhanh</p>
                   </div>
                 </div>
@@ -4577,8 +4667,37 @@ ${topKeywordsStr}`;
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
+                
+                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+                     <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
+                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU TRENDING TỪ YOUTUBE API</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật danh sách từ khóa ngách hot nhất hôm nay theo quốc gia</span>
+                     </h3>
+                     <div className="flex items-center gap-3">
+                         <div className="relative">
+                           <select
+                              value={trendingRegion}
+                              onChange={(e) => setTrendingRegion(e.target.value)}
+                              className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
+                           >
+                              {REGIONS.map(r => (
+                                <option key={r.code || 'GL'} value={r.code}>{r.name}</option>
+                              ))}
+                           </select>
+                           <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                         </div>
+                         <button
+                            onClick={fetchDailyTrendingFromYouTube}
+                            disabled={isFetchingDailyTrending}
+                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
+                         >
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật API...</> : <><Search size={16}/> Cập nhật Trending</>}
+                         </button>
+                     </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {SUGGESTED_NICHES.map((category, idx) => (
+                  {suggestedNiches.map((category, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
