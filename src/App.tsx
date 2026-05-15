@@ -4438,6 +4438,15 @@ ${topKeywordsStr}`;
                       <Bot size={20} />
                     </div>
                     <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none">1. Google Gemini API Key</label>
+                    <a 
+                      href="https://aistudio.google.com/app/apikey" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
+                    >
+                      <Link2 size={12} />
+                      LẤY KEY TẠI ĐÂY
+                    </a>
                   </div>
                   <div className="relative z-10">
                     <div className="relative">
@@ -4473,6 +4482,15 @@ ${topKeywordsStr}`;
                       <Video size={20} />
                     </div>
                     <label className="text-[13px] font-black text-red-900 uppercase tracking-widest leading-none">2. YouTube API Keys v3</label>
+                    <a 
+                      href="https://console.cloud.google.com/apis/credentials" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
+                    >
+                      <Link2 size={12} />
+                      LẤY KEY TẠI ĐÂY
+                    </a>
                   </div>
                   
                   <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
