@@ -51,10 +51,7 @@ import {
   Smartphone,
   ChevronRight,
   Filter,
-  Bot,
-  Flame,
-  RefreshCw,
-  ChevronDown
+  Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -156,7 +153,200 @@ interface SavedSpyReport {
   report: string;
 }
 
+interface User {
+  uid: string;
+  displayName: string;
+  email: string;
+  photoURL: string;
+}
+
+interface ProStatus {
+  active: boolean;
+  email: string;
+  planId: string;
+  planName: string;
+  orderCode: string;
+  expiresAt: string | null;
+  activatedAt: string;
+}
+
 // --- Constants ---
+const PAYMENT_BASE_URL = "https://research.vanthemmo.com";
+const USER_KEY = "RESEARCH_TOOL_USER";
+const PRO_KEY = "RESEARCH_TOOL_PRO";
+const PENDING_ORDER_KEY = "RESEARCH_TOOL_PENDING_ORDER";
+const PAYMENT_PREFIX = "RESEARCH";
+
+const PREMIUM_PLANS = [
+  { id: "1m", name: "Gói 1 tháng", label: "1 tháng", priceText: "10k", amount: 10000, days: 30 },
+  { id: "3m", name: "Gói 3 tháng", label: "3 tháng", priceText: "180k", amount: 180000, days: 90 },
+  { id: "6m", name: "Gói 6 tháng", label: "6 tháng", priceText: "300k", amount: 300000, days: 180 },
+  { id: "12m", name: "Gói 1 năm", label: "1 năm", priceText: "500k", amount: 500000, days: 365 }
+];
+
+function createOrderCode() {
+  return PAYMENT_PREFIX + Date.now();
+}
+
+function getSavedUser(): User | null {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveUser(user: User) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+function getSavedPro(): ProStatus | null {
+  try {
+    const pro = JSON.parse(localStorage.getItem(PRO_KEY) || "null");
+    if (!pro || !pro.active) return null;
+
+    if (pro.expiresAt && new Date(pro.expiresAt).getTime() < Date.now()) {
+      localStorage.removeItem(PRO_KEY);
+      return null;
+    }
+
+    return pro;
+  } catch {
+    return null;
+  }
+}
+
+function savePro(data: any): ProStatus {
+  const pro: ProStatus = {
+    active: true,
+    email: data.email || "",
+    planId: data.planId || "1m",
+    planName: data.planName || "Gói 1 tháng",
+    orderCode: data.orderCode,
+    expiresAt: data.expiresAt || null,
+    activatedAt: new Date().toISOString()
+  };
+
+  localStorage.setItem(PRO_KEY, JSON.stringify(pro));
+  return pro;
+}
+
+function logoutUser() {
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(PRO_KEY);
+  localStorage.removeItem(PENDING_ORDER_KEY);
+  window.location.reload();
+}
+
+async function loginWithGooglePreview() {
+  const email = prompt("Nhập Gmail để đăng nhập:");
+  if (!email || !email.includes("@")) {
+    alert("Vui lòng nhập Gmail hợp lệ.");
+    return null;
+  }
+
+  const user: User = {
+    uid: "research_" + btoa(email).replace(/=/g, ""),
+    displayName: email.split("@")[0],
+    email,
+    photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=random`
+  };
+
+  saveUser(user);
+  return user;
+}
+
+function goToPayment(plan: typeof PREMIUM_PLANS[0], user: User | null) {
+  if (!user || !user.email) {
+    alert("Vui lòng đăng nhập Gmail trước khi thanh toán.");
+    return;
+  }
+
+  const orderCode = createOrderCode();
+
+  const pendingOrder = {
+    orderCode,
+    planId: plan.id,
+    planName: plan.name,
+    amount: plan.amount,
+    email: user.email,
+    createdAt: new Date().toISOString()
+  };
+
+  localStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(pendingOrder));
+
+  const returnUrl = window.location.href.split("?")[0];
+
+  const payUrl =
+    PAYMENT_BASE_URL +
+    "/pay.html" +
+    "?plan=" + encodeURIComponent(plan.id) +
+    "&amount=" + encodeURIComponent(plan.amount) +
+    "&content=" + encodeURIComponent(orderCode) +
+    "&email=" + encodeURIComponent(user.email) +
+    "&returnUrl=" + encodeURIComponent(returnUrl);
+
+  window.location.href = payUrl;
+}
+
+async function checkPendingPayment() {
+  const raw = localStorage.getItem(PENDING_ORDER_KEY);
+  if (!raw) return null;
+
+  let pending;
+  try {
+    pending = JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(PENDING_ORDER_KEY);
+    return null;
+  }
+
+  if (!pending.orderCode) return null;
+
+  try {
+    const res = await fetch(
+      PAYMENT_BASE_URL +
+        "/api/payment-status?orderCode=" +
+        encodeURIComponent(pending.orderCode),
+      { cache: "no-store" }
+    );
+
+    const data = await res.json();
+
+    if (data && data.success && data.paid) {
+      const pro = savePro({
+        email: pending.email,
+        orderCode: pending.orderCode,
+        planId: data.planId || pending.planId,
+        planName: data.planName || pending.planName,
+        expiresAt: data.expiresAt
+      });
+
+      localStorage.removeItem(PENDING_ORDER_KEY);
+      return pro;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn("Không kiểm tra được thanh toán:", error);
+    return null;
+  }
+}
+
+function canUseTool(user: User | null, pro: ProStatus | null, silent = false) {
+  if (!user) {
+    if (!silent) alert("Vui lòng đăng nhập Gmail để sử dụng tool.");
+    return false;
+  }
+
+  if (!pro || !pro.active) {
+    if (!silent) alert("Tài khoản chưa được kích hoạt PRO. Vui lòng nâng cấp gói để sử dụng.");
+    return false;
+  }
+
+  return true;
+}
+
 const DEFAULT_CONFIG: YouTubeConfig = {
   apiKeys: [],
   keyword: '',
@@ -197,45 +387,66 @@ const REGIONS = [
 ];
 
 const SUGGESTED_NICHES = [
-  { category: 'PHÁT TRIỂN & TÂM LÝ', items: ['vượt qua sự trì hoãn', 'thói quen tốt', 'xây dựng sự tự tin', 'chữa lành tổn thương', 'tâm lý học thú vị'] },
-  { category: 'SỨC KHỎE & THỂ HÌNH', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ'] },
-  { category: 'CÔNG NGHỆ & AI', items: ['hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'review điện thoại giá rẻ', 'mẹo dùng iPhone', 'tự động hóa công việc bằng AI'] },
-  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS', 'học lập trình python', 'quản lý thời gian'] },
-  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh'] },
-  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch', 'khám phá ẩm thực', 'mẹo săn vé máy bay'] },
-  { category: 'GIẢI TRÍ & GAMING', items: ['phim hài ngắn', 'review phim rạp mới', 'tổng hợp video meme', 'highlight liên quân', 'review game mobile hay'] },
-  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'mẹo vặt nhà bếp', 'tài chính gia đình trẻ'] },
-  { category: 'VẬT NUÔI & NÔNG NGHIỆP', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'trồng rau thủy canh', 'kỹ thuật trồng cây', 'nuôi cá bống tượng'] },
-  { category: 'NGHỆ THUẬT & THỜI TRANG', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar cơ bản', 'phối đồ cho nam gầy', 'thời trang mùa đông nữ'] },
-  { category: 'TÀI CHÍNH & KINH DOANH', items: ['đầu tư chứng khoán', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'khởi nghiệp ít vốn', 'chiến lược marketing'] },
-  { category: 'REVIEW & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'review đồ công nghệ', 'review máy chiếu mini'] },
-  { category: 'HUYỀN BÍ & VĂN HÓA', items: ['giải mã những giấc mơ', 'bí ẩn vũ trụ', 'lịch sử việt nam tóm tắt', 'văn hóa người á đông', 'chuyện rùng rợn có thật'] },
-  { category: 'XE CỘ & XÂY DỰNG', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'tiến độ thi công', 'xây nhà tiết kiệm'] },
-  { category: 'NHẠC & TRỊ LIỆU', items: ['nhạc lofi chill', 'acoustic cover', 'nhạc thiền tịnh tâm', 'tần số chữa lành', 'tiếng mưa rơi dễ ngủ'] }
+  {
+    category: 'SỨC KHỎE & LÀM ĐẸP',
+    items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm']
+  },
+  {
+    category: 'TÀI CHÍNH & ĐẦU TƯ',
+    items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024']
+  },
+  {
+    category: 'CÔNG NGHỆ & AI',
+    items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI']
+  },
+  {
+    category: 'GIÁO DỤC & HỌC TẬP',
+    items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập']
+  },
+  {
+    category: 'ẨM THỰ & NẤU ĂN',
+    items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè']
+  },
+  {
+    category: 'DU LỊCH & KHÁM PHÁ',
+    items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng']
+  },
+  {
+    category: 'GIẢI TRÍ & HÀI HƯỚC',
+    items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme']
+  },
+  {
+    category: 'THỂ THAO & THỂ HÌNH',
+    items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym']
+  },
+  {
+    category: 'PETS & ĐỘNG VẬT',
+    items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng']
+  },
+  {
+    category: 'PHÁT TRIỂN BẢN THÂN (SELF-HELP)',
+    items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog một ngày làm việc năng suất']
+  },
+  {
+    category: 'GIA ĐÌNH & ĐỜI SỐNG',
+    items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa']
+  },
+  {
+    category: 'NGHỆ THUẬT & SÁNG TẠO',
+    items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình']
+  }
 ];
-
-const CATEGORY_SEARCH_MAP: Record<string, string> = {
-  'PHÁT TRIỂN & TÂM LÝ': 'Personal Development',
-  'SỨC KHỎE & THỂ HÌNH': 'Health and Fitness',
-  'CÔNG NGHỆ & AI': 'Technology AI',
-  'GIÁO DỤC & HỌC TẬP': 'Education Learning',
-  'ẨM THỰC & NẤU ĂN': 'Cooking Food',
-  'DU LỊCH & KHÁM PHÁ': 'Travel Vlog',
-  'GIẢI TRÍ & GAMING': 'Entertainment Gaming',
-  'GIA ĐÌNH & ĐỜI SỐNG': 'Family Life',
-  'VẬT NUÔI & NÔNG NGHIỆP': 'Pets Farming',
-  'NGHỆ THUẬT & THỜI TRANG': 'Art Fashion',
-  'TÀI CHÍNH & KINH DOANH': 'Finance Business',
-  'REVIEW & UNBOXING': 'Product Review',
-  'HUYỀN BÍ & VĂN HÓA': 'Mystery Culture',
-  'XE CỘ & XÂY DỰNG': 'Vehicles Construction',
-  'NHẠC & TRỊ LIỆU': 'Music Therapy'
-};
 
 const STOP_LIMIT = 10;
 
 export default function App() {
-  // --- State ---
+  // --- Login & Payment State ---
+  const [user, setUser] = useState<User | null>(getSavedUser());
+  const [pro, setPro] = useState<ProStatus | null>(getSavedPro());
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+
+  // --- Existing State ---
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
@@ -275,17 +486,11 @@ export default function App() {
   const [showKeyHistory, setShowKeyHistory] = useState(false);
   const [showKeyInputModal, setShowKeyInputModal] = useState(false);
   const [manualKeysInput, setManualKeysInput] = useState('');
-  const [suggestedNiches, setSuggestedNiches] = useState<{ category: string, items: string[] }[]>(SUGGESTED_NICHES);
-  const [trendingRegion, setTrendingRegion] = useState(config.region);
-  const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [selectedHistoryKeys, setSelectedHistoryKeys] = useState<string[]>([]);
   const [showNicheModal, setShowNicheModal] = useState(false);
-  const nicheModalRef = useRef<HTMLDivElement>(null);
-  const historyRef = useRef<HTMLDivElement>(null);
-  const keyInputRef = useRef<HTMLDivElement>(null);
   const clearHistory = () => {
     triggerConfirm(
       "Xóa lịch sử",
@@ -329,17 +534,14 @@ export default function App() {
   // Click outside to close boards
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showNicheModal && nicheModalRef.current && !nicheModalRef.current.contains(event.target as Node)) {
-        setShowNicheModal(false);
-      }
       if (showRegionList && regionRef.current && !regionRef.current.contains(event.target as Node)) {
         setShowRegionList(false);
       }
-      if (showKeyHistory && historyRef.current && !historyRef.current.contains(event.target as Node)) {
-        setShowKeyHistory(false);
-      }
-      if (showKeyInputModal && keyInputRef.current && !keyInputRef.current.contains(event.target as Node)) {
+      if (showKeyInputModal && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
         setShowKeyInputModal(false);
+      }
+      if (showKeyHistory && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
+        setShowKeyHistory(false);
       }
       if (menuPos.visible && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuPos(prev => ({ ...prev, visible: false }));
@@ -347,7 +549,7 @@ export default function App() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyHistory, menuPos.visible, showNicheModal, showKeyInputModal]);
+  }, [showRegionList, showKeyHistory, menuPos.visible]);
 
   const [status, setStatus] = useState('Sẵn sàng.');
   const [progress, setProgress] = useState(0);
@@ -388,11 +590,8 @@ export default function App() {
     channels: any[];
     thumbnails: any[];
   } | null>(null);
-  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
+  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('keywords');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
-  const [videoFilters, setVideoFilters] = useState({ trendScore: 0, views: 0, vph: 0 });
-  const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
-  const [channelFilters, setChannelFilters] = useState({ views: 0, subscribers: 0, videosCount: 0 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -409,20 +608,6 @@ export default function App() {
     const savedConfig = localStorage.getItem('youtube_hunter_config');
     const savedResults = localStorage.getItem('youtube_hunter_results');
     const savedTracking = localStorage.getItem('youtube_tracking_channels');
-
-    const savedNiches = localStorage.getItem('youtube_suggested_niches');
-    if (savedNiches) {
-      const parsed = JSON.parse(savedNiches);
-      // Migrate if length is different to adopt the new structure
-      if (parsed.length !== 15) {
-        setSuggestedNiches(SUGGESTED_NICHES);
-        localStorage.setItem('youtube_suggested_niches', JSON.stringify(SUGGESTED_NICHES));
-      } else {
-        setSuggestedNiches(parsed);
-      }
-    } else {
-      setSuggestedNiches(SUGGESTED_NICHES);
-    }
 
     if (savedKeys) {
       const keys = JSON.parse(savedKeys);
@@ -460,6 +645,19 @@ export default function App() {
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
+
+    // Initial check for pending payment
+    if (localStorage.getItem(PENDING_ORDER_KEY)) {
+      setIsCheckingPayment(true);
+      checkPendingPayment().then(newPro => {
+        if (newPro) {
+          setPro(newPro);
+          alert("Thanh toán thành công! Tài khoản PRO đã được kích hoạt.");
+        }
+      }).finally(() => {
+        setIsCheckingPayment(false);
+      });
+    }
 
     // Load daily quota and clear if it's a new day
     const savedQuotaTotal = localStorage.getItem('youtube_quota_today');
@@ -633,115 +831,8 @@ export default function App() {
     return d.toISOString();
   };
 
-  const fetchDailyTrendingFromYouTube = async () => {
-    if (config.apiKeys.length === 0) {
-      alert("Vui lòng nhập API Key để sử dụng tính năng này!");
-      return;
-    }
-    setQuotaUsed(0);
-    setIsFetchingDailyTrending(true);
-    
-    try {
-      const newNiches = [...suggestedNiches]; // always start with original or current categories
-      const batchSize = 3; // run limited batches to avoid hitting youtube rate limits quickly
-      
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      const publishedAfter = lastMonth.toISOString();
-
-      for (let i = 0; i < newNiches.length; i += batchSize) {
-        const batch = newNiches.slice(i, i + batchSize);
-        
-        await Promise.all(batch.map(async (niche, idx) => {
-          const actualIdx = i + idx;
-          try {
-             const isVN = trendingRegion === 'VN';
-             const searchQuery = isVN ? niche.category : (CATEGORY_SEARCH_MAP[niche.category] || niche.category);
-             
-             // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
-             let searchRes = await youtubeFetch('search', {
-               part: 'snippet',
-               q: searchQuery,
-               type: 'video',
-               regionCode: trendingRegion,
-               order: 'viewCount', // hottest
-               publishedAfter: publishedAfter,
-               maxResults: 4
-             });
-             
-             // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
-             if (!searchRes.items || searchRes.items.length === 0) {
-                 searchRes = await youtubeFetch('search', {
-                   part: 'snippet',
-                   q: searchQuery,
-                   type: 'video',
-                   regionCode: trendingRegion,
-                   order: 'viewCount', // hottest all-time
-                   maxResults: 4
-                 });
-             }
-             
-             if (!searchRes.items || searchRes.items.length === 0) return; // Keep original if completely empty
-             
-             const videoIds = searchRes.items.map((item: any) => item.id.videoId).join(',');
-             
-             // 2. Fetch details (tags) for these exact videos
-             const videoRes = await youtubeFetch('videos', {
-               part: 'snippet',
-               id: videoIds
-             });
-             
-             if (!videoRes.items) return;
-             
-             const countMap: Record<string, number> = {};
-             videoRes.items.forEach((v: any) => {
-               if (v.snippet.tags) {
-                 v.snippet.tags.forEach((t: string) => {
-                   const cleaned = t.trim().toLowerCase();
-                   if (cleaned.length > 2 && !cleaned.includes('shorts')) {
-                     countMap[cleaned] = (countMap[cleaned] || 0) + 1;
-                   }
-                 });
-               }
-             });
-             
-             // Fallback if the videos strangely had zero tags combined
-             if (Object.keys(countMap).length === 0) {
-                 videoRes.items.forEach((v: any) => {
-                    const words = v.snippet.title.toLowerCase().split(/[\s,._\-()[\]{}|]+/);
-                    words.forEach((w: string) => {
-                       if (w.length > 4) countMap[w] = (countMap[w] || 0) + 1;
-                    });
-                 });
-             }
-
-             // Sort them by frequency (hottest keywords within the hottest videos top)
-             const topTags = Object.entries(countMap)
-               .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
-               .map(x => x[0])
-               .slice(0, 5); // Lấy 5 keys (như mới)
-               
-             if (topTags.length > 0) {
-               newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
-             }
-          } catch(e) {
-             console.error(`Error niche ${niche.category}:`, e);
-          }
-        }));
-      }
-
-      setSuggestedNiches(newNiches);
-      localStorage.setItem('youtube_suggested_niches', JSON.stringify(newNiches));
-      alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
-    } catch(e) {
-      console.error(e);
-      alert("Không thể tải trending từ YouTube lúc này. Vui lòng kiểm tra API Key.");
-    } finally {
-      setIsFetchingDailyTrending(false);
-    }
-  };
-
   const runNicheResearch = async (customKeyword?: string) => {
+    if (!canUseTool(user, pro)) return;
     const kw = customKeyword || nicheInput;
     if (!kw.trim()) {
       alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
@@ -753,7 +844,6 @@ export default function App() {
       return;
     }
 
-    setQuotaUsed(0);
     setIsNicheSearching(true);
     setStatus(`Đang nghiên cứu ngách: ${kw}...`);
     
@@ -889,8 +979,7 @@ export default function App() {
              return tags.includes(text) || title.includes(text);
           });
           const avgVPH = relatedVideos.reduce((acc, curr) => acc + curr.vph, 0) / Math.max(1, relatedVideos.length);
-          const trendVideos = relatedVideos.filter(v => v.trendScore > 60);
-          const trendVideosCount = trendVideos.length;
+          const trendVideosCount = relatedVideos.filter(v => v.trendScore > 60).length;
           
           let kwScore = (avgVPH * 2) + (trendVideosCount * 5) + (relatedVideos.length * 2);
           return {
@@ -898,7 +987,6 @@ export default function App() {
             count,
             vph: avgVPH,
             trendVideosCount,
-            trendVideos,
             score: Math.min(100, Math.round(kwScore))
           };
         });
@@ -930,7 +1018,6 @@ export default function App() {
           return {
             ...c,
             chanVideosCount: chanVideos.length,
-            chanVideos, // Pass video data to display in modal
             bestVideo: chanVideos.sort((a: any, b: any) => b.trendScore - a.trendScore)[0]
           };
         }),
@@ -956,6 +1043,7 @@ export default function App() {
   };
 
   const analyzeWithAI = async () => {
+    if (!canUseTool(user, pro)) return;
     if (!geminiApiKey) {
       setStatus('Lỗi: Vui lòng nhập Gemini API Key ở trên header.');
       return;
@@ -1284,6 +1372,7 @@ export default function App() {
   };
 
   const startHunter = async () => {
+    if (!canUseTool(user, pro)) return;
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       return;
@@ -1293,7 +1382,6 @@ export default function App() {
       return;
     }
 
-    setQuotaUsed(0);
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
     setIsHunting(true);
@@ -1537,12 +1625,12 @@ export default function App() {
   };
 
   const analyzeSpy = async (targetId?: string | any) => {
+    if (!canUseTool(user, pro)) return;
     const query = (typeof targetId === 'string' && targetId) ? targetId : spyInput;
     if (!query || typeof query !== 'string') return;
     const input = query.trim();
     if (!input) return;
 
-    setQuotaUsed(0);
     setStatus('Đang phân tích đối thủ...');
     setSpyResult(null);
 
@@ -1879,6 +1967,7 @@ ${topKeywordsStr}`;
   };
 
   const addAllToTracking = () => {
+    if (!canUseTool(user, pro)) return;
     if (results.length === 0) {
       setStatus('Không có kết quả nào để thêm.');
       return;
@@ -1941,6 +2030,7 @@ ${topKeywordsStr}`;
   };
 
   const analyzeVideo = async (targetId?: string | any) => {
+    if (!canUseTool(user, pro)) return;
     // If targetId is a React event, ignore it and use videoInput state
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
     if (!query || typeof query !== 'string') return;
@@ -2084,6 +2174,46 @@ ${topKeywordsStr}`;
           <img src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" alt="Văn Thế Web" /> YouTube Niche & Analyze Pro (Văn Thế Web)
         </h1>
         <div className="flex items-center gap-4">
+          {user ? (
+            <div className="flex items-center gap-3 pr-3 border-r border-gray-200">
+              <div className="text-right">
+                <div className="text-[11px] font-bold text-gray-900 leading-tight flex items-center justify-end gap-1">
+                  {user.displayName}
+                  {pro?.active ? (
+                    <span className="bg-green-100 text-green-700 px-1 rounded text-[9px] border border-green-200">PRO</span>
+                  ) : (
+                    <span className="bg-gray-100 text-gray-500 px-1 rounded text-[9px] border border-gray-200">TRIAL 0H</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-gray-500">{user.email}</div>
+              </div>
+              <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-gray-300" referrerPolicy="no-referrer" />
+              <button 
+                onClick={logoutUser}
+                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                title="Đăng xuất"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => loginWithGooglePreview().then(u => u && setUser(u))}
+              className="px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 text-[12px] font-bold flex items-center gap-2 hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+            >
+              <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+              Tiếp tục với Google
+            </button>
+          )}
+
+          <button 
+            onClick={() => setShowUpgradeModal(true)}
+            className="px-4 py-1.5 rounded-lg bg-orange-500 text-white border border-orange-600 hover:bg-orange-600 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-bold text-[12px]"
+          >
+            <Zap size={16} fill="white" />
+            <span>NÂNG CẤP GÓI</span>
+          </button>
+
           <button 
             onClick={resetConfig}
             className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
@@ -2266,7 +2396,7 @@ ${topKeywordsStr}`;
                    <div 
                      id="api-status-card"
                      className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden group relative"
-                     style={{ width: '500px', height: '110px' }}
+                     style={{ height: '100px', width: '245px' }} // Exactly as requested
                    >
                       <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:scale-110 transition-transform text-blue-600">
                         <Settings size={60} />
@@ -2299,6 +2429,12 @@ ${topKeywordsStr}`;
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1"
                         >
                           <Settings size={12} /> CÀI ĐẶT
+                        </button>
+                        <button 
+                          className="bg-green-50 hover:bg-green-100 text-green-600 px-2.5 py-1.5 rounded-lg text-[10px] font-black border border-green-100 transition-all flex items-center justify-center"
+                          title="Xác nhận cấu hình"
+                        >
+                          <CheckCircle2 size={13} />
                         </button>
                         <button 
                           onClick={() => setShowKeyHistory(true)}
@@ -3107,7 +3243,7 @@ ${topKeywordsStr}`;
                         onClick={() => setShowNicheModal(true)}
                         className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-400/20 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 font-bold shadow-sm"
                       >
-                        <LayoutGrid size={10} /> XEM GỢI Ý NGÁCH
+                        <LayoutGrid size={10} /> 120 NGÁCH
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
@@ -3231,7 +3367,9 @@ ${topKeywordsStr}`;
                   </nav>
                 </div>
 
-
+                <div className="p-4 border-t border-[#34495e] bg-[#22313f] text-[10px] text-gray-400 text-center uppercase tracking-tight">
+                  Design by <span className="font-bold text-blue-400">Văn Thế Web</span>
+                </div>
               </div>
 
               {/* Main Content Area */}
@@ -3379,12 +3517,21 @@ ${topKeywordsStr}`;
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
                                <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
+                                  <div className="absolute top-2 right-2 bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg z-10">
+                                     TREND SCORE: {v.trendScore}
+                                  </div>
                                   <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200">
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                   </div>
-                                  <div className="flex flex-col justify-between overflow-hidden flex-1">
+                                  <div className="flex flex-col justify-between overflow-hidden">
                                      <h4 className="text-[10px] font-black text-gray-900 uppercase flex items-center justify-between gap-2">
-                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate w-full" title={v.snippet.title}>{v.snippet.title}</a>
+                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">{v.snippet.title}</a>
+                                        <button 
+                                          onClick={() => analyzeVideo(v.id)}
+                                          className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
+                                        >
+                                          PHÂN TÍCH
+                                        </button>
                                      </h4>
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
@@ -3394,17 +3541,6 @@ ${topKeywordsStr}`;
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">VPH (Tốc độ)</span>
                                            <span className="text-[10px] font-black text-blue-600">+{v.vph.toFixed(0)}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 ml-auto mt-1 z-20">
-                                          <button 
-                                            onClick={() => analyzeVideo(v.id)}
-                                            className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
-                                          >
-                                            PHÂN TÍCH
-                                          </button>
-                                          <div className="bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm whitespace-nowrap">
-                                             TREND SCORE: {v.trendScore}
-                                          </div>
                                         </div>
                                      </div>
                                   </div>
@@ -3458,12 +3594,7 @@ ${topKeywordsStr}`;
                                            <div className="text-[13px] font-black text-blue-600">+{kw.vph.toLocaleString()} VPH</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                           <button 
-                                              onClick={() => setModalTrendingVideos({ title: kw.text, subtitle: 'Danh sách các video có Trend Score > 60 chứa từ khóa này', videos: kw.trendVideos })}
-                                              className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black hover:bg-orange-200 transition-colors shadow-sm cursor-pointer"
-                                           >
-                                              {kw.trendVideosCount} clips
-                                           </button>
+                                           <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black">{kw.trendVideosCount} clips</span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <div className="flex flex-col items-center">
@@ -3483,50 +3614,13 @@ ${topKeywordsStr}`;
                 )}
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
-                   <div className="animate-in slide-in-from-right duration-500">
-                    <div className="mb-6">
-                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
-                        <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
-                           <button onClick={() => setVideoFilters({ trendScore: 0, views: 0, vph: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Outlier Score <span className="text-[10px] text-gray-400 font-normal block">Range (0-100+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.trendScore}</span>
-                              </div>
-                              <input type="range" min="0" max="100" value={videoFilters.trendScore} onChange={(e) => setVideoFilters({...videoFilters, trendScore: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.views >= 1000000 ? (videoFilters.views/1000000).toFixed(1) + 'M+' : videoFilters.views >= 1000 ? (videoFilters.views/1000).toFixed(0) + 'K+' : videoFilters.views}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={videoFilters.views} onChange={(e) => setVideoFilters({...videoFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views Per Hour (VPH) <span className="text-[10px] text-gray-400 font-normal block">Range (0-1000+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.vph >= 1000 ? (videoFilters.vph/1000).toFixed(1) + 'K+' : videoFilters.vph}</span>
-                              </div>
-                              <input type="range" min="0" max="10000" step="50" value={videoFilters.vph} onChange={(e) => setVideoFilters({...videoFilters, vph: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {nicheResults.videos.filter((v: any) => {
-                         if (v.trendScore < videoFilters.trendScore) return false;
-                         if (parseInt(v.statistics.viewCount) < videoFilters.views) return false;
-                         if (v.vph < videoFilters.vph) return false;
-                         return true;
-                      }).map((v: any, i: number) => (
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-500">
+                      {nicheResults.videos.map((v: any, i: number) => (
                          <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                  {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
+                                  {v.contentDetails.duration.replace('PT', '').toLowerCase()}
                                </div>
                                <div className="absolute top-2 left-2 flex gap-1">
                                   <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
@@ -3569,7 +3663,6 @@ ${topKeywordsStr}`;
                          </div>
                       ))}
                    </div>
-                  </div>
                 )}
 
                 {nicheActiveSubTab === 'shorts' && nicheResults && (
@@ -3610,45 +3703,8 @@ ${topKeywordsStr}`;
                 )}
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
-                   <div className="animate-in slide-in-from-left duration-500">
-                    <div className="mb-6">
-                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
-                        <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
-                           <button onClick={() => setChannelFilters({ views: 0, subscribers: 0, videosCount: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Subscribers <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.subscribers >= 1000000 ? (channelFilters.subscribers/1000000).toFixed(1) + 'M+' : channelFilters.subscribers >= 1000 ? (channelFilters.subscribers/1000).toFixed(0) + 'K+' : channelFilters.subscribers}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.subscribers} onChange={(e) => setChannelFilters({...channelFilters, subscribers: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.views >= 1000000 ? (channelFilters.views/1000000).toFixed(1) + 'M+' : channelFilters.views >= 1000 ? (channelFilters.views/1000).toFixed(0) + 'K+' : channelFilters.views}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.views} onChange={(e) => setChannelFilters({...channelFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Video Count <span className="text-[10px] text-gray-400 font-normal block">Range (0-10,000+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.videosCount >= 1000 ? (channelFilters.videosCount/1000).toFixed(1) + 'K+' : channelFilters.videosCount}</span>
-                              </div>
-                              <input type="range" min="0" max="10000" step="100" value={channelFilters.videosCount} onChange={(e) => setChannelFilters({...channelFilters, videosCount: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-                   <div className="space-y-4">
-                      {nicheResults.channels.filter((c: any) => {
-                         if ((parseInt(c.statistics.subscriberCount) || 0) < channelFilters.subscribers) return false;
-                         if ((parseInt(c.statistics.viewCount) || 0) < channelFilters.views) return false;
-                         if ((parseInt(c.statistics.videoCount) || 0) < channelFilters.videosCount) return false;
-                         return true;
-                      }).map((c: any, i: number) => (
+                   <div className="space-y-4 animate-in slide-in-from-left duration-500">
+                      {nicheResults.channels.map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
@@ -3672,31 +3728,21 @@ ${topKeywordsStr}`;
                                         <Video size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.videoCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">videos</span></span>
                                      </div>
-                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                                     <div className="flex gap-2 items-center">
-                                        <Eye size={14} className="text-gray-400" />
-                                        <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.viewCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">views</span></span>
-                                     </div>
                                   </div>
                                </div>
                             </div>
                             <div className="flex items-center gap-10">
-                               <button 
-                                 onClick={() => setModalTrendingVideos({ title: c.snippet.title, subtitle: 'Danh sách các video của kênh này lọt top trending', videos: c.chanVideos })}
-                                 className="flex flex-col items-center bg-blue-50/50 px-4 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 cursor-pointer transition-colors"
-                               >
-                                  <span className="text-[10px] text-blue-500 font-bold uppercase mb-1">Video Lọt Top Trending</span>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex -space-x-2">
-                                       {[...Array(Math.min(3, c.chanVideosCount))].map((_, idx) => (
-                                         <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center shadow-sm relative z-10">
-                                            <Flame size={14} className="text-orange-500" />
-                                         </div>
-                                       ))}
-                                    </div>
-                                    <span className="text-[18px] font-black text-blue-600 leading-none flex items-center"><span className="text-[12px] font-bold text-gray-500 mr-1 mt-1">x</span>{c.chanVideosCount}</span>
+                               <div className="flex flex-col items-center">
+                                  <span className="text-[10px] text-gray-400 font-bold uppercase mb-1">Items Trending</span>
+                                  <div className="flex -space-x-2">
+                                     {[...Array(Math.min(3, c.chanVideosCount))].map((_, idx) => (
+                                       <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
+                                          +
+                                       </div>
+                                     ))}
+                                     <span className="ml-3 text-[14px] font-black text-blue-600">{c.chanVideosCount}</span>
                                   </div>
-                               </button>
+                               </div>
                                <button 
                                  onClick={() => { setSpyInput(c.id); setActiveTab(2); }}
                                  className="px-6 py-3 bg-[#e67e22] text-white rounded-2xl text-[12px] font-black uppercase tracking-tight shadow-md hover:bg-[#d35400] active:scale-95 transition-all flex items-center gap-2"
@@ -3707,7 +3753,6 @@ ${topKeywordsStr}`;
                          </div>
                       ))}
                    </div>
-                  </div>
                 )}
 
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
@@ -4228,9 +4273,8 @@ ${topKeywordsStr}`;
       {/* Modal Lịch sử Key */}
       <AnimatePresence>
         {showKeyHistory && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div 
-              ref={historyRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -4390,9 +4434,8 @@ ${topKeywordsStr}`;
         )}
 
         {showKeyInputModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 shadow-2xl">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
             <motion.div 
-              ref={keyInputRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -4438,15 +4481,6 @@ ${topKeywordsStr}`;
                       <Bot size={20} />
                     </div>
                     <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none">1. Google Gemini API Key</label>
-                    <a 
-                      href="https://aistudio.google.com/app/apikey" 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
-                    >
-                      <Link2 size={12} />
-                      LẤY KEY TẠI ĐÂY
-                    </a>
                   </div>
                   <div className="relative z-10">
                     <div className="relative">
@@ -4482,15 +4516,6 @@ ${topKeywordsStr}`;
                       <Video size={20} />
                     </div>
                     <label className="text-[13px] font-black text-red-900 uppercase tracking-widest leading-none">2. YouTube API Keys v3</label>
-                    <a 
-                      href="https://console.cloud.google.com/apis/credentials" 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
-                    >
-                      <Link2 size={12} />
-                      LẤY KEY TẠI ĐÂY
-                    </a>
                   </div>
                   
                   <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
@@ -4554,15 +4579,112 @@ ${topKeywordsStr}`;
         )}
       </AnimatePresence>
 
+      {/* Upgrade Plan Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-gray-100 flex flex-col"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            >
+              <div className="bg-gradient-to-r from-[#e67e22] to-[#f39c12] p-6 text-white flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <Zap size={24} fill="white" />
+                  <h3 className="font-black text-xl uppercase tracking-wider">Chọn gói Premium</h3>
+                </div>
+                <button 
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-8 bg-gray-50 flex-1">
+                <div className="grid grid-cols-2 gap-6">
+                  {PREMIUM_PLANS.map((plan) => (
+                    <div 
+                      key={plan.id}
+                      className="bg-white p-6 rounded-2xl border-2 border-gray-100 hover:border-orange-500 transition-all flex flex-col group relative overflow-hidden"
+                    >
+                      {plan.id === '12m' && (
+                        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase">Tiết kiệm nhất</div>
+                      )}
+                      <div className="text-[14px] font-black text-gray-800 mb-1">{plan.name}</div>
+                      <div className="flex items-baseline gap-1 mb-4">
+                        <span className="text-3xl font-black text-orange-500">{plan.priceText}</span>
+                        <span className="text-gray-400 text-[12px] font-bold">/ {plan.label}</span>
+                      </div>
+                      <ul className="space-y-2 mb-6 flex-1">
+                        <li className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
+                          <CheckCircle2 size={14} className="text-green-500" /> Toàn bộ tính năng PRO
+                        </li>
+                        <li className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
+                          <CheckCircle2 size={14} className="text-green-500" /> Kích hoạt Trí tuệ nhân tạo
+                        </li>
+                        <li className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
+                          <CheckCircle2 size={14} className="text-green-500" /> Hỗ trợ 24/7 từ Văn Thế Web
+                        </li>
+                      </ul>
+                      <button 
+                        onClick={() => goToPayment(plan, user)}
+                        className="w-full py-3 rounded-xl bg-gray-900 text-white font-black uppercase text-[12px] tracking-widest hover:bg-orange-500 transition-all group-hover:scale-[1.02] active:scale-95 shadow-lg shadow-gray-200"
+                      >
+                        Thanh toán gói này
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
+                  <p className="text-[11px] text-orange-800 font-bold leading-relaxed">
+                    Mẹo: Sau khi bấm thanh toán, bạn sẽ được chuyển sang trang thanh toán riêng (pay.html). 
+                    Vui lòng quét mã QR và chuyển khoản đúng số tiền + nội dung (orderCode). 
+                    Hệ thống sẽ tự động kích hoạt ngay sau khi nhận được tiền.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Payment Checking Overlay */}
+      <AnimatePresence>
+        {isCheckingPayment && (
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+            <motion.div 
+              className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="relative">
+                <Loader2 className="animate-spin text-orange-500" size={48} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Zap size={16} fill="#f97316" className="text-orange-500" />
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="font-black text-[14px] text-gray-800 uppercase tracking-tighter">Đang kiểm tra thanh toán...</div>
+                <div className="text-[11px] text-gray-400 font-bold">Vui lòng đợi trong giây lát</div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Footer Info */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-4 py-1.5 flex justify-between items-center text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
         <div className="flex gap-4 items-center">
           <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
           <div className="flex items-center gap-3">
             <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
+            <span className="text-gray-600">Chi phí phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
             <span className="text-gray-400">|</span>
-            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {totalQuotaToday.toLocaleString()} units</span>
+            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng chi phí hôm nay (đã dùng): {totalQuotaToday.toLocaleString()} units</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -4692,9 +4814,8 @@ ${topKeywordsStr}`;
 
       <AnimatePresence>
         {showNicheModal && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4">
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <motion.div 
-              ref={nicheModalRef}
               className="bg-[#f8f9fa] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -4706,7 +4827,7 @@ ${topKeywordsStr}`;
                     <LayoutGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
+                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH 120 NGÁCH CHỦ ĐỀ GỢI Ý</h3>
                     <p className="text-[11px] text-blue-200 font-bold opacity-80 uppercase tracking-tighter">Click vào từ khóa để tự động điền và phân tích nhanh</p>
                   </div>
                 </div>
@@ -4719,37 +4840,8 @@ ${topKeywordsStr}`;
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
-                
-                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
-                     <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
-                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU TRENDING TỪ YOUTUBE API</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật danh sách từ khóa ngách hot nhất hôm nay theo quốc gia</span>
-                     </h3>
-                     <div className="flex items-center gap-3">
-                         <div className="relative">
-                           <select
-                              value={trendingRegion}
-                              onChange={(e) => setTrendingRegion(e.target.value)}
-                              className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
-                           >
-                              {REGIONS.map(r => (
-                                <option key={r.code || 'GL'} value={r.code}>{r.name}</option>
-                              ))}
-                           </select>
-                           <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-                         </div>
-                         <button
-                            onClick={fetchDailyTrendingFromYouTube}
-                            disabled={isFetchingDailyTrending}
-                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
-                         >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật API...</> : <><Search size={16}/> Cập nhật Trending</>}
-                         </button>
-                     </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {suggestedNiches.map((category, idx) => (
+                  {SUGGESTED_NICHES.map((category, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
@@ -4780,82 +4872,6 @@ ${topKeywordsStr}`;
 
               <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
                 Mẹo: Bạn có thể nhập từ khóa bất kỳ vào ô tìm kiếm nếu không tìm thấy chủ đề ưng ý tại đây.
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {modalTrendingVideos && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div 
-              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            >
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white flex justify-between items-center shadow-lg relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                   <div className="absolute rotate-45 transform bg-white w-full h-full -top-1/2 -left-1/2 animate-pulse"></div>
-                </div>
-                <div className="relative z-10 flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                    <Flame size={24} className="text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-xl uppercase tracking-wider">VIDEO TRENDING: {modalTrendingVideos.title}</h3>
-                    <p className="text-[11px] text-orange-100 font-bold uppercase tracking-tighter">{modalTrendingVideos.subtitle}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setModalTrendingVideos(null)}
-                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/30 flex items-center justify-center transition-all group z-10 relative"
-                >
-                  <X size={20} className="group-hover:rotate-90 transition-transform" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
-                {modalTrendingVideos.videos.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400 font-medium italic">Không tìm thấy video nào.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {modalTrendingVideos.videos.map((v: any, i: number) => (
-                      <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
-                         <div className="relative aspect-video">
-                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                               {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
-                            </div>
-                            <div className="absolute top-2 left-2 flex gap-1">
-                               <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
-                                  SCORE {v.trendScore}
-                               </div>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
-                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
-                                  <ExternalLink size={14} /> Xem trên YouTube
-                               </a>
-                            </div>
-                         </div>
-                         <div className="p-4">
-                            <h4 className="text-[11px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
-                            <div className="flex items-center justify-between mt-3 bg-gray-50 p-2 rounded-lg">
-                               <div className="flex flex-col">
-                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
-                                  <span className="text-[10px] font-black text-blue-600 truncate max-w-[100px]">{v.snippet.channelTitle}</span>
-                               </div>
-                               <div className="flex flex-col items-end">
-                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views / VPH</span>
-                                  <span className="text-[11px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()} / <span className="text-orange-500">+{v.vph.toFixed(0)}</span></span>
-                               </div>
-                            </div>
-                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </motion.div>
           </div>
