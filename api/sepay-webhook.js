@@ -79,6 +79,10 @@ function getPlanByAmount(amount) {
   return { planId: "1m", planName: "Gói 1 tháng", days: 30 };
 }
 
+function toDate(value) {
+  return value?.toDate?.() || (value ? new Date(value) : null);
+}
+
 function addDays(date, days) {
   return new Date(date.getTime() + Number(days) * 24 * 60 * 60 * 1000);
 }
@@ -180,11 +184,27 @@ export default async function handler(req, res) {
           }
         : amountPlan;
 
-    const paidAtDate = new Date();
-    const expiresAtDate = addDays(paidAtDate, plan.days);
-
     const userId = String(payment?.userId || "").trim();
     const userEmail = String(payment?.userEmail || "").trim();
+
+    const paidAtDate = new Date();
+    let baseDate = paidAtDate;
+    let oldExpiresAt = null;
+
+    if (userId) {
+      const userSnap = await db.collection("users").doc(userId).get();
+
+      if (userSnap.exists) {
+        const userData = userSnap.data();
+        oldExpiresAt = toDate(userData.premiumExpiresAt || userData.expired_at);
+
+        if (oldExpiresAt && oldExpiresAt.getTime() > paidAtDate.getTime()) {
+          baseDate = oldExpiresAt;
+        }
+      }
+    }
+
+    const expiresAtDate = addDays(baseDate, plan.days);
 
     await db.collection("paid_orders").doc(orderCode).set(
       {
@@ -199,6 +219,8 @@ export default async function handler(req, res) {
         days: plan.days,
         userId,
         userEmail,
+        oldExpiresAt: oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null,
+        baseExpiresAt: Timestamp.fromDate(baseDate),
         rawBody: body,
         paidAt: FieldValue.serverTimestamp(),
         expiresAt: Timestamp.fromDate(expiresAtDate),
@@ -220,6 +242,8 @@ export default async function handler(req, res) {
         days: plan.days,
         sepayContent: content,
         rawBody: body,
+        oldExpiresAt: oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null,
+        baseExpiresAt: Timestamp.fromDate(baseDate),
         paidAt: FieldValue.serverTimestamp(),
         expiresAt: Timestamp.fromDate(expiresAtDate),
         updatedAt: FieldValue.serverTimestamp()
@@ -230,14 +254,19 @@ export default async function handler(req, res) {
     if (userId) {
       await db.collection("users").doc(userId).set(
         {
+          app: "research",
+          userId,
+          email: userEmail,
           account_type: "premium",
           premium: true,
           active: true,
           planId: plan.planId,
           planName: plan.planName,
+          premiumStartedAt: FieldValue.serverTimestamp(),
           premiumExpiresAt: Timestamp.fromDate(expiresAtDate),
           expired_at: Timestamp.fromDate(expiresAtDate),
           lastPaymentOrderCode: orderCode,
+          totalPaidDays: FieldValue.increment(plan.days),
           updated_at: FieldValue.serverTimestamp()
         },
         { merge: true }
@@ -252,6 +281,8 @@ export default async function handler(req, res) {
       planId: plan.planId,
       userId,
       userEmail,
+      oldExpiresAt: oldExpiresAt ? oldExpiresAt.toISOString() : null,
+      expiresAt: expiresAtDate.toISOString(),
       body
     });
 
@@ -264,6 +295,8 @@ export default async function handler(req, res) {
       amount,
       planId: plan.planId,
       planName: plan.planName,
+      days: plan.days,
+      oldExpiresAt: oldExpiresAt ? oldExpiresAt.toISOString() : null,
       expiresAt: expiresAtDate.toISOString(),
       userId
     });

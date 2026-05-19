@@ -114,6 +114,20 @@ interface TrackingChannel {
   }>;
 }
 
+interface SubscriptionInfo {
+  success: boolean;
+  active: boolean;
+  premium: boolean;
+  accountType: 'none' | 'trial' | 'premium' | string;
+  plan: string | null;
+  planName: string | null;
+  expiresAt: string | null;
+  trialStartedAt?: string | null;
+  trialExpiresAt?: string | null;
+  remainingMs?: number;
+  message?: string;
+}
+
 // --- Components ---
 const LinkifyText = ({ text }: { text: string }) => {
   if (!text) return null;
@@ -247,6 +261,14 @@ const STOP_LIMIT = 10;
 export default function App() {
   // --- State ---
   const [user, setUser] = useState<User | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTick(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -254,6 +276,81 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  const refreshSubscription = async (currentUser = user) => {
+    if (!currentUser) {
+      setSubscription(null);
+      return;
+    }
+
+    setSubscriptionLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        userId: currentUser.uid,
+        uid: currentUser.uid,
+        email: currentUser.email || '',
+        name: currentUser.displayName || ''
+      });
+
+      const res = await fetch(`/api/me/subscription?${params.toString()}`, {
+        cache: 'no-store'
+      });
+
+      const data = await res.json();
+
+      if (data?.success) {
+        setSubscription(data);
+      } else {
+        console.error('Không đọc được trạng thái gói:', data);
+        setSubscription({
+          success: false,
+          active: false,
+          premium: false,
+          accountType: 'none',
+          plan: null,
+          planName: null,
+          expiresAt: null,
+          message: data?.error || 'Không đọc được trạng thái gói.'
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi kiểm tra gói:', error);
+      setSubscription({
+        success: false,
+        active: false,
+        premium: false,
+        accountType: 'none',
+        plan: null,
+        planName: null,
+        expiresAt: null,
+        message: 'Không kết nối được máy chủ gói.'
+      });
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setSubscription(null);
+      return;
+    }
+
+    refreshSubscription(user);
+
+    const interval = window.setInterval(() => {
+      refreshSubscription(user);
+    }, 30000);
+
+    const onFocus = () => refreshSubscription(user);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user?.uid]);
 
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
@@ -2076,7 +2173,40 @@ ${topKeywordsStr}`;
   };
 
 
-  const handleUpgradePayment = async () => {
+  const formatDateTime = (iso?: string | null) => {
+    if (!iso) return '---';
+
+    try {
+      return new Date(iso).toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return '---';
+    }
+  };
+
+  const getRemainingText = (iso?: string | null) => {
+    if (!iso) return '---';
+
+    const ms = new Date(iso).getTime() - nowTick;
+
+    if (ms <= 0) return 'Đã hết hạn';
+
+    const totalMinutes = Math.floor(ms / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) return `${days} ngày ${hours} giờ`;
+    if (hours > 0) return `${hours} giờ ${minutes} phút`;
+    return `${Math.max(1, minutes)} phút`;
+  };
+
+  const handleUpgradePayment = () => {
     if (!user) {
       alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!');
       return;
@@ -2087,10 +2217,15 @@ ${topKeywordsStr}`;
       `?uid=${encodeURIComponent(user.uid)}` +
       `&userId=${encodeURIComponent(user.uid)}` +
       `&email=${encodeURIComponent(user.email || '')}` +
-      `&returnUrl=${encodeURIComponent(window.location.href)}`;
+      `&returnUrl=${encodeURIComponent(window.location.origin + '/?paid=success')}`;
 
-    window.open(payUrl, '_blank', 'noopener,noreferrer');
+    window.location.href = payUrl;
   };
+
+  const accountExpiresAt = subscription?.expiresAt || subscription?.trialExpiresAt || null;
+  const isAccountActive = Boolean(user && subscription?.active);
+  const isAccountPremium = Boolean(subscription?.premium || subscription?.accountType === 'premium');
+  const currentPlanName = subscription?.planName || (subscription?.accountType === 'trial' ? 'Dùng thử 1 giờ' : null);
 
   // --- Render Helpers ---
   const getGrowth = (history: any[], type: 'subs' | 'views') => {
@@ -2113,7 +2248,17 @@ ${topKeywordsStr}`;
           {user ? (
             <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
               <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`} alt="avatar" className="w-6 h-6 rounded-full shadow-sm" referrerPolicy="no-referrer" />
-              <span className="text-[11px] font-black text-gray-700 max-w-[100px] truncate">{user.displayName || user.email}</span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black text-gray-700 max-w-[120px] truncate">{user.displayName || user.email}</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${isAccountPremium ? 'bg-blue-600 text-white' : isAccountActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'}`}>
+                    {isAccountPremium ? 'PRO' : isAccountActive ? 'TRIAL' : 'HẾT HẠN'}
+                  </span>
+                </div>
+                <div className="text-[9px] font-bold text-gray-400 truncate max-w-[180px]">
+                  {currentPlanName || 'Chưa có gói'} • Còn lại: {getRemainingText(accountExpiresAt)}
+                </div>
+              </div>
               <button 
                 onClick={async () => {
                   try {
@@ -2152,7 +2297,7 @@ ${topKeywordsStr}`;
               title="Nâng cấp Gói"
             >
               <Crown size={16} />
-              <span>NÂNG CẤP GÓI</span>
+              <span>{isAccountPremium ? 'NÂNG CẤP THÊM' : 'NÂNG CẤP GÓI'}</span>
             </button>
           ) : (
             <button 
@@ -2199,6 +2344,32 @@ ${topKeywordsStr}`;
             >
               <LogIn size={20} />
               <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
+            </button>
+          </div>
+        ) : subscriptionLoading && !subscription ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
+            <Loader2 size={46} className="animate-spin text-blue-600 mx-auto mb-5" />
+            <h2 className="text-2xl font-black text-gray-800 mb-3 uppercase">Đang kiểm tra thời hạn</h2>
+            <p className="text-gray-500 text-[14px]">Hệ thống đang xác thực gói dùng thử / Premium của tài khoản.</p>
+          </div>
+        ) : !isAccountActive ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Crown size={40} className="text-red-600" />
+            </div>
+            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đã hết thời gian sử dụng</h2>
+            <p className="text-gray-500 mb-3 max-w-md mx-auto text-[14px]">
+              Tài khoản của bạn đã hết 1 giờ dùng thử hoặc gói Premium đã hết hạn.
+            </p>
+            <p className="text-gray-400 mb-8 max-w-md mx-auto text-[12px]">
+              Gói hiện tại: {currentPlanName || 'Chưa có gói'} • Hết hạn: {formatDateTime(accountExpiresAt)}
+            </p>
+            <button 
+              onClick={handleUpgradePayment}
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+            >
+              <Crown size={20} />
+              <span>NÂNG CẤP PREMIUM</span>
             </button>
           </div>
         ) : (

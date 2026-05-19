@@ -65,8 +65,6 @@
 
         <button class="btn" onclick="copyContent()">COPY NỘI DUNG CHUYỂN KHOẢN</button>
         <button class="btn" onclick="copyAccount()">COPY SỐ TÀI KHOẢN</button>
-        <button class="btn secondary" onclick="checkPaymentStatus()">TÔI ĐÃ THANH TOÁN - KIỂM TRA LẠI</button>
-
         <div id="checkingBox" class="checking">🔄 Đang tạo mã thanh toán...</div>
         <a class="back" href="/">← Quay lại công cụ</a>
       </div>
@@ -196,11 +194,11 @@
 
       document.getElementById("successBox").style.display = "block";
       document.getElementById("checkingBox").innerHTML =
-        "✅ Đã xác nhận thanh toán. Đang quay lại công cụ...";
+        "✅ Đã xác nhận thanh toán. Đang vào app ngay...";
 
       setTimeout(() => {
-        window.location.href = returnUrl;
-      }, 1800);
+        window.location.replace(returnUrl);
+      }, 700);
     }
 
     async function checkPaymentStatus() {
@@ -232,7 +230,7 @@
           renderPayment();
         }
 
-        setInterval(checkPaymentStatus, 5000);
+        setInterval(checkPaymentStatus, 2000);
         checkPaymentStatus();
       } catch (error) {
         document.getElementById("checkingBox").innerHTML =
