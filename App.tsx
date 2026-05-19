@@ -387,42 +387,16 @@ export default function App() {
       <style>
         #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
         #vtw-account-status-root-20260519 .vtw-float-btn {
-          position: fixed !important;
-          top: 9px !important;
-          right: 340px !important;
-          bottom: auto !important;
-          z-index: 2147483646 !important;
-          border: 2px solid #ffffff !important;
-          border-radius: 999px !important;
-          padding: 8px 14px !important;
-          min-height: 36px !important;
-          background: linear-gradient(135deg,#2563eb,#0ea5e9) !important;
-          color: #fff !important;
-          font-weight: 900 !important;
-          font-size: 12px !important;
-          text-transform: uppercase !important;
-          box-shadow: 0 8px 24px rgba(37,99,235,.28) !important;
-          cursor: pointer !important;
-          display: flex !important;
-          align-items: center !important;
-          gap: 8px !important;
-          white-space: nowrap !important;
+          position: fixed !important; top: 9px !important; right: 335px !important; bottom: auto !important; z-index: 2147483646 !important;
+          min-height: 34px !important; border: 1px solid #93c5fd !important; border-radius: 999px !important; padding: 8px 14px !important;
+          background: ${isPremiumAccount ? 'linear-gradient(135deg,#dbeafe,#93c5fd)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#dbeafe,#bfdbfe)' : 'linear-gradient(135deg,#fee2e2,#fecaca)'} !important;
+          color: ${isPremiumAccount || subscriptionInfo?.active ? '#0f3f91' : '#991b1b'} !important; font-weight: 900 !important; font-size: 11px !important; text-transform: uppercase !important;
+          box-shadow: 0 8px 22px rgba(37,99,235,.22) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
+          white-space: nowrap !important; line-height: 1 !important;
         }
-        @media (max-width: 1180px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn {
-            right: 280px !important;
-            font-size: 11px !important;
-            padding: 7px 11px !important;
-          }
+        @media (max-width: 1200px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn { top: 56px !important; right: 14px !important; }
         }
-        @media (max-width: 900px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn {
-            top: 64px !important;
-            right: 12px !important;
-          }
-        }
-        body, #root { background: #eaf6ff !important; }
-        .bg-\[\#f4f4f4\] { background-color: #eaf6ff !important; }
         #vtw-account-status-root-20260519 .vtw-overlay {
           position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
           background: rgba(15,23,42,.52) !important; backdrop-filter: blur(3px) !important; padding: 18px !important;
@@ -433,7 +407,7 @@ export default function App() {
         #vtw-account-status-root-20260519 .vtw-label { font-size:10px !important; color:#94a3b8 !important; font-weight:900 !important; text-transform:uppercase !important; }
         #vtw-account-status-root-20260519 .vtw-value { font-size:15px !important; color:#0f172a !important; font-weight:900 !important; margin-top:5px !important; }
       </style>
-      <button class="vtw-float-btn" id="vtw-open-account-20260519">👑 ${accountLabel} · ${remainingText}</button>
+      <button class="vtw-float-btn" id="vtw-open-account-20260519">🔵 ${accountLabel} · ${remainingText}</button>
       <div class="vtw-overlay" id="vtw-overlay-20260519">
         <div class="vtw-panel" onclick="event.stopPropagation()">
           <div class="vtw-head">
@@ -448,6 +422,7 @@ export default function App() {
             <div style="border-radius:18px;padding:15px;margin-bottom:12px;border:1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'};background:${isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'};">
               <div style="font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;">Trạng thái</div>
               <div style="font-size:22px;font-weight:900;margin-top:5px;color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'};">${statusTitle}</div>
+              <div style="font-size:11px;font-weight:900;color:#f97316;margin-top:8px;">UI_PROOF_20260519_RENDERED</div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="vtw-card"><div class="vtw-label">Gói đã đăng ký</div><div class="vtw-value">${planText}</div></div>
@@ -2370,7 +2345,7 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#eaf6ff] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+    <div className="min-h-screen bg-[#eaf5ff] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
       <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -2385,53 +2360,6 @@ ${topKeywordsStr}`;
           </h1>
 
           <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-            {user && (
-              <div className="hidden items-center gap-2 min-w-0">
-                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
-                  <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : isPremiumAccount
-                        ? 'Đã nâng cấp PRO'
-                        : subscriptionInfo?.active
-                          ? 'Dùng thử 1 giờ'
-                          : 'Hết hạn'}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Gói</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight max-w-[115px] truncate">
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Ngày đăng ký</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Hạn sử dụng</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-
-                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className={`text-[8px] font-black uppercase leading-none ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-                  <div className={`text-[10px] font-black leading-tight whitespace-nowrap ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {user ? (
               <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
                 <img
@@ -2509,45 +2437,10 @@ ${topKeywordsStr}`;
             </button>
           </div>
         </div>
-
-        {user && (
-          <div className="hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
-            <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-              <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
-              <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : isPremiumAccount ? 'Đã nâng cấp PRO' : subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Hết hạn'}
-              </div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Gói</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">
-                {subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-              </div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
-            </div>
-
-            <div className={`px-2 py-1.5 rounded-xl border ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-              <div className={`text-[8px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-              <div className={`text-[10px] font-black truncate ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Main Container */}
-      <div className="p-4 pt-2 bg-[#eaf6ff]">
+      <div className="p-4 pt-2">
         {!user ? (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
             <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
