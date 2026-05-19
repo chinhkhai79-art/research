@@ -2231,29 +2231,22 @@ ${topKeywordsStr}`;
         style={{
           background: '#ffffff',
           borderBottom: '1px solid #d1d5db',
-          padding: '6px 10px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+          padding: '6px 12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          position: 'relative',
+          zIndex: 9999
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            width: '100%',
-            minWidth: 0
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <h1
             style={{
+              fontSize: 16,
+              fontWeight: 900,
+              color: '#1f2937',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               margin: 0,
-              fontSize: 16,
-              fontWeight: 800,
-              color: '#333',
-              flexShrink: 0,
               whiteSpace: 'nowrap'
             }}
           >
@@ -2263,94 +2256,10 @@ ${topKeywordsStr}`;
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            <span>YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            YouTube Niche & Analyze Pro (Văn Thế Web)
           </h1>
 
-          {user && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                flex: 1,
-                minWidth: 0,
-                overflowX: 'auto',
-                padding: '0 4px'
-              }}
-            >
-              <div
-                style={{
-                  border: isPremiumAccount ? '1px solid #93c5fd' : subscriptionInfo?.active ? '1px solid #fcd34d' : '1px solid #fca5a5',
-                  background: isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2',
-                  borderRadius: 10,
-                  padding: '4px 8px',
-                  minWidth: 118,
-                  flexShrink: 0,
-                  lineHeight: 1.15
-                }}
-              >
-                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Tài khoản</div>
-                <div style={{ fontSize: 10, fontWeight: 900, color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#dc2626', textTransform: 'uppercase' }}>
-                  {subscriptionLoading && !subscriptionInfo
-                    ? 'Đang kiểm tra'
-                    : isPremiumAccount
-                      ? 'Đã nâng cấp PRO'
-                      : subscriptionInfo?.active
-                        ? 'Dùng thử 1 giờ'
-                        : 'Hết hạn'}
-                </div>
-              </div>
-
-              <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: 10, padding: '4px 8px', minWidth: 95, flexShrink: 0, lineHeight: 1.15 }}>
-                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Gói</div>
-                <div style={{ fontSize: 10, fontWeight: 900, color: '#0f172a', maxWidth: 115, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {subscriptionLoading && !subscriptionInfo
-                    ? 'Đang kiểm tra'
-                    : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                </div>
-              </div>
-
-              <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: 10, padding: '4px 8px', minWidth: 128, flexShrink: 0, lineHeight: 1.15 }}>
-                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Ngày đăng ký</div>
-                <div style={{ fontSize: 10, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                  {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                </div>
-              </div>
-
-              <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: 10, padding: '4px 8px', minWidth: 128, flexShrink: 0, lineHeight: 1.15 }}>
-                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Hạn sử dụng</div>
-                <div style={{ fontSize: 10, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>
-                  {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  border: subscriptionInfo?.active ? '1px solid #86efac' : '1px solid #fca5a5',
-                  background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2',
-                  borderRadius: 10,
-                  padding: '4px 8px',
-                  minWidth: 96,
-                  flexShrink: 0,
-                  lineHeight: 1.15
-                }}
-              >
-                <div style={{ fontSize: 8, fontWeight: 900, color: subscriptionInfo?.active ? '#059669' : '#dc2626', textTransform: 'uppercase' }}>Còn lại</div>
-                <div style={{ fontSize: 10, fontWeight: 900, color: subscriptionInfo?.active ? '#047857' : '#dc2626', whiteSpace: 'nowrap' }}>
-                  {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              flexShrink: 0
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {user ? (
               <div
                 style={{
@@ -2358,9 +2267,9 @@ ${topKeywordsStr}`;
                   alignItems: 'center',
                   gap: 8,
                   background: '#f8fafc',
-                  border: '1px solid #e5e7eb',
+                  padding: '5px 10px',
                   borderRadius: 12,
-                  padding: '5px 8px',
+                  border: '1px solid #e5e7eb',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
                 }}
               >
@@ -2370,7 +2279,7 @@ ${topKeywordsStr}`;
                   style={{ width: 24, height: 24, borderRadius: 999 }}
                   referrerPolicy="no-referrer"
                 />
-                <div style={{ maxWidth: 100, lineHeight: 1.1 }}>
+                <div style={{ lineHeight: 1.1, maxWidth: 115, overflow: 'hidden' }}>
                   <div style={{ fontSize: 10, fontWeight: 900, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {user.displayName || user.email}
                   </div>
@@ -2386,7 +2295,7 @@ ${topKeywordsStr}`;
                       console.error('Lỗi đăng xuất:', e);
                     }
                   }}
-                  style={{ border: 0, background: 'transparent', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  style={{ color: '#64748b', border: 0, background: 'transparent', cursor: 'pointer', padding: 2 }}
                   title="Đăng xuất"
                 >
                   <LogOut size={14} />
@@ -2401,11 +2310,24 @@ ${topKeywordsStr}`;
                     alert('Lỗi đăng nhập: ' + e.message);
                   }
                 }}
-                className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 12,
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  border: '1px solid #bfdbfe',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  cursor: 'pointer'
+                }}
                 title="Đăng nhập Google"
               >
                 <LogIn size={16} />
-                <span>ĐĂNG NHẬP</span>
+                ĐĂNG NHẬP
               </button>
             )}
 
@@ -2415,47 +2337,167 @@ ${topKeywordsStr}`;
                 target="_blank"
                 rel="noreferrer"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '8px 14px',
+                  padding: '9px 18px',
                   borderRadius: 12,
                   background: 'linear-gradient(90deg,#f97316,#ef4444)',
-                  color: '#fff',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                   fontSize: 10,
                   fontWeight: 900,
-                  textDecoration: 'none',
                   textTransform: 'uppercase',
-                  boxShadow: '0 2px 8px rgba(239,68,68,.25)',
-                  whiteSpace: 'nowrap'
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 5px rgba(239,68,68,0.25)'
                 }}
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
-                <span>{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+                {isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}
               </a>
             ) : (
               <button
                 onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px]"
-                title="Cần đăng nhập để Nâng cấp Gói"
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 12,
+                  background: 'linear-gradient(90deg,#f97316,#ef4444)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  border: 0,
+                  opacity: 0.85,
+                  cursor: 'not-allowed'
+                }}
+                title="Cần đăng nhập để nâng cấp gói"
               >
                 <Crown size={15} />
-                <span>NÂNG CẤP GÓI</span>
+                NÂNG CẤP GÓI
               </button>
             )}
 
             <button
               onClick={resetConfig}
-              className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px]"
+              style={{
+                padding: '9px 18px',
+                borderRadius: 12,
+                background: '#fef2f2',
+                color: '#dc2626',
+                border: '1px solid #fecaca',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 10,
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                cursor: 'pointer'
+              }}
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
-              <span>LÀM MỚI</span>
+              LÀM MỚI
             </button>
           </div>
         </div>
       </div>
+
+      {/* FORCE VISIBLE SUBSCRIPTION BAR - KHÔNG DÙNG hidden/xl */}
+      {user && (
+        <div
+          style={{
+            display: 'block',
+            width: '100%',
+            background: 'linear-gradient(90deg,#f8fafc,#eff6ff,#ecfdf5)',
+            borderBottom: '1px solid #bfdbfe',
+            padding: '5px 12px',
+            position: 'relative',
+            zIndex: 9998,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              width: '100%',
+              fontSize: 10,
+              fontWeight: 900
+            }}
+          >
+            <div
+              style={{
+                padding: '4px 9px',
+                borderRadius: 10,
+                border: `1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'}`,
+                background: isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2',
+                color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'
+              }}
+            >
+              Tài khoản: {subscriptionLoading && !subscriptionInfo
+                ? 'Đang kiểm tra'
+                : isPremiumAccount
+                  ? 'Đã nâng cấp PRO'
+                  : subscriptionInfo?.active
+                    ? 'Dùng thử 1 giờ'
+                    : 'Hết hạn'}
+            </div>
+
+            <div style={{ padding: '4px 9px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a' }}>
+              Gói: {subscriptionLoading && !subscriptionInfo
+                ? 'Đang kiểm tra'
+                : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+            </div>
+
+            <div style={{ padding: '4px 9px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a' }}>
+              Ngày đăng ký: {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+            </div>
+
+            <div style={{ padding: '4px 9px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a' }}>
+              Hạn sử dụng: {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+            </div>
+
+            <div
+              style={{
+                padding: '4px 9px',
+                borderRadius: 10,
+                border: `1px solid ${subscriptionInfo?.active ? '#86efac' : '#fecaca'}`,
+                background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2',
+                color: subscriptionInfo?.active ? '#047857' : '#b91c1c'
+              }}
+            >
+              Còn lại: {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+            </div>
+
+            <a
+              href={buildPaymentUrl(user)}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                marginLeft: 'auto',
+                padding: '4px 10px',
+                borderRadius: 10,
+                background: '#f97316',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: 10,
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                flexShrink: 0
+              }}
+              title="Nâng cấp thêm và cộng dồn ngày sử dụng"
+            >
+              {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <div className="p-4 pt-2">
