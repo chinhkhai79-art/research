@@ -1,0 +1,83 @@
+# Bản sửa đăng nhập Google + chuyển hướng thanh toán SePay
+
+## Lỗi hiện tại
+Link đang báo 404:
+https://research.vanthemmo.com/pay.html?uid=...
+
+Nguyên nhân: project Vercel hiện tại chưa có `public/pay.html` hoặc Vercel chưa deploy đúng thư mục.
+
+## File cần dán đè
+Dán các file trong zip vào đúng vị trí:
+
+- App.tsx
+- src/lib/firebase.ts
+- public/pay.html
+- api/create-payment.js
+- api/sepay-webhook.js
+- api/payment-status.js
+- api/me/subscription.js
+- api/ping.js
+- api/debug.js
+- api/debug-firebase.js
+- api/test-webhook.js
+- api/debug-webhook.js
+- lib/firebaseAdmin.js
+- lib/cors.js
+- package.json
+- vercel.json
+
+## Biến môi trường Vercel
+Vào Vercel > Settings > Environment Variables, thêm:
+
+SEPAY_API_KEY = mysecret123
+FIREBASE_SERVICE_ACCOUNT = JSON service account Firebase Admin
+FIRESTORE_DATABASE_ID = (default) hoặc database id thật của Firebase
+
+Sau đó Redeploy.
+
+## Firebase Google Login OAuth2
+Vào Firebase Console > Authentication > Settings > Authorized domains, thêm:
+
+research.vanthemmo.com
+
+Nếu vẫn test trong AI Studio preview thì thêm cả domain dạng:
+
+ais-dev-...run.app
+
+Google Cloud Console > APIs & Services > Credentials > OAuth client Web application:
+Authorized JavaScript origins thêm:
+
+https://research.vanthemmo.com
+
+Authorized redirect URIs thêm:
+
+https://research.vanthemmo.com/__/auth/handler
+
+## Test sau deploy
+https://research.vanthemmo.com/pay.html
+https://research.vanthemmo.com/api/ping
+https://research.vanthemmo.com/api/debug-firebase
+https://research.vanthemmo.com/api/debug
+https://research.vanthemmo.com/api/sepay-webhook
+
+Test webhook giả:
+https://research.vanthemmo.com/api/test-webhook?orderCode=RESEARCH1779163274685&amount=300000
+
+Kiểm tra thanh toán:
+https://research.vanthemmo.com/api/payment-status?orderCode=RESEARCH1779163274685
+
+## SePay
+Webhook URL:
+https://research.vanthemmo.com/api/sepay-webhook
+
+Định dạng:
+JSON
+
+Loại giao dịch:
+Tiền vào
+
+Bảo mật:
+API Key
+
+API Key:
+mysecret123
