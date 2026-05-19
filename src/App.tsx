@@ -336,37 +336,45 @@ export default function App() {
         box-sizing: border-box !important;
         font-family: Arial, sans-serif !important;
       }
+      html, body, #root, .min-h-screen {
+        background: #eff6ff !important;
+      }
       #VTW_HARD_ACCOUNT_FLOAT_BTN {
         position: fixed !important;
-        right: 18px !important;
-        bottom: 22px !important;
+        right: 300px !important;
+        top: 12px !important;
+        bottom: auto !important;
         z-index: 2147483647 !important;
         display: flex !important;
         align-items: center !important;
         gap: 9px !important;
-        min-width: 190px !important;
-        max-width: 360px !important;
-        padding: 12px 16px !important;
+        min-width: 168px !important;
+        max-width: 260px !important;
+        padding: 8px 13px !important;
         border-radius: 999px !important;
-        border: 3px solid #fff !important;
-        color: #fff !important;
-        background: linear-gradient(135deg,#2563eb,#06b6d4) !important;
-        box-shadow: 0 18px 50px rgba(0,0,0,.35) !important;
+        border: 1px solid #93c5fd !important;
+        color: #1d4ed8 !important;
+        background: #dbeafe !important;
+        box-shadow: 0 5px 18px rgba(37,99,235,.22) !important;
         cursor: pointer !important;
         font-weight: 900 !important;
         font-size: 12px !important;
         line-height: 1.15 !important;
         text-transform: uppercase !important;
       }
-      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-trial { background: linear-gradient(135deg,#f59e0b,#f97316) !important; }
-      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-expired { background: linear-gradient(135deg,#ef4444,#b91c1c) !important; }
+      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-trial,
+      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-expired {
+        background: #dbeafe !important;
+        color: #1d4ed8 !important;
+        border-color: #93c5fd !important;
+      }
       #VTW_HARD_ACCOUNT_FLOAT_BTN .vtw-dot {
-        width: 14px !important;
-        height: 14px !important;
+        width: 12px !important;
+        height: 12px !important;
         border-radius: 999px !important;
-        background: #fff !important;
+        background: #60a5fa !important;
         flex: 0 0 auto !important;
-        box-shadow: 0 0 0 4px rgba(255,255,255,.25) !important;
+        box-shadow: 0 0 0 4px rgba(96,165,250,.18) !important;
       }
       #VTW_HARD_ACCOUNT_PANEL_BACKDROP {
         position: fixed !important;
@@ -380,7 +388,8 @@ export default function App() {
       #VTW_HARD_ACCOUNT_PANEL {
         position: fixed !important;
         right: 18px !important;
-        bottom: 86px !important;
+        top: 58px !important;
+        bottom: auto !important;
         z-index: 2147483647 !important;
         width: 460px !important;
         max-width: calc(100vw - 28px) !important;
@@ -441,8 +450,8 @@ export default function App() {
         text-transform: uppercase !important; cursor: pointer !important;
       }
       @media (max-width: 700px) {
-        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 10px !important; bottom: 12px !important; min-width: 150px !important; font-size: 10px !important; padding: 10px 12px !important; }
-        #VTW_HARD_ACCOUNT_PANEL { right: 10px !important; bottom: 68px !important; width: calc(100vw - 20px) !important; }
+        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 150px !important; top: 10px !important; bottom: auto !important; min-width: 125px !important; max-width: 170px !important; font-size: 9px !important; padding: 7px 10px !important; }
+        #VTW_HARD_ACCOUNT_PANEL { right: 10px !important; top: 58px !important; bottom: auto !important; width: calc(100vw - 20px) !important; }
         .vtw-hard-grid { grid-template-columns: 1fr !important; }
       }
     `;
@@ -2490,7 +2499,7 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+    <div className="min-h-screen bg-[#eff6ff] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
       <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -2505,52 +2514,7 @@ ${topKeywordsStr}`;
           </h1>
 
           <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-            {user && (
-              <div className="hidden xl:flex items-center gap-2 min-w-0">
-                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
-                  <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : isPremiumAccount
-                        ? 'Đã nâng cấp PRO'
-                        : subscriptionInfo?.active
-                          ? 'Dùng thử 1 giờ'
-                          : 'Hết hạn'}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Gói</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight max-w-[115px] truncate">
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Ngày đăng ký</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Hạn sử dụng</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-
-                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className={`text-[8px] font-black uppercase leading-none ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-                  <div className={`text-[10px] font-black leading-tight whitespace-nowrap ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* VTW_REMOVED_HEADER_SUBSCRIPTION_PILLS_DESKTOP_20260519 */}
 
             {user ? (
               <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
@@ -2630,40 +2594,7 @@ ${topKeywordsStr}`;
           </div>
         </div>
 
-        {user && (
-          <div className="xl:hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
-            <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-              <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
-              <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : isPremiumAccount ? 'Đã nâng cấp PRO' : subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Hết hạn'}
-              </div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Gói</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">
-                {subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-              </div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
-            </div>
-
-            <div className={`px-2 py-1.5 rounded-xl border ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-              <div className={`text-[8px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-              <div className={`text-[10px] font-black truncate ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* VTW_REMOVED_HEADER_SUBSCRIPTION_PILLS_MOBILE_20260519 */}
       </div>
 
       {/* Main Container */}
