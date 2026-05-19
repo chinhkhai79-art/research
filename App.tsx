@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { 
   Search, 
   BarChart2, 
@@ -267,7 +266,6 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
-  const [showFloatingAccountPanel, setShowFloatingAccountPanel] = useState(false);
 
   const buildPaymentUrl = (targetUser = user) => {
     if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
@@ -347,6 +345,122 @@ export default function App() {
       window.removeEventListener('focus', onFocus);
     };
   }, [user]);
+
+  // UI_PROOF_20260519: Inject trực tiếp vào document.body để không bị khung tool / overflow / CSS che.
+  useEffect(() => {
+    const rootId = 'vtw-account-status-root-20260519';
+    let root = document.getElementById(rootId);
+
+    if (!root) {
+      root = document.createElement('div');
+      root.id = rootId;
+      document.body.appendChild(root);
+    }
+
+    const accountLabel = !user
+      ? 'CHƯA ĐĂNG NHẬP'
+      : subscriptionLoading && !subscriptionInfo
+        ? 'ĐANG KIỂM TRA'
+        : isPremiumAccount
+          ? 'PRO'
+          : subscriptionInfo?.active
+            ? 'TRIAL'
+            : 'HẾT HẠN';
+
+    const statusTitle = !user
+      ? 'Chưa đăng nhập Google'
+      : subscriptionLoading && !subscriptionInfo
+        ? 'Đang kiểm tra tài khoản...'
+        : isPremiumAccount
+          ? 'Tài khoản đã nâng cấp PRO'
+          : subscriptionInfo?.active
+            ? 'Tài khoản đang dùng thử 1 giờ'
+            : 'Tài khoản đã hết hạn';
+
+    const planText = subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói');
+    const startedText = formatSubscriptionDateCompact(subscriptionInfo?.startedAt);
+    const expiresText = formatSubscriptionDateCompact(subscriptionInfo?.expiresAt);
+    const remainingText = user ? getRemainingText(subscriptionInfo?.expiresAt) : '---';
+    const payUrl = user ? buildPaymentUrl(user) : '#';
+
+    root.innerHTML = `
+      <style>
+        #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        #vtw-account-status-root-20260519 .vtw-float-btn {
+          position: fixed !important; right: 18px !important; bottom: 64px !important; z-index: 2147483646 !important;
+          border: 3px solid #fff !important; border-radius: 999px !important; padding: 11px 16px !important;
+          background: ${isPremiumAccount ? 'linear-gradient(135deg,#2563eb,#06b6d4)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#ef4444,#dc2626)'} !important;
+          color: #fff !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase !important;
+          box-shadow: 0 14px 45px rgba(15,23,42,.35) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
+        }
+        #vtw-account-status-root-20260519 .vtw-overlay {
+          position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
+          background: rgba(15,23,42,.52) !important; backdrop-filter: blur(3px) !important; padding: 18px !important;
+        }
+        #vtw-account-status-root-20260519 .vtw-panel { width: 460px !important; max-width: calc(100vw - 30px) !important; background:#fff !important; border-radius: 24px !important; overflow:hidden !important; box-shadow:0 28px 90px rgba(15,23,42,.45) !important; border:1px solid #bfdbfe !important; }
+        #vtw-account-status-root-20260519 .vtw-head { padding:18px !important; background:linear-gradient(135deg,#2563eb,#4f46e5) !important; color:#fff !important; display:flex !important; justify-content:space-between !important; gap:12px !important; align-items:center !important; }
+        #vtw-account-status-root-20260519 .vtw-card { border:1px solid #e5e7eb !important; background:#f8fafc !important; border-radius:16px !important; padding:12px !important; }
+        #vtw-account-status-root-20260519 .vtw-label { font-size:10px !important; color:#94a3b8 !important; font-weight:900 !important; text-transform:uppercase !important; }
+        #vtw-account-status-root-20260519 .vtw-value { font-size:15px !important; color:#0f172a !important; font-weight:900 !important; margin-top:5px !important; }
+      </style>
+      <button class="vtw-float-btn" id="vtw-open-account-20260519">👑 ${accountLabel} · ${remainingText}</button>
+      <div class="vtw-overlay" id="vtw-overlay-20260519">
+        <div class="vtw-panel" onclick="event.stopPropagation()">
+          <div class="vtw-head">
+            <div>
+              <div style="font-size:12px;font-weight:900;opacity:.85;text-transform:uppercase;">Tài khoản & hạn sử dụng</div>
+              <div style="font-size:22px;font-weight:900;margin-top:4px;">${statusTitle}</div>
+              <div style="font-size:12px;font-weight:700;opacity:.85;margin-top:3px;">${user?.displayName || 'Người dùng'} · ${user?.email || 'Chưa có email'}</div>
+            </div>
+            <button id="vtw-close-account-20260519" style="width:38px;height:38px;border-radius:999px;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:22px;cursor:pointer;">×</button>
+          </div>
+          <div style="padding:18px;">
+            <div style="border-radius:18px;padding:15px;margin-bottom:12px;border:1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'};background:${isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'};">
+              <div style="font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;">Trạng thái</div>
+              <div style="font-size:22px;font-weight:900;margin-top:5px;color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'};">${statusTitle}</div>
+              <div style="font-size:11px;font-weight:900;color:#f97316;margin-top:8px;">UI_PROOF_20260519_RENDERED</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="vtw-card"><div class="vtw-label">Gói đã đăng ký</div><div class="vtw-value">${planText}</div></div>
+              <div class="vtw-card" style="background:${subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2'} !important;border-color:${subscriptionInfo?.active ? '#86efac' : '#fecaca'} !important;"><div class="vtw-label" style="color:${subscriptionInfo?.active ? '#059669' : '#dc2626'} !important;">Còn lại</div><div class="vtw-value" style="color:${subscriptionInfo?.active ? '#047857' : '#b91c1c'} !important;">${remainingText}</div></div>
+              <div class="vtw-card"><div class="vtw-label">Ngày đăng ký</div><div class="vtw-value">${startedText}</div></div>
+              <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
+              <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
+              <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const overlay = document.getElementById('vtw-overlay-20260519') as HTMLDivElement | null;
+    const openBtn = document.getElementById('vtw-open-account-20260519');
+    const closeBtn = document.getElementById('vtw-close-account-20260519');
+    const logoutBtn = document.getElementById('vtw-logout-account-20260519');
+    const refreshBtn = document.getElementById('vtw-refresh-account-20260519');
+
+    const openPanel = () => { if (overlay) overlay.style.display = 'flex'; };
+    const closePanel = () => { if (overlay) overlay.style.display = 'none'; };
+    const doLogout = async () => { await logoutUser(); closePanel(); };
+    const doRefresh = () => { if (user) refreshSubscription(user, false); };
+
+    openBtn?.addEventListener('click', openPanel);
+    closeBtn?.addEventListener('click', closePanel);
+    overlay?.addEventListener('click', closePanel);
+    logoutBtn?.addEventListener('click', doLogout);
+    refreshBtn?.addEventListener('click', doRefresh);
+
+    return () => {
+      openBtn?.removeEventListener('click', openPanel);
+      closeBtn?.removeEventListener('click', closePanel);
+      overlay?.removeEventListener('click', closePanel);
+      logoutBtn?.removeEventListener('click', doLogout);
+      refreshBtn?.removeEventListener('click', doRefresh);
+    };
+  }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
@@ -2402,230 +2516,6 @@ ${topKeywordsStr}`;
           </div>
         )}
       </div>
-
-
-      {/* GLOBAL PORTAL - THOÁT KHỎI KHUNG TOOL, KHÔNG BỊ OVERFLOW/CSS CHE */}
-      {user && createPortal(
-        <>
-          <button
-            type="button"
-            onClick={() => setShowFloatingAccountPanel(true)}
-            style={{
-              position: 'fixed',
-              top: 78,
-              right: 18,
-              zIndex: 2147483646,
-              background: isPremiumAccount ? 'linear-gradient(135deg,#2563eb,#06b6d4)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#ef4444,#dc2626)',
-              color: '#ffffff',
-              border: '2px solid rgba(255,255,255,0.8)',
-              borderRadius: 999,
-              padding: '10px 16px',
-              boxShadow: '0 10px 30px rgba(15,23,42,0.28)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              cursor: 'pointer',
-              fontWeight: 900,
-              fontSize: 12,
-              textTransform: 'uppercase',
-              fontFamily: 'Arial, sans-serif'
-            }}
-            title="Xem tài khoản, gói và hạn sử dụng"
-          >
-            <Crown size={18} />
-            <span>{isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'TRIAL' : 'HẾT HẠN'}</span>
-            <span style={{ opacity: 0.9, fontSize: 11 }}>
-              {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-            </span>
-          </button>
-
-          {showFloatingAccountPanel && (
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 2147483647,
-                background: 'rgba(15,23,42,0.45)',
-                backdropFilter: 'blur(3px)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'flex-end',
-                padding: '85px 20px 20px 20px',
-                fontFamily: 'Arial, sans-serif'
-              }}
-              onClick={() => setShowFloatingAccountPanel(false)}
-            >
-              <div
-                style={{
-                  width: 430,
-                  maxWidth: 'calc(100vw - 30px)',
-                  background: '#ffffff',
-                  borderRadius: 24,
-                  border: '1px solid #dbeafe',
-                  boxShadow: '0 25px 80px rgba(15,23,42,0.35)',
-                  overflow: 'hidden'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div
-                  style={{
-                    padding: 18,
-                    background: 'linear-gradient(135deg,#2563eb,#4f46e5)',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 12
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img
-                      src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                      alt="avatar"
-                      referrerPolicy="no-referrer"
-                      style={{ width: 48, height: 48, borderRadius: 16, border: '2px solid rgba(255,255,255,0.65)' }}
-                    />
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 900 }}>{user.displayName || 'Người dùng'}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>{user.email || 'Chưa có email'}</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowFloatingAccountPanel(false)}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 999,
-                      border: 0,
-                      background: 'rgba(255,255,255,0.16)',
-                      color: '#ffffff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Đóng"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div style={{ padding: 18 }}>
-                  <div
-                    style={{
-                      borderRadius: 18,
-                      padding: 16,
-                      marginBottom: 14,
-                      border: `1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'}`,
-                      background: isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'
-                    }}
-                  >
-                    <div style={{ fontSize: 11, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Tình trạng tài khoản
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 900,
-                        marginTop: 4,
-                        color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'
-                      }}
-                    >
-                      {subscriptionLoading && !subscriptionInfo
-                        ? 'Đang kiểm tra tài khoản...'
-                        : isPremiumAccount
-                          ? 'Tài khoản đã nâng cấp PRO'
-                          : subscriptionInfo?.active
-                            ? 'Tài khoản đang dùng thử 1 giờ'
-                            : 'Tài khoản đã hết hạn'}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div style={{ border: '1px solid #e5e7eb', background: '#f8fafc', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Gói đã đăng ký</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 5 }}>
-                        {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                      </div>
-                    </div>
-
-                    <div style={{ border: `1px solid ${subscriptionInfo?.active ? '#86efac' : '#fecaca'}`, background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: subscriptionInfo?.active ? '#059669' : '#dc2626', textTransform: 'uppercase' }}>Còn lại</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: subscriptionInfo?.active ? '#047857' : '#b91c1c', marginTop: 5 }}>
-                        {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                      </div>
-                    </div>
-
-                    <div style={{ border: '1px solid #e5e7eb', background: '#f8fafc', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Ngày đăng ký</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 5 }}>
-                        {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                      </div>
-                    </div>
-
-                    <div style={{ border: '1px solid #e5e7eb', background: '#f8fafc', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Hạn sử dụng</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 5 }}>
-                        {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-                    <a
-                      href={buildPaymentUrl(user)}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '12px 14px',
-                        borderRadius: 14,
-                        background: 'linear-gradient(90deg,#f97316,#ef4444)',
-                        color: '#ffffff',
-                        textDecoration: 'none',
-                        fontSize: 12,
-                        fontWeight: 900,
-                        textTransform: 'uppercase'
-                      }}
-                    >
-                      {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await logoutUser();
-                          setShowFloatingAccountPanel(false);
-                        } catch (e: any) {
-                          console.error('Lỗi đăng xuất:', e);
-                        }
-                      }}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: 14,
-                        border: '1px solid #e5e7eb',
-                        background: '#f8fafc',
-                        color: '#334155',
-                        fontSize: 12,
-                        fontWeight: 900,
-                        textTransform: 'uppercase',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Đăng xuất
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </>,
-        document.body
-      )}
-
 
       {/* Main Container */}
       <div className="p-4 pt-2">
@@ -5010,186 +4900,6 @@ ${topKeywordsStr}`;
 
               {/* Content */}
               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
-                {/* ACCOUNT STATUS BLOCK - HIỆN CỨNG TRÊN ĐẦU POPUP CÀI ĐẶT */}
-                <div
-                  style={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 999999,
-                    background: 'linear-gradient(135deg,#fff7ed,#eff6ff,#ecfdf5)',
-                    border: '4px solid #f97316',
-                    borderRadius: 24,
-                    padding: 18,
-                    boxShadow: '0 18px 45px rgba(15,23,42,0.18)',
-                    fontFamily: 'Arial, sans-serif'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                      <div
-                        style={{
-                          width: 50,
-                          height: 50,
-                          borderRadius: 18,
-                          background: isPremiumAccount ? '#2563eb' : subscriptionInfo?.active ? '#f59e0b' : '#dc2626',
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 10px 24px rgba(15,23,42,0.18)'
-                        }}
-                      >
-                        <Crown size={26} />
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: '#f97316', textTransform: 'uppercase', letterSpacing: 1 }}>
-                          Tài khoản & hạn sử dụng
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 24,
-                            fontWeight: 900,
-                            color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c',
-                            lineHeight: 1.15
-                          }}
-                        >
-                          {!user
-                            ? 'Chưa đăng nhập Google'
-                            : subscriptionLoading && !subscriptionInfo
-                              ? 'Đang kiểm tra tài khoản...'
-                              : isPremiumAccount
-                                ? 'Tài khoản đã nâng cấp PRO'
-                                : subscriptionInfo?.active
-                                  ? 'Tài khoản đang dùng thử 1 giờ'
-                                  : 'Tài khoản đã hết hạn'}
-                        </div>
-                        {user && (
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginTop: 4 }}>
-                            {user.displayName || 'Người dùng'} · {user.email || 'Chưa có email'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {user && (
-                      <a
-                        href={buildPaymentUrl(user)}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          padding: '12px 16px',
-                          borderRadius: 16,
-                          background: 'linear-gradient(90deg,#f97316,#ef4444)',
-                          color: '#ffffff',
-                          textDecoration: 'none',
-                          fontSize: 12,
-                          fontWeight: 900,
-                          textTransform: 'uppercase',
-                          boxShadow: '0 10px 25px rgba(239,68,68,0.22)',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
-                      </a>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Gói đã đăng ký</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
-                        {!user
-                          ? 'Chưa đăng nhập'
-                          : subscriptionLoading && !subscriptionInfo
-                            ? 'Đang kiểm tra'
-                            : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                      </div>
-                    </div>
-
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Ngày đăng ký</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
-                        {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                      </div>
-                    </div>
-
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 12 }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Hạn sử dụng</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
-                        {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2',
-                        border: `1px solid ${subscriptionInfo?.active ? '#86efac' : '#fecaca'}`,
-                        borderRadius: 16,
-                        padding: 12
-                      }}
-                    >
-                      <div style={{ fontSize: 10, fontWeight: 900, color: subscriptionInfo?.active ? '#059669' : '#dc2626', textTransform: 'uppercase' }}>Còn lại</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: subscriptionInfo?.active ? '#047857' : '#b91c1c', marginTop: 4 }}>
-                        {!user ? '---' : subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-                    {user && (
-                      <button
-                        type="button"
-                        onClick={() => refreshSubscription(user, false)}
-                        style={{
-                          padding: '9px 13px',
-                          borderRadius: 12,
-                          border: '1px solid #bfdbfe',
-                          background: '#ffffff',
-                          color: '#1d4ed8',
-                          fontSize: 11,
-                          fontWeight: 900,
-                          textTransform: 'uppercase',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Làm mới hạn dùng
-                      </button>
-                    )}
-
-                    {user && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await logoutUser();
-                            setShowKeyInputModal(false);
-                          } catch (e: any) {
-                            console.error('Lỗi đăng xuất:', e);
-                          }
-                        }}
-                        style={{
-                          padding: '9px 13px',
-                          borderRadius: 12,
-                          border: '1px solid #e5e7eb',
-                          background: '#ffffff',
-                          color: '#334155',
-                          fontSize: 11,
-                          fontWeight: 900,
-                          textTransform: 'uppercase',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Đăng xuất
-                      </button>
-                    )}
-                  </div>
-
-                  <div style={{ marginTop: 10, fontSize: 10, fontWeight: 900, color: '#64748b' }}>
-                    Mã kiểm tra UI: ACCOUNT_STATUS_BLOCK_20260519. Nếu không thấy khung cam này, file App.tsx mới chưa được build đúng.
-                  </div>
-                </div>
-
                 {/* Section Gemini */}
                 <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
