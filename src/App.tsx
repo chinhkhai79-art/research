@@ -429,7 +429,7 @@ export default function App() {
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">
               <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
-              <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
+              <button id="vtw-settings-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Cài đặt</button>
               <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
             </div>
           </div>
@@ -441,25 +441,28 @@ export default function App() {
     const openBtn = document.getElementById('vtw-open-account-20260519');
     const closeBtn = document.getElementById('vtw-close-account-20260519');
     const logoutBtn = document.getElementById('vtw-logout-account-20260519');
-    const refreshBtn = document.getElementById('vtw-refresh-account-20260519');
+    const settingsBtn = document.getElementById('vtw-settings-account-20260519');
 
     const openPanel = () => { if (overlay) overlay.style.display = 'flex'; };
     const closePanel = () => { if (overlay) overlay.style.display = 'none'; };
     const doLogout = async () => { await logoutUser(); closePanel(); };
-    const doRefresh = () => { if (user) refreshSubscription(user, false); };
+    const openApiSettings = () => {
+      closePanel();
+      setShowKeyInputModal(true);
+    };
 
     openBtn?.addEventListener('click', openPanel);
     closeBtn?.addEventListener('click', closePanel);
     overlay?.addEventListener('click', closePanel);
     logoutBtn?.addEventListener('click', doLogout);
-    refreshBtn?.addEventListener('click', doRefresh);
+    settingsBtn?.addEventListener('click', openApiSettings);
 
     return () => {
       openBtn?.removeEventListener('click', openPanel);
       closeBtn?.removeEventListener('click', closePanel);
       overlay?.removeEventListener('click', closePanel);
       logoutBtn?.removeEventListener('click', doLogout);
-      refreshBtn?.removeEventListener('click', doRefresh);
+      settingsBtn?.removeEventListener('click', openApiSettings);
     };
   }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
