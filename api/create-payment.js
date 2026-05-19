@@ -4,6 +4,7 @@ import { setCors } from "../lib/cors.js";
 const BANK_ID = "ACB";
 const ACCOUNT_NO = "13131447";
 const ACCOUNT_NAME = "LE VAN KHAI";
+
 const APP_DOMAIN = "https://research.vanthemmo.com";
 const ORDER_PREFIX = "RESEARCH";
 
@@ -50,6 +51,7 @@ export default async function handler(req, res) {
       `?plan=${encodeURIComponent(planId)}` +
       `&amount=${encodeURIComponent(plan.amount)}` +
       `&content=${encodeURIComponent(orderCode)}` +
+      `&userId=${encodeURIComponent(userId)}` +
       `&email=${encodeURIComponent(userEmail)}` +
       `&phone=${encodeURIComponent(userPhone)}`;
 
@@ -82,6 +84,9 @@ export default async function handler(req, res) {
       packageName: plan.name,
       amount: plan.amount,
       days: plan.days,
+      bankId: BANK_ID,
+      accountNo: ACCOUNT_NO,
+      accountName: ACCOUNT_NAME,
       qrUrl,
       paymentUrl
     });
