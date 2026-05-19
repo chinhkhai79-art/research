@@ -56,6 +56,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
+import { Toaster, toast } from 'react-hot-toast';
+import { useAuth } from './hooks/useAuth';
+import { AuthPortal } from './components/AccountModals';
 
 // --- Types ---
 interface YouTubeConfig {
@@ -119,7 +122,7 @@ const LinkifyText = ({ text }: { text: string }) => {
       {parts.map((part, i) => 
         urlRegex.test(part) ? (
           <a
-            key={i}
+            key={`link-${i}`}
             href={part}
             target="_blank"
             rel="noreferrer"
@@ -153,25 +156,7 @@ interface SavedSpyReport {
   report: string;
 }
 
-interface User {
-  uid: string;
-  displayName: string;
-  email: string;
-  photoURL: string;
-}
-
-interface ProStatus {
-  active: boolean;
-  email: string;
-  planId: string;
-  planName: string;
-  orderCode: string;
-  expiresAt: string | null;
-  activatedAt: string;
-}
-
 // --- Constants ---
-const PAYMENT_BASE_URL = "https://research.vanthemmo.com";
 const USER_KEY = "RESEARCH_TOOL_USER";
 const PRO_KEY = "RESEARCH_TOOL_PRO";
 const PENDING_ORDER_KEY = "RESEARCH_TOOL_PENDING_ORDER";
@@ -184,167 +169,11 @@ const PREMIUM_PLANS = [
   { id: "12m", name: "Gói 1 năm", label: "1 năm", priceText: "500k", amount: 500000, days: 365 }
 ];
 
-function createOrderCode() {
-  return PAYMENT_PREFIX + Date.now();
-}
+function canUseTool(isValidUser: () => boolean, silent = false) {
+  if (isValidUser()) return true;
 
-function getSavedUser(): User | null {
-  try {
-    return JSON.parse(localStorage.getItem(USER_KEY) || "null");
-  } catch {
-    return null;
-  }
-}
-
-function saveUser(user: User) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-function getSavedPro(): ProStatus | null {
-  try {
-    const pro = JSON.parse(localStorage.getItem(PRO_KEY) || "null");
-    if (!pro || !pro.active) return null;
-
-    if (pro.expiresAt && new Date(pro.expiresAt).getTime() < Date.now()) {
-      localStorage.removeItem(PRO_KEY);
-      return null;
-    }
-
-    return pro;
-  } catch {
-    return null;
-  }
-}
-
-function savePro(data: any): ProStatus {
-  const pro: ProStatus = {
-    active: true,
-    email: data.email || "",
-    planId: data.planId || "1m",
-    planName: data.planName || "Gói 1 tháng",
-    orderCode: data.orderCode,
-    expiresAt: data.expiresAt || null,
-    activatedAt: new Date().toISOString()
-  };
-
-  localStorage.setItem(PRO_KEY, JSON.stringify(pro));
-  return pro;
-}
-
-function logoutUser() {
-  localStorage.removeItem(USER_KEY);
-  localStorage.removeItem(PRO_KEY);
-  localStorage.removeItem(PENDING_ORDER_KEY);
-  window.location.reload();
-}
-
-async function loginWithGooglePreview() {
-  const email = prompt("Nhập Gmail để đăng nhập:");
-  if (!email || !email.includes("@")) {
-    alert("Vui lòng nhập Gmail hợp lệ.");
-    return null;
-  }
-
-  const user: User = {
-    uid: "research_" + btoa(email).replace(/=/g, ""),
-    displayName: email.split("@")[0],
-    email,
-    photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=random`
-  };
-
-  saveUser(user);
-  return user;
-}
-
-function goToPayment(plan: typeof PREMIUM_PLANS[0], user: User | null) {
-  if (!user || !user.email) {
-    alert("Vui lòng đăng nhập Gmail trước khi thanh toán.");
-    return;
-  }
-
-  const orderCode = createOrderCode();
-
-  const pendingOrder = {
-    orderCode,
-    planId: plan.id,
-    planName: plan.name,
-    amount: plan.amount,
-    email: user.email,
-    createdAt: new Date().toISOString()
-  };
-
-  localStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(pendingOrder));
-
-  const returnUrl = window.location.href.split("?")[0];
-
-  const payUrl =
-    PAYMENT_BASE_URL +
-    "/pay.html" +
-    "?plan=" + encodeURIComponent(plan.id) +
-    "&amount=" + encodeURIComponent(plan.amount) +
-    "&content=" + encodeURIComponent(orderCode) +
-    "&email=" + encodeURIComponent(user.email) +
-    "&returnUrl=" + encodeURIComponent(returnUrl);
-
-  window.location.href = payUrl;
-}
-
-async function checkPendingPayment() {
-  const raw = localStorage.getItem(PENDING_ORDER_KEY);
-  if (!raw) return null;
-
-  let pending;
-  try {
-    pending = JSON.parse(raw);
-  } catch {
-    localStorage.removeItem(PENDING_ORDER_KEY);
-    return null;
-  }
-
-  if (!pending.orderCode) return null;
-
-  try {
-    const res = await fetch(
-      PAYMENT_BASE_URL +
-        "/api/payment-status?orderCode=" +
-        encodeURIComponent(pending.orderCode),
-      { cache: "no-store" }
-    );
-
-    const data = await res.json();
-
-    if (data && data.success && data.paid) {
-      const pro = savePro({
-        email: pending.email,
-        orderCode: pending.orderCode,
-        planId: data.planId || pending.planId,
-        planName: data.planName || pending.planName,
-        expiresAt: data.expiresAt
-      });
-
-      localStorage.removeItem(PENDING_ORDER_KEY);
-      return pro;
-    }
-
-    return null;
-  } catch (error) {
-    console.warn("Không kiểm tra được thanh toán:", error);
-    return null;
-  }
-}
-
-function canUseTool(user: User | null, pro: ProStatus | null, silent = false) {
-  if (!user) {
-    if (!silent) alert("Vui lòng đăng nhập Gmail để sử dụng tool.");
-    return false;
-  }
-
-  if (!pro || !pro.active) {
-    if (!silent) alert("Tài khoản chưa được kích hoạt PRO. Vui lòng nâng cấp gói để sử dụng.");
-    return false;
-  }
-
-  return true;
+  if (!silent) toast.error("Tài khoản đã hết hạn dùng thử. Vui lòng nâng cấp để tiếp tục.");
+  return false;
 }
 
 const DEFAULT_CONFIG: YouTubeConfig = {
@@ -440,11 +269,11 @@ const SUGGESTED_NICHES = [
 const STOP_LIMIT = 10;
 
 export default function App() {
-  // --- Login & Payment State ---
-  const [user, setUser] = useState<User | null>(getSavedUser());
-  const [pro, setPro] = useState<ProStatus | null>(getSavedPro());
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const { user, profile, loading: authLoading, logout, isPremium, isTrialActive, getRemainingTrialTime, isValidUser } = useAuth();
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [portalView, setPortalView] = useState<'packages' | 'payment'>('packages');
+  
+  const isPro = isPremium();
 
   // --- Existing State ---
   const [activeTab, setActiveTab] = useState(1);
@@ -646,20 +475,18 @@ export default function App() {
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
 
-    // Initial check for pending payment
-    if (localStorage.getItem(PENDING_ORDER_KEY)) {
-      setIsCheckingPayment(true);
-      checkPendingPayment().then(newPro => {
-        if (newPro) {
-          setPro(newPro);
-          alert("Thanh toán thành công! Tài khoản PRO đã được kích hoạt.");
-        }
-      }).finally(() => {
-        setIsCheckingPayment(false);
-      });
+    // Handle paid success from pay.html
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('paid') === 'success') {
+      toast.success("Thanh toán thành công! Tài khoản của bạn đang được nâng cấp PRO.", { duration: 5000 });
+      // Remove the param from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // Load daily quota and clear if it's a new day
+    // Storage cleanup if needed
+  }, []);
+
+  useEffect(() => {
     const savedQuotaTotal = localStorage.getItem('youtube_quota_today');
     if (savedQuotaTotal) {
       try {
@@ -832,7 +659,7 @@ export default function App() {
   };
 
   const runNicheResearch = async (customKeyword?: string) => {
-    if (!canUseTool(user, pro)) return;
+    if (!canUseTool(isValidUser)) return;
     const kw = customKeyword || nicheInput;
     if (!kw.trim()) {
       alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
@@ -1043,7 +870,7 @@ export default function App() {
   };
 
   const analyzeWithAI = async () => {
-    if (!canUseTool(user, pro)) return;
+    if (!canUseTool(isValidUser)) return;
     if (!geminiApiKey) {
       setStatus('Lỗi: Vui lòng nhập Gemini API Key ở trên header.');
       return;
@@ -1231,14 +1058,14 @@ export default function App() {
     try {
       // 1. Try Suggest Queries API (Fast, no quota, real search trends)
       try {
-        const suggestUrl = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(base)}&hl=vi`;
+        const suggestUrl = `/api/youtube-suggestions?q=${encodeURIComponent(base)}`;
         const sResponse = await fetch(suggestUrl).catch(() => null);
         if (sResponse && sResponse.ok) {
           const sData = await sResponse.json();
-          if (sData && sData[1]) {
+          if (Array.isArray(sData) && sData[1]) {
             const suggestions = sData[1] as string[];
             suggestions.slice(0, 15).forEach(s => {
-              if (s.toLowerCase() !== base.toLowerCase()) {
+              if (s.toLowerCase() !== base.toLowerCase() && !ideas.find(i => i.text.toLowerCase() === s.toLowerCase())) {
                 const sScore = (Math.random() * 3 + 1.5).toFixed(1);
                 const comps = ['Thấp', 'Trung bình', 'Cao'];
                 const comp = comps[Math.floor(Math.random() * comps.length)];
@@ -1372,7 +1199,7 @@ export default function App() {
   };
 
   const startHunter = async () => {
-    if (!canUseTool(user, pro)) return;
+    if (!canUseTool(isValidUser)) return;
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       return;
@@ -1625,7 +1452,7 @@ export default function App() {
   };
 
   const analyzeSpy = async (targetId?: string | any) => {
-    if (!canUseTool(user, pro)) return;
+    if (!canUseTool(isValidUser)) return;
     const query = (typeof targetId === 'string' && targetId) ? targetId : spyInput;
     if (!query || typeof query !== 'string') return;
     const input = query.trim();
@@ -1967,7 +1794,7 @@ ${topKeywordsStr}`;
   };
 
   const addAllToTracking = () => {
-    if (!canUseTool(user, pro)) return;
+    if (!canUseTool(isValidUser)) return;
     if (results.length === 0) {
       setStatus('Không có kết quả nào để thêm.');
       return;
@@ -2030,7 +1857,7 @@ ${topKeywordsStr}`;
   };
 
   const analyzeVideo = async (targetId?: string | any) => {
-    if (!canUseTool(user, pro)) return;
+    if (!canUseTool(isValidUser)) return;
     // If targetId is a React event, ignore it and use videoInput state
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
     if (!query || typeof query !== 'string') return;
@@ -2178,18 +2005,23 @@ ${topKeywordsStr}`;
             <div className="flex items-center gap-3 pr-3 border-r border-gray-200">
               <div className="text-right">
                 <div className="text-[11px] font-bold text-gray-900 leading-tight flex items-center justify-end gap-1">
-                  {user.displayName}
-                  {pro?.active ? (
+                  {profile?.fullname || user?.displayName}
+                  {isPro ? (
                     <span className="bg-green-100 text-green-700 px-1 rounded text-[9px] border border-green-200">PRO</span>
                   ) : (
-                    <span className="bg-gray-100 text-gray-500 px-1 rounded text-[9px] border border-gray-200">TRIAL 0H</span>
+                    <button 
+                      onClick={() => { window.location.href = `/pay.html?email=${encodeURIComponent(user?.email || '')}&userId=${encodeURIComponent(user?.uid || '')}&returnUrl=${encodeURIComponent(window.location.pathname)}`; }}
+                      className="bg-blue-100 text-blue-700 px-1 rounded text-[9px] border border-blue-200 hover:bg-blue-200 transition-colors"
+                    >
+                      {isTrialActive() ? `TRIAL (${getRemainingTrialTime()}H)` : 'HẾT HẠN'}
+                    </button>
                   )}
                 </div>
                 <div className="text-[10px] text-gray-500">{user.email}</div>
               </div>
-              <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-gray-300" referrerPolicy="no-referrer" />
+              <img src={user.photoURL || ''} alt="Avatar" className="w-8 h-8 rounded-full border border-gray-300" referrerPolicy="no-referrer" />
               <button 
-                onClick={logoutUser}
+                onClick={logout}
                 className="text-gray-400 hover:text-red-500 transition-colors p-1"
                 title="Đăng xuất"
               >
@@ -2198,16 +2030,16 @@ ${topKeywordsStr}`;
             </div>
           ) : (
             <button 
-              onClick={() => loginWithGooglePreview().then(u => u && setUser(u))}
+              onClick={() => { setPortalView('packages'); setPortalOpen(true); }}
               className="px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 text-[12px] font-bold flex items-center gap-2 hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
             >
               <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
-              Tiếp tục với Google
+              Đăng nhập
             </button>
           )}
 
           <button 
-            onClick={() => setShowUpgradeModal(true)}
+            onClick={() => { window.location.href = `/pay.html?email=${encodeURIComponent(user?.email || '')}&userId=${encodeURIComponent(user?.uid || '')}&returnUrl=${encodeURIComponent(window.location.pathname)}`; }}
             className="px-4 py-1.5 rounded-lg bg-orange-500 text-white border border-orange-600 hover:bg-orange-600 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-bold text-[12px]"
           >
             <Zap size={16} fill="white" />
@@ -2638,7 +2470,7 @@ ${topKeywordsStr}`;
                         )}
                         {results.map((r, i) => (
                           <tr 
-                            key={i} 
+                            key={r.id ? `main-res-${r.id}` : `main-res-idx-${i}`} 
                             onContextMenu={(e) => handleContextMenu(e, r)}
                             onClick={() => setSelectedResultId(r.id)}
                             className={`border-b border-[#eee] py-1 cursor-default text-[11px] h-9 transition-colors ${selectedResultId === r.id ? 'bg-[#9fc8ff]' : i % 2 === 0 ? 'bg-[#effff0]' : 'bg-[#ffffff]'}`}
@@ -2897,7 +2729,7 @@ ${topKeywordsStr}`;
                           <div className="font-bold text-gray-700 mb-1">Thẻ hàng đầu (Top tags):</div>
                           <div className="text-[11px] text-gray-700 bg-gray-50 p-2 border border-gray-100 rounded leading-normal max-h-32 overflow-y-auto flex flex-wrap gap-1">
                             {(spyResult.topTags || []).map((tagObj: any, idx: number) => (
-                              <span key={idx} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/tag">
+                              <span key={`tag-${idx}-${tagObj.text}`} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/tag">
                                 <span className="hover:text-blue-600 cursor-default">{tagObj.text} ({tagObj.count})</span>
                                 <button 
                                   onClick={(e) => {
@@ -2919,7 +2751,7 @@ ${topKeywordsStr}`;
                           <div className="text-[11px] text-gray-600 bg-gray-50 p-2 border border-gray-100 rounded leading-normal max-h-48 overflow-y-auto flex flex-wrap gap-1">
                             {spyResult.topKeywords && spyResult.topKeywords.length > 0 ? (
                               spyResult.topKeywords.map((kwObj: any, idx: number) => (
-                                <span key={idx} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/kw">
+                                <span key={`kw-${idx}-${kwObj.text}`} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/kw">
                                   <span className="hover:text-blue-600 cursor-default">{kwObj.text} ({kwObj.count})</span>
                                   <button 
                                     onClick={(e) => {
@@ -2962,7 +2794,7 @@ ${topKeywordsStr}`;
                         </thead>
                         <tbody>
                           {spyResult.videos.map((v, i) => (
-                            <tr key={i} className="border-b border-[#eee] hover:bg-[#f9f9f9] text-[11px]">
+                            <tr key={v.id || i} className="border-b border-[#eee] hover:bg-[#f9f9f9] text-[11px]">
                               <td className="px-2 py-1 text-center">
                                 <img src={v.thumbnail} className="w-20 h-14 object-cover rounded shadow-sm border border-[#ccc]" />
                               </td>
@@ -3099,7 +2931,7 @@ ${topKeywordsStr}`;
                       )
                       .map((c, i) => (
                       <tr 
-                        key={i} 
+                        key={c.id || `tracking-${i}-${c.title}`} 
                         className="border-b border-[#eee] hover:bg-[#f9f9f9]"
                         onContextMenu={(e) => handleContextMenu(e, {
                           id: c.id,
@@ -3472,7 +3304,7 @@ ${topKeywordsStr}`;
                          { label: 'Đối Thủ Cùng Ngách', value: nicheResults.summary.uniqueChannels, icon: Users, color: '#9b59b6' },
                          { label: 'Tổng View Ngách (Item)', value: (nicheResults.summary.totalViews / 1000000).toFixed(1) + 'M', icon: Eye, color: '#e74c3c' },
                        ].map((stat, i) => (
-                         <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:translate-y-[-4px] transition-all">
+                         <div key={`nstat-${stat.label || i}`} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:translate-y-[-4px] transition-all">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ backgroundColor: stat.color + '15', color: stat.color }}>
                                <stat.icon size={24} />
                             </div>
@@ -3491,7 +3323,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-3">
                              {nicheResults.keywords.slice(0, 8).map((kw: any, i: number) => (
-                               <div key={i} className="flex items-center justify-between group">
+                               <div key={kw.id || kw.text || i} className="flex items-center justify-between group">
                                   <div className="flex items-center gap-3">
                                      <span className="text-[10px] font-black text-gray-300">#0{i+1}</span>
                                      <span className="text-[13px] font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{kw.text}</span>
@@ -3516,7 +3348,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
-                               <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
+                               <div key={v.id || i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
                                   <div className="absolute top-2 right-2 bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg z-10">
                                      TREND SCORE: {v.trendScore}
                                   </div>
@@ -3581,7 +3413,7 @@ ${topKeywordsStr}`;
                                </thead>
                                <tbody className="divide-y divide-gray-100">
                                   {nicheResults.keywords.slice(0, displayKeywordLimit === 'all' ? undefined : (displayKeywordLimit as number)).map((kw: any, i: number) => (
-                                     <tr key={i} className="hover:bg-gray-50 transition-colors group">
+                                     <tr key={kw.id || kw.text || i} className="hover:bg-gray-50 transition-colors group">
                                         <td className="px-6 py-4">
                                            <div className="flex items-center gap-2">
                                               <span className="text-blue-500 font-bold">#</span>
@@ -3616,7 +3448,7 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-500">
                       {nicheResults.videos.map((v: any, i: number) => (
-                         <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                         <div key={v.id ? `v-${v.id}` : `v-idx-${i}`} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
@@ -3670,7 +3502,7 @@ ${topKeywordsStr}`;
                       {nicheResults.shorts.length === 0 ? (
                         <div className="col-span-full py-20 text-center text-gray-400 italic">Không tìm thấy video Shorts nào trong danh sách được tải. Thử phân tích lại với số lượng items lớn hơn.</div>
                       ) : nicheResults.shorts.map((v: any, i: number) => (
-                         <div key={i} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
+                         <div key={v.id ? `s-${v.id}` : `s-idx-${i}`} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover opacity-80" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
@@ -3705,7 +3537,7 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="space-y-4 animate-in slide-in-from-left duration-500">
                       {nicheResults.channels.map((c: any, i: number) => (
-                         <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
+                         <div key={c.id ? `c-${c.id}` : `c-idx-${i}`} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
                                   <img src={c.snippet.thumbnails.default.url} className="w-16 h-16 rounded-full border-2 border-white shadow-xl" />
@@ -3758,7 +3590,7 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in zoom-in duration-500">
                       {nicheResults.thumbnails.map((v: any, i: number) => (
-                         <div key={i} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
+                         <div key={v.id ? `t-${v.id}` : `t-idx-${i}`} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
                             <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -3915,7 +3747,7 @@ ${topKeywordsStr}`;
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {videoProjects.map((p, idx) => (
                           <div 
-                            key={idx} 
+                            key={p.id || idx} 
                             onClick={() => {
                               setVideoResult(p);
                               setVideoInput(p.id);
@@ -4001,13 +3833,13 @@ ${topKeywordsStr}`;
                     <div className="lg:col-span-8 flex flex-col gap-4">
                       {/* Metrics Card Row */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                          { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
-                          { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
-                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
-                          { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
-                        ].map((stat, i) => (
-                          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          {[
+                            { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
+                            { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
+                            { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
+                            { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
+                          ].map((stat) => (
+                            <div key={stat.label} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                             <div className={`p-2 rounded-lg ${stat.iconBg} ${stat.color}`}>
                               <stat.icon size={20} />
                             </div>
@@ -4191,7 +4023,7 @@ ${topKeywordsStr}`;
                       <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-6 text-left">
                         <div className="flex flex-wrap gap-2">
                           {videoResult.snippet.tags ? videoResult.snippet.tags.map((tag: string, i: number) => (
-                            <div key={i} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
+                            <div key={`vtag-${i}-${tag}`} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
                               {tag}
                             </div>
                           )) : (
@@ -4229,7 +4061,7 @@ ${topKeywordsStr}`;
                       <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
                         {videoResult._comments && videoResult._comments.length > 0 ? (
                           videoResult._comments.map((comment: any, idx: number) => (
-                            <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
+                             <div key={comment.id || idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
                               {idx === 0 && (
                                 <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
                                   <Pin size={8} className="rotate-45" /> TOP/PINNED
@@ -4579,103 +4411,6 @@ ${topKeywordsStr}`;
         )}
       </AnimatePresence>
 
-      {/* Upgrade Plan Modal */}
-      <AnimatePresence>
-        {showUpgradeModal && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div 
-              className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-gray-100 flex flex-col"
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            >
-              <div className="bg-gradient-to-r from-[#e67e22] to-[#f39c12] p-6 text-white flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <Zap size={24} fill="white" />
-                  <h3 className="font-black text-xl uppercase tracking-wider">Chọn gói Premium</h3>
-                </div>
-                <button 
-                  onClick={() => setShowUpgradeModal(false)}
-                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="p-8 bg-gray-50 flex-1">
-                <div className="grid grid-cols-2 gap-6">
-                  {PREMIUM_PLANS.map((plan) => (
-                    <div 
-                      key={plan.id}
-                      className="bg-white p-6 rounded-2xl border-2 border-gray-100 hover:border-orange-500 transition-all flex flex-col group relative overflow-hidden"
-                    >
-                      {plan.id === '12m' && (
-                        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase">Tiết kiệm nhất</div>
-                      )}
-                      <div className="text-[14px] font-black text-gray-800 mb-1">{plan.name}</div>
-                      <div className="flex items-baseline gap-1 mb-4">
-                        <span className="text-3xl font-black text-orange-500">{plan.priceText}</span>
-                        <span className="text-gray-400 text-[12px] font-bold">/ {plan.label}</span>
-                      </div>
-                      <ul className="space-y-2 mb-6 flex-1">
-                        <li className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
-                          <CheckCircle2 size={14} className="text-green-500" /> Toàn bộ tính năng PRO
-                        </li>
-                        <li className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
-                          <CheckCircle2 size={14} className="text-green-500" /> Kích hoạt Trí tuệ nhân tạo
-                        </li>
-                        <li className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
-                          <CheckCircle2 size={14} className="text-green-500" /> Hỗ trợ 24/7 từ Văn Thế Web
-                        </li>
-                      </ul>
-                      <button 
-                        onClick={() => goToPayment(plan, user)}
-                        className="w-full py-3 rounded-xl bg-gray-900 text-white font-black uppercase text-[12px] tracking-widest hover:bg-orange-500 transition-all group-hover:scale-[1.02] active:scale-95 shadow-lg shadow-gray-200"
-                      >
-                        Thanh toán gói này
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
-                  <p className="text-[11px] text-orange-800 font-bold leading-relaxed">
-                    Mẹo: Sau khi bấm thanh toán, bạn sẽ được chuyển sang trang thanh toán riêng (pay.html). 
-                    Vui lòng quét mã QR và chuyển khoản đúng số tiền + nội dung (orderCode). 
-                    Hệ thống sẽ tự động kích hoạt ngay sau khi nhận được tiền.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Payment Checking Overlay */}
-      <AnimatePresence>
-        {isCheckingPayment && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-            <motion.div 
-              className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <div className="relative">
-                <Loader2 className="animate-spin text-orange-500" size={48} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Zap size={16} fill="#f97316" className="text-orange-500" />
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="font-black text-[14px] text-gray-800 uppercase tracking-tighter">Đang kiểm tra thanh toán...</div>
-                <div className="text-[11px] text-gray-400 font-bold">Vui lòng đợi trong giây lát</div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* Footer Info */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-4 py-1.5 flex justify-between items-center text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
         <div className="flex gap-4 items-center">
@@ -4841,16 +4576,16 @@ ${topKeywordsStr}`;
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {SUGGESTED_NICHES.map((category, idx) => (
-                    <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
+                  {SUGGESTED_NICHES.map((category) => (
+                    <div key={category.category} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
                         <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{category.items.length} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.map((item, itemIdx) => (
+                        {category.items.map((item) => (
                           <button
-                            key={itemIdx}
+                            key={item}
                             onClick={() => {
                               setNicheInput(item);
                               setShowNicheModal(false);
@@ -4876,6 +4611,18 @@ ${topKeywordsStr}`;
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {/* Portal & Toast */}
+        <Toaster position="top-center" />
+        <AuthPortal
+          isOpen={portalOpen}
+          onClose={() => setPortalOpen(false)}
+          user={user}
+          profile={profile}
+          initialView={portalView}
+        />
       </AnimatePresence>
 
     </div>
