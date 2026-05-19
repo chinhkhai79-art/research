@@ -1145,7 +1145,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       localStorage.setItem('youtube_suggested_niches_trending', JSON.stringify(updatedNiches));
 
       setStatus('Đã cập nhật Trending tiết kiệm quota: YouTube V3 dưới 500 quota + Gemini AI tạo 3 key/chủ đề.');
-      alert('Đã cập nhật Trending thành công. Mỗi chủ đề còn 5 key: 2 key từ YouTube V3 + 3 key từ Gemini AI. Kết quả đã được lưu trên trình duyệt.');
+      alert('Đã cập nhật Trending thành công.');
     } catch (error: any) {
       console.error(error);
       setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
