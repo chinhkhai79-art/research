@@ -387,12 +387,42 @@ export default function App() {
       <style>
         #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
         #vtw-account-status-root-20260519 .vtw-float-btn {
-          position: fixed !important; right: 18px !important; bottom: 64px !important; z-index: 2147483646 !important;
-          border: 3px solid #fff !important; border-radius: 999px !important; padding: 11px 16px !important;
-          background: ${isPremiumAccount ? 'linear-gradient(135deg,#2563eb,#06b6d4)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#ef4444,#dc2626)'} !important;
-          color: #fff !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase !important;
-          box-shadow: 0 14px 45px rgba(15,23,42,.35) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
+          position: fixed !important;
+          top: 9px !important;
+          right: 340px !important;
+          bottom: auto !important;
+          z-index: 2147483646 !important;
+          border: 2px solid #ffffff !important;
+          border-radius: 999px !important;
+          padding: 8px 14px !important;
+          min-height: 36px !important;
+          background: linear-gradient(135deg,#2563eb,#0ea5e9) !important;
+          color: #fff !important;
+          font-weight: 900 !important;
+          font-size: 12px !important;
+          text-transform: uppercase !important;
+          box-shadow: 0 8px 24px rgba(37,99,235,.28) !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          white-space: nowrap !important;
         }
+        @media (max-width: 1180px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            right: 280px !important;
+            font-size: 11px !important;
+            padding: 7px 11px !important;
+          }
+        }
+        @media (max-width: 900px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            top: 64px !important;
+            right: 12px !important;
+          }
+        }
+        body, #root { background: #eaf6ff !important; }
+        .bg-\[\#f4f4f4\] { background-color: #eaf6ff !important; }
         #vtw-account-status-root-20260519 .vtw-overlay {
           position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
           background: rgba(15,23,42,.52) !important; backdrop-filter: blur(3px) !important; padding: 18px !important;
@@ -418,7 +448,6 @@ export default function App() {
             <div style="border-radius:18px;padding:15px;margin-bottom:12px;border:1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'};background:${isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'};">
               <div style="font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;">Trạng thái</div>
               <div style="font-size:22px;font-weight:900;margin-top:5px;color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'};">${statusTitle}</div>
-              <div style="font-size:11px;font-weight:900;color:#f97316;margin-top:8px;">UI_PROOF_20260519_RENDERED</div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="vtw-card"><div class="vtw-label">Gói đã đăng ký</div><div class="vtw-value">${planText}</div></div>
@@ -2341,7 +2370,7 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+    <div className="min-h-screen bg-[#eaf6ff] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
       <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -2357,7 +2386,7 @@ ${topKeywordsStr}`;
 
           <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user && (
-              <div className="hidden xl:flex items-center gap-2 min-w-0">
+              <div className="hidden items-center gap-2 min-w-0">
                 <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
                   <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
                   <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
@@ -2482,7 +2511,7 @@ ${topKeywordsStr}`;
         </div>
 
         {user && (
-          <div className="xl:hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
             <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
               <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
               <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
@@ -2518,7 +2547,7 @@ ${topKeywordsStr}`;
       </div>
 
       {/* Main Container */}
-      <div className="p-4 pt-2">
+      <div className="p-4 pt-2 bg-[#eaf6ff]">
         {!user ? (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
             <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
