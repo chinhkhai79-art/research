@@ -875,12 +875,12 @@ export default function App() {
 
   const fetchDailyTrendingFromYouTube = async () => {
     if (config.apiKeys.length === 0) {
-      alert("Vui lòng nhập API Key YouTube V3 để cập nhật Trending.");
+      alert('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
       return;
     }
 
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật Trending tiết kiệm quota: YouTube V3 lấy 2 key thật + Gemini gợi ý 3 key...');
+    setStatus('Đang cập nhật trend');
 
     const normalizeText = (value: string) =>
       (value || '')
@@ -897,20 +897,169 @@ export default function App() {
         .replace(/\s+/g, ' ')
         .trim();
 
-    const uniqueLimit = (items: string[], limit = 5) => {
+    const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
+      'PHÁT TRIỂN BẢN THÂN': {
+        hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
+        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation']
+      },
+      'SỨC KHỎE & LÀM ĐẸP': {
+        hint: 'sức khỏe, giảm cân, skincare, làm đẹp, yoga, fitness, chăm sóc cơ thể',
+        rules: ['suc khoe', 'lam dep', 'skincare', 'giam can', 'yoga', 'trang diem', 'mun', 'toc', 'health', 'beauty', 'fitness']
+      },
+      'CÔNG NGHỆ & AI': {
+        hint: 'AI, ChatGPT, Gemini, điện thoại, phần mềm, công nghệ, app, thủ thuật số',
+        rules: ['cong nghe', 'ai', 'chatgpt', 'gemini', 'iphone', 'android', 'dien thoai', 'may tinh', 'phan mem', 'technology']
+      },
+      'GIÁO DỤC & HỌC TẬP': {
+        hint: 'học tập, ngoại ngữ, IELTS, TOEIC, lập trình, ôn thi, phương pháp học',
+        rules: ['giao duc', 'hoc tap', 'hoc tieng', 'ielts', 'toeic', 'lap trinh', 'python', 'on thi', 'education', 'learning']
+      },
+      'ẨM THỰC & NẤU ĂN': {
+        hint: 'món ăn, công thức nấu ăn, review quán ăn, bếp, đồ ăn, ẩm thực gia đình',
+        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe'],
+        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'chatgpt']
+      },
+      'DU LỊCH & KHÁM PHÁ': {
+        hint: 'du lịch, khám phá địa điểm, resort, vé máy bay, phượt, cắm trại, travel vlog',
+        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour'],
+        banned: ['bolero', 'hybe', 'lck', 'chatgpt']
+      },
+      'GIẢI TRÍ & HÀI HƯỚC': {
+        hint: 'giải trí, phim, hài, meme, reaction, drama, người nổi tiếng, thử thách',
+        rules: ['giai tri', 'hai', 'funny', 'meme', 'reaction', 'phim', 'anime', 'prank', 'thu thach', 'entertainment']
+      },
+      'THỂ THAO & THỂ HÌNH': {
+        hint: 'thể thao, gym, bóng đá, cầu lông, tennis, workout, fitness',
+        rules: ['the thao', 'gym', 'fitness', 'bong da', 'cau long', 'tennis', 'chay bo', 'workout', 'tang co', 'giam mo'],
+        banned: ['bolero', 'hybe']
+      },
+      'PETS & ĐỘNG VẬT': {
+        hint: 'thú cưng, chó mèo, động vật, chăm sóc pet, huấn luyện pet',
+        rules: ['pet', 'thu cung', 'dong vat', 'cho', 'meo', 'cat', 'dog', 'animal', 'grooming', 'bo sat'],
+        banned: ['bolero', 'hybe', 'lck']
+      },
+      'GIA ĐÌNH & ĐỜI SỐNG': {
+        hint: 'gia đình, đời sống, dọn nhà, nuôi con, mẹo nhà cửa, sống xanh',
+        rules: ['gia dinh', 'doi song', 'meo vat', 'don nha', 'nuoi con', 'me bim', 'trong rau', 'home', 'family', 'life']
+      },
+      'NGHỆ THUẬT & SÁNG TẠO': {
+        hint: 'vẽ, thiết kế, chụp ảnh, edit video, guitar, Canva, sáng tạo nội dung',
+        rules: ['nghe thuat', 'sang tao', 've tranh', 'chup anh', 'guitar', 'canva', 'edit video', 'art', 'creative', 'design']
+      },
+      'CÔNG NGHỆ Ô TÔ & XE MÁY': {
+        hint: 'ô tô, xe máy, xe điện, review xe, bảo dưỡng xe, phụ kiện xe',
+        rules: ['oto', 'xe may', 'xe dien', 'review xe', 'bao duong xe', 'phu kien oto', 'car', 'motorbike', 'vehicle'],
+        banned: ['bolero', 'hybe']
+      },
+      'TÂM LÝ HỌC & MỐI QUAN HỆ': {
+        hint: 'tâm lý học, tình yêu, mối quan hệ, MBTI, chữa lành, hôn nhân',
+        rules: ['tam ly', 'moi quan he', 'tinh yeu', 'chia tay', 'mbti', 'hon nhan', 'doc hai', 'psychology', 'relationship']
+      },
+      'ESPORTS & GAMING': {
+        hint: 'game, esports, Liên Quân, LCK, Valorant, PUBG, Genshin, LOL',
+        rules: ['game', 'gaming', 'esports', 'lien quan', 'tft', 'valorant', 'pubg', 'genshin', 'lol', 'mobile game', 'lck']
+      },
+      'HUYỀN BÍ & TÂM LINH': {
+        hint: 'huyền bí, tâm linh, tarot, giấc mơ, phong thủy, bí ẩn',
+        rules: ['huyen bi', 'tam linh', 'tarot', 'giac mo', 'bi an', 'phong thuy', 'nhan qua', 'supernatural', 'mystery']
+      },
+      'MẸO VẶT CUỘC SỐNG': {
+        hint: 'mẹo vặt, life hack, sửa chữa, tái chế, mẹo nhà bếp, mẹo sinh hoạt',
+        rules: ['meo vat', 'life hack', 'sua chua', 'tai che', 'bao quan', 'lo vi song', 'ung dung huu ich', 'tips']
+      },
+      'VĂN HÓA & LỊCH SỬ': {
+        hint: 'lịch sử, văn hóa, di tích, nhân vật lịch sử, chiến tranh, triều đại',
+        rules: ['lich su', 'van hoa', 'trieu dai', 'chien tranh', 'di tich', 'nhan vat lich su', 'history', 'culture']
+      },
+      'THỜI TRANG & PHONG CÁCH': {
+        hint: 'thời trang, phối đồ, local brand, sneaker, outfit, phong cách cá nhân',
+        rules: ['thoi trang', 'phoi do', 'local brand', 'vintage', 'sneaker', 'fashion', 'style', 'outfit']
+      },
+      'NÔNG NGHIỆP CÔNG NGHỆ CAO': {
+        hint: 'nông nghiệp, trồng trọt, thủy canh, nuôi tôm, cây cảnh, công nghệ nông nghiệp',
+        rules: ['nong nghiep', 'trong rau', 'thuy canh', 'nuoi tom', 'sau rieng', 'hoa lan', 'cay canh', 'agriculture']
+      },
+      'REVIEW SẢN PHẨM & UNBOXING': {
+        hint: 'review sản phẩm, unboxing, đồ công nghệ, đồ gia dụng, mỹ phẩm, Shopee, phụ kiện',
+        rules: ['review', 'unboxing', 'shopee', 'san pham', 'my pham', 'do cong nghe', 'ban phim', 'smartwatch', 'do gia dung'],
+        banned: ['bolero', 'nhac bolero', 'nhac', 'music', 'karaoke', 'cover', 'lck', 'lien minh', 'hybe', 'son tung']
+      },
+      'NHẠC & COVER': {
+        hint: 'nhạc, cover, bolero, lofi, karaoke, remix, acoustic, bài hát',
+        rules: ['nhac', 'cover', 'lofi', 'karaoke', 'beat', 'remix', 'acoustic', 'music', 'song', 'bolero']
+      },
+      'BẤT ĐỘNG SẢN & NHÀ CỬA': {
+        hint: 'bất động sản, nhà đất, căn hộ, nội thất, phong thủy nhà, thiết kế nhà',
+        rules: ['bat dong san', 'nha cua', 'can ho', 'nha pho', 'noi that', 'phong thuy nha', 'real estate', 'home']
+      },
+      'CÂU CHUYỆN KHỞI NGHIỆP': {
+        hint: 'khởi nghiệp, kinh doanh, startup, bán hàng, marketing, quản trị, kiếm tiền',
+        rules: ['khoi nghiep', 'kinh doanh', 'startup', 'ban hang', 'marketing 0 dong', 'quan cafe', 'business']
+      },
+      'CHUYỆN LẠ BỐN PHƯƠNG': {
+        hint: 'chuyện lạ, hiện tượng kỳ lạ, khám phá độc lạ, kỷ lục, sinh vật lạ',
+        rules: ['chuyen la', 'ky la', 'guinness', 'sinh vat bien', 'hien tuong', 'doc la', 'strange', 'weird']
+      },
+      'ASMR & MUKBANG': {
+        hint: 'ASMR, mukbang, ăn uống, âm thanh thư giãn, ăn cay, hải sản',
+        rules: ['asmr', 'mukbang', 'an uong', 'go phim', 'thu gian', 'hai san', 'do an cay']
+      },
+      'XÂY DỰNG & KIẾN TRÚC': {
+        hint: 'xây dựng, kiến trúc, thi công, chống thấm, máy xúc, thiết kế công trình',
+        rules: ['xay dung', 'kien truc', 'thi cong', 'chong tham', 'xi mang', 'may xuc', 'construction', 'architecture']
+      },
+      'MARKETING & TRUYỀN THÔNG': {
+        hint: 'marketing, affiliate, SEO, quảng cáo, content, truyền thông, case study',
+        rules: ['marketing', 'affiliate', 'seo', 'facebook ads', 'content', 'truyen thong', 'case study']
+      },
+      'TRỊ LIỆU ÂM THANH': {
+        hint: 'âm thanh chữa lành, 432hz, tiếng mưa, white noise, nhạc thiền, sleep music',
+        rules: ['am thanh', '432hz', 'tieng mua', 'song bien', 'nhac thien', 'white noise', 'sleep music', 'healing']
+      },
+      'ĐAN LEN & THÊU THÙA': {
+        hint: 'đan len, móc len, crochet, thêu, kim móc, đồ handmade len',
+        rules: ['dan len', 'moc len', 'crochet', 'theu', 'kim moc', 'tui xach len', 'knitting']
+      },
+      'TÀI CHÍNH & ĐẦU TƯ': {
+        hint: 'tài chính, đầu tư, chứng khoán, crypto, tiết kiệm tiền, kiếm tiền online, thẻ tín dụng',
+        rules: ['tai chinh', 'dau tu', 'chung khoan', 'crypto', 'tiet kiem tien', 'the tin dung', 'kiem tien online', 'finance', 'investment'],
+        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'nau an']
+      }
+    };
+
+    const GLOBAL_BLOCK_BY_CATEGORY = (category: string) => {
+      const blocks = ['bac gau vlog', 'bac gau reaction', 'hybe labels'];
+      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover');
+      if (category !== 'ESPORTS & GAMING') blocks.push('lck live', 'lien minh huyen thoai');
+      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('son tung');
+      return blocks;
+    };
+
+    const isRelevantForCategory = (category: string, keyword: string, strict = false) => {
+      const cleaned = normalizeText(cleanKeyword(keyword));
+      if (!cleaned) return false;
+      const profile = CATEGORY_PROFILES[category];
+      const banned = [...(profile?.banned || []), ...GLOBAL_BLOCK_BY_CATEGORY(category)].map(normalizeText);
+      if (banned.some(bad => cleaned.includes(bad))) return false;
+      if (!strict) return true;
+      const rules = (profile?.rules || []).map(normalizeText);
+      return rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
+    };
+
+    const uniqueLimit = (items: string[], limit = 5, category?: string, strict = false) => {
       const seen = new Set<string>();
       const output: string[] = [];
 
       for (const raw of items) {
         const cleaned = cleanKeyword(raw);
         if (!cleaned || cleaned.length < 3 || cleaned.length > 42) continue;
+        if (category && !isRelevantForCategory(category, cleaned, strict)) continue;
 
         const key = normalizeText(cleaned);
         if (seen.has(key)) continue;
 
         seen.add(key);
         output.push(cleaned);
-
         if (output.length >= limit) break;
       }
 
@@ -921,16 +1070,12 @@ export default function App() {
       const title = video?.snippet?.title || '';
       const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
       const description = video?.snippet?.description || '';
-
       const candidates: string[] = [];
 
       tags.forEach((tag: string) => {
         const cleaned = cleanKeyword(tag);
         if (cleaned && cleaned.length >= 3 && cleaned.length <= 42) candidates.push(cleaned);
       });
-
-      const titleText = cleanKeyword(title);
-      if (titleText) candidates.push(titleText);
 
       const phrases = `${title} ${description}`
         .split(/[|,.;:!?()\[\]{}"“”'’\n\r\t]+/g)
@@ -944,60 +1089,24 @@ export default function App() {
       return candidates;
     };
 
-    const CATEGORY_RULES: Record<string, string[]> = {
-      'PHÁT TRIỂN BẢN THÂN': ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation'],
-      'SỨC KHỎE & LÀM ĐẸP': ['suc khoe', 'lam dep', 'skincare', 'giam can', 'yoga', 'trang diem', 'mun', 'toc', 'health', 'beauty', 'fitness'],
-      'CÔNG NGHỆ & AI': ['cong nghe', 'ai', 'chatgpt', 'gemini', 'iphone', 'android', 'dien thoai', 'may tinh', 'phan mem', 'technology'],
-      'GIÁO DỤC & HỌC TẬP': ['giao duc', 'hoc tap', 'hoc tieng', 'ielts', 'toeic', 'lap trinh', 'python', 'on thi', 'education', 'learning'],
-      'ẨM THỰC & NẤU ĂN': ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe'],
-      'DU LỊCH & KHÁM PHÁ': ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour'],
-      'GIẢI TRÍ & HÀI HƯỚC': ['giai tri', 'hai', 'funny', 'meme', 'reaction', 'phim', 'anime', 'prank', 'thu thach', 'entertainment'],
-      'THỂ THAO & THỂ HÌNH': ['the thao', 'gym', 'fitness', 'bong da', 'cau long', 'tennis', 'chay bo', 'workout', 'tang co', 'giam mo'],
-      'PETS & ĐỘNG VẬT': ['pet', 'thu cung', 'dong vat', 'cho', 'meo', 'cat', 'dog', 'animal', 'grooming', 'bo sat'],
-      'GIA ĐÌNH & ĐỜI SỐNG': ['gia dinh', 'doi song', 'meo vat', 'don nha', 'nuoi con', 'me bim', 'trong rau', 'home', 'family', 'life'],
-      'NGHỆ THUẬT & SÁNG TẠO': ['nghe thuat', 'sang tao', 've tranh', 'chup anh', 'guitar', 'canva', 'edit video', 'art', 'creative', 'design'],
-      'CÔNG NGHỆ Ô TÔ & XE MÁY': ['oto', 'xe may', 'xe dien', 'review xe', 'bao duong xe', 'phu kien oto', 'car', 'motorbike', 'vehicle'],
-      'TÂM LÝ HỌC & MỐI QUAN HỆ': ['tam ly', 'moi quan he', 'tinh yeu', 'chia tay', 'mbti', 'hon nhan', 'doc hai', 'psychology', 'relationship'],
-      'ESPORTS & GAMING': ['game', 'gaming', 'esports', 'lien quan', 'tft', 'valorant', 'pubg', 'genshin', 'lol', 'mobile game'],
-      'HUYỀN BÍ & TÂM LINH': ['huyen bi', 'tam linh', 'tarot', 'giac mo', 'bi an', 'phong thuy', 'nhan qua', 'supernatural', 'mystery'],
-      'MẸO VẶT CUỘC SỐNG': ['meo vat', 'life hack', 'sua chua', 'tai che', 'bao quan', 'lo vi song', 'ung dung huu ich', 'tips'],
-      'VĂN HÓA & LỊCH SỬ': ['lich su', 'van hoa', 'trieu dai', 'chien tranh', 'di tich', 'nhan vat lich su', 'history', 'culture'],
-      'THỜI TRANG & PHONG CÁCH': ['thoi trang', 'phoi do', 'local brand', 'vintage', 'sneaker', 'fashion', 'style', 'outfit'],
-      'NÔNG NGHIỆP CÔNG NGHỆ CAO': ['nong nghiep', 'trong rau', 'thuy canh', 'nuoi tom', 'sau rieng', 'hoa lan', 'cay canh', 'agriculture'],
-      'REVIEW SẢN PHẨM & UNBOXING': ['review', 'unboxing', 'shopee', 'san pham', 'my pham', 'do cong nghe', 'ban phim', 'smartwatch'],
-      'NHẠC & COVER': ['nhac', 'cover', 'lofi', 'karaoke', 'beat', 'remix', 'acoustic', 'music', 'song'],
-      'BẤT ĐỘNG SẢN & NHÀ CỬA': ['bat dong san', 'nha cua', 'can ho', 'nha pho', 'noi that', 'phong thuy nha', 'real estate', 'home'],
-      'CÂU CHUYỆN KHỞI NGHIỆP': ['khoi nghiep', 'kinh doanh', 'startup', 'ban hang', 'marketing 0 dong', 'quan cafe', 'business'],
-      'CHUYỆN LẠ BỐN PHƯƠNG': ['chuyen la', 'ky la', 'guinness', 'sinh vat bien', 'hien tuong', 'doc la', 'strange', 'weird'],
-      'ASMR & MUKBANG': ['asmr', 'mukbang', 'an uong', 'go phim', 'thu gian', 'hai san', 'do an cay'],
-      'XÂY DỰNG & KIẾN TRÚC': ['xay dung', 'kien truc', 'thi cong', 'chong tham', 'xi mang', 'may xuc', 'construction', 'architecture'],
-      'MARKETING & TRUYỀN THÔNG': ['marketing', 'affiliate', 'seo', 'facebook ads', 'content', 'truyen thong', 'case study'],
-      'TRỊ LIỆU ÂM THANH': ['am thanh', '432hz', 'tieng mua', 'song bien', 'nhac thien', 'white noise', 'sleep music', 'healing'],
-      'ĐAN LEN & THÊU THÙA': ['dan len', 'moc len', 'crochet', 'theu', 'kim moc', 'tui xach len', 'knitting'],
-      'TÀI CHÍNH & ĐẦU TƯ': ['tai chinh', 'dau tu', 'chung khoan', 'crypto', 'tiet kiem tien', 'the tin dung', 'kiem tien online', 'finance', 'investment']
-    };
-
     const TARGETED_QUERY_BY_CATEGORY: Record<string, string> = {
-      'ẨM THỰC & NẤU ĂN': 'ẩm thực nấu ăn món ngon công thức đang trend',
-      'TÀI CHÍNH & ĐẦU TƯ': 'tài chính đầu tư chứng khoán kiếm tiền online đang trend'
+      'ẨM THỰC & NẤU ĂN': 'ẩm thực nấu ăn món ngon công thức hot trend',
+      'TÀI CHÍNH & ĐẦU TƯ': 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
     };
 
     try {
-      const sourceNiches = SUGGESTED_NICHES.map((base) => {
-        const current = suggestedNiches.find((item) => item.category === base.category);
-        return {
-          ...base,
-          items: uniqueLimit(current?.items?.length ? current.items : base.items, 5)
-        };
-      });
+      // Luôn bắt đầu từ danh sách gốc để loại bỏ key sai đã lưu trước đó.
+      const sourceNiches = SUGGESTED_NICHES.map((base) => ({
+        ...base,
+        items: uniqueLimit(base.items, 5, base.category)
+      }));
 
       const categoryKeywordMap: Record<string, string[]> = {};
       sourceNiches.forEach((niche) => {
         categoryKeywordMap[niche.category] = [];
       });
 
-      // YouTube V3 quota tiết kiệm:
-      // videos.list chart=mostPopular = 1 quota, lấy nguồn trend chung cho toàn bộ 30 chủ đề.
+      // Tiết kiệm quota: 1 lượt videos.list chart=mostPopular = 1 quota, dùng làm nguồn trend chung.
       const popularRes = await youtubeFetch('videos', {
         part: 'snippet,statistics',
         chart: 'mostPopular',
@@ -1015,8 +1124,8 @@ export default function App() {
         ].join(' '));
 
         sourceNiches.forEach((niche) => {
-          const rules = CATEGORY_RULES[niche.category] || [niche.category];
-          const matched = rules.some((rule) => haystack.includes(normalizeText(rule)));
+          const profile = CATEGORY_PROFILES[niche.category];
+          const matched = (profile?.rules || []).some((rule) => haystack.includes(normalizeText(rule)));
 
           if (matched) {
             categoryKeywordMap[niche.category].push(...pickCandidateWords(video));
@@ -1024,7 +1133,7 @@ export default function App() {
         });
       });
 
-      // Sửa riêng 2 mục hay bị không hoạt động: chỉ dùng 2 lượt search, tổng vẫn dưới 500 quota.
+      // Sửa riêng 2 mục hay thiếu dữ liệu: 2 lượt search = khoảng 200 quota, tổng vẫn dưới 500.
       for (const [category, query] of Object.entries(TARGETED_QUERY_BY_CATEGORY)) {
         try {
           const searchRes = await youtubeFetch('search', {
@@ -1058,13 +1167,13 @@ export default function App() {
 
       const youtubeKeywordMap: Record<string, string[]> = {};
       sourceNiches.forEach((niche) => {
-        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2);
+        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, false);
       });
 
       const categoriesNeedGemini = sourceNiches.map((niche) => ({
         category: niche.category,
-        youtubeKeys: youtubeKeywordMap[niche.category],
-        oldKeys: niche.items.slice(0, 5)
+        description: CATEGORY_PROFILES[niche.category]?.hint || niche.category,
+        youtubeKeys: youtubeKeywordMap[niche.category]
       }));
 
       let geminiKeywordMap: Record<string, string[]> = {};
@@ -1075,16 +1184,18 @@ export default function App() {
           const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
           const prompt = `
-Bạn là chuyên gia nghiên cứu trend YouTube cho thị trường ${REGIONS.find(r => r.code === trendingRegion)?.name || 'Việt Nam'}.
+Bạn là chuyên gia nghiên cứu trend YouTube tại ${REGIONS.find(r => r.code === trendingRegion)?.name || 'Việt Nam'}.
 Hãy tạo đúng 3 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
 
 Yêu cầu bắt buộc:
 - Trả về JSON thuần, không markdown, không giải thích.
 - JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3"]}.
-- Mỗi key là tiếng Việt, tự nhiên, có khả năng đang trend hiện nay.
+- Từ khóa phải ĐÚNG 100% với chủ đề và mô tả của chủ đề đó.
+- Không đưa nhạc/bolero vào REVIEW SẢN PHẨM & UNBOXING.
+- Không đưa game/LCK/nhạc/bolero/reaction vào ẨM THỰC & NẤU ĂN hoặc TÀI CHÍNH & ĐẦU TƯ.
 - Không lặp lại các key YouTube đã có.
-- Mỗi lần tạo phải có góc trend khác nhau, sắp xếp từ hot cao xuống thấp.
-- Mỗi key tối đa 6 từ.
+- Mỗi lần tạo phải khác nhau, sắp xếp từ hot cao xuống thấp.
+- Mỗi key tối đa 6 từ, viết tiếng Việt tự nhiên.
 - Random seed: ${randomSeed}
 
 Dữ liệu chủ đề:
@@ -1093,7 +1204,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
           const response = await ai.models.generateContent({
             model: geminiModel,
-            contents: [{ role: "user", parts: [{ text: prompt }] }]
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
           });
 
           const rawText = response.text || '';
@@ -1112,7 +1223,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
           sourceNiches.forEach((niche) => {
             geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
-              ? uniqueLimit(parsed[niche.category], 3)
+              ? uniqueLimit(parsed[niche.category], 3, niche.category, false)
               : [];
           });
         } catch (error) {
@@ -1121,19 +1232,15 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
 
       const updatedNiches = sourceNiches.map((niche) => {
-        const youtubeKeys = youtubeKeywordMap[niche.category] || [];
-        const aiKeys = geminiKeywordMap[niche.category] || [];
-
-        const fallbackKeys = uniqueLimit([
-          ...niche.items,
-          ...(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [])
-        ], 5);
+        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, false);
+        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 3, niche.category, false);
+        const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
 
         const finalKeys = uniqueLimit([
           ...youtubeKeys.slice(0, 2),
           ...aiKeys.slice(0, 3),
           ...fallbackKeys
-        ], 5);
+        ], 5, niche.category, false);
 
         return {
           ...niche,
@@ -1144,7 +1251,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       setSuggestedNiches(updatedNiches);
       localStorage.setItem('youtube_suggested_niches_trending', JSON.stringify(updatedNiches));
 
-      setStatus('Đã cập nhật Trending tiết kiệm quota: YouTube V3 dưới 500 quota + Gemini AI tạo 3 key/chủ đề.');
+      setStatus('Đã cập nhật Trending thành công.');
       alert('Đã cập nhật Trending thành công.');
     } catch (error: any) {
       console.error(error);
