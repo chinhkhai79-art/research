@@ -670,7 +670,7 @@ export default function App() {
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
-    const savedSuggestedNiches = localStorage.getItem('youtube_suggested_niches_trending');
+    const savedSuggestedNiches = localStorage.getItem('youtube_suggested_niches_trending_v2');
     if (savedSuggestedNiches) {
       try {
         const parsedSuggestedNiches = JSON.parse(savedSuggestedNiches);
@@ -903,7 +903,7 @@ export default function App() {
     const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
       'PHÁT TRIỂN BẢN THÂN': {
         hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
-        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation']
+        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation', 'quan ly thoi gian', 'nang suat', 'lam viec nang suat', 'ky nang lam viec']
       },
       'SỨC KHỎE & LÀM ĐẸP': {
         hint: 'sức khỏe, giảm cân, skincare, làm đẹp, yoga, fitness, chăm sóc cơ thể',
@@ -919,12 +919,12 @@ export default function App() {
       },
       'ẨM THỰC & NẤU ĂN': {
         hint: 'món ăn, công thức nấu ăn, review quán ăn, bếp, đồ ăn, ẩm thực gia đình',
-        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe'],
-        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'chatgpt']
+        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe', 'thuc pham', 'quan an', 'gia dinh ngon', 'bua an'],
+        banned: ['bac gau', 'wag bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lmht', 'league of legends', 'lien minh', 'game', 'free fire', 'tik tok free fire', 'tiktok free fire', 'chatgpt']
       },
       'DU LỊCH & KHÁM PHÁ': {
         hint: 'du lịch, khám phá địa điểm, resort, vé máy bay, phượt, cắm trại, travel vlog',
-        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour'],
+        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour', 'resort', 've may bay', 'cam trai', 'nghi duong', 'lich trinh'],
         banned: ['bolero', 'hybe', 'lck', 'chatgpt']
       },
       'GIẢI TRÍ & HÀI HƯỚC': {
@@ -1031,22 +1031,37 @@ export default function App() {
     };
 
     const GLOBAL_BLOCK_BY_CATEGORY = (category: string) => {
-      const blocks = ['bac gau vlog', 'bac gau reaction', 'hybe labels'];
-      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover');
-      if (category !== 'ESPORTS & GAMING') blocks.push('lck live', 'lien minh huyen thoai');
-      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('son tung');
+      const blocks = [
+        'bac gau', 'bac gau vlog', 'wag bac gau', 'bac gau reaction',
+        'hybe', 'hybe labels', 'free fire', 'tik tok free fire', 'tiktok free fire',
+        'lck live', 'lck', 'lmht', 'league of legends', 'lien minh huyen thoai',
+        'roblox', 'minecraft', 'pubg', 'valorant', 'genshin',
+        'son tung', 'mtp', 'drama showbiz'
+      ];
+      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover', 'nhac remix', 'music video');
+      if (category !== 'ESPORTS & GAMING') blocks.push('game', 'gaming', 'esports', 'lien minh', 'lien quan');
+      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('reaction', 'prank drama');
+      if (category !== 'ẨM THỰC & NẤU ĂN') blocks.push('mukbang');
       return blocks;
     };
 
     const isRelevantForCategory = (category: string, keyword: string, strict = false) => {
       const cleaned = normalizeText(cleanKeyword(keyword));
       if (!cleaned) return false;
+
       const profile = CATEGORY_PROFILES[category];
       const banned = [...(profile?.banned || []), ...GLOBAL_BLOCK_BY_CATEGORY(category)].map(normalizeText);
-      if (banned.some(bad => cleaned.includes(bad))) return false;
-      if (!strict) return true;
+
+      // Chặn cứng key lệch chủ đề. Đây là lớp lọc cuối cùng cho cả YouTube V3 và Gemini.
+      if (banned.some(bad => cleaned === bad || cleaned.includes(bad) || bad.includes(cleaned))) return false;
+
       const rules = (profile?.rules || []).map(normalizeText);
-      return rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
+      const matchedRule = rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
+
+      // Khi dữ liệu đến từ YouTube/Gemini phải khớp domain chủ đề, không còn kiểu lấy trend chung rồi nhét vào mọi mục.
+      if (strict) return matchedRule;
+
+      return true;
     };
 
     const uniqueLimit = (items: string[], limit = 5, category?: string, strict = false) => {
@@ -1101,7 +1116,7 @@ export default function App() {
       // Luôn bắt đầu từ danh sách gốc để loại bỏ key sai đã lưu trước đó.
       const sourceNiches = SUGGESTED_NICHES.map((base) => ({
         ...base,
-        items: uniqueLimit(base.items, 5, base.category)
+        items: uniqueLimit(base.items, 5, base.category, false)
       }));
 
       const categoryKeywordMap: Record<string, string[]> = {};
@@ -1170,7 +1185,7 @@ export default function App() {
 
       const youtubeKeywordMap: Record<string, string[]> = {};
       sourceNiches.forEach((niche) => {
-        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, false);
+        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, true);
       });
 
       const categoriesNeedGemini = sourceNiches.map((niche) => ({
@@ -1226,7 +1241,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
           sourceNiches.forEach((niche) => {
             geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
-              ? uniqueLimit(parsed[niche.category], 3, niche.category, false)
+              ? uniqueLimit(parsed[niche.category], 3, niche.category, true)
               : [];
           });
         } catch (error) {
@@ -1235,8 +1250,8 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
 
       const updatedNiches = sourceNiches.map((niche) => {
-        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, false);
-        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 3, niche.category, false);
+        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
+        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 3, niche.category, true);
         const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
 
         const finalKeys = uniqueLimit([
@@ -1252,7 +1267,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       });
 
       setSuggestedNiches(updatedNiches);
-      localStorage.setItem('youtube_suggested_niches_trending', JSON.stringify(updatedNiches));
+      localStorage.setItem('youtube_suggested_niches_trending_v2', JSON.stringify(updatedNiches));
 
       setStatus('Đã cập nhật Trending thành công.');
       alert('Đã cập nhật Trending thành công.');
