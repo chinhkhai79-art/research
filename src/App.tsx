@@ -427,7 +427,7 @@ export default function App() {
               <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">
-              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
+              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
               <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
               <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
             </div>
@@ -862,264 +862,96 @@ export default function App() {
       alert("Vui lòng nhập API Key để sử dụng tính năng này!");
       return;
     }
-
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật 30 chủ đề: mỗi chủ đề 2 từ khóa YouTube API + 3 từ khóa AI...');
-
-    const cleanKeyword = (value: any) => {
-      return String(value || '')
-        .toLowerCase()
-        .replace(/[#@"'“”‘’()[\]{}|\\]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
-    const isGoodKeyword = (value: string) => {
-      const kw = cleanKeyword(value);
-      if (!kw) return false;
-      if (kw.length < 3 || kw.length > 60) return false;
-      if (kw.includes('shorts') || kw.includes('http') || kw.includes('youtube')) return false;
-      return true;
-    };
-
-    const uniqueKeywords = (items: string[], limit = 5) => {
-      const seen = new Set<string>();
-      const output: string[] = [];
-
-      for (const raw of items) {
-        const kw = cleanKeyword(raw);
-        if (!isGoodKeyword(kw)) continue;
-        if (seen.has(kw)) continue;
-        seen.add(kw);
-        output.push(kw);
-        if (output.length >= limit) break;
-      }
-
-      return output;
-    };
-
-    const fallbackByCategory: Record<string, string[]> = {
-      'ẨM THỰC & NẤU ĂN': ['món ăn gia đình', 'công thức nấu ăn', 'nấu ăn tại nhà', 'món ngon mỗi ngày', 'đồ ăn healthy'],
-      'TÀI CHÍNH & ĐẦU TƯ': ['quản lý tài chính cá nhân', 'đầu tư chứng khoán', 'kiếm tiền online', 'tiết kiệm tiền', 'đầu tư cho người mới']
-    };
-
-    const getSearchQueryForCategory = (category: string, currentItems: string[]) => {
-      const map: Record<string, string> = {
-        'ẨM THỰC & NẤU ĂN': 'món ăn gia đình công thức nấu ăn món ngon mỗi ngày',
-        'TÀI CHÍNH & ĐẦU TƯ': 'tài chính cá nhân đầu tư chứng khoán kiếm tiền online tiết kiệm tiền',
-        'CÔNG NGHỆ & AI': 'trí tuệ nhân tạo công nghệ AI ChatGPT công cụ AI',
-        'GIÁO DỤC & HỌC TẬP': 'giáo dục học tập kỹ năng học online',
-        'SỨC KHỎE & LÀM ĐẸP': 'sức khỏe làm đẹp chăm sóc da giảm cân',
-        'DU LỊCH & KHÁM PHÁ': 'du lịch khám phá địa điểm du lịch vlog',
-      };
-
-      return map[category] || `${category} ${currentItems.slice(0, 3).join(' ')}`;
-    };
-
-    const fetchTwoYouTubeKeywords = async (category: string, currentItems: string[]) => {
-      const baseQuery = getSearchQueryForCategory(category, currentItems);
-      const publishedAfter = getPublishedAfterDate('month');
-
-      const searchVariants = [
-        baseQuery,
-        category,
-        currentItems.slice(0, 3).join(' ')
-      ].filter(Boolean);
-
-      const collected: string[] = [];
-
-      for (const query of searchVariants) {
-        if (collected.length >= 2) break;
-
-        try {
-          let searchRes = await youtubeFetch('search', {
-            part: 'snippet',
-            q: query,
-            type: 'video',
-            regionCode: trendingRegion,
-            order: 'viewCount',
-            publishedAfter,
-            maxResults: 8
-          });
-
-          if (!searchRes.items || searchRes.items.length === 0) {
-            searchRes = await youtubeFetch('search', {
-              part: 'snippet',
-              q: query,
-              type: 'video',
-              regionCode: trendingRegion,
-              order: 'viewCount',
-              maxResults: 8
-            });
-          }
-
-          const videoIds = (searchRes.items || [])
-            .map((item: any) => item?.id?.videoId)
-            .filter(Boolean)
-            .slice(0, 8)
-            .join(',');
-
-          if (!videoIds) continue;
-
-          const videoRes = await youtubeFetch('videos', {
-            part: 'snippet',
-            id: videoIds
-          });
-
-          const countMap: Record<string, number> = {};
-
-          (videoRes.items || []).forEach((v: any) => {
-            const title = v?.snippet?.title || '';
-            const tags = v?.snippet?.tags || [];
-
-            tags.forEach((tag: string) => {
-              const kw = cleanKeyword(tag);
-              if (isGoodKeyword(kw)) countMap[kw] = (countMap[kw] || 0) + 4;
-            });
-
-            title
-              .split(/[\s,._\-:;!?()[\]{}|/\\]+/)
-              .map(cleanKeyword)
-              .filter(w => w.length >= 4)
-              .forEach(w => {
-                if (isGoodKeyword(w)) countMap[w] = (countMap[w] || 0) + 1;
-              });
-
-            // Lấy thêm cụm 2-3 từ từ tiêu đề để tránh ra từng chữ rời rạc.
-            const words = title
-              .split(/[\s,._\-:;!?()[\]{}|/\\]+/)
-              .map(cleanKeyword)
-              .filter(w => w.length >= 3 && !['của', 'cho', 'với', 'một', 'những', 'các', 'the', 'and', 'for'].includes(w));
-
-            for (let i = 0; i < words.length - 1; i++) {
-              const phrase2 = `${words[i]} ${words[i + 1]}`.trim();
-              if (isGoodKeyword(phrase2)) countMap[phrase2] = (countMap[phrase2] || 0) + 2;
-
-              if (i < words.length - 2) {
-                const phrase3 = `${words[i]} ${words[i + 1]} ${words[i + 2]}`.trim();
-                if (isGoodKeyword(phrase3)) countMap[phrase3] = (countMap[phrase3] || 0) + 2;
-              }
-            }
-          });
-
-          const ranked = Object.entries(countMap)
-            .sort((a, b) => b[1] - a[1])
-            .map(([kw]) => kw);
-
-          collected.push(...ranked);
-        } catch (error) {
-          console.error(`Lỗi YouTube API khi cập nhật chủ đề ${category}:`, error);
-        }
-      }
-
-      return uniqueKeywords(collected, 2);
-    };
-
-    const getAiKeywordsForAllCategories = async (apiSeed: Array<{ category: string; apiKeywords: string[]; oldItems: string[] }>) => {
-      const fallbackMap: Record<string, string[]> = {};
-      apiSeed.forEach(item => {
-        fallbackMap[item.category] = uniqueKeywords([
-          ...(fallbackByCategory[item.category] || []),
-          ...item.oldItems
-        ], 3);
-      });
-
-      if (!geminiApiKey) return fallbackMap;
-
-      try {
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-
-        const prompt = `
-Bạn là chuyên gia nghiên cứu trend YouTube tại Việt Nam.
-Dựa trên mỗi chủ đề và 2 từ khóa lấy từ YouTube Data API bên dưới, hãy đề xuất đúng 3 từ khóa trend hiện nay cho mỗi chủ đề.
-
-Yêu cầu bắt buộc:
-- Trả về JSON hợp lệ duy nhất, không giải thích, không markdown.
-- Dạng: [{"category":"Tên chủ đề","keywords":["từ khóa 1","từ khóa 2","từ khóa 3"]}]
-- Mỗi keywords đúng 3 từ khóa.
-- Từ khóa ngắn gọn, tự nhiên, phù hợp tìm kiếm YouTube.
-- Không trùng với 2 từ khóa API đã có.
-- Ưu tiên tiếng Việt nếu khu vực là Việt Nam.
-
-Dữ liệu:
-${JSON.stringify(apiSeed.map(item => ({
-  category: item.category,
-  youtubeApiKeywords: item.apiKeywords,
-  oldKeywords: item.oldItems.slice(0, 5),
-  region: trendingRegion || 'Global'
-})), null, 2)}
-`;
-
-        const response = await ai.models.generateContent({
-          model: geminiModel,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-
-        const rawText = response.text || '';
-        const jsonText = rawText.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(jsonText);
-
-        const aiMap: Record<string, string[]> = { ...fallbackMap };
-
-        if (Array.isArray(parsed)) {
-          parsed.forEach((item: any) => {
-            if (!item?.category || !Array.isArray(item?.keywords)) return;
-            aiMap[item.category] = uniqueKeywords(item.keywords, 3);
-          });
-        }
-
-        return aiMap;
-      } catch (error) {
-        console.error('Lỗi Gemini AI khi tạo 3 từ khóa bổ sung:', error);
-        return fallbackMap;
-      }
-    };
-
+    
     try {
-      const apiSeed: Array<{ category: string; apiKeywords: string[]; oldItems: string[] }> = [];
+      const newNiches = [...suggestedNiches]; // always start with original or current categories
+      const batchSize = 3; // run limited batches to avoid hitting youtube rate limits quickly
+      
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      const publishedAfter = lastMonth.toISOString();
 
-      for (let index = 0; index < suggestedNiches.length; index++) {
-        const niche = suggestedNiches[index];
-        setStatus(`Đang lấy 2 từ khóa YouTube API cho: ${niche.category} (${index + 1}/${suggestedNiches.length})`);
+      for (let i = 0; i < newNiches.length; i += batchSize) {
+        const batch = newNiches.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (niche, idx) => {
+          const actualIdx = i + idx;
+          try {
+             // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
+             let searchRes = await youtubeFetch('search', {
+               part: 'snippet',
+               q: niche.category,
+               type: 'video',
+               regionCode: trendingRegion,
+               order: 'viewCount', // hottest
+               publishedAfter: publishedAfter,
+               maxResults: 6
+             });
+             
+             // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
+             if (!searchRes.items || searchRes.items.length === 0) {
+                 searchRes = await youtubeFetch('search', {
+                   part: 'snippet',
+                   q: niche.category,
+                   type: 'video',
+                   regionCode: trendingRegion,
+                   order: 'viewCount', // hottest all-time
+                   maxResults: 6
+                 });
+             }
+             
+             if (!searchRes.items || searchRes.items.length === 0) return; // Keep original if completely empty
+             
+             const videoIds = searchRes.items.map((item: any) => item.id.videoId).join(',');
+             
+             // 2. Fetch details (tags) for these exact videos
+             const videoRes = await youtubeFetch('videos', {
+               part: 'snippet',
+               id: videoIds
+             });
+             
+             if (!videoRes.items) return;
+             
+             const countMap: Record<string, number> = {};
+             videoRes.items.forEach((v: any) => {
+               if (v.snippet.tags) {
+                 v.snippet.tags.forEach((t: string) => {
+                   const cleaned = t.trim().toLowerCase();
+                   if (cleaned.length > 2 && !cleaned.includes('shorts')) {
+                     countMap[cleaned] = (countMap[cleaned] || 0) + 1;
+                   }
+                 });
+               }
+             });
+             
+             // Fallback if the videos strangely had zero tags combined
+             if (Object.keys(countMap).length === 0) {
+                 videoRes.items.forEach((v: any) => {
+                    const words = v.snippet.title.toLowerCase().split(/[\s,._\-()[\]{}|]+/);
+                    words.forEach((w: string) => {
+                       if (w.length > 4) countMap[w] = (countMap[w] || 0) + 1;
+                    });
+                 });
+             }
 
-        let apiKeywords = await fetchTwoYouTubeKeywords(niche.category, niche.items);
-
-        // Chống lỗi riêng cho 2 mục hay bị rỗng: vẫn cố lấy theo query dự phòng sát nghĩa.
-        if (apiKeywords.length < 2 && fallbackByCategory[niche.category]) {
-          apiKeywords = uniqueKeywords([...apiKeywords, ...fallbackByCategory[niche.category]], 2);
-        }
-
-        apiSeed.push({
-          category: niche.category,
-          apiKeywords,
-          oldItems: niche.items
-        });
+             // Sort them by frequency (hottest keywords within the hottest videos top)
+             const topTags = Object.entries(countMap)
+               .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
+               .map(x => x[0])
+               .slice(0, 10); // Lấy 10 keys (như cũ)
+               
+             if (topTags.length > 0) {
+               newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
+             }
+          } catch(e) {
+             console.error(`Error niche ${niche.category}:`, e);
+          }
+        }));
       }
-
-      setStatus('Đang dùng AI tạo 3 từ khóa bổ sung cho mỗi chủ đề...');
-      const aiMap = await getAiKeywordsForAllCategories(apiSeed);
-
-      const newNiches = suggestedNiches.map((niche) => {
-        const seed = apiSeed.find(item => item.category === niche.category);
-        const apiKeywords = seed?.apiKeywords || [];
-        const aiKeywords = aiMap[niche.category] || [];
-
-        const finalItems = uniqueKeywords([
-          ...apiKeywords,
-          ...aiKeywords,
-          ...(fallbackByCategory[niche.category] || []),
-          ...niche.items
-        ], 5);
-
-        return {
-          ...niche,
-          items: finalItems
-        };
-      });
 
       setSuggestedNiches(newNiches);
-      setStatus('Đã cập nhật xong: mỗi chủ đề có 5 từ khóa gồm 2 API + 3 AI.');
-      alert('Đã cập nhật xong: mỗi chủ đề có 5 từ khóa. Trong đó ưu tiên 2 từ khóa từ YouTube API và 3 từ khóa AI.');
+      alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
     } catch(e) {
       console.error(e);
       alert("Không thể tải trending từ YouTube lúc này. Vui lòng kiểm tra API Key.");
@@ -2688,27 +2520,102 @@ ${topKeywordsStr}`;
       {/* Main Container */}
       <div className="p-4 pt-2">
         {!user ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <LogIn size={40} className="text-blue-600" />
+          <div className="relative min-h-[calc(100vh-92px)] overflow-hidden rounded-xl bg-blue-50/80">
+            {/* Nền preview giao diện chính khi chưa đăng nhập */}
+            <div className="absolute inset-0 p-4 pt-2 blur-[2.5px] opacity-55 pointer-events-none select-none">
+              <div className="flex justify-center gap-1 mb-0 relative z-10">
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#3498db] text-white border-t border-x border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)] font-bold flex items-center gap-2">
+                  <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <BarChart2 size={16} /> Phân tích đối thủ (Spy)
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <Video size={16} /> Kiểm tra Link Video
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
+                </div>
+              </div>
+
+              <div className="bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
+                <div className="grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                  <div className="col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: quân sự</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Việt Nam <span>▼</span></div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
+                    </div>
+                    <div className="space-y-2 border-l border-[#ccc] pl-4">
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Quét tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
+                    </div>
+                    <div className="space-y-2 border-l border-[#ccc] pl-4">
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Views:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
+                    </div>
+                  </div>
+
+                  <div className="col-span-12 lg:col-span-3 flex items-start justify-end">
+                    <div className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm w-[500px] h-[110px]">
+                      <div className="flex items-center justify-between mb-2"><span className="text-[10px] font-black text-gray-400 uppercase">Hệ thống API</span><div className="flex gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400"></span><span className="w-2 h-2 rounded-full bg-indigo-500"></span></div></div>
+                      <div className="text-[11px] font-bold text-gray-700 flex justify-between"><span>YouTube V3:</span><span className="text-blue-600">0 Keys</span></div>
+                      <div className="text-[11px] font-bold text-gray-700 flex justify-between"><span>Gemini AI:</span><span className="text-green-600">Sẵn sàng</span></div>
+                      <div className="mt-2 h-7 bg-blue-600 rounded-lg text-white text-[10px] font-black flex items-center justify-center">CÀI ĐẶT</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm mt-4">
+                  <div className="font-bold text-[12px] text-[#d35400]">☑ Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</div>
+                  <div className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_0_#a04a00]">▶ BẮT ĐẦU SĂN KÊNH</div>
+                </div>
+
+                <div className="mt-4 bg-white border border-[#999] shadow-sm min-h-[450px] overflow-hidden">
+                  <div className="bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px]">
+                    <span>⊙ DANH SÁCH KÊNH QUÉT ĐƯỢC (TỰ ĐỘNG LỌC THEO ĐIỀU KIỆN)</span>
+                    <span className="flex gap-2"><span className="bg-[#2ecc71] px-3 py-1 rounded">Tải TXT</span><span className="bg-[#3498db] px-3 py-1 rounded">THEO DÕI TẤT CẢ</span><span className="bg-[#e74c3c] px-3 py-1 rounded">XÓA TẤT CẢ</span></span>
+                  </div>
+                  <div className="bg-[#ecf0f1] border-b border-[#bdc3c7] grid grid-cols-12 text-[11px] font-bold text-black">
+                    {['STT','ICON','TÊN KÊNH','MÃ KÊNH','URL','QG','NGÀY TẠO','TUỔI KÊNH','SUB','VIEWS','VIDEOS','ĐIỂM'].map((h, i) => (
+                      <div key={i} className="px-2 py-2 border-r border-[#ddd] text-center">{h}</div>
+                    ))}
+                  </div>
+                  <div className="text-center py-28 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm “Bắt đầu săn kênh” để bắt đầu...</div>
+                </div>
+              </div>
             </div>
-            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đăng nhập để sử dụng</h2>
-            <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
-              Vui lòng đăng nhập bằng tài khoản Google của bạn để truy cập tất cả các tính năng phân tích và tìm kiếm ngách trên YouTube.
-            </p>
-            <button 
-              onClick={async () => {
-                try {
-                  await loginWithGoogle();
-                } catch (e: any) {
-                  alert('Lỗi đăng nhập: ' + e.message);
-                }
-              }}
-              className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
-            >
-              <LogIn size={20} />
-              <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
-            </button>
+
+            {/* Lớp phủ đăng nhập */}
+            <div className="absolute inset-0 z-[60] flex items-start justify-center pt-24 bg-blue-50/45 backdrop-blur-[1px]">
+              <div className="bg-white rounded-2xl shadow-2xl border border-blue-100 p-12 text-center max-w-2xl w-full mx-4">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <LogIn size={40} className="text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đăng nhập để sử dụng</h2>
+                <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
+                  Vui lòng đăng nhập bằng tài khoản Google của bạn để truy cập tất cả các tính năng phân tích và tìm kiếm ngách trên YouTube.
+                </p>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await loginWithGoogle();
+                    } catch (e: any) {
+                      alert('Lỗi đăng nhập: ' + e.message);
+                    }
+                  }}
+                  className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+                >
+                  <LogIn size={20} />
+                  <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : subscriptionLoading && !subscriptionInfo ? (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
@@ -5434,10 +5341,10 @@ ${topKeywordsStr}`;
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
+                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{category.items.length} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.slice(0, 5).map((item, itemIdx) => (
+                        {category.items.map((item, itemIdx) => (
                           <button
                             key={itemIdx}
                             onClick={() => {
