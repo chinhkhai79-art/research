@@ -553,7 +553,7 @@ export default function App() {
           </div>
 
           <div class="vtw-hard-actions">
-            <a class="vtw-hard-upgrade" href="${paymentUrl}" target="_blank" rel="noreferrer">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
+            <a class="vtw-hard-upgrade" href="${paymentUrl}" target="_blank" rel="noreferrer">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
             <button id="VTW_HARD_ACCOUNT_REFRESH" class="vtw-hard-refresh" type="button">Làm mới</button>
             <button id="VTW_HARD_ACCOUNT_LOGOUT" class="vtw-hard-logout" type="button">Đăng xuất</button>
           </div>
