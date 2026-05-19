@@ -3,68 +3,274 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Thanh toán Premium - Research</title>
+  <title>Nâng cấp gói Pro - Research</title>
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #08111f; color: #fff; min-height: 100vh; }
-    .wrap { width: 94%; max-width: 1180px; margin: 0 auto; padding: 40px 0; }
-    h1 { text-align: center; font-size: 42px; font-weight: 900; margin: 0 0 10px; }
-    .sub { text-align: center; color: #9fb3ce; font-size: 18px; line-height: 1.6; margin-bottom: 28px; }
-    .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
-    .plan { background: #0f1b2d; border: 2px solid #1f334d; border-radius: 24px; padding: 22px; cursor: pointer; transition: .2s; }
-    .plan:hover { transform: translateY(-3px); border-color: #22d3ee; }
-    .plan.active { border-color: #22d3ee; box-shadow: 0 0 0 4px rgba(34,211,238,.15); background: #10253a; }
-    .plan-label { color: #93a7c1; font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
-    .plan-name { font-size: 24px; font-weight: 900; margin-bottom: 14px; }
-    .plan-price { color: #22d3ee; font-size: 30px; font-weight: 900; }
-    .page { display: grid; grid-template-columns: 1fr 1.1fr; gap: 24px; }
-    .card { background: #0f1b2d; border: 1px solid #1f334d; border-radius: 24px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
-    .card-title { font-size: 32px; font-weight: 900; margin: 0 0 14px; }
-    .qrbox { background: #fff; border-radius: 24px; padding: 22px; text-align: center; min-height: 280px; display: flex; align-items: center; justify-content: center; }
-    .qrbox img { width: 100%; max-width: 360px; }
-    .amount { font-size: 38px; font-weight: 900; color: #22d3ee; margin-top: 20px; text-align: center; }
-    .row { background: #0b1526; border: 1px solid #223650; border-radius: 16px; padding: 16px; margin-bottom: 14px; }
-    .label { color: #93a7c1; font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 7px; }
-    .value { font-size: 20px; font-weight: 900; word-break: break-all; }
-    .btn { border: 0; border-radius: 16px; padding: 15px; width: 100%; margin-top: 10px; background: #00d4ff; color: #00111f; font-size: 16px; font-weight: 900; cursor: pointer; }
-    .btn.secondary { background: #1f334d; color: #dbeafe; }
-    .success { display: none; text-align: center; background: #062e1a; border: 1px solid #22c55e; color: #bbf7d0; border-radius: 18px; padding: 24px; margin-top: 18px; font-weight: 900; line-height: 1.7; }
-    .checking { background: #10253a; border: 1px solid #1f4967; color: #b9d8ee; border-radius: 16px; padding: 16px; line-height: 1.6; margin-top: 14px; }
-    .back { display: block; color: #aab8ce; text-align: center; margin-top: 18px; text-decoration: none; font-weight: 700; }
-    @media (max-width: 900px) { .plans { grid-template-columns: repeat(2,1fr); } .page { grid-template-columns: 1fr; } }
-    @media (max-width: 520px) { .plans { grid-template-columns: 1fr; } h1 { font-size: 32px; } }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #10233d 0%, #08111f 58%, #050b14 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+    .wrap {
+      width: min(1180px, calc(100vw - 28px));
+      height: 100vh;
+      margin: 0 auto;
+      padding: 10px 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    h1 {
+      text-align: center;
+      font-size: clamp(26px, 3.2vw, 38px);
+      line-height: 1;
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: .2px;
+      text-shadow: 0 2px 0 rgba(0,0,0,.35);
+    }
+    .sub {
+      text-align: center;
+      color: #b7cff0;
+      font-size: 14px;
+      line-height: 1.35;
+      margin: 0;
+    }
+    .plans {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+    .plan {
+      background: #0f1b2d;
+      border: 2px solid #1f334d;
+      border-radius: 18px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: .2s;
+      min-height: 88px;
+    }
+    .plan:hover { transform: translateY(-2px); border-color: #22d3ee; }
+    .plan.active {
+      border-color: #22d3ee;
+      box-shadow: 0 0 0 4px rgba(34,211,238,.15);
+      background: #10253a;
+    }
+    .plan-label {
+      color: #93a7c1;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .plan-name {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .plan-price {
+      color: #22d3ee;
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .page {
+      min-height: 0;
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: .92fr 1.08fr;
+      gap: 16px;
+    }
+    .card {
+      min-height: 0;
+      background: rgba(15,27,45,.96);
+      border: 1px solid #1f334d;
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.30);
+      display: flex;
+      flex-direction: column;
+    }
+    .card-title {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+      margin: 0 0 8px;
+    }
+    .pay-note {
+      color: #b7cff0;
+      font-size: 13px;
+      line-height: 1.35;
+      margin: 0 0 12px;
+    }
+    .qrbox {
+      background: #fff;
+      border-radius: 18px;
+      padding: 12px;
+      text-align: center;
+      min-height: 0;
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .qrbox img {
+      width: min(100%, 360px);
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .amount {
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 900;
+      color: #22d3ee;
+      margin-top: 14px;
+      text-align: center;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .row {
+      background: #0b1526;
+      border: 1px solid #223650;
+      border-radius: 14px;
+      padding: 11px 12px;
+      min-height: 66px;
+    }
+    .row.wide { grid-column: 1 / -1; }
+    .label {
+      color: #93a7c1;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: .2px;
+    }
+    .value {
+      font-size: 16px;
+      line-height: 1.22;
+      font-weight: 900;
+      word-break: break-word;
+    }
+    .content-value { color: #ffffff; font-size: 17px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 10px;
+      width: 100%;
+      background: #00d4ff;
+      color: #00111f;
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .success {
+      display: none;
+      text-align: center;
+      background: #062e1a;
+      border: 1px solid #22c55e;
+      color: #bbf7d0;
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 10px;
+      font-weight: 900;
+      line-height: 1.45;
+      font-size: 13px;
+    }
+    .checking {
+      background: #10253a;
+      border: 1px solid #1f4967;
+      color: #b9d8ee;
+      border-radius: 14px;
+      padding: 12px;
+      line-height: 1.35;
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .back {
+      display: block;
+      color: #aab8ce;
+      text-align: center;
+      margin-top: auto;
+      padding-top: 10px;
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .wrap { height: auto; min-height: 100vh; }
+      .page { grid-template-columns: 1fr; }
+      .plans { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: 1fr; }
+    }
+    @media (max-height: 760px) and (min-width: 901px) {
+      .wrap { padding-top: 7px; gap: 8px; }
+      h1 { font-size: 30px; }
+      .sub { font-size: 12px; }
+      .plan { min-height: 76px; padding: 11px 16px; }
+      .plan-name { font-size: 18px; margin-bottom: 6px; }
+      .plan-price { font-size: 24px; }
+      .card { padding: 14px; border-radius: 18px; }
+      .card-title { font-size: 24px; }
+      .pay-note { font-size: 12px; margin-bottom: 9px; }
+      .row { padding: 9px 11px; min-height: 58px; }
+      .value { font-size: 15px; }
+      .amount { font-size: 28px; margin-top: 10px; }
+      .checking { font-size: 12px; padding: 10px; }
+      .btn { padding: 11px 8px; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Chọn gói Premium</h1>
-    <div class="sub">Chọn gói cần nâng cấp, quét QR và giữ nguyên nội dung chuyển khoản để hệ thống tự xác nhận.</div>
+    <h1>Chọn gói Pro</h1>
+    <p class="sub">Chọn gói cần nâng cấp, quét QR và giữ nguyên nội dung chuyển khoản để hệ thống tự xác nhận.</p>
 
     <div class="plans">
-      <div class="plan" data-plan="1m" onclick="selectPlan('1m')"><div class="plan-label">Gói</div><div class="plan-name">1 tháng</div><div class="plan-price">10k</div></div>
-      <div class="plan" data-plan="3m" onclick="selectPlan('3m')"><div class="plan-label">Gói</div><div class="plan-name">3 tháng</div><div class="plan-price">180k</div></div>
-      <div class="plan" data-plan="6m" onclick="selectPlan('6m')"><div class="plan-label">Gói</div><div class="plan-name">6 tháng</div><div class="plan-price">300k</div></div>
-      <div class="plan" data-plan="12m" onclick="selectPlan('12m')"><div class="plan-label">Gói</div><div class="plan-name">1 năm</div><div class="plan-price">500k</div></div>
+      <div class="plan" data-plan="3m" onclick="selectPlan('3m')"><div class="plan-label">GÓI</div><div class="plan-name">GÓI 3 THÁNG</div><div class="plan-price">180K</div></div>
+      <div class="plan" data-plan="6m" onclick="selectPlan('6m')"><div class="plan-label">GÓI</div><div class="plan-name">GÓI 6 THÁNG</div><div class="plan-price">300K</div></div>
+      <div class="plan" data-plan="12m" onclick="selectPlan('12m')"><div class="plan-label">GÓI</div><div class="plan-name">GÓI 1 NĂM</div><div class="plan-price">500K</div></div>
     </div>
 
     <div class="page">
       <div class="card">
-        <div class="card-title">Thanh toán Premium</div>
-        <div class="sub" style="text-align:left;margin-bottom:20px;">Quét mã QR bên dưới để chuyển khoản. Vui lòng chuyển đúng số tiền và đúng nội dung.</div>
+        <div class="card-title">Nâng cấp gói Pro</div>
+        <p class="pay-note">Quét mã QR bên dưới để chuyển khoản. Vui lòng chuyển đúng số tiền và đúng nội dung.</p>
         <div class="qrbox"><img id="qr" alt="QR thanh toán" /></div>
         <div class="amount" id="amountText">Đang tạo mã...</div>
         <div id="successBox" class="success">✅ Thanh toán thành công!<br />Tài khoản đã được nâng cấp PRO.<br />Đang quay lại công cụ...</div>
       </div>
 
       <div class="card">
-        <div class="row"><div class="label">Ngân hàng</div><div class="value">ACB</div></div>
-        <div class="row"><div class="label">Số tài khoản</div><div class="value">13131447</div></div>
-        <div class="row"><div class="label">Tên thụ hưởng</div><div class="value">LE VAN KHAI</div></div>
-        <div class="row"><div class="label">Gói dịch vụ</div><div class="value" id="planName">---</div></div>
-        <div class="row"><div class="label">Email</div><div class="value" id="emailText">---</div></div>
-        <div class="row"><div class="label">Nội dung chuyển khoản</div><div class="value" id="contentText">Đang tạo...</div></div>
+        <div class="info-grid">
+          <div class="row"><div class="label">Ngân hàng</div><div class="value">ACB</div></div>
+          <div class="row"><div class="label">Số tài khoản</div><div class="value">13131447</div></div>
+          <div class="row"><div class="label">Tên thụ hưởng</div><div class="value">LE VAN KHAI</div></div>
+          <div class="row"><div class="label">Gói dịch vụ</div><div class="value" id="planName">---</div></div>
+          <div class="row wide"><div class="label">Email</div><div class="value" id="emailText">---</div></div>
+          <div class="row wide"><div class="label">Nội dung chuyển khoản</div><div class="value content-value" id="contentText">Đang tạo...</div></div>
+        </div>
 
-        <button class="btn" onclick="copyContent()">COPY NỘI DUNG CHUYỂN KHOẢN</button>
-        <button class="btn" onclick="copyAccount()">COPY SỐ TÀI KHOẢN</button>
+        <div class="actions">
+          <button class="btn" onclick="copyContent()">Copy nội dung chuyển khoản</button>
+          <button class="btn" onclick="copyAccount()">Copy số tài khoản</button>
+        </div>
         <div id="checkingBox" class="checking">🔄 Đang tạo mã thanh toán...</div>
         <a class="back" href="/">← Quay lại công cụ</a>
       </div>
@@ -77,15 +283,15 @@
     const ACCOUNT_NAME = "LE VAN KHAI";
 
     const plans = {
-      "1m": { name: "Gói 1 tháng", amount: 10000 },
-      "3m": { name: "Gói 3 tháng", amount: 180000 },
-      "6m": { name: "Gói 6 tháng", amount: 300000 },
-      "12m": { name: "Gói 1 năm", amount: 500000 }
+      "3m": { name: "GÓI 3 THÁNG", amount: 180000 },
+      "6m": { name: "GÓI 6 THÁNG", amount: 300000 },
+      "12m": { name: "GÓI 1 NĂM", amount: 500000 }
     };
 
     const params = new URLSearchParams(window.location.search);
-    let currentPlan = params.get("plan") || "1m";
+    let currentPlan = params.get("plan") || "3m";
     if (currentPlan === "1y") currentPlan = "12m";
+    if (currentPlan === "1m" || !plans[currentPlan]) currentPlan = "3m";
 
     let currentContent = params.get("content") || "";
     let currentAmount = Number(params.get("amount") || 0);
@@ -94,7 +300,8 @@
     let returnUrl = params.get("returnUrl") || "/?paid=success";
 
     async function createPayment(planId) {
-      const plan = plans[planId] || plans["1m"];
+      if (!plans[planId]) planId = "3m";
+      const plan = plans[planId];
       document.getElementById("checkingBox").innerHTML = "🔄 Đang tạo mã thanh toán...";
       document.getElementById("amountText").textContent = "Đang tạo mã...";
       document.getElementById("contentText").textContent = "Đang tạo...";
@@ -116,7 +323,7 @@
         throw new Error(data.error || data.message || "Không tạo được mã thanh toán.");
       }
 
-      currentPlan = data.planId || planId;
+      currentPlan = plans[data.planId] ? data.planId : planId;
       currentContent = data.orderCode || data.paymentCode;
       currentAmount = Number(data.amount || plan.amount);
 
@@ -143,7 +350,8 @@
     }
 
     function renderPayment() {
-      const plan = plans[currentPlan] || plans["1m"];
+      if (!plans[currentPlan]) currentPlan = "3m";
+      const plan = plans[currentPlan];
       const amount = currentAmount > 0 ? currentAmount : plan.amount;
 
       document.querySelectorAll(".plan").forEach((el) => el.classList.remove("active"));
@@ -167,7 +375,7 @@
     }
 
     function copyContent() {
-      navigator.clipboard.writeText(currentContent);
+      navigator.clipboard.writeText(currentContent || "");
       alert("Đã copy nội dung chuyển khoản: " + currentContent);
     }
 
@@ -177,7 +385,7 @@
     }
 
     function activatePro(data) {
-      const plan = plans[currentPlan] || plans["1m"];
+      const plan = plans[currentPlan] || plans["3m"];
 
       const proData = {
         isPro: true,
