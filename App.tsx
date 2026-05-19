@@ -269,7 +269,6 @@ export default function App() {
   const [debugChecks, setDebugChecks] = useState<any | null>(null);
   const [debugLoading, setDebugLoading] = useState(false);
 
-  const [showAccountPanel, setShowAccountPanel] = useState(false);
 
   const buildPaymentUrl = (targetUser = user) => {
     if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
@@ -333,10 +332,8 @@ export default function App() {
     try {
       setDebugLoading(true);
 
-      addRow('Frontend loaded', true, {
+      addRow('Frontend đang chạy', true, {
         origin: window.location.origin,
-        path: window.location.pathname,
-        hasUser: Boolean(targetUser),
         userId: targetUser?.uid || null,
         email: targetUser?.email || null,
         subscriptionInfo
@@ -345,10 +342,7 @@ export default function App() {
       try {
         const pingRes = await fetch('/api/ping?ts=' + Date.now(), { cache: 'no-store' });
         const pingJson = await pingRes.json().catch(() => null);
-        addRow('/api/ping', pingRes.ok && Boolean(pingJson?.success), {
-          status: pingRes.status,
-          response: pingJson
-        });
+        addRow('/api/ping', pingRes.ok && Boolean(pingJson?.success), { status: pingRes.status, response: pingJson });
       } catch (e: any) {
         addRow('/api/ping', false, e?.message || String(e));
       }
@@ -356,10 +350,7 @@ export default function App() {
       try {
         const debugRes = await fetch('/api/debug?ts=' + Date.now(), { cache: 'no-store' });
         const debugJson = await debugRes.json().catch(() => null);
-        addRow('/api/debug Firebase/Firestore', debugRes.ok && Boolean(debugJson?.success), {
-          status: debugRes.status,
-          response: debugJson
-        });
+        addRow('/api/debug Firebase/Firestore', debugRes.ok && Boolean(debugJson?.success), { status: debugRes.status, response: debugJson });
       } catch (e: any) {
         addRow('/api/debug Firebase/Firestore', false, e?.message || String(e));
       }
@@ -373,15 +364,11 @@ export default function App() {
             `&email=${encodeURIComponent(targetUser.email || '')}` +
             `&name=${encodeURIComponent(targetUser.displayName || '')}` +
             `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
-            `&initTrial=0` +
-            `&ts=${Date.now()}`;
+            `&initTrial=0&ts=${Date.now()}`;
 
           const subRes = await fetch(subUrl, { cache: 'no-store' });
           const subJson = await subRes.json().catch(() => null);
-          addRow('/api/me/subscription', subRes.ok && Boolean(subJson?.success), {
-            status: subRes.status,
-            response: subJson
-          });
+          addRow('/api/me/subscription', subRes.ok && Boolean(subJson?.success), { status: subRes.status, response: subJson });
 
           if (subJson?.success) {
             setSubscriptionInfo(subJson);
@@ -393,20 +380,18 @@ export default function App() {
         addRow('/api/me/subscription', false, 'Chưa đăng nhập Google nên chưa kiểm tra được hạn dùng user.');
       }
 
-      const hasSubscriptionApi = rows.some(r => r.name === '/api/me/subscription' && r.ok);
+      const hasSubOk = rows.some(r => r.name === '/api/me/subscription' && r.ok);
       const hasDebugOk = rows.some(r => r.name === '/api/debug Firebase/Firestore' && r.ok);
-      const likelyIssue =
-        !targetUser
-          ? 'Chưa đăng nhập Google.'
-          : !hasDebugOk
-            ? 'Backend/Firebase chưa OK hoặc Vercel chưa nhận env.'
-            : !hasSubscriptionApi
-              ? 'API hạn dùng lỗi hoặc đường dẫn /api/me/subscription không chạy.'
-              : 'Backend OK. Nếu giao diện vẫn không hiện thì lỗi nằm ở vị trí render/CSS hoặc Vercel chưa deploy đúng App.tsx.';
 
       setDebugChecks({
         updatedAt: new Date().toLocaleString('vi-VN'),
-        likelyIssue,
+        likelyIssue: !targetUser
+          ? 'Chưa đăng nhập Google.'
+          : !hasDebugOk
+            ? 'Lỗi backend/Firebase hoặc Vercel chưa nhận env.'
+            : !hasSubOk
+              ? 'Lỗi API hạn dùng /api/me/subscription.'
+              : 'Backend OK. Nếu vẫn không thấy UI thì do Vercel chưa deploy đúng App.tsx hoặc CSS/render đang bị che.',
         rows
       });
     } finally {
@@ -2324,206 +2309,177 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tah      {/* Header */}
-      <div className="bg-white border-b border-[#ccc] px-4 py-2 flex justify-between items-center shadow-sm relative z-[9999]">
-        <h1 className="text-[18px] font-bold text-[#333] flex items-center gap-2">
-          <img
-            src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
-            className="w-7 h-7 rounded-full"
-            referrerPolicy="no-referrer"
-            alt="Văn Thế Web"
-          />
-          <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
-        </h1>
+    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+      {/* Header */}
+      <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
+            <img
+              src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
+              className="w-7 h-7 rounded-full"
+              referrerPolicy="no-referrer"
+              alt="Văn Thế Web"
+            />
+            <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+          </h1>
 
-        <div className="flex items-center gap-3 relative">
-          {user ? (
-            <button
-              type="button"
-              onClick={() => setShowAccountPanel(prev => !prev)}
-              className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-200 shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-all"
-              title="Xem thông tin tài khoản và hạn sử dụng"
-            >
-              <img
-                src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                alt="avatar"
-                className="w-8 h-8 rounded-full shadow-sm"
-                referrerPolicy="no-referrer"
-              />
-              <div className="text-left leading-tight">
-                <div className="text-[13px] font-black text-gray-800 max-w-[140px] truncate">
-                  {user.displayName || user.email}
-                </div>
-                <div className={`text-[10px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
-                  {subscriptionLoading ? 'Đang kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Dùng thử' : 'Hết hạn'}
-                </div>
-              </div>
-              <ChevronDown size={16} className={`text-gray-500 transition-transform ${showAccountPanel ? 'rotate-180' : ''}`} />
-            </button>
-          ) : (
-            <button
-              onClick={async () => {
-                try {
-                  await loginWithGoogle();
-                } catch (e: any) {
-                  alert('Lỗi đăng nhập: ' + e.message);
-                }
-              }}
-              className="px-5 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-              title="Đăng nhập Google"
-            >
-              <LogIn size={16} />
-              <span>ĐĂNG NHẬP</span>
-            </button>
-          )}
-
-          {user ? (
-            <a
-              href={buildPaymentUrl(user)}
-              target="_blank"
-              rel="noreferrer"
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[11px]"
-              title="Nâng cấp thêm và cộng dồn hạn dùng"
-            >
-              <Crown size={16} />
-              <span>{isPremiumAccount ? 'NÂNG CẤP THÊM' : 'NÂNG CẤP GÓI'}</span>
-            </a>
-          ) : (
-            <button
-              onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[11px]"
-              title="Cần đăng nhập để nâng cấp gói"
-            >
-              <Crown size={16} />
-              <span>NÂNG CẤP GÓI</span>
-            </button>
-          )}
-
-          <button
-            onClick={resetConfig}
-            className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-            title="Làm mới cài đặt & kết quả"
-          >
-            <RotateCcw size={16} />
-            <span>LÀM MỚI</span>
-          </button>
-
-          {user && (
-            <button
-              onClick={async () => {
-                try {
-                  await logoutUser();
-                  setShowAccountPanel(false);
-                } catch (e: any) {
-                  console.error('Lỗi đăng xuất:', e);
-                }
-              }}
-              className="px-4 py-2 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-              title="Đăng xuất tài khoản"
-            >
-              <LogOut size={15} />
-              <span>ĐĂNG XUẤT</span>
-            </button>
-          )}
-
-          {user && showAccountPanel && (
-            <div className="absolute right-0 top-[54px] w-[420px] bg-white border border-blue-100 rounded-2xl shadow-2xl p-4 z-[10000]">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                    alt="avatar"
-                    className="w-12 h-12 rounded-2xl shadow-sm"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div>
-                    <div className="text-[15px] font-black text-gray-900">{user.displayName || 'Người dùng'}</div>
-                    <div className="text-[12px] font-bold text-gray-500">{user.email || 'Chưa có email'}</div>
+          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+            {user && (
+              <div className="hidden xl:flex items-center gap-2 min-w-0">
+                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
+                  <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                    {subscriptionLoading && !subscriptionInfo
+                      ? 'Đang kiểm tra'
+                      : isPremiumAccount
+                        ? 'Đã nâng cấp PRO'
+                        : subscriptionInfo?.active
+                          ? 'Dùng thử 1 giờ'
+                          : 'Hết hạn'}
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowAccountPanel(false)}
-                  className="w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center"
-                  title="Đóng"
-                >
-                  <X size={16} />
-                </button>
-              </div>
 
-              <div className={`rounded-2xl p-4 mb-3 border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="text-[11px] font-black uppercase text-gray-500 mb-1">Tình trạng tài khoản</div>
-                <div className={`text-[22px] font-black ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                  {subscriptionLoading && !subscriptionInfo
-                    ? 'Đang kiểm tra'
-                    : isPremiumAccount
-                      ? 'Tài khoản đã nâng cấp PRO'
-                      : subscriptionInfo?.active
-                        ? 'Tài khoản đang dùng thử 1 giờ'
-                        : 'Tài khoản đã hết hạn'}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="text-[10px] font-black text-gray-400 uppercase">Gói đã đăng ký</div>
-                  <div className="text-[14px] font-black text-gray-900 mt-1">
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Gói</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight max-w-[115px] truncate">
                     {subscriptionLoading && !subscriptionInfo
                       ? 'Đang kiểm tra'
                       : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
                   </div>
                 </div>
 
-                <div className={`rounded-2xl border p-3 ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className={`text-[10px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-                  <div className={`text-[14px] font-black mt-1 ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="text-[10px] font-black text-gray-400 uppercase">Ngày đăng ký</div>
-                  <div className="text-[14px] font-black text-gray-900 mt-1">
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Ngày đăng ký</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
                     {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="text-[10px] font-black text-gray-400 uppercase">Hạn sử dụng</div>
-                  <div className="text-[14px] font-black text-gray-900 mt-1">
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Hạn sử dụng</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
                     {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4 flex gap-2">
-                <a
-                  href={buildPaymentUrl(user)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-center font-black uppercase text-[11px] shadow-md"
-                >
-                  {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
-                </a>
+                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className={`text-[8px] font-black uppercase leading-none ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+                  <div className={`text-[10px] font-black leading-tight whitespace-nowrap ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {user ? (
+              <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
+                <img
+                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                  alt="avatar"
+                  className="w-6 h-6 rounded-full shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="leading-tight max-w-[115px]">
+                  <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
+                  <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+                  </div>
+                </div>
                 <button
                   onClick={async () => {
                     try {
                       await logoutUser();
-                      setShowAccountPanel(false);
                     } catch (e: any) {
                       console.error('Lỗi đăng xuất:', e);
                     }
                   }}
-                  className="px-4 py-3 rounded-xl bg-gray-100 text-gray-700 border border-gray-200 font-black uppercase text-[11px]"
+                  className="ml-1 text-gray-500 hover:text-red-500 transition-colors"
+                  title="Đăng xuất"
                 >
-                  Đăng xuất
+                  <LogOut size={14} />
                 </button>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
+            ) : (
+              <button
+                onClick={async () => {
+                  try {
+                    await loginWithGoogle();
+                  } catch (e: any) {
+                    alert('Lỗi đăng nhập: ' + e.message);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px] shrink-0"
+                title="Đăng nhập Google"
+              >
+                <LogIn size={16} />
+                <span>ĐĂNG NHẬP</span>
+              </button>
+            )}
 
-/div>
+            {user ? (
+              <a
+                href={buildPaymentUrl(user)}
+                target="_blank"
+                rel="noreferrer"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
+                title="Nâng cấp thêm / cộng dồn hạn dùng"
+              >
+                <Crown size={15} />
+                <span>{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+              </a>
+            ) : (
+              <button
+                onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
+                title="Cần đăng nhập để Nâng cấp Gói"
+              >
+                <Crown size={15} />
+                <span>NÂNG CẤP GÓI</span>
+              </button>
+            )}
+
+            <button
+              onClick={resetConfig}
+              className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              title="Làm mới cài đặt & kết quả"
+            >
+              <RotateCcw size={15} />
+              <span>LÀM MỚI</span>
+            </button>
+          </div>
+        </div>
+
+        {user && (
+          <div className="xl:hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+            <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
+              <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : isPremiumAccount ? 'Đã nâng cấp PRO' : subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Hết hạn'}
+              </div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Gói</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">
+                {subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+              </div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
+            </div>
+
+            <div className={`px-2 py-1.5 rounded-xl border ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`text-[8px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+              <div className={`text-[10px] font-black truncate ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+              </div>
             </div>
           </div>
         )}
@@ -4899,6 +4855,14 @@ ${topKeywordsStr}`;
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
                         {showApiKeys ? 'ẨN' : 'HIỆN'} KEY
                       </button>
+                      <button
+                        onClick={() => runDebugChecks(user)}
+                        disabled={debugLoading}
+                        className="text-[9px] bg-yellow-300 text-slate-900 hover:bg-yellow-200 px-2 py-0.5 rounded-full font-black border border-yellow-100 transition-all flex items-center gap-1 uppercase"
+                        title="Kiểm tra lỗi Vercel / Firebase / API hạn dùng"
+                      >
+                        {debugLoading ? 'ĐANG KIỂM TRA...' : 'CHẠY KIỂM TRA'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -4912,56 +4876,45 @@ ${topKeywordsStr}`;
 
               {/* Content */}
               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
-                {/* Subscription / Account Status - ƯU TIÊN HIỂN THỊ TRÊN ĐẦU */}
-                <div className="rounded-3xl border-2 border-emerald-100 bg-gradient-to-r from-emerald-50 via-blue-50 to-white p-5 shadow-sm">
+                {/* DEBUG + ACCOUNT STATUS - LUÔN HIỆN ĐẦU POPUP */}
+                <div className="rounded-3xl border-4 border-yellow-300 bg-yellow-50 p-5 shadow-lg">
                   <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-md ${isPremiumAccount ? 'bg-blue-600 text-white' : subscriptionInfo?.active ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'}`}>
-                        <Crown size={24} />
+                    <div>
+                      <div className="text-[12px] font-black text-yellow-700 uppercase tracking-widest">
+                        DEBUG TÀI KHOẢN & HẠN DÙNG
                       </div>
-                      <div>
-                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tài khoản & hạn sử dụng</div>
-                        <div className={`text-[22px] font-black leading-tight ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                          {!user
-                            ? 'Chưa đăng nhập'
-                            : subscriptionLoading && !subscriptionInfo
-                              ? 'Đang kiểm tra tài khoản...'
-                              : isPremiumAccount
-                                ? 'Tài khoản đã nâng cấp PRO'
-                                : subscriptionInfo?.active
-                                  ? 'Tài khoản đang dùng thử 1 giờ'
-                                  : 'Tài khoản đã hết hạn'}
+                      <div className="text-[24px] font-black text-slate-900 leading-tight">
+                        {!user
+                          ? 'Chưa đăng nhập Google'
+                          : subscriptionLoading && !subscriptionInfo
+                            ? 'Đang kiểm tra tài khoản...'
+                            : isPremiumAccount
+                              ? 'Tài khoản đã nâng cấp PRO'
+                              : subscriptionInfo?.active
+                                ? 'Tài khoản đang dùng thử 1 giờ'
+                                : 'Tài khoản đã hết hạn'}
+                      </div>
+                      {user && (
+                        <div className="text-[12px] font-bold text-slate-600 mt-1">
+                          {user.displayName || 'Người dùng'} · {user.email || 'Chưa có email'}
                         </div>
-                        {user && (
-                          <div className="text-[12px] font-bold text-slate-500 mt-1">
-                            {user.displayName || 'Người dùng'} · {user.email || 'Chưa có email'}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
 
-                    {user && (
-                      <a
-                        href={buildPaymentUrl(user)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="shrink-0 px-5 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-black uppercase shadow-md hover:from-orange-600 hover:to-red-600 transition-all"
-                        title="Nâng cấp thêm và cộng dồn hạn sử dụng"
-                      >
-                        {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
-                      </a>
-                    )}
+                    <button
+                      onClick={() => runDebugChecks(user)}
+                      disabled={debugLoading}
+                      className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black text-[11px] uppercase disabled:opacity-60"
+                    >
+                      {debugLoading ? 'Đang kiểm tra...' : 'Chạy kiểm tra'}
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="rounded-2xl border border-slate-200 bg-white p-3">
                       <div className="text-[10px] font-black text-slate-400 uppercase">Gói đã đăng ký</div>
                       <div className="text-[14px] font-black text-slate-900 mt-1">
-                        {!user
-                          ? 'Chưa đăng nhập'
-                          : subscriptionLoading && !subscriptionInfo
-                            ? 'Đang kiểm tra'
-                            : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+                        {!user ? 'Chưa đăng nhập' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
                       </div>
                     </div>
 
@@ -4987,73 +4940,41 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
 
-                  {user && (
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => refreshSubscription(user, false)}
-                        className="px-4 py-2 rounded-xl bg-white border border-blue-200 text-blue-700 font-black text-[11px] uppercase hover:bg-blue-50"
-                      >
-                        Làm mới hạn dùng
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            await logoutUser();
-                            setShowKeyInputModal(false);
-                          } catch (e: any) {
-                            console.error('Lỗi đăng xuất:', e);
-                          }
-                        }}
-                        className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-[11px] uppercase hover:bg-gray-50"
-                      >
-                        Đăng xuất
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Debug hiển thị lỗi hệ thống */}
-                <div className="rounded-3xl border-2 border-slate-200 bg-slate-50 p-5 shadow-sm">
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div>
-                      <div className="text-[13px] font-black text-slate-900 uppercase tracking-widest">Kiểm tra lỗi hệ thống</div>
-                      <div className="text-[11px] font-bold text-slate-500">
-                        Dùng để biết lỗi nằm ở Vercel, Firebase, API hạn dùng hay giao diện.
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => runDebugChecks(user)}
-                      disabled={debugLoading}
-                      className="px-4 py-2 rounded-xl bg-slate-900 text-white font-black text-[11px] uppercase disabled:opacity-60"
-                    >
-                      {debugLoading ? 'Đang kiểm tra...' : 'Chạy kiểm tra'}
-                    </button>
-                  </div>
-
-                  {debugChecks ? (
-                    <div className="space-y-3">
-                      <div className="rounded-2xl bg-white border border-slate-200 p-3">
-                        <div className="text-[10px] font-black text-slate-400 uppercase">Kết luận nhanh</div>
-                        <div className="text-[13px] font-black text-slate-800 mt-1">{debugChecks.likelyIssue}</div>
-                        <div className="text-[10px] font-bold text-slate-400 mt-1">Cập nhật: {debugChecks.updatedAt}</div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-2">
+                  {debugChecks && (
+                    <div className="mt-4 rounded-2xl bg-white border border-yellow-200 p-3">
+                      <div className="text-[10px] font-black text-slate-400 uppercase">Kết luận nhanh</div>
+                      <div className="text-[13px] font-black text-slate-900 mt-1">{debugChecks.likelyIssue}</div>
+                      <div className="mt-3 space-y-2">
                         {debugChecks.rows.map((row: any, idx: number) => (
-                          <details key={idx} className={`rounded-2xl border p-3 ${row.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                            <summary className={`cursor-pointer text-[12px] font-black ${row.ok ? 'text-emerald-700' : 'text-red-700'}`}>
+                          <details key={idx} className={`rounded-xl border p-2 ${row.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                            <summary className={`cursor-pointer text-[11px] font-black ${row.ok ? 'text-emerald-700' : 'text-red-700'}`}>
                               {row.ok ? '✅' : '❌'} {row.name}
                             </summary>
-                            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-[10px] bg-white/70 rounded-xl p-2 text-slate-700">
+                            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[10px] bg-white/70 rounded-xl p-2 text-slate-700">
                               {JSON.stringify(row.detail, null, 2)}
                             </pre>
                           </details>
                         ))}
                       </div>
                     </div>
-                  ) : (
-                    <div className="rounded-2xl bg-white border border-slate-200 p-3 text-[12px] font-bold text-slate-500">
-                      Bấm “Chạy kiểm tra” để hiện lỗi chi tiết.
+                  )}
+
+                  {user && (
+                    <div className="mt-4 flex gap-2">
+                      <a
+                        href={buildPaymentUrl(user)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-black text-[11px] uppercase"
+                      >
+                        {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
+                      </a>
+                      <button
+                        onClick={() => refreshSubscription(user, false)}
+                        className="px-4 py-2 rounded-xl bg-white border border-blue-200 text-blue-700 font-black text-[11px] uppercase"
+                      >
+                        Làm mới hạn dùng
+                      </button>
                     </div>
                   )}
                 </div>
