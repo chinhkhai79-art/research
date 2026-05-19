@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, 
   BarChart2, 
@@ -266,9 +267,7 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
-  const [debugChecks, setDebugChecks] = useState<any | null>(null);
-  const [debugLoading, setDebugLoading] = useState(false);
-
+  const [showFloatingAccountPanel, setShowFloatingAccountPanel] = useState(false);
 
   const buildPaymentUrl = (targetUser = user) => {
     if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
@@ -315,87 +314,6 @@ export default function App() {
       return null;
     } finally {
       setSubscriptionLoading(false);
-    }
-  };
-
-  const runDebugChecks = async (targetUser = user) => {
-    const rows: any[] = [];
-    const addRow = (name: string, ok: boolean, detail: any = null) => {
-      rows.push({
-        name,
-        ok,
-        detail,
-        time: new Date().toLocaleTimeString('vi-VN')
-      });
-    };
-
-    try {
-      setDebugLoading(true);
-
-      addRow('Frontend đang chạy', true, {
-        origin: window.location.origin,
-        userId: targetUser?.uid || null,
-        email: targetUser?.email || null,
-        subscriptionInfo
-      });
-
-      try {
-        const pingRes = await fetch('/api/ping?ts=' + Date.now(), { cache: 'no-store' });
-        const pingJson = await pingRes.json().catch(() => null);
-        addRow('/api/ping', pingRes.ok && Boolean(pingJson?.success), { status: pingRes.status, response: pingJson });
-      } catch (e: any) {
-        addRow('/api/ping', false, e?.message || String(e));
-      }
-
-      try {
-        const debugRes = await fetch('/api/debug?ts=' + Date.now(), { cache: 'no-store' });
-        const debugJson = await debugRes.json().catch(() => null);
-        addRow('/api/debug Firebase/Firestore', debugRes.ok && Boolean(debugJson?.success), { status: debugRes.status, response: debugJson });
-      } catch (e: any) {
-        addRow('/api/debug Firebase/Firestore', false, e?.message || String(e));
-      }
-
-      if (targetUser) {
-        try {
-          const subUrl =
-            `/api/me/subscription` +
-            `?userId=${encodeURIComponent(targetUser.uid)}` +
-            `&uid=${encodeURIComponent(targetUser.uid)}` +
-            `&email=${encodeURIComponent(targetUser.email || '')}` +
-            `&name=${encodeURIComponent(targetUser.displayName || '')}` +
-            `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
-            `&initTrial=0&ts=${Date.now()}`;
-
-          const subRes = await fetch(subUrl, { cache: 'no-store' });
-          const subJson = await subRes.json().catch(() => null);
-          addRow('/api/me/subscription', subRes.ok && Boolean(subJson?.success), { status: subRes.status, response: subJson });
-
-          if (subJson?.success) {
-            setSubscriptionInfo(subJson);
-          }
-        } catch (e: any) {
-          addRow('/api/me/subscription', false, e?.message || String(e));
-        }
-      } else {
-        addRow('/api/me/subscription', false, 'Chưa đăng nhập Google nên chưa kiểm tra được hạn dùng user.');
-      }
-
-      const hasSubOk = rows.some(r => r.name === '/api/me/subscription' && r.ok);
-      const hasDebugOk = rows.some(r => r.name === '/api/debug Firebase/Firestore' && r.ok);
-
-      setDebugChecks({
-        updatedAt: new Date().toLocaleString('vi-VN'),
-        likelyIssue: !targetUser
-          ? 'Chưa đăng nhập Google.'
-          : !hasDebugOk
-            ? 'Lỗi backend/Firebase hoặc Vercel chưa nhận env.'
-            : !hasSubOk
-              ? 'Lỗi API hạn dùng /api/me/subscription.'
-              : 'Backend OK. Nếu vẫn không thấy UI thì do Vercel chưa deploy đúng App.tsx hoặc CSS/render đang bị che.',
-        rows
-      });
-    } finally {
-      setDebugLoading(false);
     }
   };
 
@@ -2484,6 +2402,230 @@ ${topKeywordsStr}`;
           </div>
         )}
       </div>
+
+
+      {/* GLOBAL PORTAL - THOÁT KHỎI KHUNG TOOL, KHÔNG BỊ OVERFLOW/CSS CHE */}
+      {user && createPortal(
+        <>
+          <button
+            type="button"
+            onClick={() => setShowFloatingAccountPanel(true)}
+            style={{
+              position: 'fixed',
+              top: 78,
+              right: 18,
+              zIndex: 2147483646,
+              background: isPremiumAccount ? 'linear-gradient(135deg,#2563eb,#06b6d4)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#ef4444,#dc2626)',
+              color: '#ffffff',
+              border: '2px solid rgba(255,255,255,0.8)',
+              borderRadius: 999,
+              padding: '10px 16px',
+              boxShadow: '0 10px 30px rgba(15,23,42,0.28)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              cursor: 'pointer',
+              fontWeight: 900,
+              fontSize: 12,
+              textTransform: 'uppercase',
+              fontFamily: 'Arial, sans-serif'
+            }}
+            title="Xem tài khoản, gói và hạn sử dụng"
+          >
+            <Crown size={18} />
+            <span>{isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'TRIAL' : 'HẾT HẠN'}</span>
+            <span style={{ opacity: 0.9, fontSize: 11 }}>
+              {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+            </span>
+          </button>
+
+          {showFloatingAccountPanel && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 2147483647,
+                background: 'rgba(15,23,42,0.45)',
+                backdropFilter: 'blur(3px)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'flex-end',
+                padding: '85px 20px 20px 20px',
+                fontFamily: 'Arial, sans-serif'
+              }}
+              onClick={() => setShowFloatingAccountPanel(false)}
+            >
+              <div
+                style={{
+                  width: 430,
+                  maxWidth: 'calc(100vw - 30px)',
+                  background: '#ffffff',
+                  borderRadius: 24,
+                  border: '1px solid #dbeafe',
+                  boxShadow: '0 25px 80px rgba(15,23,42,0.35)',
+                  overflow: 'hidden'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  style={{
+                    padding: 18,
+                    background: 'linear-gradient(135deg,#2563eb,#4f46e5)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img
+                      src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                      alt="avatar"
+                      referrerPolicy="no-referrer"
+                      style={{ width: 48, height: 48, borderRadius: 16, border: '2px solid rgba(255,255,255,0.65)' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 17, fontWeight: 900 }}>{user.displayName || 'Người dùng'}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>{user.email || 'Chưa có email'}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFloatingAccountPanel(false)}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 999,
+                      border: 0,
+                      background: 'rgba(255,255,255,0.16)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Đóng"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div style={{ padding: 18 }}>
+                  <div
+                    style={{
+                      borderRadius: 18,
+                      padding: 16,
+                      marginBottom: 14,
+                      border: `1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'}`,
+                      background: isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Tình trạng tài khoản
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 22,
+                        fontWeight: 900,
+                        marginTop: 4,
+                        color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'
+                      }}
+                    >
+                      {subscriptionLoading && !subscriptionInfo
+                        ? 'Đang kiểm tra tài khoản...'
+                        : isPremiumAccount
+                          ? 'Tài khoản đã nâng cấp PRO'
+                          : subscriptionInfo?.active
+                            ? 'Tài khoản đang dùng thử 1 giờ'
+                            : 'Tài khoản đã hết hạn'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ border: '1px solid #e5e7eb', background: '#f8fafc', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Gói đã đăng ký</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 5 }}>
+                        {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+                      </div>
+                    </div>
+
+                    <div style={{ border: `1px solid ${subscriptionInfo?.active ? '#86efac' : '#fecaca'}`, background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: subscriptionInfo?.active ? '#059669' : '#dc2626', textTransform: 'uppercase' }}>Còn lại</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: subscriptionInfo?.active ? '#047857' : '#b91c1c', marginTop: 5 }}>
+                        {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                      </div>
+                    </div>
+
+                    <div style={{ border: '1px solid #e5e7eb', background: '#f8fafc', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Ngày đăng ký</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 5 }}>
+                        {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+                      </div>
+                    </div>
+
+                    <div style={{ border: '1px solid #e5e7eb', background: '#f8fafc', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Hạn sử dụng</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 5 }}>
+                        {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                    <a
+                      href={buildPaymentUrl(user)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        padding: '12px 14px',
+                        borderRadius: 14,
+                        background: 'linear-gradient(90deg,#f97316,#ef4444)',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        fontSize: 12,
+                        fontWeight: 900,
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await logoutUser();
+                          setShowFloatingAccountPanel(false);
+                        } catch (e: any) {
+                          console.error('Lỗi đăng xuất:', e);
+                        }
+                      }}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 14,
+                        border: '1px solid #e5e7eb',
+                        background: '#f8fafc',
+                        color: '#334155',
+                        fontSize: 12,
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>,
+        document.body
+      )}
+
 
       {/* Main Container */}
       <div className="p-4 pt-2">
@@ -4855,14 +4997,6 @@ ${topKeywordsStr}`;
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
                         {showApiKeys ? 'ẨN' : 'HIỆN'} KEY
                       </button>
-                      <button
-                        onClick={() => runDebugChecks(user)}
-                        disabled={debugLoading}
-                        className="text-[9px] bg-yellow-300 text-slate-900 hover:bg-yellow-200 px-2 py-0.5 rounded-full font-black border border-yellow-100 transition-all flex items-center gap-1 uppercase"
-                        title="Kiểm tra lỗi Vercel / Firebase / API hạn dùng"
-                      >
-                        {debugLoading ? 'ĐANG KIỂM TRA...' : 'CHẠY KIỂM TRA'}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -4876,109 +5010,6 @@ ${topKeywordsStr}`;
 
               {/* Content */}
               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
-                {/* DEBUG + ACCOUNT STATUS - LUÔN HIỆN ĐẦU POPUP */}
-                <div className="rounded-3xl border-4 border-yellow-300 bg-yellow-50 p-5 shadow-lg">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <div className="text-[12px] font-black text-yellow-700 uppercase tracking-widest">
-                        DEBUG TÀI KHOẢN & HẠN DÙNG
-                      </div>
-                      <div className="text-[24px] font-black text-slate-900 leading-tight">
-                        {!user
-                          ? 'Chưa đăng nhập Google'
-                          : subscriptionLoading && !subscriptionInfo
-                            ? 'Đang kiểm tra tài khoản...'
-                            : isPremiumAccount
-                              ? 'Tài khoản đã nâng cấp PRO'
-                              : subscriptionInfo?.active
-                                ? 'Tài khoản đang dùng thử 1 giờ'
-                                : 'Tài khoản đã hết hạn'}
-                      </div>
-                      {user && (
-                        <div className="text-[12px] font-bold text-slate-600 mt-1">
-                          {user.displayName || 'Người dùng'} · {user.email || 'Chưa có email'}
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => runDebugChecks(user)}
-                      disabled={debugLoading}
-                      className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black text-[11px] uppercase disabled:opacity-60"
-                    >
-                      {debugLoading ? 'Đang kiểm tra...' : 'Chạy kiểm tra'}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <div className="text-[10px] font-black text-slate-400 uppercase">Gói đã đăng ký</div>
-                      <div className="text-[14px] font-black text-slate-900 mt-1">
-                        {!user ? 'Chưa đăng nhập' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <div className="text-[10px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
-                      <div className="text-[14px] font-black text-slate-900 mt-1">
-                        {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <div className="text-[10px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
-                      <div className="text-[14px] font-black text-slate-900 mt-1">
-                        {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                      </div>
-                    </div>
-
-                    <div className={`rounded-2xl border p-3 ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                      <div className={`text-[10px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-                      <div className={`text-[14px] font-black mt-1 ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                        {!user ? '---' : subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {debugChecks && (
-                    <div className="mt-4 rounded-2xl bg-white border border-yellow-200 p-3">
-                      <div className="text-[10px] font-black text-slate-400 uppercase">Kết luận nhanh</div>
-                      <div className="text-[13px] font-black text-slate-900 mt-1">{debugChecks.likelyIssue}</div>
-                      <div className="mt-3 space-y-2">
-                        {debugChecks.rows.map((row: any, idx: number) => (
-                          <details key={idx} className={`rounded-xl border p-2 ${row.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                            <summary className={`cursor-pointer text-[11px] font-black ${row.ok ? 'text-emerald-700' : 'text-red-700'}`}>
-                              {row.ok ? '✅' : '❌'} {row.name}
-                            </summary>
-                            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[10px] bg-white/70 rounded-xl p-2 text-slate-700">
-                              {JSON.stringify(row.detail, null, 2)}
-                            </pre>
-                          </details>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {user && (
-                    <div className="mt-4 flex gap-2">
-                      <a
-                        href={buildPaymentUrl(user)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-black text-[11px] uppercase"
-                      >
-                        {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
-                      </a>
-                      <button
-                        onClick={() => refreshSubscription(user, false)}
-                        className="px-4 py-2 rounded-xl bg-white border border-blue-200 text-blue-700 font-black text-[11px] uppercase"
-                      >
-                        Làm mới hạn dùng
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 {/* Section Gemini */}
                 <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
