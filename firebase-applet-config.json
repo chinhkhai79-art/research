@@ -1,8 +1,9 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyC4AZHKcSHb7iW6Ctv4mEhXTieaaueVj40",
-  authDomain: "gen-lang-client-0680572356.firebaseapp.com",
-  projectId: "gen-lang-client-0680572356",
-  storageBucket: "gen-lang-client-0680572356.firebasestorage.app",
-  messagingSenderId: "143403316600",
-  appId: "1:143403316600:web:9287503c9aa8f456fe848d"
-};
+{
+  "apiKey": "AIzaSyC4AZHKcSHb7jW6Cty4mEhXTieaaueVj4Q",
+  "authDomain": "gen-lang-client-0680572356.firebaseapp.com",
+  "projectId": "gen-lang-client-0680572356",
+  "storageBucket": "gen-lang-client-0680572356.firebasestorage.app",
+  "messagingSenderId": "143403316600",
+  "appId": "1:143403316600:web:9287503c9aa8f456fe848d",
+  "firestoreDatabaseId": "ai-studio-6470d40d-327e-432b-83ff-33781fc60fb8"
+}
