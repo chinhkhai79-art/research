@@ -387,39 +387,17 @@ export default function App() {
       <style>
         #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
         #vtw-account-status-root-20260519 .vtw-float-btn {
-          position: fixed !important;
-          top: 7px !important;
-          right: 310px !important;
-          bottom: auto !important;
-          z-index: 2147483646 !important;
-          height: 32px !important;
-          min-height: 32px !important;
-          max-height: 32px !important;
-          border: 2px solid #93c5fd !important;
-          border-radius: 999px !important;
-          padding: 0 16px !important;
+          position: fixed !important; top: 12px !important; right: 420px !important; bottom: auto !important; z-index: 2147483646 !important;
+          border: 2px solid #bfdbfe !important; border-radius: 999px !important; padding: 8px 14px !important;
           background: ${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important;
-          color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important;
-          font-weight: 900 !important;
-          font-size: 12px !important;
-          line-height: 1 !important;
-          text-transform: uppercase !important;
-          box-shadow: 0 6px 20px rgba(37,99,235,.24) !important;
-          cursor: pointer !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 8px !important;
-          white-space: nowrap !important;
+          color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase !important;
+          box-shadow: 0 8px 24px rgba(37,99,235,.22) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
         }
-        @media (max-width: 1500px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn { right: 300px !important; font-size: 11px !important; padding: 0 12px !important; }
-        }
-        @media (max-width: 1180px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn { right: 245px !important; font-size: 10px !important; padding: 0 10px !important; }
+        @media (max-width: 1300px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn { right: 280px !important; font-size: 11px !important; padding: 7px 11px !important; }
         }
         @media (max-width: 900px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn { right: 12px !important; top: 50px !important; }
+          #vtw-account-status-root-20260519 .vtw-float-btn { right: 12px !important; top: 58px !important; }
         }
         #vtw-account-status-root-20260519 .vtw-overlay {
           position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
@@ -450,7 +428,7 @@ export default function App() {
               <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">
-              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
+              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
               <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
               <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
             </div>
