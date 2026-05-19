@@ -1,6 +1,5 @@
 import { db, FieldValue, Timestamp } from "../lib/firebaseAdmin.js";
 import { setCors } from "../lib/cors.js";
-import { sendPaymentSuccessEmail } from "../lib/mailer.js";
 
 const SEPAY_API_KEY = process.env.SEPAY_API_KEY || "mysecret123";
 
@@ -100,52 +99,6 @@ async function logWebhook(data) {
   }
 }
 
-async function sendSuccessEmailOnce({
-  orderCode,
-  userEmail,
-  userName,
-  planName,
-  amount,
-  expiresAtDate,
-  paidOrderBefore
-}) {
-  if (!userEmail) {
-    return { success: false, skipped: true, error: "Missing userEmail" };
-  }
-
-  if (paidOrderBefore?.emailSent) {
-    return {
-      success: true,
-      skipped: true,
-      messageId: paidOrderBefore.emailMessageId || null,
-      error: null
-    };
-  }
-
-  const emailResult = await sendPaymentSuccessEmail({
-    to: userEmail,
-    name: userName || userEmail,
-    planName,
-    amount,
-    orderCode,
-    expiresAt: expiresAtDate,
-    toolUrl: "https://research.vanthemmo.com/"
-  });
-
-  await db.collection("paid_orders").doc(orderCode).set(
-    {
-      emailSent: Boolean(emailResult.success),
-      emailMessageId: emailResult.messageId || null,
-      emailError: emailResult.error || null,
-      emailSentAt: emailResult.success ? FieldValue.serverTimestamp() : null,
-      updatedAt: FieldValue.serverTimestamp()
-    },
-    { merge: true }
-  );
-
-  return emailResult;
-}
-
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
 
@@ -218,15 +171,8 @@ export default async function handler(req, res) {
     const orderCode = match[0].toUpperCase();
 
     const paymentRef = db.collection("payments").doc(orderCode);
-    const paidOrderRef = db.collection("paid_orders").doc(orderCode);
-
-    const [paymentSnap, paidOrderSnap] = await Promise.all([
-      paymentRef.get(),
-      paidOrderRef.get()
-    ]);
-
+    const paymentSnap = await paymentRef.get();
     const payment = paymentSnap.exists ? paymentSnap.data() : null;
-    const paidOrderBefore = paidOrderSnap.exists ? paidOrderSnap.data() : null;
 
     const amountPlan = getPlanByAmount(amount);
     const plan =
@@ -239,30 +185,33 @@ export default async function handler(req, res) {
         : amountPlan;
 
     const paidAtDate = new Date();
-
     const userId = String(payment?.userId || "").trim();
     const userEmail = String(payment?.userEmail || "").trim();
-    const userName = String(payment?.userName || payment?.displayName || userEmail || "").trim();
 
-    let currentUser = null;
+    let baseDate = paidAtDate;
+    let premiumStartedAtDate = paidAtDate;
 
     if (userId) {
       const userSnap = await db.collection("users").doc(userId).get();
-      currentUser = userSnap.exists ? userSnap.data() : null;
+
+      if (userSnap.exists) {
+        const user = userSnap.data();
+        const currentPremiumExpiresAt = toDate(user.premiumExpiresAt) || toDate(user.expired_at);
+        const currentTrialExpiresAt = toDate(user.trialExpiresAt);
+
+        if (currentPremiumExpiresAt && currentPremiumExpiresAt.getTime() > paidAtDate.getTime()) {
+          baseDate = currentPremiumExpiresAt;
+        } else if (currentTrialExpiresAt && currentTrialExpiresAt.getTime() > paidAtDate.getTime()) {
+          baseDate = currentTrialExpiresAt;
+        }
+
+        premiumStartedAtDate = toDate(user.premiumStartedAt) || toDate(user.started_at) || paidAtDate;
+      }
     }
-
-    const oldExpiresAt =
-      toDate(currentUser?.premiumExpiresAt) ||
-      toDate(currentUser?.expired_at);
-
-    const baseDate =
-      oldExpiresAt && oldExpiresAt.getTime() > paidAtDate.getTime()
-        ? oldExpiresAt
-        : paidAtDate;
 
     const expiresAtDate = addDays(baseDate, plan.days);
 
-    await paidOrderRef.set(
+    await db.collection("paid_orders").doc(orderCode).set(
       {
         app: "research",
         orderCode,
@@ -275,12 +224,11 @@ export default async function handler(req, res) {
         days: plan.days,
         userId,
         userEmail,
-        userName,
         rawBody: body,
-        cumulativeBaseAt: Timestamp.fromDate(baseDate),
-        previousExpiresAt: oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null,
         paidAt: FieldValue.serverTimestamp(),
+        baseExpiresAtBeforePurchase: Timestamp.fromDate(baseDate),
         expiresAt: Timestamp.fromDate(expiresAtDate),
+        cumulative: baseDate.getTime() > paidAtDate.getTime(),
         updatedAt: FieldValue.serverTimestamp()
       },
       { merge: true }
@@ -299,10 +247,10 @@ export default async function handler(req, res) {
         days: plan.days,
         sepayContent: content,
         rawBody: body,
-        cumulativeBaseAt: Timestamp.fromDate(baseDate),
-        previousExpiresAt: oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null,
         paidAt: FieldValue.serverTimestamp(),
+        baseExpiresAtBeforePurchase: Timestamp.fromDate(baseDate),
         expiresAt: Timestamp.fromDate(expiresAtDate),
+        cumulative: baseDate.getTime() > paidAtDate.getTime(),
         updatedAt: FieldValue.serverTimestamp()
       },
       { merge: true }
@@ -316,26 +264,16 @@ export default async function handler(req, res) {
           active: true,
           planId: plan.planId,
           planName: plan.planName,
+          premiumStartedAt: Timestamp.fromDate(premiumStartedAtDate),
+          started_at: Timestamp.fromDate(premiumStartedAtDate),
           premiumExpiresAt: Timestamp.fromDate(expiresAtDate),
           expired_at: Timestamp.fromDate(expiresAtDate),
           lastPaymentOrderCode: orderCode,
-          lastPaymentAmount: amount,
-          lastPaymentAt: FieldValue.serverTimestamp(),
           updated_at: FieldValue.serverTimestamp()
         },
         { merge: true }
       );
     }
-
-    const emailResult = await sendSuccessEmailOnce({
-      orderCode,
-      userEmail,
-      userName,
-      planName: plan.planName,
-      amount,
-      expiresAtDate,
-      paidOrderBefore
-    });
 
     await logWebhook({
       status: "success_paid",
@@ -345,8 +283,9 @@ export default async function handler(req, res) {
       planId: plan.planId,
       userId,
       userEmail,
-      emailSent: Boolean(emailResult.success),
-      emailError: emailResult.error || null,
+      cumulative: baseDate.getTime() > paidAtDate.getTime(),
+      baseExpiresAtBeforePurchase: baseDate.toISOString(),
+      expiresAt: expiresAtDate.toISOString(),
       body
     });
 
@@ -360,9 +299,8 @@ export default async function handler(req, res) {
       planId: plan.planId,
       planName: plan.planName,
       expiresAt: expiresAtDate.toISOString(),
-      userId,
-      emailSent: Boolean(emailResult.success),
-      emailError: emailResult.error || null
+      cumulative: baseDate.getTime() > paidAtDate.getTime(),
+      userId
     });
   } catch (error) {
     console.error("SEPAY WEBHOOK ERROR:", error);
@@ -371,7 +309,7 @@ export default async function handler(req, res) {
       success: false,
       message: "Webhook error",
       error: error.message || "Server error",
-      hint: "Kiểm tra FIREBASE_SERVICE_ACCOUNT / FIRESTORE_DATABASE_ID / SMTP_USER / SMTP_PASS trên Vercel."
+      hint: "Kiểm tra FIREBASE_SERVICE_ACCOUNT / FIRESTORE_DATABASE_ID trên Vercel."
     });
   }
 }
