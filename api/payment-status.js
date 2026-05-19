@@ -38,7 +38,8 @@ export default async function handler(req, res) {
         planName: data.planName || "Gói 1 tháng",
         packageName: data.planName || "Gói 1 tháng",
         paidAt: tsToISO(data.paidAt),
-        expiresAt: tsToISO(data.expiresAt)
+        expiresAt: tsToISO(data.expiresAt),
+        cumulative: Boolean(data.cumulative)
       });
     }
 
@@ -65,7 +66,8 @@ export default async function handler(req, res) {
       planName: payment.planName || "Gói 1 tháng",
       packageName: payment.planName || "Gói 1 tháng",
       paidAt: tsToISO(payment.paidAt),
-      expiresAt: tsToISO(payment.expiresAt)
+      expiresAt: tsToISO(payment.expiresAt),
+      cumulative: Boolean(payment.cumulative)
     });
   } catch (error) {
     console.error("PAYMENT STATUS ERROR:", error);

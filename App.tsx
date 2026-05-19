@@ -114,20 +114,6 @@ interface TrackingChannel {
   }>;
 }
 
-interface SubscriptionInfo {
-  success: boolean;
-  active: boolean;
-  premium: boolean;
-  accountType: 'none' | 'trial' | 'premium' | string;
-  plan: string | null;
-  planName: string | null;
-  expiresAt: string | null;
-  trialStartedAt?: string | null;
-  trialExpiresAt?: string | null;
-  remainingMs?: number;
-  message?: string;
-}
-
 // --- Components ---
 const LinkifyText = ({ text }: { text: string }) => {
   if (!text) return null;
@@ -171,6 +157,22 @@ interface SavedSpyReport {
   name: string;
   date: string;
   report: string;
+}
+
+
+interface SubscriptionInfo {
+  success: boolean;
+  active: boolean;
+  premium: boolean;
+  accountType: 'trial' | 'premium' | 'expired' | 'none' | string;
+  plan?: string | null;
+  planId?: string | null;
+  planName?: string | null;
+  startedAt?: string | null;
+  expiresAt?: string | null;
+  remainingMs?: number;
+  remainingText?: string;
+  userId?: string;
 }
 
 // --- Constants ---
@@ -261,96 +263,88 @@ const STOP_LIMIT = 10;
 export default function App() {
   // --- State ---
   const [user, setUser] = useState<User | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
-  const [nowTick, setNowTick] = useState(Date.now());
+  const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNowTick(Date.now()), 30000);
-    return () => window.clearInterval(timer);
-  }, []);
+  const buildPaymentUrl = (targetUser = user) => {
+    if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
+    return (
+      `https://research.vanthemmo.com/pay.html` +
+      `?uid=${encodeURIComponent(targetUser.uid)}` +
+      `&userId=${encodeURIComponent(targetUser.uid)}` +
+      `&email=${encodeURIComponent(targetUser.email || '')}` +
+      `&returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`
+    );
+  };
 
-  const refreshSubscription = async (currentUser = user) => {
-    if (!currentUser) {
-      setSubscription(null);
-      return;
+  const refreshSubscription = async (targetUser = user, initTrial = false) => {
+    if (!targetUser) {
+      setSubscriptionInfo(null);
+      return null;
     }
 
-    setSubscriptionLoading(true);
-
     try {
-      const params = new URLSearchParams({
-        userId: currentUser.uid,
-        uid: currentUser.uid,
-        email: currentUser.email || '',
-        name: currentUser.displayName || ''
-      });
+      setSubscriptionLoading(true);
 
-      const res = await fetch(`/api/me/subscription?${params.toString()}`, {
-        cache: 'no-store'
-      });
+      const url =
+        `/api/me/subscription` +
+        `?userId=${encodeURIComponent(targetUser.uid)}` +
+        `&uid=${encodeURIComponent(targetUser.uid)}` +
+        `&email=${encodeURIComponent(targetUser.email || '')}` +
+        `&name=${encodeURIComponent(targetUser.displayName || '')}` +
+        `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
+        `&initTrial=${initTrial ? '1' : '0'}`;
 
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
 
       if (data?.success) {
-        setSubscription(data);
-      } else {
-        console.error('Không đọc được trạng thái gói:', data);
-        setSubscription({
-          success: false,
-          active: false,
-          premium: false,
-          accountType: 'none',
-          plan: null,
-          planName: null,
-          expiresAt: null,
-          message: data?.error || 'Không đọc được trạng thái gói.'
-        });
+        setSubscriptionInfo(data);
+        return data;
       }
+
+      console.warn('Không lấy được hạn dùng:', data);
+      return null;
     } catch (error) {
-      console.error('Lỗi kiểm tra gói:', error);
-      setSubscription({
-        success: false,
-        active: false,
-        premium: false,
-        accountType: 'none',
-        plan: null,
-        planName: null,
-        expiresAt: null,
-        message: 'Không kết nối được máy chủ gói.'
-      });
+      console.error('Lỗi kiểm tra hạn dùng:', error);
+      return null;
     } finally {
       setSubscriptionLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!user) {
-      setSubscription(null);
-      return;
-    }
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
 
-    refreshSubscription(user);
+      if (currentUser) {
+        await refreshSubscription(currentUser, true);
+      } else {
+        setSubscriptionInfo(null);
+      }
+    });
 
-    const interval = window.setInterval(() => {
-      refreshSubscription(user);
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const timer = window.setInterval(() => {
+      setSubscriptionTick(Date.now());
+      refreshSubscription(user, false);
     }, 30000);
 
-    const onFocus = () => refreshSubscription(user);
+    const onFocus = () => refreshSubscription(user, false);
     window.addEventListener('focus', onFocus);
 
     return () => {
-      window.clearInterval(interval);
+      window.clearInterval(timer);
       window.removeEventListener('focus', onFocus);
     };
-  }, [user?.uid]);
+  }, [user]);
 
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
@@ -2173,30 +2167,28 @@ ${topKeywordsStr}`;
   };
 
 
-  const formatDateTime = (iso?: string | null) => {
+  const formatSubscriptionDate = (iso?: string | null) => {
     if (!iso) return '---';
 
-    try {
-      return new Date(iso).toLocaleString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch {
-      return '---';
-    }
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '---';
+
+    return d.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + '\n' + d.toLocaleDateString('vi-VN');
   };
 
   const getRemainingText = (iso?: string | null) => {
     if (!iso) return '---';
 
-    const ms = new Date(iso).getTime() - nowTick;
+    const expires = new Date(iso).getTime();
+    const diff = expires - subscriptionTick;
 
-    if (ms <= 0) return 'Đã hết hạn';
+    if (Number.isNaN(expires)) return '---';
+    if (diff <= 0) return 'Đã hết hạn';
 
-    const totalMinutes = Math.floor(ms / 60000);
+    const totalMinutes = Math.floor(diff / 60000);
     const days = Math.floor(totalMinutes / 1440);
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const minutes = totalMinutes % 60;
@@ -2206,26 +2198,9 @@ ${topKeywordsStr}`;
     return `${Math.max(1, minutes)} phút`;
   };
 
-  const handleUpgradePayment = () => {
-    if (!user) {
-      alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!');
-      return;
-    }
-
-    const payUrl =
-      `https://research.vanthemmo.com/pay.html` +
-      `?uid=${encodeURIComponent(user.uid)}` +
-      `&userId=${encodeURIComponent(user.uid)}` +
-      `&email=${encodeURIComponent(user.email || '')}` +
-      `&returnUrl=${encodeURIComponent(window.location.origin + '/?paid=success')}`;
-
-    window.location.href = payUrl;
-  };
-
-  const accountExpiresAt = subscription?.expiresAt || subscription?.trialExpiresAt || null;
-  const isAccountActive = Boolean(user && subscription?.active);
-  const isAccountPremium = Boolean(subscription?.premium || subscription?.accountType === 'premium');
-  const currentPlanName = subscription?.planName || (subscription?.accountType === 'trial' ? 'Dùng thử 1 giờ' : null);
+  const isPremiumAccount = subscriptionInfo?.accountType === 'premium' || subscriptionInfo?.premium;
+  const canUseTool = Boolean(user && subscriptionInfo?.active);
+  const subscriptionExpired = Boolean(user && subscriptionInfo && !subscriptionInfo.active && !subscriptionLoading);
 
   // --- Render Helpers ---
   const getGrowth = (history: any[], type: 'subs' | 'views') => {
@@ -2248,15 +2223,10 @@ ${topKeywordsStr}`;
           {user ? (
             <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
               <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`} alt="avatar" className="w-6 h-6 rounded-full shadow-sm" referrerPolicy="no-referrer" />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black text-gray-700 max-w-[120px] truncate">{user.displayName || user.email}</span>
-                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${isAccountPremium ? 'bg-blue-600 text-white' : isAccountActive ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'}`}>
-                    {isAccountPremium ? 'PRO' : isAccountActive ? 'TRIAL' : 'HẾT HẠN'}
-                  </span>
-                </div>
-                <div className="text-[9px] font-bold text-gray-400 truncate max-w-[180px]">
-                  {currentPlanName || 'Chưa có gói'} • Còn lại: {getRemainingText(accountExpiresAt)}
+              <div className="leading-tight max-w-[135px]">
+                <div className="text-[11px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
+                <div className={`text-[9px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : 'text-amber-600'}`}>
+                  {subscriptionLoading ? 'Đang kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Dùng thử' : 'Hết hạn'}
                 </div>
               </div>
               <button 
@@ -2291,14 +2261,15 @@ ${topKeywordsStr}`;
           )}
 
           {user ? (
-            <button 
-              onClick={handleUpgradePayment}
+            <a 
+              href={buildPaymentUrl(user)}
+              target="_blank" rel="noreferrer"
               className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[11px]"
-              title="Nâng cấp Gói"
+              title="Nâng cấp thêm / cộng dồn hạn dùng"
             >
               <Crown size={16} />
-              <span>{isAccountPremium ? 'NÂNG CẤP THÊM' : 'NÂNG CẤP GÓI'}</span>
-            </button>
+              <span>{isPremiumAccount ? 'NÂNG CẤP THÊM' : 'NÂNG CẤP GÓI'}</span>
+            </a>
           ) : (
             <button 
               onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
@@ -2320,6 +2291,40 @@ ${topKeywordsStr}`;
           </button>
         </div>
       </div>
+
+      {user && (
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <div className="text-[11px] font-black text-slate-400 uppercase">Gói</div>
+              <div className="text-[18px] font-black text-slate-900 mt-1">
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra...' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <div className="text-[11px] font-black text-slate-400 uppercase">Bắt đầu</div>
+              <div className="text-[18px] font-black text-slate-900 mt-1 whitespace-pre-line">
+                {formatSubscriptionDate(subscriptionInfo?.startedAt)}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <div className="text-[11px] font-black text-slate-400 uppercase">Hết hạn</div>
+              <div className="text-[18px] font-black text-slate-900 mt-1 whitespace-pre-line">
+                {formatSubscriptionDate(subscriptionInfo?.expiresAt)}
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border p-4 ${subscriptionInfo?.active ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+              <div className={`text-[11px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+              <div className={`text-[18px] font-black mt-1 ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra...' : getRemainingText(subscriptionInfo?.expiresAt)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <div className="p-4 pt-2">
@@ -2346,31 +2351,30 @@ ${topKeywordsStr}`;
               <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
             </button>
           </div>
-        ) : subscriptionLoading && !subscription ? (
+        ) : subscriptionLoading && !subscriptionInfo ? (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
-            <Loader2 size={46} className="animate-spin text-blue-600 mx-auto mb-5" />
-            <h2 className="text-2xl font-black text-gray-800 mb-3 uppercase">Đang kiểm tra thời hạn</h2>
-            <p className="text-gray-500 text-[14px]">Hệ thống đang xác thực gói dùng thử / Premium của tài khoản.</p>
+            <Loader2 size={42} className="text-blue-600 animate-spin mx-auto mb-5" />
+            <h2 className="text-2xl font-black text-gray-800 mb-3 uppercase">Đang kiểm tra hạn dùng</h2>
+            <p className="text-gray-500 text-[14px]">Vui lòng đợi trong giây lát...</p>
           </div>
-        ) : !isAccountActive ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
+        ) : subscriptionExpired ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-12 text-center max-w-2xl mx-auto mt-20">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Crown size={40} className="text-red-600" />
             </div>
-            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đã hết thời gian sử dụng</h2>
-            <p className="text-gray-500 mb-3 max-w-md mx-auto text-[14px]">
-              Tài khoản của bạn đã hết 1 giờ dùng thử hoặc gói Premium đã hết hạn.
+            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Gói dùng thử đã hết hạn</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
+              Tài khoản Google mới được dùng thử 1 giờ. Vui lòng nâng cấp gói để tiếp tục sử dụng công cụ.
             </p>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto text-[12px]">
-              Gói hiện tại: {currentPlanName || 'Chưa có gói'} • Hết hạn: {formatDateTime(accountExpiresAt)}
-            </p>
-            <button 
-              onClick={handleUpgradePayment}
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+            <a
+              href={buildPaymentUrl(user)}
+              target="_blank"
+              rel="noreferrer"
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 inline-flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
             >
               <Crown size={20} />
-              <span>NÂNG CẤP PREMIUM</span>
-            </button>
+              <span>NÂNG CẤP GÓI</span>
+            </a>
           </div>
         ) : (
           <>

@@ -184,23 +184,28 @@ export default async function handler(req, res) {
           }
         : amountPlan;
 
+    const paidAtDate = new Date();
     const userId = String(payment?.userId || "").trim();
     const userEmail = String(payment?.userEmail || "").trim();
 
-    const paidAtDate = new Date();
     let baseDate = paidAtDate;
-    let oldExpiresAt = null;
+    let premiumStartedAtDate = paidAtDate;
 
     if (userId) {
       const userSnap = await db.collection("users").doc(userId).get();
 
       if (userSnap.exists) {
-        const userData = userSnap.data();
-        oldExpiresAt = toDate(userData.premiumExpiresAt || userData.expired_at);
+        const user = userSnap.data();
+        const currentPremiumExpiresAt = toDate(user.premiumExpiresAt) || toDate(user.expired_at);
+        const currentTrialExpiresAt = toDate(user.trialExpiresAt);
 
-        if (oldExpiresAt && oldExpiresAt.getTime() > paidAtDate.getTime()) {
-          baseDate = oldExpiresAt;
+        if (currentPremiumExpiresAt && currentPremiumExpiresAt.getTime() > paidAtDate.getTime()) {
+          baseDate = currentPremiumExpiresAt;
+        } else if (currentTrialExpiresAt && currentTrialExpiresAt.getTime() > paidAtDate.getTime()) {
+          baseDate = currentTrialExpiresAt;
         }
+
+        premiumStartedAtDate = toDate(user.premiumStartedAt) || toDate(user.started_at) || paidAtDate;
       }
     }
 
@@ -219,11 +224,11 @@ export default async function handler(req, res) {
         days: plan.days,
         userId,
         userEmail,
-        oldExpiresAt: oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null,
-        baseExpiresAt: Timestamp.fromDate(baseDate),
         rawBody: body,
         paidAt: FieldValue.serverTimestamp(),
+        baseExpiresAtBeforePurchase: Timestamp.fromDate(baseDate),
         expiresAt: Timestamp.fromDate(expiresAtDate),
+        cumulative: baseDate.getTime() > paidAtDate.getTime(),
         updatedAt: FieldValue.serverTimestamp()
       },
       { merge: true }
@@ -242,10 +247,10 @@ export default async function handler(req, res) {
         days: plan.days,
         sepayContent: content,
         rawBody: body,
-        oldExpiresAt: oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null,
-        baseExpiresAt: Timestamp.fromDate(baseDate),
         paidAt: FieldValue.serverTimestamp(),
+        baseExpiresAtBeforePurchase: Timestamp.fromDate(baseDate),
         expiresAt: Timestamp.fromDate(expiresAtDate),
+        cumulative: baseDate.getTime() > paidAtDate.getTime(),
         updatedAt: FieldValue.serverTimestamp()
       },
       { merge: true }
@@ -254,19 +259,16 @@ export default async function handler(req, res) {
     if (userId) {
       await db.collection("users").doc(userId).set(
         {
-          app: "research",
-          userId,
-          email: userEmail,
           account_type: "premium",
           premium: true,
           active: true,
           planId: plan.planId,
           planName: plan.planName,
-          premiumStartedAt: FieldValue.serverTimestamp(),
+          premiumStartedAt: Timestamp.fromDate(premiumStartedAtDate),
+          started_at: Timestamp.fromDate(premiumStartedAtDate),
           premiumExpiresAt: Timestamp.fromDate(expiresAtDate),
           expired_at: Timestamp.fromDate(expiresAtDate),
           lastPaymentOrderCode: orderCode,
-          totalPaidDays: FieldValue.increment(plan.days),
           updated_at: FieldValue.serverTimestamp()
         },
         { merge: true }
@@ -281,7 +283,8 @@ export default async function handler(req, res) {
       planId: plan.planId,
       userId,
       userEmail,
-      oldExpiresAt: oldExpiresAt ? oldExpiresAt.toISOString() : null,
+      cumulative: baseDate.getTime() > paidAtDate.getTime(),
+      baseExpiresAtBeforePurchase: baseDate.toISOString(),
       expiresAt: expiresAtDate.toISOString(),
       body
     });
@@ -295,9 +298,8 @@ export default async function handler(req, res) {
       amount,
       planId: plan.planId,
       planName: plan.planName,
-      days: plan.days,
-      oldExpiresAt: oldExpiresAt ? oldExpiresAt.toISOString() : null,
       expiresAt: expiresAtDate.toISOString(),
+      cumulative: baseDate.getTime() > paidAtDate.getTime(),
       userId
     });
   } catch (error) {

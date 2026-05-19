@@ -163,7 +163,7 @@
       document.getElementById("emailText").textContent = currentEmail || "---";
 
       document.getElementById("checkingBox").innerHTML =
-        "🔄 Đang chờ SePay xác nhận thanh toán tự động...<br />Mã đang chờ: <b>" + currentContent + "</b>";
+        "🔄 Đang tự động chờ SePay xác nhận...<br />Không cần bấm nút. Mã đang chờ: <b>" + currentContent + "</b>";
     }
 
     function copyContent() {
@@ -194,11 +194,11 @@
 
       document.getElementById("successBox").style.display = "block";
       document.getElementById("checkingBox").innerHTML =
-        "✅ Đã xác nhận thanh toán. Đang vào app ngay...";
+        "✅ Thanh toán thành công! Đang tự động mở công cụ...";
 
       setTimeout(() => {
-        window.location.replace(returnUrl);
-      }, 700);
+        window.location.href = returnUrl;
+      }, 1800);
     }
 
     async function checkPaymentStatus() {
@@ -214,7 +214,7 @@
           activatePro(data);
         } else {
           document.getElementById("checkingBox").innerHTML =
-            "🔄 Đang chờ SePay xác nhận thanh toán tự động...<br />Mã đang chờ: <b>" + currentContent + "</b>";
+            "🔄 Đang tự động chờ SePay xác nhận...<br />Không cần bấm nút. Mã đang chờ: <b>" + currentContent + "</b>";
         }
       } catch (err) {
         document.getElementById("checkingBox").innerHTML =
