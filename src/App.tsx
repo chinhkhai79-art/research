@@ -341,7 +341,7 @@ export default function App() {
       }
       #VTW_HARD_ACCOUNT_FLOAT_BTN {
         position: fixed !important;
-        right: 300px !important;
+        right: 520px !important;
         top: 12px !important;
         bottom: auto !important;
         z-index: 2147483647 !important;
@@ -387,7 +387,7 @@ export default function App() {
       #VTW_HARD_ACCOUNT_PANEL_BACKDROP.vtw-open { display: block !important; }
       #VTW_HARD_ACCOUNT_PANEL {
         position: fixed !important;
-        right: 18px !important;
+        right: 360px !important;
         top: 58px !important;
         bottom: auto !important;
         z-index: 2147483647 !important;
@@ -449,10 +449,13 @@ export default function App() {
         background: #f8fafc !important; color: #334155 !important; font-size: 12px !important; font-weight: 900 !important;
         text-transform: uppercase !important; cursor: pointer !important;
       }
-      @media (max-width: 700px) {
-        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 150px !important; top: 10px !important; bottom: auto !important; min-width: 125px !important; max-width: 170px !important; font-size: 9px !important; padding: 7px 10px !important; }
+      @media (max-width: 900px) {
+        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 260px !important; top: 10px !important; bottom: auto !important; min-width: 125px !important; max-width: 170px !important; font-size: 9px !important; padding: 7px 10px !important; }
         #VTW_HARD_ACCOUNT_PANEL { right: 10px !important; top: 58px !important; bottom: auto !important; width: calc(100vw - 20px) !important; }
         .vtw-hard-grid { grid-template-columns: 1fr !important; }
+      }
+      @media (max-width: 700px) {
+        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 150px !important; max-width: 145px !important; }
       }
     `;
     document.head.appendChild(style);
