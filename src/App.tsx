@@ -315,283 +315,6 @@ export default function App() {
     }
   };
 
-  // VTW_HARD_ACCOUNT_UI_ROOT - BẢN CỨNG NHẤT: inject trực tiếp vào document.body, thoát khỏi mọi khung tool/modal
-  useEffect(() => {
-    const cleanupOld = () => {
-      document.getElementById('VTW_HARD_ACCOUNT_UI_ROOT')?.remove();
-      document.getElementById('VTW_HARD_ACCOUNT_UI_STYLE')?.remove();
-    };
-
-    cleanupOld();
-
-    const root = document.createElement('div');
-    root.id = 'VTW_HARD_ACCOUNT_UI_ROOT';
-    root.setAttribute('data-proof', 'VTW_HARD_ACCOUNT_UI_20260519_RENDERED');
-    document.body.appendChild(root);
-
-    const style = document.createElement('style');
-    style.id = 'VTW_HARD_ACCOUNT_UI_STYLE';
-    style.textContent = `
-      #VTW_HARD_ACCOUNT_UI_ROOT, #VTW_HARD_ACCOUNT_UI_ROOT * {
-        box-sizing: border-box !important;
-        font-family: Arial, sans-serif !important;
-      }
-      html, body, #root, .min-h-screen {
-        background: #eff6ff !important;
-      }
-      #VTW_HARD_ACCOUNT_FLOAT_BTN {
-        position: fixed !important;
-        right: 520px !important;
-        top: 12px !important;
-        bottom: auto !important;
-        z-index: 2147483647 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 9px !important;
-        min-width: 168px !important;
-        max-width: 260px !important;
-        padding: 8px 13px !important;
-        border-radius: 999px !important;
-        border: 1px solid #93c5fd !important;
-        color: #1d4ed8 !important;
-        background: #dbeafe !important;
-        box-shadow: 0 5px 18px rgba(37,99,235,.22) !important;
-        cursor: pointer !important;
-        font-weight: 900 !important;
-        font-size: 12px !important;
-        line-height: 1.15 !important;
-        text-transform: uppercase !important;
-      }
-      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-trial,
-      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-expired {
-        background: #dbeafe !important;
-        color: #1d4ed8 !important;
-        border-color: #93c5fd !important;
-      }
-      #VTW_HARD_ACCOUNT_FLOAT_BTN .vtw-dot {
-        width: 12px !important;
-        height: 12px !important;
-        border-radius: 999px !important;
-        background: #60a5fa !important;
-        flex: 0 0 auto !important;
-        box-shadow: 0 0 0 4px rgba(96,165,250,.18) !important;
-      }
-      #VTW_HARD_ACCOUNT_PANEL_BACKDROP {
-        position: fixed !important;
-        inset: 0 !important;
-        z-index: 2147483646 !important;
-        background: rgba(15,23,42,.56) !important;
-        backdrop-filter: blur(3px) !important;
-        display: none !important;
-      }
-      #VTW_HARD_ACCOUNT_PANEL_BACKDROP.vtw-open { display: block !important; }
-      #VTW_HARD_ACCOUNT_PANEL {
-        position: fixed !important;
-        right: 360px !important;
-        top: 58px !important;
-        bottom: auto !important;
-        z-index: 2147483647 !important;
-        width: 460px !important;
-        max-width: calc(100vw - 28px) !important;
-        max-height: calc(100vh - 120px) !important;
-        overflow: auto !important;
-        display: none !important;
-        background: #fff !important;
-        border: 2px solid #bfdbfe !important;
-        border-radius: 26px !important;
-        box-shadow: 0 30px 100px rgba(0,0,0,.45) !important;
-      }
-      #VTW_HARD_ACCOUNT_PANEL.vtw-open { display: block !important; }
-      .vtw-hard-head {
-        background: linear-gradient(135deg,#2563eb,#4f46e5) !important;
-        color: white !important;
-        padding: 18px !important;
-        display: flex !important;
-        justify-content: space-between !important;
-        gap: 12px !important;
-        align-items: center !important;
-      }
-      .vtw-hard-title { font-size: 18px !important; font-weight: 900 !important; margin: 0 !important; }
-      .vtw-hard-sub { font-size: 12px !important; font-weight: 700 !important; opacity: .88 !important; margin-top: 4px !important; }
-      .vtw-hard-close {
-        width: 38px !important; height: 38px !important; border-radius: 999px !important;
-        border: 0 !important; background: rgba(255,255,255,.18) !important; color: #fff !important;
-        font-size: 24px !important; line-height: 1 !important; cursor: pointer !important; font-weight: 900 !important;
-      }
-      .vtw-hard-body { padding: 18px !important; }
-      .vtw-hard-status {
-        border-radius: 20px !important; padding: 16px !important; margin-bottom: 14px !important;
-        border: 2px solid #bfdbfe !important; background: #eff6ff !important;
-      }
-      .vtw-hard-status.vtw-trial { border-color: #fde68a !important; background: #fffbeb !important; }
-      .vtw-hard-status.vtw-expired { border-color: #fecaca !important; background: #fef2f2 !important; }
-      .vtw-hard-label { font-size: 10px !important; font-weight: 900 !important; color: #64748b !important; text-transform: uppercase !important; letter-spacing: .5px !important; }
-      .vtw-hard-main { margin-top: 5px !important; font-size: 22px !important; font-weight: 900 !important; color: #1d4ed8 !important; }
-      .vtw-hard-main.vtw-trial { color: #b45309 !important; }
-      .vtw-hard-main.vtw-expired { color: #b91c1c !important; }
-      .vtw-hard-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-      .vtw-hard-card {
-        border: 1px solid #e5e7eb !important; background: #f8fafc !important; border-radius: 16px !important; padding: 12px !important;
-      }
-      .vtw-hard-card.green { border-color: #86efac !important; background: #ecfdf5 !important; }
-      .vtw-hard-card.red { border-color: #fecaca !important; background: #fef2f2 !important; }
-      .vtw-hard-value { font-size: 15px !important; font-weight: 900 !important; color: #0f172a !important; margin-top: 5px !important; word-break: break-word !important; }
-      .vtw-hard-value.green { color: #047857 !important; }
-      .vtw-hard-value.red { color: #b91c1c !important; }
-      .vtw-hard-actions { display: flex !important; gap: 10px !important; margin-top: 16px !important; flex-wrap: wrap !important; }
-      .vtw-hard-upgrade {
-        flex: 1 !important; text-align: center !important; padding: 12px 14px !important; border-radius: 14px !important;
-        background: linear-gradient(90deg,#f97316,#ef4444) !important; color: white !important;
-        text-decoration: none !important; font-size: 12px !important; font-weight: 900 !important; text-transform: uppercase !important;
-      }
-      .vtw-hard-logout, .vtw-hard-refresh {
-        padding: 12px 14px !important; border-radius: 14px !important; border: 1px solid #e5e7eb !important;
-        background: #f8fafc !important; color: #334155 !important; font-size: 12px !important; font-weight: 900 !important;
-        text-transform: uppercase !important; cursor: pointer !important;
-      }
-      @media (max-width: 900px) {
-        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 260px !important; top: 10px !important; bottom: auto !important; min-width: 125px !important; max-width: 170px !important; font-size: 9px !important; padding: 7px 10px !important; }
-        #VTW_HARD_ACCOUNT_PANEL { right: 10px !important; top: 58px !important; bottom: auto !important; width: calc(100vw - 20px) !important; }
-        .vtw-hard-grid { grid-template-columns: 1fr !important; }
-      }
-      @media (max-width: 700px) {
-        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 150px !important; max-width: 145px !important; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      cleanupOld();
-    };
-  }, []);
-
-  useEffect(() => {
-    const root = document.getElementById('VTW_HARD_ACCOUNT_UI_ROOT');
-    if (!root) return;
-
-    if (!user) {
-      root.innerHTML = `
-        <button id="VTW_HARD_ACCOUNT_FLOAT_BTN" class="vtw-expired" type="button">
-          <span class="vtw-dot"></span>
-          <span>ĐĂNG NHẬP ĐỂ XEM GÓI</span>
-        </button>
-      `;
-
-      const loginBtn = document.getElementById('VTW_HARD_ACCOUNT_FLOAT_BTN');
-      loginBtn?.addEventListener('click', async () => {
-        try {
-          await loginWithGoogle();
-        } catch (e: any) {
-          alert('Lỗi đăng nhập: ' + (e?.message || e));
-        }
-      });
-      return;
-    }
-
-    const statusClass = isPremiumAccount ? '' : subscriptionInfo?.active ? 'vtw-trial' : 'vtw-expired';
-    const statusText = subscriptionLoading && !subscriptionInfo
-      ? 'Đang kiểm tra tài khoản...'
-      : isPremiumAccount
-        ? 'Tài khoản đã nâng cấp PRO'
-        : subscriptionInfo?.active
-          ? 'Tài khoản đang dùng thử 1 giờ'
-          : 'Tài khoản đã hết hạn';
-
-    const badgeText = isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'TRIAL' : 'HẾT HẠN';
-    const remainText = subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt);
-    const planText = subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói');
-    const startedText = formatSubscriptionDateCompact(subscriptionInfo?.startedAt);
-    const expiresText = formatSubscriptionDateCompact(subscriptionInfo?.expiresAt);
-    const paymentUrl = buildPaymentUrl(user);
-    const displayName = user.displayName || 'Người dùng';
-    const email = user.email || 'Chưa có email';
-    const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || 'U')}`;
-
-    root.innerHTML = `
-      <div id="VTW_HARD_ACCOUNT_PANEL_BACKDROP"></div>
-      <button id="VTW_HARD_ACCOUNT_FLOAT_BTN" class="${statusClass}" type="button">
-        <span class="vtw-dot"></span>
-        <span>${badgeText}</span>
-        <span style="opacity:.92;font-size:11px;">${remainText}</span>
-      </button>
-
-      <div id="VTW_HARD_ACCOUNT_PANEL">
-        <div class="vtw-hard-head">
-          <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-            <img src="${avatar}" referrerpolicy="no-referrer" style="width:48px;height:48px;border-radius:16px;border:2px solid rgba(255,255,255,.65);object-fit:cover;" />
-            <div style="min-width:0;">
-              <div class="vtw-hard-title">${displayName}</div>
-              <div class="vtw-hard-sub">${email}</div>
-            </div>
-          </div>
-          <button id="VTW_HARD_ACCOUNT_CLOSE" class="vtw-hard-close" type="button">×</button>
-        </div>
-
-        <div class="vtw-hard-body">
-          <div class="vtw-hard-status ${statusClass}">
-            <div class="vtw-hard-label">Tình trạng tài khoản</div>
-            <div class="vtw-hard-main ${statusClass}">${statusText}</div>
-          </div>
-
-          <div class="vtw-hard-grid">
-            <div class="vtw-hard-card">
-              <div class="vtw-hard-label">Gói đã đăng ký</div>
-              <div class="vtw-hard-value">${planText}</div>
-            </div>
-            <div class="vtw-hard-card ${subscriptionInfo?.active ? 'green' : 'red'}">
-              <div class="vtw-hard-label">Còn lại</div>
-              <div class="vtw-hard-value ${subscriptionInfo?.active ? 'green' : 'red'}">${remainText}</div>
-            </div>
-            <div class="vtw-hard-card">
-              <div class="vtw-hard-label">Ngày đăng ký</div>
-              <div class="vtw-hard-value">${startedText}</div>
-            </div>
-            <div class="vtw-hard-card">
-              <div class="vtw-hard-label">Hạn sử dụng</div>
-              <div class="vtw-hard-value">${expiresText}</div>
-            </div>
-          </div>
-
-          <div class="vtw-hard-actions">
-            <a class="vtw-hard-upgrade" href="${paymentUrl}" target="_blank" rel="noreferrer">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
-            <button id="VTW_HARD_ACCOUNT_REFRESH" class="vtw-hard-refresh" type="button">Làm mới</button>
-            <button id="VTW_HARD_ACCOUNT_LOGOUT" class="vtw-hard-logout" type="button">Đăng xuất</button>
-          </div>
-
-          <div style="margin-top:12px;font-size:10px;font-weight:900;color:#94a3b8;text-align:center;">UI_PROOF_HARD_BODY_INJECT_20260519</div>
-        </div>
-      </div>
-    `;
-
-    const open = () => {
-      document.getElementById('VTW_HARD_ACCOUNT_PANEL')?.classList.add('vtw-open');
-      document.getElementById('VTW_HARD_ACCOUNT_PANEL_BACKDROP')?.classList.add('vtw-open');
-    };
-
-    const close = () => {
-      document.getElementById('VTW_HARD_ACCOUNT_PANEL')?.classList.remove('vtw-open');
-      document.getElementById('VTW_HARD_ACCOUNT_PANEL_BACKDROP')?.classList.remove('vtw-open');
-    };
-
-    document.getElementById('VTW_HARD_ACCOUNT_FLOAT_BTN')?.addEventListener('click', open);
-    document.getElementById('VTW_HARD_ACCOUNT_CLOSE')?.addEventListener('click', close);
-    document.getElementById('VTW_HARD_ACCOUNT_PANEL_BACKDROP')?.addEventListener('click', close);
-    document.getElementById('VTW_HARD_ACCOUNT_REFRESH')?.addEventListener('click', () => refreshSubscription(user, false));
-    document.getElementById('VTW_HARD_ACCOUNT_LOGOUT')?.addEventListener('click', async () => {
-      try {
-        await logoutUser();
-        close();
-      } catch (e: any) {
-        console.error('Lỗi đăng xuất:', e);
-      }
-    });
-  }, [
-    user,
-    subscriptionInfo,
-    subscriptionLoading,
-    subscriptionTick
-  ]);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -622,6 +345,122 @@ export default function App() {
       window.removeEventListener('focus', onFocus);
     };
   }, [user]);
+
+  // UI_PROOF_20260519: Inject trực tiếp vào document.body để không bị khung tool / overflow / CSS che.
+  useEffect(() => {
+    const rootId = 'vtw-account-status-root-20260519';
+    let root = document.getElementById(rootId);
+
+    if (!root) {
+      root = document.createElement('div');
+      root.id = rootId;
+      document.body.appendChild(root);
+    }
+
+    const accountLabel = !user
+      ? 'CHƯA ĐĂNG NHẬP'
+      : subscriptionLoading && !subscriptionInfo
+        ? 'ĐANG KIỂM TRA'
+        : isPremiumAccount
+          ? 'PRO'
+          : subscriptionInfo?.active
+            ? 'TRIAL'
+            : 'HẾT HẠN';
+
+    const statusTitle = !user
+      ? 'Chưa đăng nhập Google'
+      : subscriptionLoading && !subscriptionInfo
+        ? 'Đang kiểm tra tài khoản...'
+        : isPremiumAccount
+          ? 'Tài khoản đã nâng cấp PRO'
+          : subscriptionInfo?.active
+            ? 'Tài khoản đang dùng thử 1 giờ'
+            : 'Tài khoản đã hết hạn';
+
+    const planText = subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói');
+    const startedText = formatSubscriptionDateCompact(subscriptionInfo?.startedAt);
+    const expiresText = formatSubscriptionDateCompact(subscriptionInfo?.expiresAt);
+    const remainingText = user ? getRemainingText(subscriptionInfo?.expiresAt) : '---';
+    const payUrl = user ? buildPaymentUrl(user) : '#';
+
+    root.innerHTML = `
+      <style>
+        #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        #vtw-account-status-root-20260519 .vtw-float-btn {
+          position: fixed !important; right: 18px !important; bottom: 64px !important; z-index: 2147483646 !important;
+          border: 3px solid #fff !important; border-radius: 999px !important; padding: 11px 16px !important;
+          background: ${isPremiumAccount ? 'linear-gradient(135deg,#2563eb,#06b6d4)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#ef4444,#dc2626)'} !important;
+          color: #fff !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase !important;
+          box-shadow: 0 14px 45px rgba(15,23,42,.35) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
+        }
+        #vtw-account-status-root-20260519 .vtw-overlay {
+          position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
+          background: rgba(15,23,42,.52) !important; backdrop-filter: blur(3px) !important; padding: 18px !important;
+        }
+        #vtw-account-status-root-20260519 .vtw-panel { width: 460px !important; max-width: calc(100vw - 30px) !important; background:#fff !important; border-radius: 24px !important; overflow:hidden !important; box-shadow:0 28px 90px rgba(15,23,42,.45) !important; border:1px solid #bfdbfe !important; }
+        #vtw-account-status-root-20260519 .vtw-head { padding:18px !important; background:linear-gradient(135deg,#2563eb,#4f46e5) !important; color:#fff !important; display:flex !important; justify-content:space-between !important; gap:12px !important; align-items:center !important; }
+        #vtw-account-status-root-20260519 .vtw-card { border:1px solid #e5e7eb !important; background:#f8fafc !important; border-radius:16px !important; padding:12px !important; }
+        #vtw-account-status-root-20260519 .vtw-label { font-size:10px !important; color:#94a3b8 !important; font-weight:900 !important; text-transform:uppercase !important; }
+        #vtw-account-status-root-20260519 .vtw-value { font-size:15px !important; color:#0f172a !important; font-weight:900 !important; margin-top:5px !important; }
+      </style>
+      <button class="vtw-float-btn" id="vtw-open-account-20260519">👑 ${accountLabel} · ${remainingText}</button>
+      <div class="vtw-overlay" id="vtw-overlay-20260519">
+        <div class="vtw-panel" onclick="event.stopPropagation()">
+          <div class="vtw-head">
+            <div>
+              <div style="font-size:12px;font-weight:900;opacity:.85;text-transform:uppercase;">Tài khoản & hạn sử dụng</div>
+              <div style="font-size:22px;font-weight:900;margin-top:4px;">${statusTitle}</div>
+              <div style="font-size:12px;font-weight:700;opacity:.85;margin-top:3px;">${user?.displayName || 'Người dùng'} · ${user?.email || 'Chưa có email'}</div>
+            </div>
+            <button id="vtw-close-account-20260519" style="width:38px;height:38px;border-radius:999px;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:22px;cursor:pointer;">×</button>
+          </div>
+          <div style="padding:18px;">
+            <div style="border-radius:18px;padding:15px;margin-bottom:12px;border:1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'};background:${isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'};">
+              <div style="font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;">Trạng thái</div>
+              <div style="font-size:22px;font-weight:900;margin-top:5px;color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'};">${statusTitle}</div>
+              <div style="font-size:11px;font-weight:900;color:#f97316;margin-top:8px;">UI_PROOF_20260519_RENDERED</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="vtw-card"><div class="vtw-label">Gói đã đăng ký</div><div class="vtw-value">${planText}</div></div>
+              <div class="vtw-card" style="background:${subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2'} !important;border-color:${subscriptionInfo?.active ? '#86efac' : '#fecaca'} !important;"><div class="vtw-label" style="color:${subscriptionInfo?.active ? '#059669' : '#dc2626'} !important;">Còn lại</div><div class="vtw-value" style="color:${subscriptionInfo?.active ? '#047857' : '#b91c1c'} !important;">${remainingText}</div></div>
+              <div class="vtw-card"><div class="vtw-label">Ngày đăng ký</div><div class="vtw-value">${startedText}</div></div>
+              <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
+              <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
+              <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const overlay = document.getElementById('vtw-overlay-20260519') as HTMLDivElement | null;
+    const openBtn = document.getElementById('vtw-open-account-20260519');
+    const closeBtn = document.getElementById('vtw-close-account-20260519');
+    const logoutBtn = document.getElementById('vtw-logout-account-20260519');
+    const refreshBtn = document.getElementById('vtw-refresh-account-20260519');
+
+    const openPanel = () => { if (overlay) overlay.style.display = 'flex'; };
+    const closePanel = () => { if (overlay) overlay.style.display = 'none'; };
+    const doLogout = async () => { await logoutUser(); closePanel(); };
+    const doRefresh = () => { if (user) refreshSubscription(user, false); };
+
+    openBtn?.addEventListener('click', openPanel);
+    closeBtn?.addEventListener('click', closePanel);
+    overlay?.addEventListener('click', closePanel);
+    logoutBtn?.addEventListener('click', doLogout);
+    refreshBtn?.addEventListener('click', doRefresh);
+
+    return () => {
+      openBtn?.removeEventListener('click', openPanel);
+      closeBtn?.removeEventListener('click', closePanel);
+      overlay?.removeEventListener('click', closePanel);
+      logoutBtn?.removeEventListener('click', doLogout);
+      refreshBtn?.removeEventListener('click', doRefresh);
+    };
+  }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
@@ -1023,96 +862,264 @@ export default function App() {
       alert("Vui lòng nhập API Key để sử dụng tính năng này!");
       return;
     }
+
     setIsFetchingDailyTrending(true);
-    
-    try {
-      const newNiches = [...suggestedNiches]; // always start with original or current categories
-      const batchSize = 3; // run limited batches to avoid hitting youtube rate limits quickly
-      
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      const publishedAfter = lastMonth.toISOString();
+    setStatus('Đang cập nhật 30 chủ đề: mỗi chủ đề 2 từ khóa YouTube API + 3 từ khóa AI...');
 
-      for (let i = 0; i < newNiches.length; i += batchSize) {
-        const batch = newNiches.slice(i, i + batchSize);
-        
-        await Promise.all(batch.map(async (niche, idx) => {
-          const actualIdx = i + idx;
-          try {
-             // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
-             let searchRes = await youtubeFetch('search', {
-               part: 'snippet',
-               q: niche.category,
-               type: 'video',
-               regionCode: trendingRegion,
-               order: 'viewCount', // hottest
-               publishedAfter: publishedAfter,
-               maxResults: 6
-             });
-             
-             // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
-             if (!searchRes.items || searchRes.items.length === 0) {
-                 searchRes = await youtubeFetch('search', {
-                   part: 'snippet',
-                   q: niche.category,
-                   type: 'video',
-                   regionCode: trendingRegion,
-                   order: 'viewCount', // hottest all-time
-                   maxResults: 6
-                 });
-             }
-             
-             if (!searchRes.items || searchRes.items.length === 0) return; // Keep original if completely empty
-             
-             const videoIds = searchRes.items.map((item: any) => item.id.videoId).join(',');
-             
-             // 2. Fetch details (tags) for these exact videos
-             const videoRes = await youtubeFetch('videos', {
-               part: 'snippet',
-               id: videoIds
-             });
-             
-             if (!videoRes.items) return;
-             
-             const countMap: Record<string, number> = {};
-             videoRes.items.forEach((v: any) => {
-               if (v.snippet.tags) {
-                 v.snippet.tags.forEach((t: string) => {
-                   const cleaned = t.trim().toLowerCase();
-                   if (cleaned.length > 2 && !cleaned.includes('shorts')) {
-                     countMap[cleaned] = (countMap[cleaned] || 0) + 1;
-                   }
-                 });
-               }
-             });
-             
-             // Fallback if the videos strangely had zero tags combined
-             if (Object.keys(countMap).length === 0) {
-                 videoRes.items.forEach((v: any) => {
-                    const words = v.snippet.title.toLowerCase().split(/[\s,._\-()[\]{}|]+/);
-                    words.forEach((w: string) => {
-                       if (w.length > 4) countMap[w] = (countMap[w] || 0) + 1;
-                    });
-                 });
-             }
+    const cleanKeyword = (value: any) => {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[#@"'“”‘’()[\]{}|\\]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
 
-             // Sort them by frequency (hottest keywords within the hottest videos top)
-             const topTags = Object.entries(countMap)
-               .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
-               .map(x => x[0])
-               .slice(0, 10); // Lấy 10 keys (như cũ)
-               
-             if (topTags.length > 0) {
-               newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
-             }
-          } catch(e) {
-             console.error(`Error niche ${niche.category}:`, e);
-          }
-        }));
+    const isGoodKeyword = (value: string) => {
+      const kw = cleanKeyword(value);
+      if (!kw) return false;
+      if (kw.length < 3 || kw.length > 60) return false;
+      if (kw.includes('shorts') || kw.includes('http') || kw.includes('youtube')) return false;
+      return true;
+    };
+
+    const uniqueKeywords = (items: string[], limit = 5) => {
+      const seen = new Set<string>();
+      const output: string[] = [];
+
+      for (const raw of items) {
+        const kw = cleanKeyword(raw);
+        if (!isGoodKeyword(kw)) continue;
+        if (seen.has(kw)) continue;
+        seen.add(kw);
+        output.push(kw);
+        if (output.length >= limit) break;
       }
 
+      return output;
+    };
+
+    const fallbackByCategory: Record<string, string[]> = {
+      'ẨM THỰC & NẤU ĂN': ['món ăn gia đình', 'công thức nấu ăn', 'nấu ăn tại nhà', 'món ngon mỗi ngày', 'đồ ăn healthy'],
+      'TÀI CHÍNH & ĐẦU TƯ': ['quản lý tài chính cá nhân', 'đầu tư chứng khoán', 'kiếm tiền online', 'tiết kiệm tiền', 'đầu tư cho người mới']
+    };
+
+    const getSearchQueryForCategory = (category: string, currentItems: string[]) => {
+      const map: Record<string, string> = {
+        'ẨM THỰC & NẤU ĂN': 'món ăn gia đình công thức nấu ăn món ngon mỗi ngày',
+        'TÀI CHÍNH & ĐẦU TƯ': 'tài chính cá nhân đầu tư chứng khoán kiếm tiền online tiết kiệm tiền',
+        'CÔNG NGHỆ & AI': 'trí tuệ nhân tạo công nghệ AI ChatGPT công cụ AI',
+        'GIÁO DỤC & HỌC TẬP': 'giáo dục học tập kỹ năng học online',
+        'SỨC KHỎE & LÀM ĐẸP': 'sức khỏe làm đẹp chăm sóc da giảm cân',
+        'DU LỊCH & KHÁM PHÁ': 'du lịch khám phá địa điểm du lịch vlog',
+      };
+
+      return map[category] || `${category} ${currentItems.slice(0, 3).join(' ')}`;
+    };
+
+    const fetchTwoYouTubeKeywords = async (category: string, currentItems: string[]) => {
+      const baseQuery = getSearchQueryForCategory(category, currentItems);
+      const publishedAfter = getPublishedAfterDate('month');
+
+      const searchVariants = [
+        baseQuery,
+        category,
+        currentItems.slice(0, 3).join(' ')
+      ].filter(Boolean);
+
+      const collected: string[] = [];
+
+      for (const query of searchVariants) {
+        if (collected.length >= 2) break;
+
+        try {
+          let searchRes = await youtubeFetch('search', {
+            part: 'snippet',
+            q: query,
+            type: 'video',
+            regionCode: trendingRegion,
+            order: 'viewCount',
+            publishedAfter,
+            maxResults: 8
+          });
+
+          if (!searchRes.items || searchRes.items.length === 0) {
+            searchRes = await youtubeFetch('search', {
+              part: 'snippet',
+              q: query,
+              type: 'video',
+              regionCode: trendingRegion,
+              order: 'viewCount',
+              maxResults: 8
+            });
+          }
+
+          const videoIds = (searchRes.items || [])
+            .map((item: any) => item?.id?.videoId)
+            .filter(Boolean)
+            .slice(0, 8)
+            .join(',');
+
+          if (!videoIds) continue;
+
+          const videoRes = await youtubeFetch('videos', {
+            part: 'snippet',
+            id: videoIds
+          });
+
+          const countMap: Record<string, number> = {};
+
+          (videoRes.items || []).forEach((v: any) => {
+            const title = v?.snippet?.title || '';
+            const tags = v?.snippet?.tags || [];
+
+            tags.forEach((tag: string) => {
+              const kw = cleanKeyword(tag);
+              if (isGoodKeyword(kw)) countMap[kw] = (countMap[kw] || 0) + 4;
+            });
+
+            title
+              .split(/[\s,._\-:;!?()[\]{}|/\\]+/)
+              .map(cleanKeyword)
+              .filter(w => w.length >= 4)
+              .forEach(w => {
+                if (isGoodKeyword(w)) countMap[w] = (countMap[w] || 0) + 1;
+              });
+
+            // Lấy thêm cụm 2-3 từ từ tiêu đề để tránh ra từng chữ rời rạc.
+            const words = title
+              .split(/[\s,._\-:;!?()[\]{}|/\\]+/)
+              .map(cleanKeyword)
+              .filter(w => w.length >= 3 && !['của', 'cho', 'với', 'một', 'những', 'các', 'the', 'and', 'for'].includes(w));
+
+            for (let i = 0; i < words.length - 1; i++) {
+              const phrase2 = `${words[i]} ${words[i + 1]}`.trim();
+              if (isGoodKeyword(phrase2)) countMap[phrase2] = (countMap[phrase2] || 0) + 2;
+
+              if (i < words.length - 2) {
+                const phrase3 = `${words[i]} ${words[i + 1]} ${words[i + 2]}`.trim();
+                if (isGoodKeyword(phrase3)) countMap[phrase3] = (countMap[phrase3] || 0) + 2;
+              }
+            }
+          });
+
+          const ranked = Object.entries(countMap)
+            .sort((a, b) => b[1] - a[1])
+            .map(([kw]) => kw);
+
+          collected.push(...ranked);
+        } catch (error) {
+          console.error(`Lỗi YouTube API khi cập nhật chủ đề ${category}:`, error);
+        }
+      }
+
+      return uniqueKeywords(collected, 2);
+    };
+
+    const getAiKeywordsForAllCategories = async (apiSeed: Array<{ category: string; apiKeywords: string[]; oldItems: string[] }>) => {
+      const fallbackMap: Record<string, string[]> = {};
+      apiSeed.forEach(item => {
+        fallbackMap[item.category] = uniqueKeywords([
+          ...(fallbackByCategory[item.category] || []),
+          ...item.oldItems
+        ], 3);
+      });
+
+      if (!geminiApiKey) return fallbackMap;
+
+      try {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+        const prompt = `
+Bạn là chuyên gia nghiên cứu trend YouTube tại Việt Nam.
+Dựa trên mỗi chủ đề và 2 từ khóa lấy từ YouTube Data API bên dưới, hãy đề xuất đúng 3 từ khóa trend hiện nay cho mỗi chủ đề.
+
+Yêu cầu bắt buộc:
+- Trả về JSON hợp lệ duy nhất, không giải thích, không markdown.
+- Dạng: [{"category":"Tên chủ đề","keywords":["từ khóa 1","từ khóa 2","từ khóa 3"]}]
+- Mỗi keywords đúng 3 từ khóa.
+- Từ khóa ngắn gọn, tự nhiên, phù hợp tìm kiếm YouTube.
+- Không trùng với 2 từ khóa API đã có.
+- Ưu tiên tiếng Việt nếu khu vực là Việt Nam.
+
+Dữ liệu:
+${JSON.stringify(apiSeed.map(item => ({
+  category: item.category,
+  youtubeApiKeywords: item.apiKeywords,
+  oldKeywords: item.oldItems.slice(0, 5),
+  region: trendingRegion || 'Global'
+})), null, 2)}
+`;
+
+        const response = await ai.models.generateContent({
+          model: geminiModel,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
+
+        const rawText = response.text || '';
+        const jsonText = rawText.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(jsonText);
+
+        const aiMap: Record<string, string[]> = { ...fallbackMap };
+
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item: any) => {
+            if (!item?.category || !Array.isArray(item?.keywords)) return;
+            aiMap[item.category] = uniqueKeywords(item.keywords, 3);
+          });
+        }
+
+        return aiMap;
+      } catch (error) {
+        console.error('Lỗi Gemini AI khi tạo 3 từ khóa bổ sung:', error);
+        return fallbackMap;
+      }
+    };
+
+    try {
+      const apiSeed: Array<{ category: string; apiKeywords: string[]; oldItems: string[] }> = [];
+
+      for (let index = 0; index < suggestedNiches.length; index++) {
+        const niche = suggestedNiches[index];
+        setStatus(`Đang lấy 2 từ khóa YouTube API cho: ${niche.category} (${index + 1}/${suggestedNiches.length})`);
+
+        let apiKeywords = await fetchTwoYouTubeKeywords(niche.category, niche.items);
+
+        // Chống lỗi riêng cho 2 mục hay bị rỗng: vẫn cố lấy theo query dự phòng sát nghĩa.
+        if (apiKeywords.length < 2 && fallbackByCategory[niche.category]) {
+          apiKeywords = uniqueKeywords([...apiKeywords, ...fallbackByCategory[niche.category]], 2);
+        }
+
+        apiSeed.push({
+          category: niche.category,
+          apiKeywords,
+          oldItems: niche.items
+        });
+      }
+
+      setStatus('Đang dùng AI tạo 3 từ khóa bổ sung cho mỗi chủ đề...');
+      const aiMap = await getAiKeywordsForAllCategories(apiSeed);
+
+      const newNiches = suggestedNiches.map((niche) => {
+        const seed = apiSeed.find(item => item.category === niche.category);
+        const apiKeywords = seed?.apiKeywords || [];
+        const aiKeywords = aiMap[niche.category] || [];
+
+        const finalItems = uniqueKeywords([
+          ...apiKeywords,
+          ...aiKeywords,
+          ...(fallbackByCategory[niche.category] || []),
+          ...niche.items
+        ], 5);
+
+        return {
+          ...niche,
+          items: finalItems
+        };
+      });
+
       setSuggestedNiches(newNiches);
-      alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
+      setStatus('Đã cập nhật xong: mỗi chủ đề có 5 từ khóa gồm 2 API + 3 AI.');
+      alert('Đã cập nhật xong: mỗi chủ đề có 5 từ khóa. Trong đó ưu tiên 2 từ khóa từ YouTube API và 3 từ khóa AI.');
     } catch(e) {
       console.error(e);
       alert("Không thể tải trending từ YouTube lúc này. Vui lòng kiểm tra API Key.");
@@ -2502,7 +2509,7 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#eff6ff] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
       <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
@@ -2517,7 +2524,52 @@ ${topKeywordsStr}`;
           </h1>
 
           <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-            {/* VTW_REMOVED_HEADER_SUBSCRIPTION_PILLS_DESKTOP_20260519 */}
+            {user && (
+              <div className="hidden xl:flex items-center gap-2 min-w-0">
+                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
+                  <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                    {subscriptionLoading && !subscriptionInfo
+                      ? 'Đang kiểm tra'
+                      : isPremiumAccount
+                        ? 'Đã nâng cấp PRO'
+                        : subscriptionInfo?.active
+                          ? 'Dùng thử 1 giờ'
+                          : 'Hết hạn'}
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Gói</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight max-w-[115px] truncate">
+                    {subscriptionLoading && !subscriptionInfo
+                      ? 'Đang kiểm tra'
+                      : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Ngày đăng ký</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
+                    {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Hạn sử dụng</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
+                    {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+                  </div>
+                </div>
+
+                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className={`text-[8px] font-black uppercase leading-none ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+                  <div className={`text-[10px] font-black leading-tight whitespace-nowrap ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {user ? (
               <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
@@ -2597,7 +2649,40 @@ ${topKeywordsStr}`;
           </div>
         </div>
 
-        {/* VTW_REMOVED_HEADER_SUBSCRIPTION_PILLS_MOBILE_20260519 */}
+        {user && (
+          <div className="xl:hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+            <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
+              <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : isPremiumAccount ? 'Đã nâng cấp PRO' : subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Hết hạn'}
+              </div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Gói</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">
+                {subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+              </div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
+            </div>
+
+            <div className={`px-2 py-1.5 rounded-xl border ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`text-[8px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+              <div className={`text-[10px] font-black truncate ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Container */}
@@ -5349,10 +5434,10 @@ ${topKeywordsStr}`;
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{category.items.length} KEY</span>
+                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.map((item, itemIdx) => (
+                        {category.items.slice(0, 5).map((item, itemIdx) => (
                           <button
                             key={itemIdx}
                             onClick={() => {
