@@ -427,7 +427,7 @@ export default function App() {
               <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">
-              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
+              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
               <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
               <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
             </div>
