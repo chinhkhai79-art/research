@@ -266,6 +266,9 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
+  const [debugChecks, setDebugChecks] = useState<any | null>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
+
   const [showAccountPanel, setShowAccountPanel] = useState(false);
 
   const buildPaymentUrl = (targetUser = user) => {
@@ -313,6 +316,101 @@ export default function App() {
       return null;
     } finally {
       setSubscriptionLoading(false);
+    }
+  };
+
+  const runDebugChecks = async (targetUser = user) => {
+    const rows: any[] = [];
+    const addRow = (name: string, ok: boolean, detail: any = null) => {
+      rows.push({
+        name,
+        ok,
+        detail,
+        time: new Date().toLocaleTimeString('vi-VN')
+      });
+    };
+
+    try {
+      setDebugLoading(true);
+
+      addRow('Frontend loaded', true, {
+        origin: window.location.origin,
+        path: window.location.pathname,
+        hasUser: Boolean(targetUser),
+        userId: targetUser?.uid || null,
+        email: targetUser?.email || null,
+        subscriptionInfo
+      });
+
+      try {
+        const pingRes = await fetch('/api/ping?ts=' + Date.now(), { cache: 'no-store' });
+        const pingJson = await pingRes.json().catch(() => null);
+        addRow('/api/ping', pingRes.ok && Boolean(pingJson?.success), {
+          status: pingRes.status,
+          response: pingJson
+        });
+      } catch (e: any) {
+        addRow('/api/ping', false, e?.message || String(e));
+      }
+
+      try {
+        const debugRes = await fetch('/api/debug?ts=' + Date.now(), { cache: 'no-store' });
+        const debugJson = await debugRes.json().catch(() => null);
+        addRow('/api/debug Firebase/Firestore', debugRes.ok && Boolean(debugJson?.success), {
+          status: debugRes.status,
+          response: debugJson
+        });
+      } catch (e: any) {
+        addRow('/api/debug Firebase/Firestore', false, e?.message || String(e));
+      }
+
+      if (targetUser) {
+        try {
+          const subUrl =
+            `/api/me/subscription` +
+            `?userId=${encodeURIComponent(targetUser.uid)}` +
+            `&uid=${encodeURIComponent(targetUser.uid)}` +
+            `&email=${encodeURIComponent(targetUser.email || '')}` +
+            `&name=${encodeURIComponent(targetUser.displayName || '')}` +
+            `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
+            `&initTrial=0` +
+            `&ts=${Date.now()}`;
+
+          const subRes = await fetch(subUrl, { cache: 'no-store' });
+          const subJson = await subRes.json().catch(() => null);
+          addRow('/api/me/subscription', subRes.ok && Boolean(subJson?.success), {
+            status: subRes.status,
+            response: subJson
+          });
+
+          if (subJson?.success) {
+            setSubscriptionInfo(subJson);
+          }
+        } catch (e: any) {
+          addRow('/api/me/subscription', false, e?.message || String(e));
+        }
+      } else {
+        addRow('/api/me/subscription', false, 'Chưa đăng nhập Google nên chưa kiểm tra được hạn dùng user.');
+      }
+
+      const hasSubscriptionApi = rows.some(r => r.name === '/api/me/subscription' && r.ok);
+      const hasDebugOk = rows.some(r => r.name === '/api/debug Firebase/Firestore' && r.ok);
+      const likelyIssue =
+        !targetUser
+          ? 'Chưa đăng nhập Google.'
+          : !hasDebugOk
+            ? 'Backend/Firebase chưa OK hoặc Vercel chưa nhận env.'
+            : !hasSubscriptionApi
+              ? 'API hạn dùng lỗi hoặc đường dẫn /api/me/subscription không chạy.'
+              : 'Backend OK. Nếu giao diện vẫn không hiện thì lỗi nằm ở vị trí render/CSS hoặc Vercel chưa deploy đúng App.tsx.';
+
+      setDebugChecks({
+        updatedAt: new Date().toLocaleString('vi-VN'),
+        likelyIssue,
+        rows
+      });
+    } finally {
+      setDebugLoading(false);
     }
   };
 
@@ -4814,6 +4912,152 @@ ${topKeywordsStr}`;
 
               {/* Content */}
               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
+                {/* Subscription / Account Status - ƯU TIÊN HIỂN THỊ TRÊN ĐẦU */}
+                <div className="rounded-3xl border-2 border-emerald-100 bg-gradient-to-r from-emerald-50 via-blue-50 to-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-md ${isPremiumAccount ? 'bg-blue-600 text-white' : subscriptionInfo?.active ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'}`}>
+                        <Crown size={24} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tài khoản & hạn sử dụng</div>
+                        <div className={`text-[22px] font-black leading-tight ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                          {!user
+                            ? 'Chưa đăng nhập'
+                            : subscriptionLoading && !subscriptionInfo
+                              ? 'Đang kiểm tra tài khoản...'
+                              : isPremiumAccount
+                                ? 'Tài khoản đã nâng cấp PRO'
+                                : subscriptionInfo?.active
+                                  ? 'Tài khoản đang dùng thử 1 giờ'
+                                  : 'Tài khoản đã hết hạn'}
+                        </div>
+                        {user && (
+                          <div className="text-[12px] font-bold text-slate-500 mt-1">
+                            {user.displayName || 'Người dùng'} · {user.email || 'Chưa có email'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {user && (
+                      <a
+                        href={buildPaymentUrl(user)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 px-5 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-black uppercase shadow-md hover:from-orange-600 hover:to-red-600 transition-all"
+                        title="Nâng cấp thêm và cộng dồn hạn sử dụng"
+                      >
+                        {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <div className="text-[10px] font-black text-slate-400 uppercase">Gói đã đăng ký</div>
+                      <div className="text-[14px] font-black text-slate-900 mt-1">
+                        {!user
+                          ? 'Chưa đăng nhập'
+                          : subscriptionLoading && !subscriptionInfo
+                            ? 'Đang kiểm tra'
+                            : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <div className="text-[10px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
+                      <div className="text-[14px] font-black text-slate-900 mt-1">
+                        {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <div className="text-[10px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
+                      <div className="text-[14px] font-black text-slate-900 mt-1">
+                        {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+                      </div>
+                    </div>
+
+                    <div className={`rounded-2xl border p-3 ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                      <div className={`text-[10px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+                      <div className={`text-[14px] font-black mt-1 ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {!user ? '---' : subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {user && (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => refreshSubscription(user, false)}
+                        className="px-4 py-2 rounded-xl bg-white border border-blue-200 text-blue-700 font-black text-[11px] uppercase hover:bg-blue-50"
+                      >
+                        Làm mới hạn dùng
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await logoutUser();
+                            setShowKeyInputModal(false);
+                          } catch (e: any) {
+                            console.error('Lỗi đăng xuất:', e);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-[11px] uppercase hover:bg-gray-50"
+                      >
+                        Đăng xuất
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Debug hiển thị lỗi hệ thống */}
+                <div className="rounded-3xl border-2 border-slate-200 bg-slate-50 p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <div className="text-[13px] font-black text-slate-900 uppercase tracking-widest">Kiểm tra lỗi hệ thống</div>
+                      <div className="text-[11px] font-bold text-slate-500">
+                        Dùng để biết lỗi nằm ở Vercel, Firebase, API hạn dùng hay giao diện.
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => runDebugChecks(user)}
+                      disabled={debugLoading}
+                      className="px-4 py-2 rounded-xl bg-slate-900 text-white font-black text-[11px] uppercase disabled:opacity-60"
+                    >
+                      {debugLoading ? 'Đang kiểm tra...' : 'Chạy kiểm tra'}
+                    </button>
+                  </div>
+
+                  {debugChecks ? (
+                    <div className="space-y-3">
+                      <div className="rounded-2xl bg-white border border-slate-200 p-3">
+                        <div className="text-[10px] font-black text-slate-400 uppercase">Kết luận nhanh</div>
+                        <div className="text-[13px] font-black text-slate-800 mt-1">{debugChecks.likelyIssue}</div>
+                        <div className="text-[10px] font-bold text-slate-400 mt-1">Cập nhật: {debugChecks.updatedAt}</div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2">
+                        {debugChecks.rows.map((row: any, idx: number) => (
+                          <details key={idx} className={`rounded-2xl border p-3 ${row.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                            <summary className={`cursor-pointer text-[12px] font-black ${row.ok ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {row.ok ? '✅' : '❌'} {row.name}
+                            </summary>
+                            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-[10px] bg-white/70 rounded-xl p-2 text-slate-700">
+                              {JSON.stringify(row.detail, null, 2)}
+                            </pre>
+                          </details>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl bg-white border border-slate-200 p-3 text-[12px] font-bold text-slate-500">
+                      Bấm “Chạy kiểm tra” để hiện lỗi chi tiết.
+                    </div>
+                  )}
+                </div>
+
                 {/* Section Gemini */}
                 <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
