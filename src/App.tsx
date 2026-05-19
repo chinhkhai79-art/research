@@ -56,6 +56,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
+import { Toaster, toast } from 'react-hot-toast';
+import { useAuth } from './hooks/useAuth';
+import { AuthPortal } from './components/AccountModals';
 
 // --- Types ---
 interface YouTubeConfig {
@@ -119,7 +122,7 @@ const LinkifyText = ({ text }: { text: string }) => {
       {parts.map((part, i) => 
         urlRegex.test(part) ? (
           <a
-            key={i}
+            key={`link-${i}`}
             href={part}
             target="_blank"
             rel="noreferrer"
@@ -154,6 +157,25 @@ interface SavedSpyReport {
 }
 
 // --- Constants ---
+const USER_KEY = "RESEARCH_TOOL_USER";
+const PRO_KEY = "RESEARCH_TOOL_PRO";
+const PENDING_ORDER_KEY = "RESEARCH_TOOL_PENDING_ORDER";
+const PAYMENT_PREFIX = "RESEARCH";
+
+const PREMIUM_PLANS = [
+  { id: "1m", name: "Gói 1 tháng", label: "1 tháng", priceText: "10k", amount: 10000, days: 30 },
+  { id: "3m", name: "Gói 3 tháng", label: "3 tháng", priceText: "180k", amount: 180000, days: 90 },
+  { id: "6m", name: "Gói 6 tháng", label: "6 tháng", priceText: "300k", amount: 300000, days: 180 },
+  { id: "12m", name: "Gói 1 năm", label: "1 năm", priceText: "500k", amount: 500000, days: 365 }
+];
+
+function canUseTool(isValidUser: () => boolean, silent = false) {
+  if (isValidUser()) return true;
+
+  if (!silent) toast.error("Tài khoản đã hết hạn dùng thử. Vui lòng nâng cấp để tiếp tục.");
+  return false;
+}
+
 const DEFAULT_CONFIG: YouTubeConfig = {
   apiKeys: [],
   keyword: '',
@@ -247,7 +269,13 @@ const SUGGESTED_NICHES = [
 const STOP_LIMIT = 10;
 
 export default function App() {
-  // --- State ---
+  const { user, profile, loading: authLoading, logout, isPremium, isTrialActive, getRemainingTrialTime, isValidUser } = useAuth();
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [portalView, setPortalView] = useState<'packages' | 'payment'>('packages');
+  
+  const isPro = isPremium();
+
+  // --- Existing State ---
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
@@ -447,7 +475,18 @@ export default function App() {
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
 
-    // Load daily quota and clear if it's a new day
+    // Handle paid success from pay.html
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('paid') === 'success') {
+      toast.success("Thanh toán thành công! Tài khoản của bạn đang được nâng cấp PRO.", { duration: 5000 });
+      // Remove the param from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Storage cleanup if needed
+  }, []);
+
+  useEffect(() => {
     const savedQuotaTotal = localStorage.getItem('youtube_quota_today');
     if (savedQuotaTotal) {
       try {
@@ -620,6 +659,7 @@ export default function App() {
   };
 
   const runNicheResearch = async (customKeyword?: string) => {
+    if (!canUseTool(isValidUser)) return;
     const kw = customKeyword || nicheInput;
     if (!kw.trim()) {
       alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
@@ -830,6 +870,7 @@ export default function App() {
   };
 
   const analyzeWithAI = async () => {
+    if (!canUseTool(isValidUser)) return;
     if (!geminiApiKey) {
       setStatus('Lỗi: Vui lòng nhập Gemini API Key ở trên header.');
       return;
@@ -1017,14 +1058,14 @@ export default function App() {
     try {
       // 1. Try Suggest Queries API (Fast, no quota, real search trends)
       try {
-        const suggestUrl = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(base)}&hl=vi`;
+        const suggestUrl = `/api/youtube-suggestions?q=${encodeURIComponent(base)}`;
         const sResponse = await fetch(suggestUrl).catch(() => null);
         if (sResponse && sResponse.ok) {
           const sData = await sResponse.json();
-          if (sData && sData[1]) {
+          if (Array.isArray(sData) && sData[1]) {
             const suggestions = sData[1] as string[];
             suggestions.slice(0, 15).forEach(s => {
-              if (s.toLowerCase() !== base.toLowerCase()) {
+              if (s.toLowerCase() !== base.toLowerCase() && !ideas.find(i => i.text.toLowerCase() === s.toLowerCase())) {
                 const sScore = (Math.random() * 3 + 1.5).toFixed(1);
                 const comps = ['Thấp', 'Trung bình', 'Cao'];
                 const comp = comps[Math.floor(Math.random() * comps.length)];
@@ -1158,6 +1199,7 @@ export default function App() {
   };
 
   const startHunter = async () => {
+    if (!canUseTool(isValidUser)) return;
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       return;
@@ -1410,6 +1452,7 @@ export default function App() {
   };
 
   const analyzeSpy = async (targetId?: string | any) => {
+    if (!canUseTool(isValidUser)) return;
     const query = (typeof targetId === 'string' && targetId) ? targetId : spyInput;
     if (!query || typeof query !== 'string') return;
     const input = query.trim();
@@ -1751,6 +1794,7 @@ ${topKeywordsStr}`;
   };
 
   const addAllToTracking = () => {
+    if (!canUseTool(isValidUser)) return;
     if (results.length === 0) {
       setStatus('Không có kết quả nào để thêm.');
       return;
@@ -1813,6 +1857,7 @@ ${topKeywordsStr}`;
   };
 
   const analyzeVideo = async (targetId?: string | any) => {
+    if (!canUseTool(isValidUser)) return;
     // If targetId is a React event, ignore it and use videoInput state
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
     if (!query || typeof query !== 'string') return;
@@ -1956,6 +2001,51 @@ ${topKeywordsStr}`;
           <img src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" alt="Văn Thế Web" /> YouTube Niche & Analyze Pro (Văn Thế Web)
         </h1>
         <div className="flex items-center gap-4">
+          {user ? (
+            <div className="flex items-center gap-3 pr-3 border-r border-gray-200">
+              <div className="text-right">
+                <div className="text-[11px] font-bold text-gray-900 leading-tight flex items-center justify-end gap-1">
+                  {profile?.fullname || user?.displayName}
+                  {isPro ? (
+                    <span className="bg-green-100 text-green-700 px-1 rounded text-[9px] border border-green-200">PRO</span>
+                  ) : (
+                    <button 
+                      onClick={() => { window.location.href = `/pay.html?email=${encodeURIComponent(user?.email || '')}&userId=${encodeURIComponent(user?.uid || '')}&returnUrl=${encodeURIComponent(window.location.pathname)}`; }}
+                      className="bg-blue-100 text-blue-700 px-1 rounded text-[9px] border border-blue-200 hover:bg-blue-200 transition-colors"
+                    >
+                      {isTrialActive() ? `TRIAL (${getRemainingTrialTime()}H)` : 'HẾT HẠN'}
+                    </button>
+                  )}
+                </div>
+                <div className="text-[10px] text-gray-500">{user.email}</div>
+              </div>
+              <img src={user.photoURL || ''} alt="Avatar" className="w-8 h-8 rounded-full border border-gray-300" referrerPolicy="no-referrer" />
+              <button 
+                onClick={logout}
+                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                title="Đăng xuất"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => { setPortalView('packages'); setPortalOpen(true); }}
+              className="px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 text-[12px] font-bold flex items-center gap-2 hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+            >
+              <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+              Đăng nhập
+            </button>
+          )}
+
+          <button 
+            onClick={() => { window.location.href = `/pay.html?email=${encodeURIComponent(user?.email || '')}&userId=${encodeURIComponent(user?.uid || '')}&returnUrl=${encodeURIComponent(window.location.pathname)}`; }}
+            className="px-4 py-1.5 rounded-lg bg-orange-500 text-white border border-orange-600 hover:bg-orange-600 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-bold text-[12px]"
+          >
+            <Zap size={16} fill="white" />
+            <span>NÂNG CẤP GÓI</span>
+          </button>
+
           <button 
             onClick={resetConfig}
             className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
@@ -2380,7 +2470,7 @@ ${topKeywordsStr}`;
                         )}
                         {results.map((r, i) => (
                           <tr 
-                            key={i} 
+                            key={r.id ? `main-res-${r.id}` : `main-res-idx-${i}`} 
                             onContextMenu={(e) => handleContextMenu(e, r)}
                             onClick={() => setSelectedResultId(r.id)}
                             className={`border-b border-[#eee] py-1 cursor-default text-[11px] h-9 transition-colors ${selectedResultId === r.id ? 'bg-[#9fc8ff]' : i % 2 === 0 ? 'bg-[#effff0]' : 'bg-[#ffffff]'}`}
@@ -2639,7 +2729,7 @@ ${topKeywordsStr}`;
                           <div className="font-bold text-gray-700 mb-1">Thẻ hàng đầu (Top tags):</div>
                           <div className="text-[11px] text-gray-700 bg-gray-50 p-2 border border-gray-100 rounded leading-normal max-h-32 overflow-y-auto flex flex-wrap gap-1">
                             {(spyResult.topTags || []).map((tagObj: any, idx: number) => (
-                              <span key={idx} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/tag">
+                              <span key={`tag-${idx}-${tagObj.text}`} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/tag">
                                 <span className="hover:text-blue-600 cursor-default">{tagObj.text} ({tagObj.count})</span>
                                 <button 
                                   onClick={(e) => {
@@ -2661,7 +2751,7 @@ ${topKeywordsStr}`;
                           <div className="text-[11px] text-gray-600 bg-gray-50 p-2 border border-gray-100 rounded leading-normal max-h-48 overflow-y-auto flex flex-wrap gap-1">
                             {spyResult.topKeywords && spyResult.topKeywords.length > 0 ? (
                               spyResult.topKeywords.map((kwObj: any, idx: number) => (
-                                <span key={idx} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/kw">
+                                <span key={`kw-${idx}-${kwObj.text}`} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/kw">
                                   <span className="hover:text-blue-600 cursor-default">{kwObj.text} ({kwObj.count})</span>
                                   <button 
                                     onClick={(e) => {
@@ -2704,7 +2794,7 @@ ${topKeywordsStr}`;
                         </thead>
                         <tbody>
                           {spyResult.videos.map((v, i) => (
-                            <tr key={i} className="border-b border-[#eee] hover:bg-[#f9f9f9] text-[11px]">
+                            <tr key={v.id || i} className="border-b border-[#eee] hover:bg-[#f9f9f9] text-[11px]">
                               <td className="px-2 py-1 text-center">
                                 <img src={v.thumbnail} className="w-20 h-14 object-cover rounded shadow-sm border border-[#ccc]" />
                               </td>
@@ -2841,7 +2931,7 @@ ${topKeywordsStr}`;
                       )
                       .map((c, i) => (
                       <tr 
-                        key={i} 
+                        key={c.id || `tracking-${i}-${c.title}`} 
                         className="border-b border-[#eee] hover:bg-[#f9f9f9]"
                         onContextMenu={(e) => handleContextMenu(e, {
                           id: c.id,
@@ -3214,7 +3304,7 @@ ${topKeywordsStr}`;
                          { label: 'Đối Thủ Cùng Ngách', value: nicheResults.summary.uniqueChannels, icon: Users, color: '#9b59b6' },
                          { label: 'Tổng View Ngách (Item)', value: (nicheResults.summary.totalViews / 1000000).toFixed(1) + 'M', icon: Eye, color: '#e74c3c' },
                        ].map((stat, i) => (
-                         <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:translate-y-[-4px] transition-all">
+                         <div key={`nstat-${stat.label || i}`} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:translate-y-[-4px] transition-all">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ backgroundColor: stat.color + '15', color: stat.color }}>
                                <stat.icon size={24} />
                             </div>
@@ -3233,7 +3323,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-3">
                              {nicheResults.keywords.slice(0, 8).map((kw: any, i: number) => (
-                               <div key={i} className="flex items-center justify-between group">
+                               <div key={kw.id || kw.text || i} className="flex items-center justify-between group">
                                   <div className="flex items-center gap-3">
                                      <span className="text-[10px] font-black text-gray-300">#0{i+1}</span>
                                      <span className="text-[13px] font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{kw.text}</span>
@@ -3258,7 +3348,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
-                               <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
+                               <div key={v.id || i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
                                   <div className="absolute top-2 right-2 bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg z-10">
                                      TREND SCORE: {v.trendScore}
                                   </div>
@@ -3323,7 +3413,7 @@ ${topKeywordsStr}`;
                                </thead>
                                <tbody className="divide-y divide-gray-100">
                                   {nicheResults.keywords.slice(0, displayKeywordLimit === 'all' ? undefined : (displayKeywordLimit as number)).map((kw: any, i: number) => (
-                                     <tr key={i} className="hover:bg-gray-50 transition-colors group">
+                                     <tr key={kw.id || kw.text || i} className="hover:bg-gray-50 transition-colors group">
                                         <td className="px-6 py-4">
                                            <div className="flex items-center gap-2">
                                               <span className="text-blue-500 font-bold">#</span>
@@ -3358,7 +3448,7 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-500">
                       {nicheResults.videos.map((v: any, i: number) => (
-                         <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                         <div key={v.id ? `v-${v.id}` : `v-idx-${i}`} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
@@ -3412,7 +3502,7 @@ ${topKeywordsStr}`;
                       {nicheResults.shorts.length === 0 ? (
                         <div className="col-span-full py-20 text-center text-gray-400 italic">Không tìm thấy video Shorts nào trong danh sách được tải. Thử phân tích lại với số lượng items lớn hơn.</div>
                       ) : nicheResults.shorts.map((v: any, i: number) => (
-                         <div key={i} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
+                         <div key={v.id ? `s-${v.id}` : `s-idx-${i}`} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover opacity-80" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
@@ -3447,7 +3537,7 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="space-y-4 animate-in slide-in-from-left duration-500">
                       {nicheResults.channels.map((c: any, i: number) => (
-                         <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
+                         <div key={c.id ? `c-${c.id}` : `c-idx-${i}`} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
                                   <img src={c.snippet.thumbnails.default.url} className="w-16 h-16 rounded-full border-2 border-white shadow-xl" />
@@ -3500,7 +3590,7 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in zoom-in duration-500">
                       {nicheResults.thumbnails.map((v: any, i: number) => (
-                         <div key={i} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
+                         <div key={v.id ? `t-${v.id}` : `t-idx-${i}`} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
                             <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -3657,7 +3747,7 @@ ${topKeywordsStr}`;
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {videoProjects.map((p, idx) => (
                           <div 
-                            key={idx} 
+                            key={p.id || idx} 
                             onClick={() => {
                               setVideoResult(p);
                               setVideoInput(p.id);
@@ -3743,13 +3833,13 @@ ${topKeywordsStr}`;
                     <div className="lg:col-span-8 flex flex-col gap-4">
                       {/* Metrics Card Row */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                          { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
-                          { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
-                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
-                          { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
-                        ].map((stat, i) => (
-                          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          {[
+                            { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
+                            { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
+                            { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
+                            { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
+                          ].map((stat) => (
+                            <div key={stat.label} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                             <div className={`p-2 rounded-lg ${stat.iconBg} ${stat.color}`}>
                               <stat.icon size={20} />
                             </div>
@@ -3933,7 +4023,7 @@ ${topKeywordsStr}`;
                       <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-6 text-left">
                         <div className="flex flex-wrap gap-2">
                           {videoResult.snippet.tags ? videoResult.snippet.tags.map((tag: string, i: number) => (
-                            <div key={i} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
+                            <div key={`vtag-${i}-${tag}`} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
                               {tag}
                             </div>
                           )) : (
@@ -3971,7 +4061,7 @@ ${topKeywordsStr}`;
                       <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
                         {videoResult._comments && videoResult._comments.length > 0 ? (
                           videoResult._comments.map((comment: any, idx: number) => (
-                            <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
+                             <div key={comment.id || idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
                               {idx === 0 && (
                                 <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
                                   <Pin size={8} className="rotate-45" /> TOP/PINNED
@@ -4486,16 +4576,16 @@ ${topKeywordsStr}`;
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {SUGGESTED_NICHES.map((category, idx) => (
-                    <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
+                  {SUGGESTED_NICHES.map((category) => (
+                    <div key={category.category} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
                         <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{category.items.length} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.map((item, itemIdx) => (
+                        {category.items.map((item) => (
                           <button
-                            key={itemIdx}
+                            key={item}
                             onClick={() => {
                               setNicheInput(item);
                               setShowNicheModal(false);
@@ -4521,6 +4611,18 @@ ${topKeywordsStr}`;
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {/* Portal & Toast */}
+        <Toaster position="top-center" />
+        <AuthPortal
+          isOpen={portalOpen}
+          onClose={() => setPortalOpen(false)}
+          user={user}
+          profile={profile}
+          initialView={portalView}
+        />
       </AnimatePresence>
 
     </div>
