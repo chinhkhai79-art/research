@@ -5010,6 +5010,186 @@ ${topKeywordsStr}`;
 
               {/* Content */}
               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
+                {/* ACCOUNT STATUS BLOCK - HIỆN CỨNG TRÊN ĐẦU POPUP CÀI ĐẶT */}
+                <div
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 999999,
+                    background: 'linear-gradient(135deg,#fff7ed,#eff6ff,#ecfdf5)',
+                    border: '4px solid #f97316',
+                    borderRadius: 24,
+                    padding: 18,
+                    boxShadow: '0 18px 45px rgba(15,23,42,0.18)',
+                    fontFamily: 'Arial, sans-serif'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div
+                        style={{
+                          width: 50,
+                          height: 50,
+                          borderRadius: 18,
+                          background: isPremiumAccount ? '#2563eb' : subscriptionInfo?.active ? '#f59e0b' : '#dc2626',
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 10px 24px rgba(15,23,42,0.18)'
+                        }}
+                      >
+                        <Crown size={26} />
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: '#f97316', textTransform: 'uppercase', letterSpacing: 1 }}>
+                          Tài khoản & hạn sử dụng
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 24,
+                            fontWeight: 900,
+                            color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c',
+                            lineHeight: 1.15
+                          }}
+                        >
+                          {!user
+                            ? 'Chưa đăng nhập Google'
+                            : subscriptionLoading && !subscriptionInfo
+                              ? 'Đang kiểm tra tài khoản...'
+                              : isPremiumAccount
+                                ? 'Tài khoản đã nâng cấp PRO'
+                                : subscriptionInfo?.active
+                                  ? 'Tài khoản đang dùng thử 1 giờ'
+                                  : 'Tài khoản đã hết hạn'}
+                        </div>
+                        {user && (
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginTop: 4 }}>
+                            {user.displayName || 'Người dùng'} · {user.email || 'Chưa có email'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {user && (
+                      <a
+                        href={buildPaymentUrl(user)}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          padding: '12px 16px',
+                          borderRadius: 16,
+                          background: 'linear-gradient(90deg,#f97316,#ef4444)',
+                          color: '#ffffff',
+                          textDecoration: 'none',
+                          fontSize: 12,
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          boxShadow: '0 10px 25px rgba(239,68,68,0.22)',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
+                      </a>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Gói đã đăng ký</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                        {!user
+                          ? 'Chưa đăng nhập'
+                          : subscriptionLoading && !subscriptionInfo
+                            ? 'Đang kiểm tra'
+                            : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Ngày đăng ký</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                        {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>Hạn sử dụng</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                        {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2',
+                        border: `1px solid ${subscriptionInfo?.active ? '#86efac' : '#fecaca'}`,
+                        borderRadius: 16,
+                        padding: 12
+                      }}
+                    >
+                      <div style={{ fontSize: 10, fontWeight: 900, color: subscriptionInfo?.active ? '#059669' : '#dc2626', textTransform: 'uppercase' }}>Còn lại</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: subscriptionInfo?.active ? '#047857' : '#b91c1c', marginTop: 4 }}>
+                        {!user ? '---' : subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={() => refreshSubscription(user, false)}
+                        style={{
+                          padding: '9px 13px',
+                          borderRadius: 12,
+                          border: '1px solid #bfdbfe',
+                          background: '#ffffff',
+                          color: '#1d4ed8',
+                          fontSize: 11,
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Làm mới hạn dùng
+                      </button>
+                    )}
+
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await logoutUser();
+                            setShowKeyInputModal(false);
+                          } catch (e: any) {
+                            console.error('Lỗi đăng xuất:', e);
+                          }
+                        }}
+                        style={{
+                          padding: '9px 13px',
+                          borderRadius: 12,
+                          border: '1px solid #e5e7eb',
+                          background: '#ffffff',
+                          color: '#334155',
+                          fontSize: 11,
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Đăng xuất
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 10, fontSize: 10, fontWeight: 900, color: '#64748b' }}>
+                    Mã kiểm tra UI: ACCOUNT_STATUS_BLOCK_20260519. Nếu không thấy khung cam này, file App.tsx mới chưa được build đúng.
+                  </div>
+                </div>
+
                 {/* Section Gemini */}
                 <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
