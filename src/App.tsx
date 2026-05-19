@@ -159,6 +159,22 @@ interface SavedSpyReport {
   report: string;
 }
 
+
+interface SubscriptionInfo {
+  success: boolean;
+  active: boolean;
+  premium: boolean;
+  accountType: 'trial' | 'premium' | 'expired' | 'none' | string;
+  plan?: string | null;
+  planId?: string | null;
+  planName?: string | null;
+  startedAt?: string | null;
+  expiresAt?: string | null;
+  remainingMs?: number;
+  remainingText?: string;
+  userId?: string;
+}
+
 // --- Constants ---
 const DEFAULT_CONFIG: YouTubeConfig = {
   apiKeys: [],
@@ -247,13 +263,353 @@ const STOP_LIMIT = 10;
 export default function App() {
   // --- State ---
   const [user, setUser] = useState<User | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
+
+  const buildPaymentUrl = (targetUser = user) => {
+    if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
+
+    return (
+      `https://research.vanthemmo.com/pay.html` +
+      `?uid=${encodeURIComponent(targetUser.uid)}` +
+      `&userId=${encodeURIComponent(targetUser.uid)}` +
+      `&email=${encodeURIComponent(targetUser.email || '')}` +
+      `&returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`
+    );
+  };
+
+  const refreshSubscription = async (targetUser = user, initTrial = false) => {
+    if (!targetUser) {
+      setSubscriptionInfo(null);
+      return null;
+    }
+
+    try {
+      setSubscriptionLoading(true);
+
+      const url =
+        `/api/me/subscription` +
+        `?userId=${encodeURIComponent(targetUser.uid)}` +
+        `&uid=${encodeURIComponent(targetUser.uid)}` +
+        `&email=${encodeURIComponent(targetUser.email || '')}` +
+        `&name=${encodeURIComponent(targetUser.displayName || '')}` +
+        `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
+        `&initTrial=${initTrial ? '1' : '0'}`;
+
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json();
+
+      if (data?.success) {
+        setSubscriptionInfo(data);
+        return data;
+      }
+
+      console.warn('Không lấy được hạn dùng:', data);
+      return null;
+    } catch (error) {
+      console.error('Lỗi kiểm tra hạn dùng:', error);
+      return null;
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  // VTW_HARD_ACCOUNT_UI_ROOT - BẢN CỨNG NHẤT: inject trực tiếp vào document.body, thoát khỏi mọi khung tool/modal
+  useEffect(() => {
+    const cleanupOld = () => {
+      document.getElementById('VTW_HARD_ACCOUNT_UI_ROOT')?.remove();
+      document.getElementById('VTW_HARD_ACCOUNT_UI_STYLE')?.remove();
+    };
+
+    cleanupOld();
+
+    const root = document.createElement('div');
+    root.id = 'VTW_HARD_ACCOUNT_UI_ROOT';
+    root.setAttribute('data-proof', 'VTW_HARD_ACCOUNT_UI_20260519_RENDERED');
+    document.body.appendChild(root);
+
+    const style = document.createElement('style');
+    style.id = 'VTW_HARD_ACCOUNT_UI_STYLE';
+    style.textContent = `
+      #VTW_HARD_ACCOUNT_UI_ROOT, #VTW_HARD_ACCOUNT_UI_ROOT * {
+        box-sizing: border-box !important;
+        font-family: Arial, sans-serif !important;
+      }
+      #VTW_HARD_ACCOUNT_FLOAT_BTN {
+        position: fixed !important;
+        right: 18px !important;
+        bottom: 22px !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 9px !important;
+        min-width: 190px !important;
+        max-width: 360px !important;
+        padding: 12px 16px !important;
+        border-radius: 999px !important;
+        border: 3px solid #fff !important;
+        color: #fff !important;
+        background: linear-gradient(135deg,#2563eb,#06b6d4) !important;
+        box-shadow: 0 18px 50px rgba(0,0,0,.35) !important;
+        cursor: pointer !important;
+        font-weight: 900 !important;
+        font-size: 12px !important;
+        line-height: 1.15 !important;
+        text-transform: uppercase !important;
+      }
+      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-trial { background: linear-gradient(135deg,#f59e0b,#f97316) !important; }
+      #VTW_HARD_ACCOUNT_FLOAT_BTN.vtw-expired { background: linear-gradient(135deg,#ef4444,#b91c1c) !important; }
+      #VTW_HARD_ACCOUNT_FLOAT_BTN .vtw-dot {
+        width: 14px !important;
+        height: 14px !important;
+        border-radius: 999px !important;
+        background: #fff !important;
+        flex: 0 0 auto !important;
+        box-shadow: 0 0 0 4px rgba(255,255,255,.25) !important;
+      }
+      #VTW_HARD_ACCOUNT_PANEL_BACKDROP {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 2147483646 !important;
+        background: rgba(15,23,42,.56) !important;
+        backdrop-filter: blur(3px) !important;
+        display: none !important;
+      }
+      #VTW_HARD_ACCOUNT_PANEL_BACKDROP.vtw-open { display: block !important; }
+      #VTW_HARD_ACCOUNT_PANEL {
+        position: fixed !important;
+        right: 18px !important;
+        bottom: 86px !important;
+        z-index: 2147483647 !important;
+        width: 460px !important;
+        max-width: calc(100vw - 28px) !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow: auto !important;
+        display: none !important;
+        background: #fff !important;
+        border: 2px solid #bfdbfe !important;
+        border-radius: 26px !important;
+        box-shadow: 0 30px 100px rgba(0,0,0,.45) !important;
+      }
+      #VTW_HARD_ACCOUNT_PANEL.vtw-open { display: block !important; }
+      .vtw-hard-head {
+        background: linear-gradient(135deg,#2563eb,#4f46e5) !important;
+        color: white !important;
+        padding: 18px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 12px !important;
+        align-items: center !important;
+      }
+      .vtw-hard-title { font-size: 18px !important; font-weight: 900 !important; margin: 0 !important; }
+      .vtw-hard-sub { font-size: 12px !important; font-weight: 700 !important; opacity: .88 !important; margin-top: 4px !important; }
+      .vtw-hard-close {
+        width: 38px !important; height: 38px !important; border-radius: 999px !important;
+        border: 0 !important; background: rgba(255,255,255,.18) !important; color: #fff !important;
+        font-size: 24px !important; line-height: 1 !important; cursor: pointer !important; font-weight: 900 !important;
+      }
+      .vtw-hard-body { padding: 18px !important; }
+      .vtw-hard-status {
+        border-radius: 20px !important; padding: 16px !important; margin-bottom: 14px !important;
+        border: 2px solid #bfdbfe !important; background: #eff6ff !important;
+      }
+      .vtw-hard-status.vtw-trial { border-color: #fde68a !important; background: #fffbeb !important; }
+      .vtw-hard-status.vtw-expired { border-color: #fecaca !important; background: #fef2f2 !important; }
+      .vtw-hard-label { font-size: 10px !important; font-weight: 900 !important; color: #64748b !important; text-transform: uppercase !important; letter-spacing: .5px !important; }
+      .vtw-hard-main { margin-top: 5px !important; font-size: 22px !important; font-weight: 900 !important; color: #1d4ed8 !important; }
+      .vtw-hard-main.vtw-trial { color: #b45309 !important; }
+      .vtw-hard-main.vtw-expired { color: #b91c1c !important; }
+      .vtw-hard-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+      .vtw-hard-card {
+        border: 1px solid #e5e7eb !important; background: #f8fafc !important; border-radius: 16px !important; padding: 12px !important;
+      }
+      .vtw-hard-card.green { border-color: #86efac !important; background: #ecfdf5 !important; }
+      .vtw-hard-card.red { border-color: #fecaca !important; background: #fef2f2 !important; }
+      .vtw-hard-value { font-size: 15px !important; font-weight: 900 !important; color: #0f172a !important; margin-top: 5px !important; word-break: break-word !important; }
+      .vtw-hard-value.green { color: #047857 !important; }
+      .vtw-hard-value.red { color: #b91c1c !important; }
+      .vtw-hard-actions { display: flex !important; gap: 10px !important; margin-top: 16px !important; flex-wrap: wrap !important; }
+      .vtw-hard-upgrade {
+        flex: 1 !important; text-align: center !important; padding: 12px 14px !important; border-radius: 14px !important;
+        background: linear-gradient(90deg,#f97316,#ef4444) !important; color: white !important;
+        text-decoration: none !important; font-size: 12px !important; font-weight: 900 !important; text-transform: uppercase !important;
+      }
+      .vtw-hard-logout, .vtw-hard-refresh {
+        padding: 12px 14px !important; border-radius: 14px !important; border: 1px solid #e5e7eb !important;
+        background: #f8fafc !important; color: #334155 !important; font-size: 12px !important; font-weight: 900 !important;
+        text-transform: uppercase !important; cursor: pointer !important;
+      }
+      @media (max-width: 700px) {
+        #VTW_HARD_ACCOUNT_FLOAT_BTN { right: 10px !important; bottom: 12px !important; min-width: 150px !important; font-size: 10px !important; padding: 10px 12px !important; }
+        #VTW_HARD_ACCOUNT_PANEL { right: 10px !important; bottom: 68px !important; width: calc(100vw - 20px) !important; }
+        .vtw-hard-grid { grid-template-columns: 1fr !important; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      cleanupOld();
+    };
+  }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const root = document.getElementById('VTW_HARD_ACCOUNT_UI_ROOT');
+    if (!root) return;
+
+    if (!user) {
+      root.innerHTML = `
+        <button id="VTW_HARD_ACCOUNT_FLOAT_BTN" class="vtw-expired" type="button">
+          <span class="vtw-dot"></span>
+          <span>ĐĂNG NHẬP ĐỂ XEM GÓI</span>
+        </button>
+      `;
+
+      const loginBtn = document.getElementById('VTW_HARD_ACCOUNT_FLOAT_BTN');
+      loginBtn?.addEventListener('click', async () => {
+        try {
+          await loginWithGoogle();
+        } catch (e: any) {
+          alert('Lỗi đăng nhập: ' + (e?.message || e));
+        }
+      });
+      return;
+    }
+
+    const statusClass = isPremiumAccount ? '' : subscriptionInfo?.active ? 'vtw-trial' : 'vtw-expired';
+    const statusText = subscriptionLoading && !subscriptionInfo
+      ? 'Đang kiểm tra tài khoản...'
+      : isPremiumAccount
+        ? 'Tài khoản đã nâng cấp PRO'
+        : subscriptionInfo?.active
+          ? 'Tài khoản đang dùng thử 1 giờ'
+          : 'Tài khoản đã hết hạn';
+
+    const badgeText = isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'TRIAL' : 'HẾT HẠN';
+    const remainText = subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt);
+    const planText = subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói');
+    const startedText = formatSubscriptionDateCompact(subscriptionInfo?.startedAt);
+    const expiresText = formatSubscriptionDateCompact(subscriptionInfo?.expiresAt);
+    const paymentUrl = buildPaymentUrl(user);
+    const displayName = user.displayName || 'Người dùng';
+    const email = user.email || 'Chưa có email';
+    const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || 'U')}`;
+
+    root.innerHTML = `
+      <div id="VTW_HARD_ACCOUNT_PANEL_BACKDROP"></div>
+      <button id="VTW_HARD_ACCOUNT_FLOAT_BTN" class="${statusClass}" type="button">
+        <span class="vtw-dot"></span>
+        <span>${badgeText}</span>
+        <span style="opacity:.92;font-size:11px;">${remainText}</span>
+      </button>
+
+      <div id="VTW_HARD_ACCOUNT_PANEL">
+        <div class="vtw-hard-head">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+            <img src="${avatar}" referrerpolicy="no-referrer" style="width:48px;height:48px;border-radius:16px;border:2px solid rgba(255,255,255,.65);object-fit:cover;" />
+            <div style="min-width:0;">
+              <div class="vtw-hard-title">${displayName}</div>
+              <div class="vtw-hard-sub">${email}</div>
+            </div>
+          </div>
+          <button id="VTW_HARD_ACCOUNT_CLOSE" class="vtw-hard-close" type="button">×</button>
+        </div>
+
+        <div class="vtw-hard-body">
+          <div class="vtw-hard-status ${statusClass}">
+            <div class="vtw-hard-label">Tình trạng tài khoản</div>
+            <div class="vtw-hard-main ${statusClass}">${statusText}</div>
+          </div>
+
+          <div class="vtw-hard-grid">
+            <div class="vtw-hard-card">
+              <div class="vtw-hard-label">Gói đã đăng ký</div>
+              <div class="vtw-hard-value">${planText}</div>
+            </div>
+            <div class="vtw-hard-card ${subscriptionInfo?.active ? 'green' : 'red'}">
+              <div class="vtw-hard-label">Còn lại</div>
+              <div class="vtw-hard-value ${subscriptionInfo?.active ? 'green' : 'red'}">${remainText}</div>
+            </div>
+            <div class="vtw-hard-card">
+              <div class="vtw-hard-label">Ngày đăng ký</div>
+              <div class="vtw-hard-value">${startedText}</div>
+            </div>
+            <div class="vtw-hard-card">
+              <div class="vtw-hard-label">Hạn sử dụng</div>
+              <div class="vtw-hard-value">${expiresText}</div>
+            </div>
+          </div>
+
+          <div class="vtw-hard-actions">
+            <a class="vtw-hard-upgrade" href="${paymentUrl}" target="_blank" rel="noreferrer">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
+            <button id="VTW_HARD_ACCOUNT_REFRESH" class="vtw-hard-refresh" type="button">Làm mới</button>
+            <button id="VTW_HARD_ACCOUNT_LOGOUT" class="vtw-hard-logout" type="button">Đăng xuất</button>
+          </div>
+
+          <div style="margin-top:12px;font-size:10px;font-weight:900;color:#94a3b8;text-align:center;">UI_PROOF_HARD_BODY_INJECT_20260519</div>
+        </div>
+      </div>
+    `;
+
+    const open = () => {
+      document.getElementById('VTW_HARD_ACCOUNT_PANEL')?.classList.add('vtw-open');
+      document.getElementById('VTW_HARD_ACCOUNT_PANEL_BACKDROP')?.classList.add('vtw-open');
+    };
+
+    const close = () => {
+      document.getElementById('VTW_HARD_ACCOUNT_PANEL')?.classList.remove('vtw-open');
+      document.getElementById('VTW_HARD_ACCOUNT_PANEL_BACKDROP')?.classList.remove('vtw-open');
+    };
+
+    document.getElementById('VTW_HARD_ACCOUNT_FLOAT_BTN')?.addEventListener('click', open);
+    document.getElementById('VTW_HARD_ACCOUNT_CLOSE')?.addEventListener('click', close);
+    document.getElementById('VTW_HARD_ACCOUNT_PANEL_BACKDROP')?.addEventListener('click', close);
+    document.getElementById('VTW_HARD_ACCOUNT_REFRESH')?.addEventListener('click', () => refreshSubscription(user, false));
+    document.getElementById('VTW_HARD_ACCOUNT_LOGOUT')?.addEventListener('click', async () => {
+      try {
+        await logoutUser();
+        close();
+      } catch (e: any) {
+        console.error('Lỗi đăng xuất:', e);
+      }
     });
+  }, [
+    user,
+    subscriptionInfo,
+    subscriptionLoading,
+    subscriptionTick
+  ]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+
+      if (currentUser) {
+        await refreshSubscription(currentUser, true);
+      } else {
+        setSubscriptionInfo(null);
+      }
+    });
+
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const timer = window.setInterval(() => {
+      setSubscriptionTick(Date.now());
+      refreshSubscription(user, false);
+    }, 30000);
+
+    const onFocus = () => refreshSubscription(user, false);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user]);
 
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
@@ -2075,6 +2431,54 @@ ${topKeywordsStr}`;
     closeMenu();
   };
 
+
+  const formatSubscriptionDate = (iso?: string | null) => {
+    if (!iso) return '---';
+
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '---';
+
+    return d.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + '\n' + d.toLocaleDateString('vi-VN');
+  };
+
+  const formatSubscriptionDateCompact = (iso?: string | null) => {
+    if (!iso) return '---';
+
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '---';
+
+    return d.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' ' + d.toLocaleDateString('vi-VN');
+  };
+
+  const getRemainingText = (iso?: string | null) => {
+    if (!iso) return '---';
+
+    const expires = new Date(iso).getTime();
+    const diff = expires - subscriptionTick;
+
+    if (Number.isNaN(expires)) return '---';
+    if (diff <= 0) return 'Đã hết hạn';
+
+    const totalMinutes = Math.floor(diff / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) return `${days} ngày ${hours} giờ`;
+    if (hours > 0) return `${hours} giờ ${minutes} phút`;
+    return `${Math.max(1, minutes)} phút`;
+  };
+
+  const isPremiumAccount = subscriptionInfo?.accountType === 'premium' || subscriptionInfo?.premium;
+  const canUseTool = Boolean(user && subscriptionInfo?.active);
+  const subscriptionExpired = Boolean(user && subscriptionInfo && !subscriptionInfo.active && !subscriptionLoading);
+
   // --- Render Helpers ---
   const getGrowth = (history: any[], type: 'subs' | 'views') => {
     if (history.length < 2) return '+0';
@@ -2088,76 +2492,178 @@ ${topKeywordsStr}`;
   return (
     <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
-      <div className="bg-white border-b border-[#ccc] px-4 py-2 flex justify-between items-center shadow-sm">
-        <h1 className="text-[17px] font-bold text-[#333] flex items-center gap-2">
-          <img src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj" className="w-7 h-7 rounded-full" referrerPolicy="no-referrer" alt="Văn Thế Web" /> YouTube Niche & Analyze Pro (Văn Thế Web)
-        </h1>
-        <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
-              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`} alt="avatar" className="w-6 h-6 rounded-full shadow-sm" referrerPolicy="no-referrer" />
-              <span className="text-[11px] font-black text-gray-700 max-w-[100px] truncate">{user.displayName || user.email}</span>
-              <button 
+      <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
+            <img
+              src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
+              className="w-7 h-7 rounded-full"
+              referrerPolicy="no-referrer"
+              alt="Văn Thế Web"
+            />
+            <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+          </h1>
+
+          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+            {user && (
+              <div className="hidden xl:flex items-center gap-2 min-w-0">
+                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
+                  <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                    {subscriptionLoading && !subscriptionInfo
+                      ? 'Đang kiểm tra'
+                      : isPremiumAccount
+                        ? 'Đã nâng cấp PRO'
+                        : subscriptionInfo?.active
+                          ? 'Dùng thử 1 giờ'
+                          : 'Hết hạn'}
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Gói</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight max-w-[115px] truncate">
+                    {subscriptionLoading && !subscriptionInfo
+                      ? 'Đang kiểm tra'
+                      : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Ngày đăng ký</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
+                    {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Hạn sử dụng</div>
+                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
+                    {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+                  </div>
+                </div>
+
+                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className={`text-[8px] font-black uppercase leading-none ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+                  <div className={`text-[10px] font-black leading-tight whitespace-nowrap ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {user ? (
+              <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
+                <img
+                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                  alt="avatar"
+                  className="w-6 h-6 rounded-full shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="leading-tight max-w-[115px]">
+                  <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
+                  <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await logoutUser();
+                    } catch (e: any) {
+                      console.error('Lỗi đăng xuất:', e);
+                    }
+                  }}
+                  className="ml-1 text-gray-500 hover:text-red-500 transition-colors"
+                  title="Đăng xuất"
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
                 onClick={async () => {
                   try {
-                    await logoutUser();
+                    await loginWithGoogle();
                   } catch (e: any) {
-                    console.error('Lỗi đăng xuất:', e);
+                    alert('Lỗi đăng nhập: ' + e.message);
                   }
                 }}
-                className="ml-2 text-gray-500 hover:text-red-500 transition-colors"
-                title="Đăng xuất"
+                className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px] shrink-0"
+                title="Đăng nhập Google"
               >
-                <LogOut size={14} />
+                <LogIn size={16} />
+                <span>ĐĂNG NHẬP</span>
               </button>
-            </div>
-          ) : (
-            <button 
-              onClick={async () => {
-                try {
-                  await loginWithGoogle();
-                } catch (e: any) {
-                  alert('Lỗi đăng nhập: ' + e.message);
-                }
-              }}
-              className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-              title="Đăng nhập Google"
-            >
-              <LogIn size={16} />
-              <span>ĐĂNG NHẬP</span>
-            </button>
-          )}
+            )}
 
-          {user ? (
-            <a 
-              href={`https://research.vanthemmo.com/pay.html?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}&returnUrl=${encodeURIComponent(window.location.href)}`}
-              target="_blank" rel="noreferrer"
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[11px]"
-              title="Nâng cấp Gói"
-            >
-              <Crown size={16} />
-              <span>NÂNG CẤP GÓI</span>
-            </a>
-          ) : (
-            <button 
-              onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[11px]"
-              title="Cần đăng nhập để Nâng cấp Gói"
-            >
-              <Crown size={16} />
-              <span>NÂNG CẤP GÓI</span>
-            </button>
-          )}
+            {user ? (
+              <a
+                href={buildPaymentUrl(user)}
+                target="_blank"
+                rel="noreferrer"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
+                title="Nâng cấp thêm / cộng dồn hạn dùng"
+              >
+                <Crown size={15} />
+                <span>{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+              </a>
+            ) : (
+              <button
+                onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
+                title="Cần đăng nhập để Nâng cấp Gói"
+              >
+                <Crown size={15} />
+                <span>NÂNG CẤP GÓI</span>
+              </button>
+            )}
 
-          <button 
-            onClick={resetConfig}
-            className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-            title="Làm mới cài đặt & kết quả"
-          >
-            <RotateCcw size={16} />
-            <span>LÀM MỚI</span>
-          </button>
+            <button
+              onClick={resetConfig}
+              className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              title="Làm mới cài đặt & kết quả"
+            >
+              <RotateCcw size={15} />
+              <span>LÀM MỚI</span>
+            </button>
+          </div>
         </div>
+
+        {user && (
+          <div className="xl:hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
+            <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
+              <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : isPremiumAccount ? 'Đã nâng cấp PRO' : subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Hết hạn'}
+              </div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Gói</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">
+                {subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
+              </div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
+            </div>
+
+            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-[8px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
+              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
+            </div>
+
+            <div className={`px-2 py-1.5 rounded-xl border ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`text-[8px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
+              <div className={`text-[10px] font-black truncate ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
+                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Container */}
@@ -2184,6 +2690,31 @@ ${topKeywordsStr}`;
               <LogIn size={20} />
               <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
             </button>
+          </div>
+        ) : subscriptionLoading && !subscriptionInfo ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
+            <Loader2 size={42} className="text-blue-600 animate-spin mx-auto mb-5" />
+            <h2 className="text-2xl font-black text-gray-800 mb-3 uppercase">Đang kiểm tra hạn dùng</h2>
+            <p className="text-gray-500 text-[14px]">Vui lòng đợi trong giây lát...</p>
+          </div>
+        ) : subscriptionExpired ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-12 text-center max-w-2xl mx-auto mt-20">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Crown size={40} className="text-red-600" />
+            </div>
+            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Gói dùng thử đã hết hạn</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
+              Tài khoản Google mới được dùng thử 1 giờ. Vui lòng nâng cấp gói để tiếp tục sử dụng công cụ.
+            </p>
+            <a
+              href={buildPaymentUrl(user)}
+              target="_blank"
+              rel="noreferrer"
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 inline-flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+            >
+              <Crown size={20} />
+              <span>NÂNG CẤP GÓI</span>
+            </a>
           </div>
         ) : (
           <>
