@@ -51,14 +51,17 @@ import {
   Smartphone,
   ChevronRight,
   Filter,
-  Bot
+  Bot,
+  Flame,
+  RefreshCw,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Markdown from 'react-markdown';
-import { Toaster, toast } from 'react-hot-toast';
-import { useAuth } from './hooks/useAuth';
-import { AuthPortal } from './components/AccountModals';
+import { LogOut, LogIn, Crown } from 'lucide-react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, loginWithGoogle, logoutUser } from './lib/firebase';
 
 // --- Types ---
 interface YouTubeConfig {
@@ -122,7 +125,7 @@ const LinkifyText = ({ text }: { text: string }) => {
       {parts.map((part, i) => 
         urlRegex.test(part) ? (
           <a
-            key={`link-${i}`}
+            key={i}
             href={part}
             target="_blank"
             rel="noreferrer"
@@ -157,25 +160,6 @@ interface SavedSpyReport {
 }
 
 // --- Constants ---
-const USER_KEY = "RESEARCH_TOOL_USER";
-const PRO_KEY = "RESEARCH_TOOL_PRO";
-const PENDING_ORDER_KEY = "RESEARCH_TOOL_PENDING_ORDER";
-const PAYMENT_PREFIX = "RESEARCH";
-
-const PREMIUM_PLANS = [
-  { id: "1m", name: "Gói 1 tháng", label: "1 tháng", priceText: "10k", amount: 10000, days: 30 },
-  { id: "3m", name: "Gói 3 tháng", label: "3 tháng", priceText: "180k", amount: 180000, days: 90 },
-  { id: "6m", name: "Gói 6 tháng", label: "6 tháng", priceText: "300k", amount: 300000, days: 180 },
-  { id: "12m", name: "Gói 1 năm", label: "1 năm", priceText: "500k", amount: 500000, days: 365 }
-];
-
-function canUseTool(isValidUser: () => boolean, silent = false) {
-  if (isValidUser()) return true;
-
-  if (!silent) toast.error("Tài khoản đã hết hạn dùng thử. Vui lòng nâng cấp để tiếp tục.");
-  return false;
-}
-
 const DEFAULT_CONFIG: YouTubeConfig = {
   apiKeys: [],
   keyword: '',
@@ -215,67 +199,62 @@ const REGIONS = [
   { code: 'IT', name: 'Ý (Italia)' },
 ];
 
+const GEMINI_MODELS = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash — Khuyên dùng: ổn định, mạnh, phù hợp phân tích video/kênh.' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite — Nhẹ hơn 2.5 Flash, tiết kiệm quota hơn.' },
+  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash-Lite Preview — Model mới, nhanh, dùng khi key/project có hỗ trợ.' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview — Model mới, mạnh hơn, phù hợp phân tích sâu khi được hỗ trợ.' },
+  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest — Alias tự động của Google, dùng khi project hỗ trợ alias latest.' },
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite — Dự phòng nếu key/project còn hỗ trợ.' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash — Dự phòng nếu key/project còn hỗ trợ.' },
+];
+
 const SUGGESTED_NICHES = [
-  {
-    category: 'SỨC KHỎE & LÀM ĐẸP',
-    items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm']
-  },
-  {
-    category: 'TÀI CHÍNH & ĐẦU TƯ',
-    items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024']
-  },
-  {
-    category: 'CÔNG NGHỆ & AI',
-    items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI']
-  },
-  {
-    category: 'GIÁO DỤC & HỌC TẬP',
-    items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập']
-  },
-  {
-    category: 'ẨM THỰ & NẤU ĂN',
-    items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè']
-  },
-  {
-    category: 'DU LỊCH & KHÁM PHÁ',
-    items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng']
-  },
-  {
-    category: 'GIẢI TRÍ & HÀI HƯỚC',
-    items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme']
-  },
-  {
-    category: 'THỂ THAO & THỂ HÌNH',
-    items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym']
-  },
-  {
-    category: 'PETS & ĐỘNG VẬT',
-    items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng']
-  },
-  {
-    category: 'PHÁT TRIỂN BẢN THÂN (SELF-HELP)',
-    items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog một ngày làm việc năng suất']
-  },
-  {
-    category: 'GIA ĐÌNH & ĐỜI SỐNG',
-    items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa']
-  },
-  {
-    category: 'NGHỆ THUẬT & SÁNG TẠO',
-    items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình']
-  }
+  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog năng suất'] },
+  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm'] },
+  { category: 'CÔNG NGHỆ & AI', items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI'] },
+  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập'] },
+  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè'] },
+  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng'] },
+  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme'] },
+  { category: 'THỂ THAO & THỂ HÌNH', items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym'] },
+  { category: 'PETS & ĐỘNG VẬT', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng'] },
+  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa'] },
+  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình'] },
+  { category: 'CÔNG NGHỆ Ô TÔ & XE MÁY', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'bảo dưỡng xe tay ga', 'độ xe kiểng', 'phượt bằng mô tô', 'học lái xe ô tô B2', 'phụ kiện ô tô cần thiết', 'luật giao thông đường bộ', 'so sánh các dòng xe'] },
+  { category: 'TÂM LÝ HỌC & MỐI QUAN HỆ', items: ['tâm lý học thú vị', 'chữa lành tổn thương', 'vượt qua chia tay', 'nghệ thuật quyến rũ', 'nhận biết người độc hại', 'bài test tính cách MBTI', 'cách hiểu tâm lý nam giới', 'giữ lửa hôn nhân', 'kỹ năng lắng nghe thấu cảm', 'tâm lý tội phạm'] },
+  { category: 'ESPORTS & GAMING', items: ['highlight liên quân', 'build đồ tft mùa mới', 'review game mobile hay', 'giáo trình valorant', 'mẹo leo rank csgo', 'phân tích meta lol', 'game kinh dị việt nam', 'streamer tiktok', 'thi đấu pubg mobile', 'genshin impact hướng dẫn'] },
+  { category: 'HUYỀN BÍ & TÂM LINH', items: ['giải mã những giấc mơ', 'luật nhân quả', 'bí ẩn vũ trụ', 'chuyện rùng rợn có thật', 'bói bài tarot tình yêu', 'phong thủy nhà ở', 'năng lượng luân xa', 'kỳ quan thế giới', 'hiện tượng siêu nhiên', 'câu chuyện tâm linh tuổi thơ'] },
+  { category: 'MẸO VẶT CUỘC SỐNG', items: ['mẹo vặt nhà bếp', 'tái chế đồ nhựa', 'sửa chữa đồ điện gia dụng', 'gấp quần áo nhanh', 'làm sạch vết bẩn cứng đầu', 'mẹo bảo quản thực phẩm', 'ứng dụng hữu ích trên điện thoại', 'mẹo chống muỗi tự nhiên', 'sử dụng lò vi sóng', 'mẹo vặt cho sinh viên'] },
+  { category: 'VĂN HÓA & LỊCH SỬ', items: ['lịch sử việt nam tóm tắt', 'khám phá các triều đại', 'sự kiện lịch sử thế giới', 'văn hóa người á đông', 'trang phục truyền thống', 'nhân vật lịch sử nổi tiếng', 'chiến tranh thế giới thứ 2', 'văn hóa nhật bản', 'phong tục tập quán việt nam', 'di tích lịch sử hà nội'] },
+  { category: 'THỜI TRANG & PHONG CÁCH', items: ['phối đồ cho nam gầy', 'thời trang mùa đông nữ', 'review local brand việt nam', 'cách chọn kính cận phù hợp', 'phong cách vintage', 'mẹo chọn giày sneaker', 'phối đồ đi học đại học', 'xu hướng thời trang 2024', 'thời trang công sở nữ', 'phối đồ với quần ống rộng'] },
+  { category: 'NÔNG NGHIỆP CÔNG NGHỆ CAO', items: ['trồng rau thủy canh', 'mô hình nuôi tôm thẻ', 'kỹ thuật trồng sầu riêng', 'nông nghiệp tuần hoàn', 'trồng hoa lan hồ điệp', 'review máy nông nghiệp', 'chăm sóc cây cảnh', 'nông nghiệp hữu cơ', 'nuôi cá bống tượng', 'kỹ thuật ghép cây'] },
+  { category: 'REVIEW SẢN PHẨM & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'trải nghiệm tai nghe bluetooth', 'review bàn phím cơ dưới 1 triệu', 'đồ decor phòng giá rẻ', 'review sách hay nên đọc', 'đánh giá smartwatch', 'unboxing đồ công nghệ độc lạ', 'review máy chiếu mini'] },
+  { category: 'NHẠC & COVER', items: ['nhạc lofi chill', 'acoustic cover', 'hướng dẫn hát karaoke', 'beat rap free', 'nhạc tiktok remix', 'cover nhạc trẻ', 'nhạc thiền tịnh tâm', 'học thanh nhạc cơ bản', 'nhạc nền không bản quyền', 'nhạc edm sôi động'] },
+  { category: 'BẤT ĐỘNG SẢN & NHÀ CỬA', items: ['kinh nghiệm mua căn hộ', 'review nhà phố', 'thiết kế nội thất chung cư', 'phong thủy phòng khách', 'tin tức bất động sản', 'mẫu nhà cấp 4 đẹp', 'hướng dẫn xin giấy phép xây dựng', 'cách định giá nhà đất', 'hợp đồng thuê nhà', 'review đồ nội thất thông minh'] },
+  { category: 'CÂU CHUYỆN KHỞI NGHIỆP', items: ['kinh nghiệm mở quán cafe', 'bài học kinh doanh', 'khởi nghiệp ít vốn', 'câu chuyện startup việt', 'chiến lược marketing 0 đồng', 'nghệ thuật bán hàng', 'mở shop quần áo', 'kỹ năng đàm phán', 'quản lý nhân sự', 'ý tưởng kinh doanh 2024'] },
+  { category: 'CHUYỆN LẠ BỐN PHƯƠNG', items: ['video thỏa mãn thị giác', 'kỷ lục guinness', 'sinh vật biển kỳ lạ', 'hiện tượng thiên nhiên hiếm gặp', 'người có siêu năng lực', 'khám phá đáy đại dương', 'review ẩm thực độc lạ', 'clip hài hước động vật', 'công trình kiến trúc độc đáo', 'những nơi nguy hiểm nhất'] },
+  { category: 'ASMR & MUKBANG', items: ['asmr ăn uống', 'mukbang gà rán', 'asmr gõ phím', 'asmr nấu ăn', 'mukbang hải sản', 'asmr thư giãn giấc ngủ', 'mukbang đồ ăn cay', 'asmr trang điểm', 'asmr âm thanh tự nhiên', 'mukbang ăn vặt trung quốc'] },
+  { category: 'XÂY DỰNG & KIẾN TRÚC', items: ['tiến độ thi công', 'kiến trúc cổ đại', 'kỹ thuật chống thấm nhà', 'quá trình xây dựng tòa nhà', 'review xi măng', 'kiến trúc hiện đại việt nam', 'máy xúc đất', 'thi công nội thất', 'xây nhà tiết kiệm', 'trải nghiệm thợ xây'] },
+  { category: 'MARKETING & TRUYỀN THÔNG', items: ['cách làm affiliate tiktok', 'kiến thức seo website', 'chạy ads facebook', 'kinh nghiệm shopee', 'chia sẻ marketing thực chiến', 'đánh giá case study', 'chiến lược giá', 'câu nói viral', 'chất lượng content', 'tin tức marketing'] },
+  { category: 'TRỊ LIỆU ÂM THANH', items: ['tần số chữa lành 432hz', 'tiếng mưa rơi dễ ngủ', 'âm thanh rừng tự nhiên', 'tiếng sóng biển 8 tiếng', 'tiếng ồn trắng cho em bé', 'nhạc thiền om', 'tiếng nhạc không lời', 'bowl singing tây tạng', 'tần số tập trung', 'tiếng suối chảy chim hót'] },
+  { category: 'ĐAN LEN & THÊU THÙA', items: ['học móc len cơ bản', 'đan áo len nam', 'thêu hoa nổi', 'cách đọc chart móc', 'review kim móc crochet', 'móc gấu bông tỏi', 'thêu chỉ mế', 'đan len mũi hạt gạo', 'móc túi xách len', 'cách khâu mũi chữ thập'] },
+  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024'] }
 ];
 
 const STOP_LIMIT = 10;
 
 export default function App() {
-  const { user, profile, loading: authLoading, logout, isPremium, isTrialActive, getRemainingTrialTime, isValidUser } = useAuth();
-  const [portalOpen, setPortalOpen] = useState(false);
-  const [portalView, setPortalView] = useState<'packages' | 'payment'>('packages');
-  
-  const isPro = isPremium();
+  // --- State ---
+  const [user, setUser] = useState<User | null>(null);
 
-  // --- Existing State ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
@@ -315,7 +294,12 @@ export default function App() {
   const [showKeyHistory, setShowKeyHistory] = useState(false);
   const [showKeyInputModal, setShowKeyInputModal] = useState(false);
   const [manualKeysInput, setManualKeysInput] = useState('');
+  const [suggestedNiches, setSuggestedNiches] = useState<{ category: string, items: string[] }[]>(SUGGESTED_NICHES);
+  const [trendingRegion, setTrendingRegion] = useState(config.region);
+  const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
+  const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
+  const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [selectedHistoryKeys, setSelectedHistoryKeys] = useState<string[]>([]);
@@ -419,8 +403,11 @@ export default function App() {
     channels: any[];
     thumbnails: any[];
   } | null>(null);
-  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('keywords');
+  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
+  const [videoFilters, setVideoFilters] = useState({ trendScore: 0, views: 0, vph: 0 });
+  const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
+  const [channelFilters, setChannelFilters] = useState({ views: 0, subscribers: 0, videosCount: 0 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -474,19 +461,20 @@ export default function App() {
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
+    
+    const savedGeminiModel = localStorage.getItem('youtube_gemini_model');
+    if (savedGeminiModel) setGeminiModel(savedGeminiModel);
 
-    // Handle paid success from pay.html
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('paid') === 'success') {
-      toast.success("Thanh toán thành công! Tài khoản của bạn đang được nâng cấp PRO.", { duration: 5000 });
-      // Remove the param from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+    // Handle payment success return
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('paid') === 'success') {
+      alert(`Thanh toán thành công! Mã đơn: ${urlParams.get('orderCode') || ''}`);
+      // Clean up URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     }
 
-    // Storage cleanup if needed
-  }, []);
-
-  useEffect(() => {
+    // Load daily quota and clear if it's a new day
     const savedQuotaTotal = localStorage.getItem('youtube_quota_today');
     if (savedQuotaTotal) {
       try {
@@ -525,6 +513,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
   }, [geminiApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('youtube_gemini_model', geminiModel);
+  }, [geminiModel]);
 
   // Save exhausted keys whenever they change
   useEffect(() => {
@@ -658,8 +650,110 @@ export default function App() {
     return d.toISOString();
   };
 
+  const fetchDailyTrendingFromYouTube = async () => {
+    if (config.apiKeys.length === 0) {
+      alert("Vui lòng nhập API Key để sử dụng tính năng này!");
+      return;
+    }
+    setIsFetchingDailyTrending(true);
+    
+    try {
+      const newNiches = [...suggestedNiches]; // always start with original or current categories
+      const batchSize = 3; // run limited batches to avoid hitting youtube rate limits quickly
+      
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      const publishedAfter = lastMonth.toISOString();
+
+      for (let i = 0; i < newNiches.length; i += batchSize) {
+        const batch = newNiches.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (niche, idx) => {
+          const actualIdx = i + idx;
+          try {
+             // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
+             let searchRes = await youtubeFetch('search', {
+               part: 'snippet',
+               q: niche.category,
+               type: 'video',
+               regionCode: trendingRegion,
+               order: 'viewCount', // hottest
+               publishedAfter: publishedAfter,
+               maxResults: 6
+             });
+             
+             // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
+             if (!searchRes.items || searchRes.items.length === 0) {
+                 searchRes = await youtubeFetch('search', {
+                   part: 'snippet',
+                   q: niche.category,
+                   type: 'video',
+                   regionCode: trendingRegion,
+                   order: 'viewCount', // hottest all-time
+                   maxResults: 6
+                 });
+             }
+             
+             if (!searchRes.items || searchRes.items.length === 0) return; // Keep original if completely empty
+             
+             const videoIds = searchRes.items.map((item: any) => item.id.videoId).join(',');
+             
+             // 2. Fetch details (tags) for these exact videos
+             const videoRes = await youtubeFetch('videos', {
+               part: 'snippet',
+               id: videoIds
+             });
+             
+             if (!videoRes.items) return;
+             
+             const countMap: Record<string, number> = {};
+             videoRes.items.forEach((v: any) => {
+               if (v.snippet.tags) {
+                 v.snippet.tags.forEach((t: string) => {
+                   const cleaned = t.trim().toLowerCase();
+                   if (cleaned.length > 2 && !cleaned.includes('shorts')) {
+                     countMap[cleaned] = (countMap[cleaned] || 0) + 1;
+                   }
+                 });
+               }
+             });
+             
+             // Fallback if the videos strangely had zero tags combined
+             if (Object.keys(countMap).length === 0) {
+                 videoRes.items.forEach((v: any) => {
+                    const words = v.snippet.title.toLowerCase().split(/[\s,._\-()[\]{}|]+/);
+                    words.forEach((w: string) => {
+                       if (w.length > 4) countMap[w] = (countMap[w] || 0) + 1;
+                    });
+                 });
+             }
+
+             // Sort them by frequency (hottest keywords within the hottest videos top)
+             const topTags = Object.entries(countMap)
+               .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
+               .map(x => x[0])
+               .slice(0, 10); // Lấy 10 keys (như cũ)
+               
+             if (topTags.length > 0) {
+               newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
+             }
+          } catch(e) {
+             console.error(`Error niche ${niche.category}:`, e);
+          }
+        }));
+      }
+
+      setSuggestedNiches(newNiches);
+      alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
+    } catch(e) {
+      console.error(e);
+      alert("Không thể tải trending từ YouTube lúc này. Vui lòng kiểm tra API Key.");
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
   const runNicheResearch = async (customKeyword?: string) => {
-    if (!canUseTool(isValidUser)) return;
     const kw = customKeyword || nicheInput;
     if (!kw.trim()) {
       alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
@@ -806,7 +900,8 @@ export default function App() {
              return tags.includes(text) || title.includes(text);
           });
           const avgVPH = relatedVideos.reduce((acc, curr) => acc + curr.vph, 0) / Math.max(1, relatedVideos.length);
-          const trendVideosCount = relatedVideos.filter(v => v.trendScore > 60).length;
+          const trendVideos = relatedVideos.filter(v => v.trendScore > 60);
+          const trendVideosCount = trendVideos.length;
           
           let kwScore = (avgVPH * 2) + (trendVideosCount * 5) + (relatedVideos.length * 2);
           return {
@@ -814,6 +909,7 @@ export default function App() {
             count,
             vph: avgVPH,
             trendVideosCount,
+            trendVideos,
             score: Math.min(100, Math.round(kwScore))
           };
         });
@@ -845,6 +941,7 @@ export default function App() {
           return {
             ...c,
             chanVideosCount: chanVideos.length,
+            chanVideos, // Pass video data to display in modal
             bestVideo: chanVideos.sort((a: any, b: any) => b.trendScore - a.trendScore)[0]
           };
         }),
@@ -870,7 +967,6 @@ export default function App() {
   };
 
   const analyzeWithAI = async () => {
-    if (!canUseTool(isValidUser)) return;
     if (!geminiApiKey) {
       setStatus('Lỗi: Vui lòng nhập Gemini API Key ở trên header.');
       return;
@@ -910,7 +1006,7 @@ export default function App() {
 
       setProgress(60);
       const response = await ai.models.generateContent({
-        model: "gemini-flash-latest",
+        model: geminiModel,
         contents: [{ role: "user", parts: [{ text: prompt }] }]
       });
       const text = response.text || "Lỗi: Không có phản hồi từ AI.";
@@ -1058,14 +1154,14 @@ export default function App() {
     try {
       // 1. Try Suggest Queries API (Fast, no quota, real search trends)
       try {
-        const suggestUrl = `/api/youtube-suggestions?q=${encodeURIComponent(base)}`;
+        const suggestUrl = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(base)}&hl=vi`;
         const sResponse = await fetch(suggestUrl).catch(() => null);
         if (sResponse && sResponse.ok) {
           const sData = await sResponse.json();
-          if (Array.isArray(sData) && sData[1]) {
+          if (sData && sData[1]) {
             const suggestions = sData[1] as string[];
             suggestions.slice(0, 15).forEach(s => {
-              if (s.toLowerCase() !== base.toLowerCase() && !ideas.find(i => i.text.toLowerCase() === s.toLowerCase())) {
+              if (s.toLowerCase() !== base.toLowerCase()) {
                 const sScore = (Math.random() * 3 + 1.5).toFixed(1);
                 const comps = ['Thấp', 'Trung bình', 'Cao'];
                 const comp = comps[Math.floor(Math.random() * comps.length)];
@@ -1199,7 +1295,6 @@ export default function App() {
   };
 
   const startHunter = async () => {
-    if (!canUseTool(isValidUser)) return;
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       return;
@@ -1452,7 +1547,6 @@ export default function App() {
   };
 
   const analyzeSpy = async (targetId?: string | any) => {
-    if (!canUseTool(isValidUser)) return;
     const query = (typeof targetId === 'string' && targetId) ? targetId : spyInput;
     if (!query || typeof query !== 'string') return;
     const input = query.trim();
@@ -1794,7 +1888,6 @@ ${topKeywordsStr}`;
   };
 
   const addAllToTracking = () => {
-    if (!canUseTool(isValidUser)) return;
     if (results.length === 0) {
       setStatus('Không có kết quả nào để thêm.');
       return;
@@ -1857,7 +1950,6 @@ ${topKeywordsStr}`;
   };
 
   const analyzeVideo = async (targetId?: string | any) => {
-    if (!canUseTool(isValidUser)) return;
     // If targetId is a React event, ignore it and use videoInput state
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
     if (!query || typeof query !== 'string') return;
@@ -2002,49 +2094,60 @@ ${topKeywordsStr}`;
         </h1>
         <div className="flex items-center gap-4">
           {user ? (
-            <div className="flex items-center gap-3 pr-3 border-r border-gray-200">
-              <div className="text-right">
-                <div className="text-[11px] font-bold text-gray-900 leading-tight flex items-center justify-end gap-1">
-                  {profile?.fullname || user?.displayName}
-                  {isPro ? (
-                    <span className="bg-green-100 text-green-700 px-1 rounded text-[9px] border border-green-200">PRO</span>
-                  ) : (
-                    <button 
-                      onClick={() => { window.location.href = `/pay.html?email=${encodeURIComponent(user?.email || '')}&userId=${encodeURIComponent(user?.uid || '')}&returnUrl=${encodeURIComponent(window.location.pathname)}`; }}
-                      className="bg-blue-100 text-blue-700 px-1 rounded text-[9px] border border-blue-200 hover:bg-blue-200 transition-colors"
-                    >
-                      {isTrialActive() ? `TRIAL (${getRemainingTrialTime()}H)` : 'HẾT HẠN'}
-                    </button>
-                  )}
-                </div>
-                <div className="text-[10px] text-gray-500">{user.email}</div>
-              </div>
-              <img src={user.photoURL || ''} alt="Avatar" className="w-8 h-8 rounded-full border border-gray-300" referrerPolicy="no-referrer" />
+            <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
+              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`} alt="avatar" className="w-6 h-6 rounded-full shadow-sm" referrerPolicy="no-referrer" />
+              <span className="text-[11px] font-black text-gray-700 max-w-[100px] truncate">{user.displayName || user.email}</span>
               <button 
-                onClick={logout}
-                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                onClick={async () => {
+                  try {
+                    await logoutUser();
+                  } catch (e: any) {
+                    console.error('Lỗi đăng xuất:', e);
+                  }
+                }}
+                className="ml-2 text-gray-500 hover:text-red-500 transition-colors"
                 title="Đăng xuất"
               >
-                <Trash2 size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
             <button 
-              onClick={() => { setPortalView('packages'); setPortalOpen(true); }}
-              className="px-4 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 text-[12px] font-bold flex items-center gap-2 hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+              onClick={async () => {
+                try {
+                  await loginWithGoogle();
+                } catch (e: any) {
+                  alert('Lỗi đăng nhập: ' + e.message);
+                }
+              }}
+              className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
+              title="Đăng nhập Google"
             >
-              <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
-              Đăng nhập
+              <LogIn size={16} />
+              <span>ĐĂNG NHẬP</span>
             </button>
           )}
 
-          <button 
-            onClick={() => { window.location.href = `/pay.html?email=${encodeURIComponent(user?.email || '')}&userId=${encodeURIComponent(user?.uid || '')}&returnUrl=${encodeURIComponent(window.location.pathname)}`; }}
-            className="px-4 py-1.5 rounded-lg bg-orange-500 text-white border border-orange-600 hover:bg-orange-600 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-bold text-[12px]"
-          >
-            <Zap size={16} fill="white" />
-            <span>NÂNG CẤP GÓI</span>
-          </button>
+          {user ? (
+            <a 
+              href={`https://research.vanthemmo.com/pay.html?uid=${user.uid}&email=${encodeURIComponent(user.email || '')}&returnUrl=${encodeURIComponent(window.location.href)}`}
+              target="_blank" rel="noreferrer"
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[11px]"
+              title="Nâng cấp Gói"
+            >
+              <Crown size={16} />
+              <span>NÂNG CẤP GÓI</span>
+            </a>
+          ) : (
+            <button 
+              onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
+              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[11px]"
+              title="Cần đăng nhập để Nâng cấp Gói"
+            >
+              <Crown size={16} />
+              <span>NÂNG CẤP GÓI</span>
+            </button>
+          )}
 
           <button 
             onClick={resetConfig}
@@ -2059,6 +2162,31 @@ ${topKeywordsStr}`;
 
       {/* Main Container */}
       <div className="p-4 pt-2">
+        {!user ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <LogIn size={40} className="text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đăng nhập để sử dụng</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
+              Vui lòng đăng nhập bằng tài khoản Google của bạn để truy cập tất cả các tính năng phân tích và tìm kiếm ngách trên YouTube.
+            </p>
+            <button 
+              onClick={async () => {
+                try {
+                  await loginWithGoogle();
+                } catch (e: any) {
+                  alert('Lỗi đăng nhập: ' + e.message);
+                }
+              }}
+              className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+            >
+              <LogIn size={20} />
+              <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
+            </button>
+          </div>
+        ) : (
+          <>
         {/* Tabs - Centered */}
         <div className="flex justify-center gap-1 mb-0 relative z-10">
           <button 
@@ -2228,7 +2356,7 @@ ${topKeywordsStr}`;
                    <div 
                      id="api-status-card"
                      className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden group relative"
-                     style={{ height: '100px', width: '245px' }} // Exactly as requested
+                     style={{ width: '500px', height: '110px' }}
                    >
                       <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:scale-110 transition-transform text-blue-600">
                         <Settings size={60} />
@@ -2261,12 +2389,6 @@ ${topKeywordsStr}`;
                           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1"
                         >
                           <Settings size={12} /> CÀI ĐẶT
-                        </button>
-                        <button 
-                          className="bg-green-50 hover:bg-green-100 text-green-600 px-2.5 py-1.5 rounded-lg text-[10px] font-black border border-green-100 transition-all flex items-center justify-center"
-                          title="Xác nhận cấu hình"
-                        >
-                          <CheckCircle2 size={13} />
                         </button>
                         <button 
                           onClick={() => setShowKeyHistory(true)}
@@ -2470,7 +2592,7 @@ ${topKeywordsStr}`;
                         )}
                         {results.map((r, i) => (
                           <tr 
-                            key={r.id ? `main-res-${r.id}` : `main-res-idx-${i}`} 
+                            key={i} 
                             onContextMenu={(e) => handleContextMenu(e, r)}
                             onClick={() => setSelectedResultId(r.id)}
                             className={`border-b border-[#eee] py-1 cursor-default text-[11px] h-9 transition-colors ${selectedResultId === r.id ? 'bg-[#9fc8ff]' : i % 2 === 0 ? 'bg-[#effff0]' : 'bg-[#ffffff]'}`}
@@ -2729,7 +2851,7 @@ ${topKeywordsStr}`;
                           <div className="font-bold text-gray-700 mb-1">Thẻ hàng đầu (Top tags):</div>
                           <div className="text-[11px] text-gray-700 bg-gray-50 p-2 border border-gray-100 rounded leading-normal max-h-32 overflow-y-auto flex flex-wrap gap-1">
                             {(spyResult.topTags || []).map((tagObj: any, idx: number) => (
-                              <span key={`tag-${idx}-${tagObj.text}`} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/tag">
+                              <span key={idx} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/tag">
                                 <span className="hover:text-blue-600 cursor-default">{tagObj.text} ({tagObj.count})</span>
                                 <button 
                                   onClick={(e) => {
@@ -2751,7 +2873,7 @@ ${topKeywordsStr}`;
                           <div className="text-[11px] text-gray-600 bg-gray-50 p-2 border border-gray-100 rounded leading-normal max-h-48 overflow-y-auto flex flex-wrap gap-1">
                             {spyResult.topKeywords && spyResult.topKeywords.length > 0 ? (
                               spyResult.topKeywords.map((kwObj: any, idx: number) => (
-                                <span key={`kw-${idx}-${kwObj.text}`} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/kw">
+                                <span key={idx} className="inline-flex items-center gap-1 bg-white px-1.5 py-0.5 rounded border border-gray-200 hover:border-blue-300 group/kw">
                                   <span className="hover:text-blue-600 cursor-default">{kwObj.text} ({kwObj.count})</span>
                                   <button 
                                     onClick={(e) => {
@@ -2794,7 +2916,7 @@ ${topKeywordsStr}`;
                         </thead>
                         <tbody>
                           {spyResult.videos.map((v, i) => (
-                            <tr key={v.id || i} className="border-b border-[#eee] hover:bg-[#f9f9f9] text-[11px]">
+                            <tr key={i} className="border-b border-[#eee] hover:bg-[#f9f9f9] text-[11px]">
                               <td className="px-2 py-1 text-center">
                                 <img src={v.thumbnail} className="w-20 h-14 object-cover rounded shadow-sm border border-[#ccc]" />
                               </td>
@@ -2931,7 +3053,7 @@ ${topKeywordsStr}`;
                       )
                       .map((c, i) => (
                       <tr 
-                        key={c.id || `tracking-${i}-${c.title}`} 
+                        key={i} 
                         className="border-b border-[#eee] hover:bg-[#f9f9f9]"
                         onContextMenu={(e) => handleContextMenu(e, {
                           id: c.id,
@@ -3075,7 +3197,7 @@ ${topKeywordsStr}`;
                         onClick={() => setShowNicheModal(true)}
                         className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-400/20 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 font-bold shadow-sm"
                       >
-                        <LayoutGrid size={10} /> 120 NGÁCH
+                        <LayoutGrid size={10} /> XEM GỢI Ý NGÁCH
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
@@ -3199,9 +3321,7 @@ ${topKeywordsStr}`;
                   </nav>
                 </div>
 
-                <div className="p-4 border-t border-[#34495e] bg-[#22313f] text-[10px] text-gray-400 text-center uppercase tracking-tight">
-                  Design by <span className="font-bold text-blue-400">Văn Thế Web</span>
-                </div>
+
               </div>
 
               {/* Main Content Area */}
@@ -3304,7 +3424,7 @@ ${topKeywordsStr}`;
                          { label: 'Đối Thủ Cùng Ngách', value: nicheResults.summary.uniqueChannels, icon: Users, color: '#9b59b6' },
                          { label: 'Tổng View Ngách (Item)', value: (nicheResults.summary.totalViews / 1000000).toFixed(1) + 'M', icon: Eye, color: '#e74c3c' },
                        ].map((stat, i) => (
-                         <div key={`nstat-${stat.label || i}`} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:translate-y-[-4px] transition-all">
+                         <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:translate-y-[-4px] transition-all">
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-inner" style={{ backgroundColor: stat.color + '15', color: stat.color }}>
                                <stat.icon size={24} />
                             </div>
@@ -3323,7 +3443,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-3">
                              {nicheResults.keywords.slice(0, 8).map((kw: any, i: number) => (
-                               <div key={kw.id || kw.text || i} className="flex items-center justify-between group">
+                               <div key={i} className="flex items-center justify-between group">
                                   <div className="flex items-center gap-3">
                                      <span className="text-[10px] font-black text-gray-300">#0{i+1}</span>
                                      <span className="text-[13px] font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{kw.text}</span>
@@ -3348,22 +3468,13 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
-                               <div key={v.id || i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
-                                  <div className="absolute top-2 right-2 bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg z-10">
-                                     TREND SCORE: {v.trendScore}
-                                  </div>
+                               <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
                                   <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200">
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                   </div>
-                                  <div className="flex flex-col justify-between overflow-hidden">
+                                  <div className="flex flex-col justify-between overflow-hidden flex-1">
                                      <h4 className="text-[10px] font-black text-gray-900 uppercase flex items-center justify-between gap-2">
-                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">{v.snippet.title}</a>
-                                        <button 
-                                          onClick={() => analyzeVideo(v.id)}
-                                          className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
-                                        >
-                                          PHÂN TÍCH
-                                        </button>
+                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate w-full" title={v.snippet.title}>{v.snippet.title}</a>
                                      </h4>
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
@@ -3373,6 +3484,17 @@ ${topKeywordsStr}`;
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">VPH (Tốc độ)</span>
                                            <span className="text-[10px] font-black text-blue-600">+{v.vph.toFixed(0)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-auto mt-1 z-20">
+                                          <button 
+                                            onClick={() => analyzeVideo(v.id)}
+                                            className="bg-orange-600 font-bold text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap hover:bg-orange-700 transition-colors"
+                                          >
+                                            PHÂN TÍCH
+                                          </button>
+                                          <div className="bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm whitespace-nowrap">
+                                             TREND SCORE: {v.trendScore}
+                                          </div>
                                         </div>
                                      </div>
                                   </div>
@@ -3413,7 +3535,7 @@ ${topKeywordsStr}`;
                                </thead>
                                <tbody className="divide-y divide-gray-100">
                                   {nicheResults.keywords.slice(0, displayKeywordLimit === 'all' ? undefined : (displayKeywordLimit as number)).map((kw: any, i: number) => (
-                                     <tr key={kw.id || kw.text || i} className="hover:bg-gray-50 transition-colors group">
+                                     <tr key={i} className="hover:bg-gray-50 transition-colors group">
                                         <td className="px-6 py-4">
                                            <div className="flex items-center gap-2">
                                               <span className="text-blue-500 font-bold">#</span>
@@ -3426,7 +3548,12 @@ ${topKeywordsStr}`;
                                            <div className="text-[13px] font-black text-blue-600">+{kw.vph.toLocaleString()} VPH</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                           <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black">{kw.trendVideosCount} clips</span>
+                                           <button 
+                                              onClick={() => setModalTrendingVideos({ title: kw.text, subtitle: 'Danh sách các video có Trend Score > 60 chứa từ khóa này', videos: kw.trendVideos })}
+                                              className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black hover:bg-orange-200 transition-colors shadow-sm cursor-pointer"
+                                           >
+                                              {kw.trendVideosCount} clips
+                                           </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <div className="flex flex-col items-center">
@@ -3446,13 +3573,50 @@ ${topKeywordsStr}`;
                 )}
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-right duration-500">
-                      {nicheResults.videos.map((v: any, i: number) => (
-                         <div key={v.id ? `v-${v.id}` : `v-idx-${i}`} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                   <div className="animate-in slide-in-from-right duration-500">
+                    <div className="mb-6">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 pt-2">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
+                           <button onClick={() => setVideoFilters({ trendScore: 0, views: 0, vph: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Outlier Score <span className="text-[10px] text-gray-400 font-normal block">Range (0-100+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.trendScore}</span>
+                              </div>
+                              <input type="range" min="0" max="100" value={videoFilters.trendScore} onChange={(e) => setVideoFilters({...videoFilters, trendScore: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.views >= 1000000 ? (videoFilters.views/1000000).toFixed(1) + 'M+' : videoFilters.views >= 1000 ? (videoFilters.views/1000).toFixed(0) + 'K+' : videoFilters.views}</span>
+                              </div>
+                              <input type="range" min="0" max="10000000" step="50000" value={videoFilters.views} onChange={(e) => setVideoFilters({...videoFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Views Per Hour (VPH) <span className="text-[10px] text-gray-400 font-normal block">Range (0-1000+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.vph >= 1000 ? (videoFilters.vph/1000).toFixed(1) + 'K+' : videoFilters.vph}</span>
+                              </div>
+                              <input type="range" min="0" max="10000" step="50" value={videoFilters.vph} onChange={(e) => setVideoFilters({...videoFilters, vph: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {nicheResults.videos.filter((v: any) => {
+                         if (v.trendScore < videoFilters.trendScore) return false;
+                         if (parseInt(v.statistics.viewCount) < videoFilters.views) return false;
+                         if (v.vph < videoFilters.vph) return false;
+                         return true;
+                      }).map((v: any, i: number) => (
+                         <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                  {v.contentDetails.duration.replace('PT', '').toLowerCase()}
+                                  {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
                                </div>
                                <div className="absolute top-2 left-2 flex gap-1">
                                   <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
@@ -3495,6 +3659,7 @@ ${topKeywordsStr}`;
                          </div>
                       ))}
                    </div>
+                  </div>
                 )}
 
                 {nicheActiveSubTab === 'shorts' && nicheResults && (
@@ -3502,7 +3667,7 @@ ${topKeywordsStr}`;
                       {nicheResults.shorts.length === 0 ? (
                         <div className="col-span-full py-20 text-center text-gray-400 italic">Không tìm thấy video Shorts nào trong danh sách được tải. Thử phân tích lại với số lượng items lớn hơn.</div>
                       ) : nicheResults.shorts.map((v: any, i: number) => (
-                         <div key={v.id ? `s-${v.id}` : `s-idx-${i}`} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
+                         <div key={i} className="aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover opacity-80" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
@@ -3535,9 +3700,46 @@ ${topKeywordsStr}`;
                 )}
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
-                   <div className="space-y-4 animate-in slide-in-from-left duration-500">
-                      {nicheResults.channels.map((c: any, i: number) => (
-                         <div key={c.id ? `c-${c.id}` : `c-idx-${i}`} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
+                   <div className="animate-in slide-in-from-left duration-500">
+                    <div className="mb-6">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 pt-2">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
+                           <button onClick={() => setChannelFilters({ views: 0, subscribers: 0, videosCount: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Subscribers <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.subscribers >= 1000000 ? (channelFilters.subscribers/1000000).toFixed(1) + 'M+' : channelFilters.subscribers >= 1000 ? (channelFilters.subscribers/1000).toFixed(0) + 'K+' : channelFilters.subscribers}</span>
+                              </div>
+                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.subscribers} onChange={(e) => setChannelFilters({...channelFilters, subscribers: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.views >= 1000000 ? (channelFilters.views/1000000).toFixed(1) + 'M+' : channelFilters.views >= 1000 ? (channelFilters.views/1000).toFixed(0) + 'K+' : channelFilters.views}</span>
+                              </div>
+                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.views} onChange={(e) => setChannelFilters({...channelFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
+                                 <span>Video Count <span className="text-[10px] text-gray-400 font-normal block">Range (0-10,000+)</span></span>
+                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.videosCount >= 1000 ? (channelFilters.videosCount/1000).toFixed(1) + 'K+' : channelFilters.videosCount}</span>
+                              </div>
+                              <input type="range" min="0" max="10000" step="100" value={channelFilters.videosCount} onChange={(e) => setChannelFilters({...channelFilters, videosCount: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                   <div className="space-y-4">
+                      {nicheResults.channels.filter((c: any) => {
+                         if ((parseInt(c.statistics.subscriberCount) || 0) < channelFilters.subscribers) return false;
+                         if ((parseInt(c.statistics.viewCount) || 0) < channelFilters.views) return false;
+                         if ((parseInt(c.statistics.videoCount) || 0) < channelFilters.videosCount) return false;
+                         return true;
+                      }).map((c: any, i: number) => (
+                         <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
                                   <img src={c.snippet.thumbnails.default.url} className="w-16 h-16 rounded-full border-2 border-white shadow-xl" />
@@ -3560,21 +3762,31 @@ ${topKeywordsStr}`;
                                         <Video size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.videoCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">videos</span></span>
                                      </div>
+                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                                     <div className="flex gap-2 items-center">
+                                        <Eye size={14} className="text-gray-400" />
+                                        <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.viewCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">views</span></span>
+                                     </div>
                                   </div>
                                </div>
                             </div>
                             <div className="flex items-center gap-10">
-                               <div className="flex flex-col items-center">
-                                  <span className="text-[10px] text-gray-400 font-bold uppercase mb-1">Items Trending</span>
-                                  <div className="flex -space-x-2">
-                                     {[...Array(Math.min(3, c.chanVideosCount))].map((_, idx) => (
-                                       <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center text-[10px] font-black text-blue-600 shadow-sm">
-                                          +
-                                       </div>
-                                     ))}
-                                     <span className="ml-3 text-[14px] font-black text-blue-600">{c.chanVideosCount}</span>
+                               <button 
+                                 onClick={() => setModalTrendingVideos({ title: c.snippet.title, subtitle: 'Danh sách các video của kênh này lọt top trending', videos: c.chanVideos })}
+                                 className="flex flex-col items-center bg-blue-50/50 px-4 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 cursor-pointer transition-colors"
+                               >
+                                  <span className="text-[10px] text-blue-500 font-bold uppercase mb-1">Video Lọt Top Trending</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex -space-x-2">
+                                       {[...Array(Math.min(3, c.chanVideosCount))].map((_, idx) => (
+                                         <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-blue-100 flex items-center justify-center shadow-sm relative z-10">
+                                            <Flame size={14} className="text-orange-500" />
+                                         </div>
+                                       ))}
+                                    </div>
+                                    <span className="text-[18px] font-black text-blue-600 leading-none flex items-center"><span className="text-[12px] font-bold text-gray-500 mr-1 mt-1">x</span>{c.chanVideosCount}</span>
                                   </div>
-                               </div>
+                               </button>
                                <button 
                                  onClick={() => { setSpyInput(c.id); setActiveTab(2); }}
                                  className="px-6 py-3 bg-[#e67e22] text-white rounded-2xl text-[12px] font-black uppercase tracking-tight shadow-md hover:bg-[#d35400] active:scale-95 transition-all flex items-center gap-2"
@@ -3585,12 +3797,13 @@ ${topKeywordsStr}`;
                          </div>
                       ))}
                    </div>
+                  </div>
                 )}
 
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in zoom-in duration-500">
                       {nicheResults.thumbnails.map((v: any, i: number) => (
-                         <div key={v.id ? `t-${v.id}` : `t-idx-${i}`} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
+                         <div key={i} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
                             <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -3747,7 +3960,7 @@ ${topKeywordsStr}`;
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {videoProjects.map((p, idx) => (
                           <div 
-                            key={p.id || idx} 
+                            key={idx} 
                             onClick={() => {
                               setVideoResult(p);
                               setVideoInput(p.id);
@@ -3833,13 +4046,13 @@ ${topKeywordsStr}`;
                     <div className="lg:col-span-8 flex flex-col gap-4">
                       {/* Metrics Card Row */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {[
-                            { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
-                            { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
-                            { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
-                            { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
-                          ].map((stat) => (
-                            <div key={stat.label} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                        {[
+                          { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
+                          { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
+                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
+                          { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
+                        ].map((stat, i) => (
+                          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                             <div className={`p-2 rounded-lg ${stat.iconBg} ${stat.color}`}>
                               <stat.icon size={20} />
                             </div>
@@ -4023,7 +4236,7 @@ ${topKeywordsStr}`;
                       <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-6 text-left">
                         <div className="flex flex-wrap gap-2">
                           {videoResult.snippet.tags ? videoResult.snippet.tags.map((tag: string, i: number) => (
-                            <div key={`vtag-${i}-${tag}`} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
+                            <div key={i} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
                               {tag}
                             </div>
                           )) : (
@@ -4061,7 +4274,7 @@ ${topKeywordsStr}`;
                       <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
                         {videoResult._comments && videoResult._comments.length > 0 ? (
                           videoResult._comments.map((comment: any, idx: number) => (
-                             <div key={comment.id || idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
+                            <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
                               {idx === 0 && (
                                 <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
                                   <Pin size={8} className="rotate-45" /> TOP/PINNED
@@ -4100,6 +4313,8 @@ ${topKeywordsStr}`;
             </div>
           ) : null}
         </div>
+        </>
+        )}
       </div>
 
       {/* Modal Lịch sử Key */}
@@ -4312,7 +4527,12 @@ ${topKeywordsStr}`;
                     <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
                       <Bot size={20} />
                     </div>
-                    <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none">1. Google Gemini API Key</label>
+                    <div>
+                      <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none block mb-1">1. Google Gemini API Key</label>
+                      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-500 hover:text-indigo-700 font-bold flex items-center gap-1 w-fit transition-colors">
+                        Lấy API Key Gemini Miễn Phí <ExternalLink size={10} />
+                      </a>
+                    </div>
                   </div>
                   <div className="relative z-10">
                     <div className="relative">
@@ -4335,6 +4555,53 @@ ${topKeywordsStr}`;
                       <Zap size={12} fill="currentColor" />
                       Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
                     </div>
+
+                    {/* Model Selection UI */}
+                    <div className="mt-4">
+                      <button 
+                        type="button"
+                        onClick={() => setShowModelOptions(!showModelOptions)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <span className="text-[11px] font-black text-gray-400 tracking-widest uppercase">Chọn model Gemini</span>
+                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                          Đang dùng: {geminiModel}
+                        </div>
+                      </button>
+
+                      {showModelOptions && (
+                        <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                          <button
+                            type="button"
+                            onClick={() => setShowModelOptions(!showModelOptions)}
+                            className="w-full text-left px-4 py-2 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="text-[12px] font-bold text-gray-800">{GEMINI_MODELS.find(m => m.id === geminiModel)?.name}</span>
+                            <ChevronDown size={14} className="text-gray-400" />
+                          </button>
+                          
+                          <div className="max-h-[150px] overflow-y-auto">
+                            {GEMINI_MODELS.map(model => (
+                              <button
+                                key={model.id}
+                                type="button"
+                                onClick={() => {
+                                  setGeminiModel(model.id);
+                                  setShowModelOptions(false);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-[12px] transition-colors border-b border-gray-50 last:border-0 ${
+                                  model.id === geminiModel 
+                                    ? 'bg-blue-600 text-white font-bold' 
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                              >
+                                {model.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -4347,7 +4614,12 @@ ${topKeywordsStr}`;
                     <div className="p-2 bg-red-600 rounded-xl text-white shadow-lg">
                       <Video size={20} />
                     </div>
-                    <label className="text-[13px] font-black text-red-900 uppercase tracking-widest leading-none">2. YouTube API Keys v3</label>
+                    <div>
+                      <label className="text-[13px] font-black text-red-900 uppercase tracking-widest leading-none block mb-1">2. YouTube API Keys v3</label>
+                      <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-red-500 hover:text-red-700 font-bold flex items-center gap-1 w-fit transition-colors">
+                        Lấy API Key YouTube V3 Miễn Phí <ExternalLink size={10} />
+                      </a>
+                    </div>
                   </div>
                   
                   <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
@@ -4392,6 +4664,7 @@ ${topKeywordsStr}`;
                     setConfig(prev => ({ ...prev, apiKeys: keys }));
                     localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
                     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
+                    localStorage.setItem('youtube_gemini_model', geminiModel);
                     
                     const newHistory = [...new Set([...apiKeysHistory, ...keys])];
                     setApiKeysHistory(newHistory);
@@ -4417,9 +4690,9 @@ ${topKeywordsStr}`;
           <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
           <div className="flex items-center gap-3">
             <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Chi phí phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
+            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
             <span className="text-gray-400">|</span>
-            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng chi phí hôm nay (đã dùng): {totalQuotaToday.toLocaleString()} units</span>
+            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {totalQuotaToday.toLocaleString()} units</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -4549,9 +4822,11 @@ ${topKeywordsStr}`;
 
       <AnimatePresence>
         {showNicheModal && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent p-4" onClick={() => setShowNicheModal(false)}>
             <motion.div 
+              onClick={(e) => e.stopPropagation()}
               className="bg-[#f8f9fa] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
+              style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -4562,7 +4837,7 @@ ${topKeywordsStr}`;
                     <LayoutGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH 120 NGÁCH CHỦ ĐỀ GỢI Ý</h3>
+                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
                     <p className="text-[11px] text-blue-200 font-bold opacity-80 uppercase tracking-tighter">Click vào từ khóa để tự động điền và phân tích nhanh</p>
                   </div>
                 </div>
@@ -4575,17 +4850,46 @@ ${topKeywordsStr}`;
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
+                
+                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+                     <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
+                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU TRENDING TỪ YOUTUBE API</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật danh sách từ khóa ngách hot nhất hôm nay theo quốc gia</span>
+                     </h3>
+                     <div className="flex items-center gap-3">
+                         <div className="relative">
+                           <select
+                              value={trendingRegion}
+                              onChange={(e) => setTrendingRegion(e.target.value)}
+                              className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
+                           >
+                              {REGIONS.map(r => (
+                                <option key={r.code || 'GL'} value={r.code}>{r.name}</option>
+                              ))}
+                           </select>
+                           <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                         </div>
+                         <button
+                            onClick={fetchDailyTrendingFromYouTube}
+                            disabled={isFetchingDailyTrending}
+                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
+                         >
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật API...</> : <><Search size={16}/> Cập nhật Trending</>}
+                         </button>
+                     </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {SUGGESTED_NICHES.map((category) => (
-                    <div key={category.category} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
+                  {suggestedNiches.map((category, idx) => (
+                    <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
                         <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{category.items.length} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.map((item) => (
+                        {category.items.map((item, itemIdx) => (
                           <button
-                            key={item}
+                            key={itemIdx}
                             onClick={() => {
                               setNicheInput(item);
                               setShowNicheModal(false);
@@ -4614,15 +4918,79 @@ ${topKeywordsStr}`;
       </AnimatePresence>
 
       <AnimatePresence>
-        {/* Portal & Toast */}
-        <Toaster position="top-center" />
-        <AuthPortal
-          isOpen={portalOpen}
-          onClose={() => setPortalOpen(false)}
-          user={user}
-          profile={profile}
-          initialView={portalView}
-        />
+        {modalTrendingVideos && (
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            >
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white flex justify-between items-center shadow-lg relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10">
+                   <div className="absolute rotate-45 transform bg-white w-full h-full -top-1/2 -left-1/2 animate-pulse"></div>
+                </div>
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                    <Flame size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-xl uppercase tracking-wider">VIDEO TRENDING: {modalTrendingVideos.title}</h3>
+                    <p className="text-[11px] text-orange-100 font-bold uppercase tracking-tighter">{modalTrendingVideos.subtitle}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setModalTrendingVideos(null)}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/30 flex items-center justify-center transition-all group z-10 relative"
+                >
+                  <X size={20} className="group-hover:rotate-90 transition-transform" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
+                {modalTrendingVideos.videos.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 font-medium italic">Không tìm thấy video nào.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {modalTrendingVideos.videos.map((v: any, i: number) => (
+                      <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                         <div className="relative aspect-video">
+                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                               {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
+                            </div>
+                            <div className="absolute top-2 left-2 flex gap-1">
+                               <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
+                                  SCORE {v.trendScore}
+                               </div>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
+                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
+                                  <ExternalLink size={14} /> Xem trên YouTube
+                               </a>
+                            </div>
+                         </div>
+                         <div className="p-4">
+                            <h4 className="text-[11px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
+                            <div className="flex items-center justify-between mt-3 bg-gray-50 p-2 rounded-lg">
+                               <div className="flex flex-col">
+                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
+                                  <span className="text-[10px] font-black text-blue-600 truncate max-w-[100px]">{v.snippet.channelTitle}</span>
+                               </div>
+                               <div className="flex flex-col items-end">
+                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views / VPH</span>
+                                  <span className="text-[11px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()} / <span className="text-orange-500">+{v.vph.toFixed(0)}</span></span>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
     </div>
