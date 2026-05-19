@@ -266,7 +266,6 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
-  const [showAccountPanel, setShowAccountPanel] = useState(false);
 
   const buildPaymentUrl = (targetUser = user) => {
     if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
@@ -2226,209 +2225,236 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tah      {/* Header */}
-      <div className="bg-white border-b border-[#ccc] px-4 py-2 flex justify-between items-center shadow-sm relative z-[9999]">
-        <h1 className="text-[18px] font-bold text-[#333] flex items-center gap-2">
-          <img
-            src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
-            className="w-7 h-7 rounded-full"
-            referrerPolicy="no-referrer"
-            alt="Văn Thế Web"
-          />
-          <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
-        </h1>
-
-        <div className="flex items-center gap-3 relative">
-          {user ? (
-            <button
-              type="button"
-              onClick={() => setShowAccountPanel(prev => !prev)}
-              className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-200 shadow-sm hover:bg-blue-50 hover:border-blue-200 transition-all"
-              title="Xem thông tin tài khoản và hạn sử dụng"
-            >
-              <img
-                src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                alt="avatar"
-                className="w-8 h-8 rounded-full shadow-sm"
-                referrerPolicy="no-referrer"
-              />
-              <div className="text-left leading-tight">
-                <div className="text-[13px] font-black text-gray-800 max-w-[140px] truncate">
-                  {user.displayName || user.email}
-                </div>
-                <div className={`text-[10px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
-                  {subscriptionLoading ? 'Đang kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Dùng thử' : 'Hết hạn'}
-                </div>
-              </div>
-              <ChevronDown size={16} className={`text-gray-500 transition-transform ${showAccountPanel ? 'rotate-180' : ''}`} />
-            </button>
-          ) : (
-            <button
-              onClick={async () => {
-                try {
-                  await loginWithGoogle();
-                } catch (e: any) {
-                  alert('Lỗi đăng nhập: ' + e.message);
-                }
-              }}
-              className="px-5 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-              title="Đăng nhập Google"
-            >
-              <LogIn size={16} />
-              <span>ĐĂNG NHẬP</span>
-            </button>
-          )}
-
-          {user ? (
-            <a
-              href={buildPaymentUrl(user)}
-              target="_blank"
-              rel="noreferrer"
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[11px]"
-              title="Nâng cấp thêm và cộng dồn hạn dùng"
-            >
-              <Crown size={16} />
-              <span>{isPremiumAccount ? 'NÂNG CẤP THÊM' : 'NÂNG CẤP GÓI'}</span>
-            </a>
-          ) : (
-            <button
-              onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[11px]"
-              title="Cần đăng nhập để nâng cấp gói"
-            >
-              <Crown size={16} />
-              <span>NÂNG CẤP GÓI</span>
-            </button>
-          )}
-
-          <button
-            onClick={resetConfig}
-            className="px-6 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-            title="Làm mới cài đặt & kết quả"
+    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+      {/* Header */}
+      <div
+        style={{
+          background: '#ffffff',
+          borderBottom: '1px solid #d1d5db',
+          padding: '6px 10px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            width: '100%',
+            minWidth: 0
+          }}
+        >
+          <h1
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              margin: 0,
+              fontSize: 16,
+              fontWeight: 800,
+              color: '#333',
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
+            }}
           >
-            <RotateCcw size={16} />
-            <span>LÀM MỚI</span>
-          </button>
+            <img
+              src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
+              style={{ width: 28, height: 28, borderRadius: 999 }}
+              referrerPolicy="no-referrer"
+              alt="Văn Thế Web"
+            />
+            <span>YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+          </h1>
 
           {user && (
-            <button
-              onClick={async () => {
-                try {
-                  await logoutUser();
-                  setShowAccountPanel(false);
-                } catch (e: any) {
-                  console.error('Lỗi đăng xuất:', e);
-                }
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                flex: 1,
+                minWidth: 0,
+                overflowX: 'auto',
+                padding: '0 4px'
               }}
-              className="px-4 py-2 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
-              title="Đăng xuất tài khoản"
             >
-              <LogOut size={15} />
-              <span>ĐĂNG XUẤT</span>
-            </button>
-          )}
-
-          {user && showAccountPanel && (
-            <div className="absolute right-0 top-[54px] w-[420px] bg-white border border-blue-100 rounded-2xl shadow-2xl p-4 z-[10000]">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                    alt="avatar"
-                    className="w-12 h-12 rounded-2xl shadow-sm"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div>
-                    <div className="text-[15px] font-black text-gray-900">{user.displayName || 'Người dùng'}</div>
-                    <div className="text-[12px] font-bold text-gray-500">{user.email || 'Chưa có email'}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAccountPanel(false)}
-                  className="w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center"
-                  title="Đóng"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className={`rounded-2xl p-4 mb-3 border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="text-[11px] font-black uppercase text-gray-500 mb-1">Tình trạng tài khoản</div>
-                <div className={`text-[22px] font-black ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
+              <div
+                style={{
+                  border: isPremiumAccount ? '1px solid #93c5fd' : subscriptionInfo?.active ? '1px solid #fcd34d' : '1px solid #fca5a5',
+                  background: isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2',
+                  borderRadius: 10,
+                  padding: '4px 8px',
+                  minWidth: 118,
+                  flexShrink: 0,
+                  lineHeight: 1.15
+                }}
+              >
+                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Tài khoản</div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#dc2626', textTransform: 'uppercase' }}>
                   {subscriptionLoading && !subscriptionInfo
                     ? 'Đang kiểm tra'
                     : isPremiumAccount
-                      ? 'Tài khoản đã nâng cấp PRO'
+                      ? 'Đã nâng cấp PRO'
                       : subscriptionInfo?.active
-                        ? 'Tài khoản đang dùng thử 1 giờ'
-                        : 'Tài khoản đã hết hạn'}
+                        ? 'Dùng thử 1 giờ'
+                        : 'Hết hạn'}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="text-[10px] font-black text-gray-400 uppercase">Gói đã đăng ký</div>
-                  <div className="text-[14px] font-black text-gray-900 mt-1">
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                  </div>
-                </div>
-
-                <div className={`rounded-2xl border p-3 ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className={`text-[10px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-                  <div className={`text-[14px] font-black mt-1 ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="text-[10px] font-black text-gray-400 uppercase">Ngày đăng ký</div>
-                  <div className="text-[14px] font-black text-gray-900 mt-1">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                  <div className="text-[10px] font-black text-gray-400 uppercase">Hạn sử dụng</div>
-                  <div className="text-[14px] font-black text-gray-900 mt-1">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                  </div>
+              <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: 10, padding: '4px 8px', minWidth: 95, flexShrink: 0, lineHeight: 1.15 }}>
+                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Gói</div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#0f172a', maxWidth: 115, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {subscriptionLoading && !subscriptionInfo
+                    ? 'Đang kiểm tra'
+                    : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-2">
-                <a
-                  href={buildPaymentUrl(user)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-center font-black uppercase text-[11px] shadow-md"
-                >
-                  {isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}
-                </a>
+              <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: 10, padding: '4px 8px', minWidth: 128, flexShrink: 0, lineHeight: 1.15 }}>
+                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Ngày đăng ký</div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                  {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
+                </div>
+              </div>
+
+              <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: 10, padding: '4px 8px', minWidth: 128, flexShrink: 0, lineHeight: 1.15 }}>
+                <div style={{ fontSize: 8, fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>Hạn sử dụng</div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                  {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  border: subscriptionInfo?.active ? '1px solid #86efac' : '1px solid #fca5a5',
+                  background: subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2',
+                  borderRadius: 10,
+                  padding: '4px 8px',
+                  minWidth: 96,
+                  flexShrink: 0,
+                  lineHeight: 1.15
+                }}
+              >
+                <div style={{ fontSize: 8, fontWeight: 900, color: subscriptionInfo?.active ? '#059669' : '#dc2626', textTransform: 'uppercase' }}>Còn lại</div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: subscriptionInfo?.active ? '#047857' : '#dc2626', whiteSpace: 'nowrap' }}>
+                  {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexShrink: 0
+            }}
+          >
+            {user ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: '#f8fafc',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 12,
+                  padding: '5px 8px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+                }}
+              >
+                <img
+                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                  alt="avatar"
+                  style={{ width: 24, height: 24, borderRadius: 999 }}
+                  referrerPolicy="no-referrer"
+                />
+                <div style={{ maxWidth: 100, lineHeight: 1.1 }}>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.displayName || user.email}
+                  </div>
+                  <div style={{ fontSize: 8, fontWeight: 900, color: isPremiumAccount ? '#2563eb' : subscriptionInfo?.active ? '#d97706' : '#dc2626', textTransform: 'uppercase' }}>
+                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+                  </div>
+                </div>
                 <button
                   onClick={async () => {
                     try {
                       await logoutUser();
-                      setShowAccountPanel(false);
                     } catch (e: any) {
                       console.error('Lỗi đăng xuất:', e);
                     }
                   }}
-                  className="px-4 py-3 rounded-xl bg-gray-100 text-gray-700 border border-gray-200 font-black uppercase text-[11px]"
+                  style={{ border: 0, background: 'transparent', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  title="Đăng xuất"
                 >
-                  Đăng xuất
+                  <LogOut size={14} />
                 </button>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
+            ) : (
+              <button
+                onClick={async () => {
+                  try {
+                    await loginWithGoogle();
+                  } catch (e: any) {
+                    alert('Lỗi đăng nhập: ' + e.message);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px]"
+                title="Đăng nhập Google"
+              >
+                <LogIn size={16} />
+                <span>ĐĂNG NHẬP</span>
+              </button>
+            )}
 
-/div>
-            </div>
+            {user ? (
+              <a
+                href={buildPaymentUrl(user)}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '8px 14px',
+                  borderRadius: 12,
+                  background: 'linear-gradient(90deg,#f97316,#ef4444)',
+                  color: '#fff',
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textDecoration: 'none',
+                  textTransform: 'uppercase',
+                  boxShadow: '0 2px 8px rgba(239,68,68,.25)',
+                  whiteSpace: 'nowrap'
+                }}
+                title="Nâng cấp thêm / cộng dồn hạn dùng"
+              >
+                <Crown size={15} />
+                <span>{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+              </a>
+            ) : (
+              <button
+                onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px]"
+                title="Cần đăng nhập để Nâng cấp Gói"
+              >
+                <Crown size={15} />
+                <span>NÂNG CẤP GÓI</span>
+              </button>
+            )}
+
+            <button
+              onClick={resetConfig}
+              className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px]"
+              title="Làm mới cài đặt & kết quả"
+            >
+              <RotateCcw size={15} />
+              <span>LÀM MỚI</span>
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Main Container */}
