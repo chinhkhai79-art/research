@@ -266,6 +266,23 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const updateViewportFlag = () => {
+      setIsMobileViewport(window.innerWidth <= 768);
+    };
+
+    updateViewportFlag();
+    window.addEventListener('resize', updateViewportFlag);
+    window.addEventListener('orientationchange', updateViewportFlag);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportFlag);
+      window.removeEventListener('orientationchange', updateViewportFlag);
+    };
+  }, []);
 
   const buildPaymentUrl = (targetUser = user) => {
     if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
@@ -323,6 +340,7 @@ export default function App() {
         await refreshSubscription(currentUser, true);
       } else {
         setSubscriptionInfo(null);
+        setShowAccountModal(false);
       }
     });
 
@@ -2600,43 +2618,37 @@ ${topKeywordsStr}`;
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
-            <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche Pro</span>
+            {isMobileViewport ? (
+              <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche Pro</span>
+            ) : (
+              <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            )}
           </h1>
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
-              <>
-                <div className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
-                  <img
-                    src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                    alt="avatar"
-                    className="w-6 h-6 rounded-full shadow-sm"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="leading-tight max-w-[115px]">
-                    <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
-                    <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
-                      {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
-                    </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAccountModal(true);
+                }}
+                className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
+                title="Tài khoản & hạn sử dụng"
+              >
+                <img
+                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                  alt="avatar"
+                  className="w-6 h-6 rounded-full shadow-sm"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="leading-tight max-w-[115px] text-left">
+                  <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
+                  <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
                   </div>
                 </div>
-
-                <button
-                  onClick={async () => {
-                    try {
-                      await logoutUser();
-                    } catch (e: any) {
-                      console.error('Lỗi đăng xuất:', e);
-                    }
-                  }}
-                  className="vtw-logout-text-btn px-4 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
-                  title="Đăng xuất tài khoản Google"
-                >
-                  <LogOut size={15} />
-                  <span>Đăng Xuất</span>
-                </button>
-              </>
+              </button>
             ) : (
               <button
                 onClick={async () => {
@@ -5615,6 +5627,91 @@ ${topKeywordsStr}`;
                     ))}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAccountModal && user && (
+          <div
+            className="vtw-account-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4"
+            onClick={() => setShowAccountModal(false)}
+          >
+            <motion.div
+              className="vtw-account-modal bg-white rounded-[26px] shadow-2xl border border-blue-100 overflow-hidden w-full max-w-[440px]"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 18 }}
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4 relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountModal(false)}
+                  className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white"
+                  title="Đóng"
+                >
+                  <X size={20} />
+                </button>
+                <div className="text-[11px] font-black uppercase tracking-wide opacity-90 mb-2">Tài khoản & hạn sử dụng</div>
+                <div className="text-[24px] leading-tight font-black">
+                  {isPremiumAccount ? 'Tài khoản đã nâng cấp PRO' : subscriptionInfo?.active ? 'Tài khoản đang dùng thử' : 'Tài khoản đã hết hạn'}
+                </div>
+                <div className="text-[12px] font-bold opacity-95 mt-2 break-all">
+                  {user.displayName || 'Tài khoản'} · {user.email}
+                </div>
+              </div>
+
+              <div className="p-4 grid grid-cols-2 gap-3 bg-white">
+                <div className="vtw-account-info-card">
+                  <div className="vtw-account-info-label">Gói đã đăng ký</div>
+                  <div className="vtw-account-info-value">{subscriptionInfo?.planName || (isPremiumAccount ? 'Gói PRO' : subscriptionInfo?.active ? 'Dùng thử' : 'Chưa có gói')}</div>
+                </div>
+                <div className="vtw-account-info-card vtw-account-info-card-green">
+                  <div className="vtw-account-info-label text-green-700">Còn lại</div>
+                  <div className="vtw-account-info-value text-green-700">{getRemainingText(subscriptionInfo?.expiresAt)}</div>
+                </div>
+                <div className="vtw-account-info-card">
+                  <div className="vtw-account-info-label">Ngày đăng ký</div>
+                  <div className="vtw-account-info-value">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
+                </div>
+                <div className="vtw-account-info-card">
+                  <div className="vtw-account-info-label">Hạn sử dụng</div>
+                  <div className="vtw-account-info-value">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
+                </div>
+              </div>
+
+              <div className="px-4 pb-4 grid grid-cols-3 gap-2 bg-white">
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = buildPaymentUrl(user); }}
+                  className="vtw-account-action vtw-account-action-upgrade"
+                >
+                  Nâng cấp thêm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAccountModal(false); setShowKeyInputModal(true); }}
+                  className="vtw-account-action vtw-account-action-settings"
+                >
+                  Cài đặt
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setShowAccountModal(false);
+                      await logoutUser();
+                    } catch (e: any) {
+                      console.error('Lỗi đăng xuất:', e);
+                    }
+                  }}
+                  className="vtw-account-action vtw-account-action-logout"
+                >
+                  Đăng xuất
+                </button>
               </div>
             </motion.div>
           </div>

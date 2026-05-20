@@ -2468,3 +2468,154 @@
     height: 13px !important;
   }
 }
+
+/* STEP 14: Tiêu đề mobile chỉ còn 1 dòng + tài khoản mở popup hạn dùng */
+.vtw-app-title .vtw-title-full,
+.vtw-app-title .vtw-title-mobile {
+  vertical-align: middle !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-app-title .vtw-title-full {
+    display: none !important;
+  }
+
+  .vtw-app-title .vtw-title-mobile {
+    display: inline-block !important;
+    width: 118px !important;
+    max-width: 118px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    line-height: 18px !important;
+    font-weight: 900 !important;
+  }
+
+  .vtw-app-title {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    max-width: 170px !important;
+    overflow: hidden !important;
+  }
+
+  .vtw-header-actions {
+    flex: 0 0 auto !important;
+  }
+
+  .vtw-account-box {
+    cursor: pointer !important;
+  }
+
+  .vtw-account-box .leading-tight {
+    max-width: 70px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .vtw-app-title .vtw-title-mobile {
+    display: none !important;
+  }
+
+  .vtw-app-title .vtw-title-full {
+    display: inline-block !important;
+  }
+}
+
+.vtw-account-modal-overlay {
+  overscroll-behavior: contain !important;
+}
+
+.vtw-account-modal {
+  max-height: min(92vh, 620px) !important;
+  overflow-y: auto !important;
+}
+
+.vtw-account-info-card {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 16px !important;
+  padding: 14px !important;
+  background: #f8fafc !important;
+  min-height: 72px !important;
+}
+
+.vtw-account-info-card-green {
+  background: #ecfdf5 !important;
+  border-color: #86efac !important;
+}
+
+.vtw-account-info-label {
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  font-weight: 900 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+  margin-bottom: 8px !important;
+}
+
+.vtw-account-info-value {
+  font-size: 15px !important;
+  line-height: 1.25 !important;
+  font-weight: 900 !important;
+  color: #1f2937 !important;
+  word-break: break-word !important;
+}
+
+.vtw-account-action {
+  min-height: 44px !important;
+  border-radius: 14px !important;
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 10px !important;
+  border: 1px solid transparent !important;
+}
+
+.vtw-account-action-upgrade {
+  background: linear-gradient(135deg, #f97316, #ef4444) !important;
+  color: white !important;
+  box-shadow: 0 10px 24px rgba(249,115,22,.18) !important;
+}
+
+.vtw-account-action-settings {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+
+.vtw-account-action-logout {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+@media (max-width: 420px) {
+  .vtw-account-modal {
+    max-width: calc(100vw - 22px) !important;
+    border-radius: 22px !important;
+  }
+
+  .vtw-account-modal .grid-cols-2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .vtw-account-info-card {
+    padding: 11px !important;
+  }
+
+  .vtw-account-info-value {
+    font-size: 13px !important;
+  }
+
+  .vtw-account-action {
+    font-size: 10px !important;
+    padding: 8px 6px !important;
+  }
+}
