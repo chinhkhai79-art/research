@@ -2126,3 +2126,252 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* VTW MOBILE STEP 8 - fix xoay ngang, tab desktop bị lặp chữ, bảng mobile còn chật */
+.vtw-tab-short {
+  display: none !important;
+}
+.vtw-tab-full {
+  display: inline !important;
+}
+
+/* Giữ trang có thể cuộn dọc trong mọi chế độ mobile, đặc biệt iPhone xoay ngang. */
+@media (max-width: 1100px) {
+  html,
+  body,
+  #root,
+  .vtw-mobile-app {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .vtw-page-wrap,
+  .vtw-main-panel,
+  .vtw-main-panel > div,
+  .vtw-results-box,
+  .vtw-tracking-panel,
+  .vtw-spy-panel,
+  .vtw-niche-layout,
+  .vtw-niche-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vtw-tab-short {
+    display: block !important;
+  }
+
+  .vtw-tab-full {
+    display: none !important;
+  }
+
+  .vtw-tabs {
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .vtw-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Bắt buộc tab tìm ngách không dùng layout 2 cột trên mobile và xoay ngang. */
+  .vtw-niche-layout,
+  .vtw-niche-layout.flex,
+  .vtw-niche-layout[class*="flex"] {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vtw-niche-sidebar,
+  .vtw-niche-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vtw-niche-content *,
+  .vtw-spy-report *,
+  .vtw-results-box *,
+  .vtw-tracking-table * {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  .vtw-niche-content a,
+  .vtw-niche-content h4,
+  .vtw-niche-content h4 a {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    max-width: 100% !important;
+  }
+
+  /* Tracking / các bảng phụ: ưu tiên card dọc, không để table kéo ngang. */
+  .vtw-tracking-table-box,
+  .vtw-tracking-table-box > div,
+  .vtw-spy-panel .flex-1.overflow-auto,
+  .vtw-results-table-wrap {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vtw-tracking-table,
+  .vtw-tracking-table thead,
+  .vtw-tracking-table tbody,
+  .vtw-tracking-table tr,
+  .vtw-tracking-table th,
+  .vtw-tracking-table td {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-tracking-table {
+    display: block !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  .vtw-tracking-table thead {
+    display: none !important;
+  }
+
+  .vtw-tracking-table tbody {
+    display: block !important;
+  }
+
+  .vtw-tracking-table tr {
+    display: block !important;
+    margin: 0 0 10px !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 1px solid #dbe5f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 22px rgba(15,23,42,.06) !important;
+  }
+
+  .vtw-tracking-table td {
+    display: grid !important;
+    grid-template-columns: 92px minmax(0, 1fr) !important;
+    gap: 8px !important;
+    align-items: start !important;
+    border: 0 !important;
+    border-bottom: 1px dashed #e5edf5 !important;
+    padding: 7px 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    font-size: 12px !important;
+  }
+
+  .vtw-tracking-table td:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .vtw-tracking-table td::before {
+    display: block !important;
+    margin: 0 !important;
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
+    font-weight: 900 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+  }
+
+  .vtw-main-panel table:not(.vtw-results-table) {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .vtw-spy-result-grid,
+  .vtw-spy-result-grid.flex,
+  .vtw-spy-report,
+  .vtw-spy-profile {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vtw-spy-profile {
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .vtw-footer-status {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: calc(100% - 12px) !important;
+    margin: 10px 6px 14px !important;
+  }
+}
+
+/* Riêng điện thoại xoay ngang: giảm chiều cao khối, vẫn cho cuộn dọc. */
+@media (max-width: 950px) and (max-height: 520px) {
+  .vtw-mobile-app,
+  .vtw-page-wrap,
+  .vtw-main-panel {
+    overflow-y: visible !important;
+  }
+
+  .vtw-app-header {
+    position: static !important;
+  }
+
+  .vtw-tabs {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    background: #eef2f8 !important;
+  }
+
+  .vtw-tab-btn,
+  .vtw-tabs > button,
+  .vtw-tabs > div {
+    min-height: 42px !important;
+    height: 42px !important;
+    flex-basis: 76px !important;
+    width: 76px !important;
+    min-width: 76px !important;
+    max-width: 76px !important;
+    font-size: 8px !important;
+    padding: 4px 3px !important;
+  }
+
+  .vtw-niche-sidebar > div:first-child {
+    padding: 10px !important;
+  }
+
+  .vtw-niche-content {
+    padding: 10px !important;
+  }
+
+  #vtw-account-status-root-20260519 .vtw-float-btn {
+    right: 8px !important;
+    bottom: 8px !important;
+    opacity: .58 !important;
+  }
+}
+
+/* Desktop: không lặp chữ ngắn trong tab. */
+@media (min-width: 1101px) {
+  .vtw-tab-short {
+    display: none !important;
+  }
+  .vtw-tab-full {
+    display: inline !important;
+  }
+}
