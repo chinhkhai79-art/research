@@ -3542,7 +3542,7 @@ ${topKeywordsStr}`;
                           score: calculateNicheScore(spyResult.channelInfo),
                           keywordTitle: ''
                         })}
-                        className="vtw-mobile-action-btn mt-3 w-full bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-[10px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                        className="vtw-spy-mobile-action-btn vtw-mobile-action-btn mt-3 w-full bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-[10px] font-black shadow-sm transition-all active:scale-95 uppercase"
                       >
                         THAO TÁC
                       </button>
@@ -3561,6 +3561,27 @@ ${topKeywordsStr}`;
                           </a>
                         </div>
                         <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => openChannelActionMenu(e, {
+                              id: spyResult.channelInfo.id,
+                              name: spyResult.channelInfo.snippet.title,
+                              url: `https://youtube.com/channel/${spyResult.channelInfo.id}`,
+                              icon: spyResult.channelInfo.logo,
+                              country: spyResult.channelInfo.snippet.country || '',
+                              publishedAt: spyResult.channelInfo.snippet.publishedAt,
+                              age: calculateChannelAge(spyResult.channelInfo.snippet.publishedAt),
+                              subs: parseInt(spyResult.channelInfo.statistics.subscriberCount || '0'),
+                              views: parseInt(spyResult.channelInfo.statistics.viewCount || '0'),
+                              videos: parseInt(spyResult.channelInfo.statistics.videoCount || '0'),
+                              score: calculateNicheScore(spyResult.channelInfo),
+                              keywordTitle: ''
+                            })}
+                            className="vtw-spy-report-action-btn vtw-mobile-action-btn bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded text-[9px] font-black uppercase"
+                            title="Mở thao tác kênh"
+                          >
+                            THAO TÁC
+                          </button>
                           <button 
                             onClick={() => downloadAsTxt(spyResult.report, spyResult.channelInfo.snippet.title)}
                             className="p-1 hover:bg-gray-100 rounded text-green-600 transition-colors"

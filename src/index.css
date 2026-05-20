@@ -2961,3 +2961,117 @@
     word-break: break-word !important;
   }
 }
+
+/* Step 20: Fix Spy mobile scroll + explicit action button for Spy channel. */
+@media (max-width: 768px) {
+  .vtw-spy-panel,
+  .vtw-spy-result,
+  .vtw-spy-result-grid,
+  .vtw-spy-videos-box,
+  .vtw-spy-videos-box > div,
+  .vtw-spy-videos-box .flex-1,
+  .vtw-spy-videos-box .overflow-auto {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vtw-spy-videos-box {
+    display: block !important;
+    margin-bottom: 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table,
+  .vtw-spy-videos-box .vtw-tracking-table thead,
+  .vtw-spy-videos-box .vtw-tracking-table tbody,
+  .vtw-spy-videos-box .vtw-tracking-table tr,
+  .vtw-spy-videos-box .vtw-tracking-table th,
+  .vtw-spy-videos-box .vtw-tracking-table td {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table {
+    display: block !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table thead {
+    display: none !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table tbody,
+  .vtw-spy-videos-box .vtw-tracking-table tr {
+    display: block !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table tr {
+    margin: 10px !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border: 1px solid #dbe5f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .08) !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td {
+    display: grid !important;
+    grid-template-columns: 86px minmax(0, 1fr) !important;
+    gap: 8px !important;
+    align-items: start !important;
+    border: 0 !important;
+    border-bottom: 1px dashed #e5edf5 !important;
+    padding: 8px 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td::before {
+    display: block !important;
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+    font-weight: 900 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(1)::before { content: 'Thumb'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(2)::before { content: 'Video ID'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(3)::before { content: 'Phân tích'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(4)::before { content: 'Tiêu đề'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(5)::before { content: 'Ngày đăng'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(6)::before { content: 'Views'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(7)::before { content: 'Views/ngày'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(8)::before { content: 'URL'; }
+
+  .vtw-spy-videos-box .vtw-tracking-table img {
+    width: 92px !important;
+    height: 54px !important;
+    object-fit: cover !important;
+  }
+
+  .vtw-spy-mobile-action-btn,
+  .vtw-spy-report-action-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .vtw-spy-profile .vtw-spy-mobile-action-btn {
+    width: 100% !important;
+    min-height: 34px !important;
+    margin-top: 10px !important;
+  }
+
+  .vtw-spy-report-action-btn {
+    min-height: 26px !important;
+  }
+}
