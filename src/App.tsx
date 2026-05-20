@@ -2606,19 +2606,22 @@ ${topKeywordsStr}`;
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
-              <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
-                <img
-                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                  alt="avatar"
-                  className="w-6 h-6 rounded-full shadow-sm"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="leading-tight max-w-[115px]">
-                  <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
-                  <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
-                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+              <>
+                <div className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
+                  <img
+                    src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                    alt="avatar"
+                    className="w-6 h-6 rounded-full shadow-sm"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="leading-tight max-w-[115px]">
+                    <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
+                    <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                      {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+                    </div>
                   </div>
                 </div>
+
                 <button
                   onClick={async () => {
                     try {
@@ -2627,12 +2630,13 @@ ${topKeywordsStr}`;
                       console.error('Lỗi đăng xuất:', e);
                     }
                   }}
-                  className="ml-1 text-gray-500 hover:text-red-500 transition-colors"
-                  title="Đăng xuất"
+                  className="vtw-logout-text-btn px-4 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+                  title="Đăng xuất tài khoản Google"
                 >
-                  <LogOut size={14} />
+                  <LogOut size={15} />
+                  <span>Đăng Xuất</span>
                 </button>
-              </div>
+              </>
             ) : (
               <button
                 onClick={async () => {

@@ -2432,3 +2432,39 @@
     display: inline-block !important;
   }
 }
+
+/* STEP 13: Tách nút Đăng Xuất khỏi cụm tài khoản, ép hiển thị dạng chữ */
+.vtw-account-box > button,
+.vtw-account-box .vtw-old-logout,
+.vtw-account-box [title="Đăng xuất"] {
+  display: none !important;
+}
+
+.vtw-logout-text-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-account-box {
+    padding: 6px 8px !important;
+    max-width: 130px !important;
+  }
+
+  .vtw-account-box .leading-tight {
+    max-width: 78px !important;
+  }
+
+  .vtw-logout-text-btn {
+    padding: 7px 9px !important;
+    font-size: 9px !important;
+    min-height: 34px !important;
+  }
+
+  .vtw-logout-text-btn svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+}
