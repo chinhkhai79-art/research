@@ -397,7 +397,18 @@ export default function App() {
           #vtw-account-status-root-20260519 .vtw-float-btn { right: 280px !important; font-size: 11px !important; padding: 7px 11px !important; }
         }
         @media (max-width: 900px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn { right: 12px !important; top: 58px !important; }
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            right: 12px !important;
+            left: auto !important;
+            top: auto !important;
+            bottom: 14px !important;
+            min-width: 132px !important;
+            max-width: calc(100vw - 24px) !important;
+            height: 42px !important;
+            padding: 9px 13px !important;
+            font-size: 11px !important;
+            z-index: 2147483646 !important;
+          }
         }
         #vtw-account-status-root-20260519 .vtw-overlay {
           position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
@@ -2957,11 +2968,11 @@ ${topKeywordsStr}`;
           </button>
         </div>
 
-        <div className="bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
+        <div className="vtw-main-panel bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
           {activeTab === 1 ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
-                <div className="col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
+              <div className="vtw-filter-grid grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                   {/* Group 1 */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
