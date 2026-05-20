@@ -22,3 +22,186 @@
     animation: shake 0.2s ease-in-out 0s 2;
   }
 }
+
+/* MOBILE_STEP_1_20260520
+   Lớp an toàn cho web mobile: chỉ xử lý responsive/overflow, không đổi logic React/API. */
+@layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+}
+
+@layer utilities {
+  .vtw-mobile-safe {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .vtw-scroll-x {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    min-width: 0 !important;
+  }
+
+  /* Chặn các khối desktop rộng gây tràn ngang trên điện thoại. */
+  main,
+  section,
+  header,
+  footer,
+  aside,
+  nav,
+  form {
+    max-width: 100% !important;
+  }
+
+  /* Các grid nhiều cột sẽ tự xếp 1 cột trên mobile. */
+  [class*="grid-cols-2"],
+  [class*="grid-cols-3"],
+  [class*="grid-cols-4"],
+  [class*="grid-cols-5"],
+  [class*="grid-cols-6"],
+  [class*="md:grid-cols-"],
+  [class*="lg:grid-cols-"],
+  [class*="xl:grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Các hàng flex dài chuyển xuống dòng để không tràn màn hình. */
+  [class*="flex"] {
+    min-width: 0;
+  }
+
+  [class*="gap-"] {
+    max-width: 100%;
+  }
+
+  /* Input/select/button dễ bấm hơn trên mobile. */
+  input,
+  select,
+  textarea {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+
+  button,
+  a[role="button"] {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  /* Nội dung AI/Markdown/bảng dài được cuộn ngang trong khung, không kéo vỡ toàn trang. */
+  table,
+  pre,
+  code,
+  .prose,
+  .prose table,
+  .prose pre {
+    max-width: 100% !important;
+  }
+
+  table,
+  pre,
+  .prose table,
+  .prose pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ảnh đại diện/thumbnail không làm card bị bung ngang. */
+  img {
+    height: auto;
+  }
+
+  /* Nút trạng thái tài khoản/PRO inject thẳng vào body: đưa về vị trí an toàn trên mobile. */
+  #vtw-account-status-root-20260519 .vtw-float-btn {
+    top: auto !important;
+    right: 12px !important;
+    bottom: 14px !important;
+    left: auto !important;
+    min-width: 132px !important;
+    max-width: calc(100vw - 24px) !important;
+    height: 42px !important;
+    padding: 9px 13px !important;
+    font-size: 11px !important;
+    border-radius: 999px !important;
+    z-index: 2147483646 !important;
+  }
+
+  #vtw-account-status-root-20260519 .vtw-overlay {
+    padding: 12px !important;
+    align-items: flex-end !important;
+  }
+
+  #vtw-account-status-root-20260519 .vtw-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: clamp(24px, 7vw, 32px);
+    line-height: 1.15;
+  }
+
+  h2 {
+    font-size: clamp(20px, 6vw, 26px);
+    line-height: 1.18;
+  }
+
+  h3 {
+    font-size: clamp(17px, 5vw, 22px);
+    line-height: 1.22;
+  }
+
+  p,
+  li,
+  input,
+  select,
+  textarea,
+  button {
+    line-height: 1.45;
+  }
+}

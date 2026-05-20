@@ -212,12 +212,86 @@
       font-size: 13px;
     }
     @media (max-width: 900px) {
-      body { overflow: auto; }
-      .wrap { height: auto; min-height: 100vh; }
-      .page { grid-template-columns: 1fr; }
-      .plans { grid-template-columns: 1fr; }
+      html, body { width: 100%; overflow-x: hidden; }
+      body { overflow-y: auto; }
+      .wrap {
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        padding: 12px;
+        gap: 12px;
+      }
+      h1 {
+        font-size: clamp(24px, 8vw, 34px);
+        line-height: 1.12;
+      }
+      .sub {
+        font-size: 13px;
+        padding: 0 4px;
+      }
+      .page {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .plans { grid-template-columns: 1fr; gap: 10px; }
+      .plan {
+        min-height: auto;
+        padding: 13px 14px;
+        border-radius: 16px;
+      }
+      .plan-name { font-size: 17px; margin-bottom: 6px; }
+      .plan-price { font-size: 24px; }
+      .card {
+        width: 100%;
+        min-height: auto;
+        border-radius: 18px;
+        padding: 14px;
+      }
+      .card-title {
+        font-size: 22px;
+        line-height: 1.15;
+      }
+      .qrbox {
+        min-height: 260px;
+        padding: 10px;
+      }
+      .qrbox img {
+        width: min(100%, 300px);
+        max-height: 300px;
+      }
+      .amount {
+        font-size: 28px;
+        margin-top: 12px;
+      }
       .info-grid { grid-template-columns: 1fr; }
+      .row {
+        min-height: auto;
+        padding: 11px;
+      }
+      .value { font-size: 15px; }
+      .content-value { font-size: 16px; }
       .actions { grid-template-columns: 1fr; }
+      .btn {
+        min-height: 46px;
+        font-size: 12px;
+        border-radius: 13px;
+      }
+      .checking, .success {
+        font-size: 13px;
+        word-break: break-word;
+      }
+      .back {
+        padding: 14px 0 4px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .wrap { padding: 10px; }
+      .qrbox { min-height: 230px; }
+      .qrbox img { width: min(100%, 260px); max-height: 260px; }
+      .amount { font-size: 25px; }
+      .card { padding: 12px; border-radius: 16px; }
     }
     @media (max-height: 760px) and (min-width: 901px) {
       .wrap { padding-top: 7px; gap: 8px; }
