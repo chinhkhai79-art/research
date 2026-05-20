@@ -2782,3 +2782,46 @@
     z-index: auto !important;
   }
 }
+
+/* Step 16: mobile channel actions menu. Desktop keeps right-click menu; mobile gets an explicit button. */
+.vtw-mobile-action-btn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-mobile-action-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .vtw-channel-context-menu {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(78vh, 420px) !important;
+    overflow-y: auto !important;
+    border-radius: 18px !important;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.36) !important;
+    z-index: 2147483647 !important;
+  }
+
+  .vtw-channel-context-menu button {
+    min-height: 48px !important;
+    font-size: 13px !important;
+  }
+
+  .vtw-channel-context-menu button:first-child {
+    min-height: 58px !important;
+  }
+}

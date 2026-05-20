@@ -2335,6 +2335,23 @@ ${topKeywordsStr}`;
     setMenuPos({ x: e.clientX, y: e.clientY, visible: true, channel });
   };
 
+  const openChannelActionMenu = (e: React.MouseEvent, channel: ChannelResult) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedResultId(channel.id);
+
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    setMenuPos({
+      x: isMobile ? 12 : rect.left,
+      y: isMobile ? Math.max(80, window.innerHeight - 290) : rect.bottom + 6,
+      visible: true,
+      channel
+    });
+  };
+
   const closeMenu = () => setMenuPos({ ...menuPos, visible: false });
 
   const addToTracking = (channel: ChannelResult) => {
@@ -3251,6 +3268,14 @@ ${topKeywordsStr}`;
                             <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
                             <td className="px-2 py-1 text-center">
                               <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => openChannelActionMenu(e, r)}
+                                  className="vtw-mobile-action-btn bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded text-[9px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                                  title="Mở bảng thao tác kênh"
+                                >
+                                  THAO TÁC
+                                </button>
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); goToSpy(r.id); }}
                                   className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[9px] font-black shadow-sm transition-all active:scale-95 uppercase"
@@ -5352,7 +5377,7 @@ ${topKeywordsStr}`;
       {menuPos.visible && (
         <div 
           ref={menuRef}
-          className="fixed z-[1000] bg-white border border-[#ccc] shadow-[0_4px_12px_rgba(0,0,0,0.15)] w-[280px] text-[13px] rounded-md overflow-hidden select-none"
+          className="vtw-channel-context-menu fixed z-[1000] bg-white border border-[#ccc] shadow-[0_4px_12px_rgba(0,0,0,0.15)] w-[280px] text-[13px] rounded-md overflow-hidden select-none"
           style={{ 
             top: Math.min(menuPos.y, window.innerHeight - 250), 
             left: Math.min(menuPos.x, window.innerWidth - 300) 
