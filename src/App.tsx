@@ -3217,7 +3217,7 @@ ${topKeywordsStr}`;
                     </button>
                   </div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse">
+                    <table className="vtw-tracking-table w-full text-left border-collapse">
                       <thead className="bg-[#fdf2e9] sticky top-0 z-10 border-b border-orange-200">
                         <tr>
                           <th className="px-3 py-1.5 text-[11px] font-bold text-orange-800 border-r border-orange-100 italic w-12 text-center">STT</th>
@@ -3407,8 +3407,8 @@ ${topKeywordsStr}`;
 
 
           {activeTab === 2 ? (
-            <div className="space-y-4">
-              <div className="flex gap-4 items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
+            <div className="vtw-spy-panel space-y-4">
+              <div className="vtw-spy-toolbar flex gap-4 items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
                 <label className="font-bold text-[14px]">Channel ID:</label>
                 <input 
                   type="text" 
@@ -3492,10 +3492,10 @@ ${topKeywordsStr}`;
 
               {spyResult ? (
                 <React.Fragment>
-                  <div className="space-y-4">
-                  <div className="flex gap-4">
+                  <div className="vtw-spy-result space-y-4">
+                  <div className="vtw-spy-result-grid flex gap-4">
                     <div 
-                      className="bg-white border border-[#999] p-4 shadow-sm flex flex-col items-center justify-center min-w-[150px] shrink-0 cursor-context-menu"
+                      className="vtw-spy-profile bg-white border border-[#999] p-4 shadow-sm flex flex-col items-center justify-center min-w-[150px] shrink-0 cursor-context-menu"
                       onContextMenu={(e) => handleContextMenu(e, {
                         id: spyResult.channelInfo.id,
                         name: spyResult.channelInfo.snippet.title,
@@ -3517,7 +3517,7 @@ ${topKeywordsStr}`;
                         Xem kênh <ExternalLink size={10} />
                       </a>
                     </div>
-                    <div className="flex-1 bg-white border border-[#999] p-4 font-mono text-[13px] text-blue-800 leading-relaxed shadow-inner overflow-x-auto">
+                    <div className="vtw-spy-report flex-1 bg-white border border-[#999] p-4 font-mono text-[13px] text-blue-800 leading-relaxed shadow-inner overflow-x-auto">
                       <div className="mb-2 border-b border-gray-100 pb-1 flex justify-between items-center">
                         <div className="flex flex-wrap gap-x-2">
                           <span className="font-bold">Kênh:</span>
@@ -3648,7 +3648,7 @@ ${topKeywordsStr}`;
                       <button onClick={() => downloadTXT('spy')} className="bg-green-600 hover:bg-green-700 px-3 py-0.5 rounded text-[11px]">Tải TXT</button>
                     </div>
                     <div className="flex-1 overflow-auto">
-                      <table className="w-full text-left border-collapse">
+                      <table className="vtw-tracking-table w-full text-left border-collapse">
                         <thead className="bg-[#ecf0f1] border-b border-[#bdc3c7] sticky top-0 z-10 shadow-sm text-black">
                           <tr>
                             <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-center w-24">THUMB</th>
@@ -3706,8 +3706,8 @@ ${topKeywordsStr}`;
           ) : null}
 
           {activeTab === 3 ? (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
+            <div className="vtw-tracking-panel space-y-4">
+              <div className="vtw-tracking-toolbar flex justify-between items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
                 <div className="flex gap-2 items-center">
                   <button 
                     onClick={updateTracking}
@@ -3776,9 +3776,9 @@ ${topKeywordsStr}`;
                 </p>
               </div>
 
-              <div className="bg-white border border-[#999] flex flex-col h-[60vh] min-h-0 overflow-hidden shadow-sm">
+              <div className="vtw-tracking-table-box bg-white border border-[#999] flex flex-col h-[60vh] min-h-0 overflow-hidden shadow-sm">
                 <div className="flex-1 overflow-auto">
-                  <table className="w-full text-left border-collapse">
+                  <table className="vtw-tracking-table w-full text-left border-collapse">
                     <thead className="bg-[#e6e6e6] border-b border-[#999] sticky top-0 z-10 shadow-sm">
                     <tr>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] w-10 text-center">STT</th>
