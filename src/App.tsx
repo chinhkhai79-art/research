@@ -420,7 +420,7 @@ export default function App() {
         #vtw-account-status-root-20260519 .vtw-label { font-size:10px !important; color:#94a3b8 !important; font-weight:900 !important; text-transform:uppercase !important; }
         #vtw-account-status-root-20260519 .vtw-value { font-size:15px !important; color:#0f172a !important; font-weight:900 !important; margin-top:5px !important; }
       </style>
-      <button class="vtw-float-btn" id="vtw-open-account-20260519">● ${accountLabel} · ${remainingText}</button>
+      <button class="vtw-float-btn" id="vtw-open-account-20260519"><span class="vtw-full-label">● ${accountLabel} · ${remainingText}</span><span class="vtw-short-label">● ${accountLabel}</span></button>
       <div class="vtw-overlay" id="vtw-overlay-20260519">
         <div class="vtw-panel" onclick="event.stopPropagation()">
           <div class="vtw-head">
@@ -5228,15 +5228,15 @@ ${topKeywordsStr}`;
         )}
 
         {showKeyInputModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
+          <div className="vtw-api-modal-overlay fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100 flex flex-col"
+              className="vtw-api-modal bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100 flex flex-col"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
+              <div className="vtw-api-modal-header bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
                     <Settings size={28} />
@@ -5264,7 +5264,7 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Content */}
-              <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
+              <div className="vtw-api-modal-content p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
                 {/* Section Gemini */}
                 <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
