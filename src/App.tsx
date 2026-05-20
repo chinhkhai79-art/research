@@ -478,7 +478,32 @@ export default function App() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyHistory, menuPos.visible]);
+  }, [showRegionList, showKeyInputModal, showKeyHistory, menuPos.visible]);
+
+  // Đóng bảng thao tác khi cuộn/đổi màn hình để không bị dính sai kênh.
+  useEffect(() => {
+    if (!menuPos.visible) return;
+
+    const closeFloatingMenu = () => {
+      setMenuPos(prev => prev.visible ? ({ ...prev, visible: false }) : prev);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeFloatingMenu();
+    };
+
+    window.addEventListener('scroll', closeFloatingMenu, true);
+    window.addEventListener('resize', closeFloatingMenu);
+    window.addEventListener('orientationchange', closeFloatingMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('scroll', closeFloatingMenu, true);
+      window.removeEventListener('resize', closeFloatingMenu);
+      window.removeEventListener('orientationchange', closeFloatingMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuPos.visible]);
 
   const [status, setStatus] = useState('Sẵn sàng.');
   const [progress, setProgress] = useState(0);
@@ -5384,6 +5409,21 @@ ${topKeywordsStr}`;
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="vtw-channel-menu-head flex items-center justify-between gap-3 px-4 py-3 bg-slate-800 text-white border-b border-white/10">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-wide text-blue-200">Thao tác kênh</div>
+              <div className="truncate text-[13px] font-black">{menuPos.channel?.name || 'Kênh đã chọn'}</div>
+            </div>
+            <button
+              type="button"
+              onClick={closeMenu}
+              className="shrink-0 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white text-xl leading-none flex items-center justify-center"
+              aria-label="Đóng bảng thao tác"
+            >
+              ×
+            </button>
+          </div>
+
           {/* Header/Primary Action */}
           <button 
             onClick={() => addToTracking(menuPos.channel!)}
