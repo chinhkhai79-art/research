@@ -670,7 +670,7 @@ export default function App() {
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
-    const savedSuggestedNiches = localStorage.getItem('youtube_suggested_niches_trending_v2');
+    const savedSuggestedNiches = localStorage.getItem(`youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`);
     if (savedSuggestedNiches) {
       try {
         const parsedSuggestedNiches = JSON.parse(savedSuggestedNiches);
@@ -884,6 +884,38 @@ export default function App() {
 
     setIsFetchingDailyTrending(true);
     setStatus('Đang cập nhật trend');
+
+    const REGION_LANGUAGE: Record<string, { language: string; prompt: string; searchHint: string }> = {
+      '': {
+        language: 'Đa ngôn ngữ',
+        prompt: 'Trộn ngẫu nhiên theo thị trường toàn cầu: có thể dùng tiếng Việt, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Thái, tiếng Indonesia, tiếng Tây Ban Nha. Không bắt buộc tất cả là tiếng Việt.',
+        searchHint: 'global trending'
+      },
+      VN: { language: 'Tiếng Việt', prompt: 'Tất cả từ khóa phải viết bằng tiếng Việt tự nhiên.', searchHint: 'hot trend việt nam' },
+      US: { language: 'English', prompt: 'All keywords must be in natural American English. Do not use Vietnamese.', searchHint: 'US trending' },
+      GB: { language: 'English', prompt: 'All keywords must be in natural British English. Do not use Vietnamese.', searchHint: 'UK trending' },
+      CA: { language: 'English', prompt: 'All keywords must be in natural English for Canada. Do not use Vietnamese.', searchHint: 'Canada trending' },
+      AU: { language: 'English', prompt: 'All keywords must be in natural English for Australia. Do not use Vietnamese.', searchHint: 'Australia trending' },
+      IN: { language: 'English/Hindi', prompt: 'Use natural India-market keywords, mainly English or Hindi. Do not use Vietnamese.', searchHint: 'India trending' },
+      JP: { language: '日本語', prompt: 'すべてのキーワードは自然な日本語で書いてください。ベトナム語は使わないでください。', searchHint: '日本 トレンド' },
+      KR: { language: '한국어', prompt: '모든 키워드는 자연스러운 한국어로 작성하세요. 베트남어를 사용하지 마세요.', searchHint: '한국 트렌드' },
+      TH: { language: 'ภาษาไทย', prompt: 'ใช้คำค้นหาเป็นภาษาไทยธรรมชาติเท่านั้น ห้ามใช้ภาษาเวียดนาม', searchHint: 'เทรนด์ไทย' },
+      ID: { language: 'Bahasa Indonesia', prompt: 'Semua keyword harus dalam Bahasa Indonesia yang natural. Jangan gunakan bahasa Vietnam.', searchHint: 'tren indonesia' },
+      PH: { language: 'English/Filipino', prompt: 'Use natural Philippines-market keywords in English or Filipino. Do not use Vietnamese.', searchHint: 'Philippines trending' },
+      MY: { language: 'Malay/English', prompt: 'Use natural Malaysia-market keywords in Malay or English. Do not use Vietnamese.', searchHint: 'Malaysia trending' },
+      SG: { language: 'English', prompt: 'All keywords must be in natural Singapore English. Do not use Vietnamese.', searchHint: 'Singapore trending' },
+      DE: { language: 'Deutsch', prompt: 'Alle Keywords müssen auf natürlichem Deutsch sein. Kein Vietnamesisch verwenden.', searchHint: 'Deutschland Trends' },
+      FR: { language: 'Français', prompt: 'Tous les mots-clés doivent être en français naturel. Ne pas utiliser le vietnamien.', searchHint: 'tendances france' },
+      RU: { language: 'Русский', prompt: 'Все ключевые слова должны быть на естественном русском языке. Не используйте вьетнамский.', searchHint: 'тренды россия' },
+      BR: { language: 'Português', prompt: 'Todas as palavras-chave devem estar em português natural do Brasil. Não use vietnamita.', searchHint: 'tendências brasil' },
+      MX: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural de México. No uses vietnamita.', searchHint: 'tendencias méxico' },
+      ES: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural. No uses vietnamita.', searchHint: 'tendencias españa' },
+      IT: { language: 'Italiano', prompt: 'Tutte le keyword devono essere in italiano naturale. Non usare vietnamita.', searchHint: 'tendenze italia' }
+    };
+
+    const regionMeta = REGION_LANGUAGE[trendingRegion] || REGION_LANGUAGE.US;
+    const regionLabel = REGIONS.find(r => r.code === trendingRegion)?.name || 'Toàn cầu (Global)';
+    const trendingStorageKey = `youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`;
 
     const normalizeText = (value: string) =>
       (value || '')
@@ -1108,8 +1140,16 @@ export default function App() {
     };
 
     const TARGETED_QUERY_BY_CATEGORY: Record<string, string> = {
-      'ẨM THỰC & NẤU ĂN': 'ẩm thực nấu ăn món ngon công thức hot trend',
-      'TÀI CHÍNH & ĐẦU TƯ': 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
+      'ẨM THỰC & NẤU ĂN': trendingRegion === 'VN'
+        ? 'ẩm thực nấu ăn món ngon công thức hot trend'
+        : trendingRegion === ''
+          ? 'food cooking recipe trending OR món ngon'
+          : `food cooking recipe trending ${regionMeta.searchHint}`,
+      'TÀI CHÍNH & ĐẦU TƯ': trendingRegion === 'VN'
+        ? 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
+        : trendingRegion === ''
+          ? 'finance investing stocks crypto trending OR tài chính đầu tư'
+          : `finance investing stocks crypto money trend ${regionMeta.searchHint}`
     };
 
     try {
@@ -1128,7 +1168,7 @@ export default function App() {
       const popularRes = await youtubeFetch('videos', {
         part: 'snippet,statistics',
         chart: 'mostPopular',
-        regionCode: trendingRegion || 'VN',
+        regionCode: trendingRegion || undefined,
         maxResults: 50
       });
 
@@ -1158,7 +1198,7 @@ export default function App() {
             part: 'snippet',
             q: query,
             type: 'video',
-            regionCode: trendingRegion || 'VN',
+            regionCode: trendingRegion || undefined,
             order: 'viewCount',
             publishedAfter: getPublishedAfterDate('month'),
             maxResults: 5
@@ -1202,18 +1242,19 @@ export default function App() {
           const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
           const prompt = `
-Bạn là chuyên gia nghiên cứu trend YouTube tại ${REGIONS.find(r => r.code === trendingRegion)?.name || 'Việt Nam'}.
-Hãy tạo đúng 3 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
+Bạn là chuyên gia nghiên cứu trend YouTube tại ${regionLabel}.
+Hãy tạo đúng 5 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
 
 Yêu cầu bắt buộc:
 - Trả về JSON thuần, không markdown, không giải thích.
-- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3"]}.
+- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3","key 4","key 5"]}.
 - Từ khóa phải ĐÚNG 100% với chủ đề và mô tả của chủ đề đó.
+- NGÔN NGỮ BẮT BUỘC: ${regionMeta.prompt}
 - Không đưa nhạc/bolero vào REVIEW SẢN PHẨM & UNBOXING.
 - Không đưa game/LCK/nhạc/bolero/reaction vào ẨM THỰC & NẤU ĂN hoặc TÀI CHÍNH & ĐẦU TƯ.
 - Không lặp lại các key YouTube đã có.
 - Mỗi lần tạo phải khác nhau, sắp xếp từ hot cao xuống thấp.
-- Mỗi key tối đa 6 từ, viết tiếng Việt tự nhiên.
+- Mỗi key tối đa 6 từ, đúng ngôn ngữ khu vực đã chọn.
 - Random seed: ${randomSeed}
 
 Dữ liệu chủ đề:
@@ -1241,7 +1282,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
           sourceNiches.forEach((niche) => {
             geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
-              ? uniqueLimit(parsed[niche.category], 3, niche.category, true)
+              ? uniqueLimit(parsed[niche.category], 5, niche.category, false)
               : [];
           });
         } catch (error) {
@@ -1251,12 +1292,12 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
       const updatedNiches = sourceNiches.map((niche) => {
         const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
-        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 3, niche.category, true);
+        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, false);
         const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
 
         const finalKeys = uniqueLimit([
           ...youtubeKeys.slice(0, 2),
-          ...aiKeys.slice(0, 3),
+          ...aiKeys.slice(0, 5),
           ...fallbackKeys
         ], 5, niche.category, false);
 
@@ -1267,7 +1308,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       });
 
       setSuggestedNiches(updatedNiches);
-      localStorage.setItem('youtube_suggested_niches_trending_v2', JSON.stringify(updatedNiches));
+      localStorage.setItem(trendingStorageKey, JSON.stringify(updatedNiches));
 
       setStatus('Đã cập nhật Trending thành công.');
       alert('Đã cập nhật Trending thành công.');
