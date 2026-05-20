@@ -388,16 +388,17 @@ export default function App() {
         #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
         #vtw-account-status-root-20260519 .vtw-float-btn {
           position: fixed !important;
-          top: 10px !important;
+          top: 7px !important;
+          right: 410px !important;
           left: auto !important;
-          right: 270px !important;
           bottom: auto !important;
           z-index: 2147483646 !important;
           height: 34px !important;
-          min-width: 170px !important;
+          min-width: 176px !important;
+          max-width: 220px !important;
           border: 2px solid #bfdbfe !important;
           border-radius: 999px !important;
-          padding: 7px 14px !important;
+          padding: 7px 16px !important;
           background: ${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important;
           color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important;
           font-weight: 900 !important;
@@ -412,6 +413,19 @@ export default function App() {
           line-height: 1 !important;
           white-space: nowrap !important;
           pointer-events: auto !important;
+          transform: none !important;
+          margin: 0 !important;
+        }
+        @media (max-width: 1500px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn { right: 355px !important; }
+        }
+        @media (max-width: 1250px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            right: 255px !important;
+            min-width: 145px !important;
+            font-size: 11px !important;
+            padding: 7px 10px !important;
+          }
         }
         @media (max-width: 900px) {
           #vtw-account-status-root-20260519 .vtw-float-btn {
@@ -474,46 +488,76 @@ export default function App() {
       setShowKeyInputModal(true);
     };
 
-    // VTW_HARD_ACCOUNT_POSITION_20260520:
-    // Không phụ thuộc header / Tailwind / khung tool. Nút được bơm vào body,
-    // sau đó tự đo vị trí cụm tài khoản Google để bám sát bên trái.
-    const placeHardAccountButton = () => {
+    // VTW_HARD_ACCOUNT_POSITION_20260520_LOCKED:
+    // Bản cứng nhất: không đo header, không bám popup, không phụ thuộc Tailwind.
+    // Ép style inline lặp lại để nút PRO luôn nằm cố định trên thanh tiêu đề.
+    const forceHardAccountButton = () => {
       const btn = document.getElementById('vtw-open-account-20260519') as HTMLButtonElement | null;
       if (!btn) return;
 
-      let anchor: Element | null = null;
-      const avatarImgs = Array.from(document.querySelectorAll('img[alt="avatar"]'))
-        .filter((img) => !(img as HTMLElement).closest('#vtw-account-status-root-20260519'));
-      if (avatarImgs.length > 0) {
-        anchor = avatarImgs[0].closest('div[class*="rounded"]') || avatarImgs[0].parentElement;
+      const width = window.innerWidth || document.documentElement.clientWidth || 1600;
+      let top = '7px';
+      let right = '410px';
+      let minWidth = '176px';
+      let fontSize = '12px';
+      let padding = '7px 16px';
+
+      if (width <= 900) {
+        top = '58px';
+        right = '12px';
+        minWidth = '145px';
+        fontSize = '11px';
+        padding = '7px 10px';
+      } else if (width <= 1250) {
+        right = '255px';
+        minWidth = '145px';
+        fontSize = '11px';
+        padding = '7px 10px';
+      } else if (width <= 1500) {
+        right = '355px';
       }
 
-      if (!anchor && user?.displayName) {
-        anchor = Array.from(document.querySelectorAll('button,div,a'))
-          .find((el) => !(el as HTMLElement).closest('#vtw-account-status-root-20260519') && (el.textContent || '').includes(user.displayName || '')) || null;
-      }
-
-      if (!anchor) {
-        btn.style.top = '10px';
-        btn.style.left = 'auto';
-        btn.style.right = '285px';
-        return;
-      }
-
-      const rect = (anchor as HTMLElement).getBoundingClientRect();
-      const gap = 10;
-      const width = btn.offsetWidth || 170;
-      const top = Math.max(6, rect.top + (rect.height - 34) / 2);
-      const left = Math.max(8, rect.left - width - gap);
-
-      btn.style.top = `${top}px`;
-      btn.style.left = `${left}px`;
-      btn.style.right = 'auto';
+      btn.setAttribute(
+        'style',
+        [
+          'position:fixed !important',
+          `top:${top} !important`,
+          `right:${right} !important`,
+          'left:auto !important',
+          'bottom:auto !important',
+          'z-index:2147483646 !important',
+          'height:34px !important',
+          `min-width:${minWidth} !important`,
+          'max-width:220px !important',
+          'border:2px solid #bfdbfe !important',
+          'border-radius:999px !important',
+          `padding:${padding} !important`,
+          `background:${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important`,
+          `color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important`,
+          'font-weight:900 !important',
+          `font-size:${fontSize} !important`,
+          'text-transform:uppercase !important',
+          'box-shadow:0 8px 24px rgba(37,99,235,.22) !important',
+          'cursor:pointer !important',
+          'display:flex !important',
+          'align-items:center !important',
+          'justify-content:center !important',
+          'gap:8px !important',
+          'line-height:1 !important',
+          'white-space:nowrap !important',
+          'pointer-events:auto !important',
+          'transform:none !important',
+          'margin:0 !important'
+        ].join(';')
+      );
     };
 
-    window.setTimeout(placeHardAccountButton, 50);
-    window.setTimeout(placeHardAccountButton, 300);
-    window.addEventListener('resize', placeHardAccountButton);
+    forceHardAccountButton();
+    window.setTimeout(forceHardAccountButton, 50);
+    window.setTimeout(forceHardAccountButton, 250);
+    window.setTimeout(forceHardAccountButton, 800);
+    const vtwHardAccountPositionTimer = window.setInterval(forceHardAccountButton, 700);
+    window.addEventListener('resize', forceHardAccountButton);
 
     openBtn?.addEventListener('click', openPanel);
     closeBtn?.addEventListener('click', closePanel);
@@ -527,7 +571,8 @@ export default function App() {
       overlay?.removeEventListener('click', closePanel);
       logoutBtn?.removeEventListener('click', doLogout);
       settingsBtn?.removeEventListener('click', openApiSettings);
-      window.removeEventListener('resize', placeHardAccountButton);
+      window.removeEventListener('resize', forceHardAccountButton);
+      window.clearInterval(vtwHardAccountPositionTimer);
     };
   }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
