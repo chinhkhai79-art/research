@@ -2702,11 +2702,11 @@ ${topKeywordsStr}`;
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+    <div className="vtw-mobile-app min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
-      <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
+      <div className="vtw-app-header bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
+          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
             <img
               src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
               className="w-7 h-7 rounded-full"
@@ -2716,7 +2716,7 @@ ${topKeywordsStr}`;
             <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
           </h1>
 
-          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+          <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
               <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
                 <img
@@ -2797,12 +2797,12 @@ ${topKeywordsStr}`;
       </div>
 
       {/* Main Container */}
-      <div className="p-4 pt-2">
+      <div className="vtw-page-wrap p-4 pt-2">
         {!user ? (
           <div className="relative min-h-[calc(100vh-92px)] overflow-hidden rounded-xl bg-blue-50/80">
             {/* Nền preview giao diện chính khi chưa đăng nhập */}
             <div className="absolute inset-0 p-4 pt-2 blur-[2.5px] opacity-55 pointer-events-none select-none">
-              <div className="flex justify-center gap-1 mb-0 relative z-10">
+              <div className="vtw-tabs flex justify-center gap-1 mb-0 relative z-10">
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#3498db] text-white border-t border-x border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)] font-bold flex items-center gap-2">
                   <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
                 </div>
@@ -2820,9 +2820,9 @@ ${topKeywordsStr}`;
                 </div>
               </div>
 
-              <div className="bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
-                <div className="grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
-                  <div className="col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
+              <div className="vtw-main-panel bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
+                <div className="vtw-filter-grid grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                  <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: quân sự</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Việt Nam <span>▼</span></div></div>
@@ -2840,7 +2840,7 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
 
-                  <div className="col-span-12 lg:col-span-3 flex items-start justify-end">
+                  <div className="vtw-api-wrap col-span-12 lg:col-span-3 flex items-start justify-end">
                     <div className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm w-[500px] h-[110px]">
                       <div className="flex items-center justify-between mb-2"><span className="text-[10px] font-black text-gray-400 uppercase">Hệ thống API</span><div className="flex gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400"></span><span className="w-2 h-2 rounded-full bg-indigo-500"></span></div></div>
                       <div className="text-[11px] font-bold text-gray-700 flex justify-between"><span>YouTube V3:</span><span className="text-blue-600">0 Keys</span></div>
@@ -2927,31 +2927,31 @@ ${topKeywordsStr}`;
         <div className="flex justify-center gap-1 mb-0 relative z-10">
           <button 
             onClick={() => setActiveTab(1)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 1 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 1 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
           </button>
           <button 
             onClick={() => setActiveTab(2)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <BarChart2 size={16} /> Phân tích đối thủ (Spy)
           </button>
           <button 
             onClick={() => setActiveTab(3)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
           </button>
           <button 
             onClick={() => setActiveTab(4)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <Video size={16} /> Kiểm tra Link Video
           </button>
           <button 
             onClick={() => setActiveTab(5)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
           </button>
@@ -3139,7 +3139,7 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Bottom Actions Row */}
-              <div className="flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
+              <div className="vtw-bottom-actions flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <input 
@@ -3264,8 +3264,8 @@ ${topKeywordsStr}`;
               )}
 
 
-              <div className="flex-1 flex flex-col bg-white border border-[#999] shadow-sm relative min-h-[450px] h-[65vh] max-h-[85vh] overflow-hidden">
-                  <div className="bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px] shrink-0">
+              <div className="vtw-results-box flex-1 flex flex-col bg-white border border-[#999] shadow-sm relative min-h-[450px] h-[65vh] max-h-[85vh] overflow-hidden">
+                  <div className="vtw-results-header bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px] shrink-0">
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-2"><CheckCircle2 size={16} /> DANH SÁCH KÊNH QUÉT ĐƯỢC (TỰ ĐỘNG LỌC THEO ĐIỀU KIỆN)</span>
                       <span className="px-2 py-0.5 bg-blue-500 rounded text-[11px] font-black shadow-sm">TỔNG: {results.length}</span>
@@ -3303,8 +3303,8 @@ ${topKeywordsStr}`;
                       </button>
                     </div>
                   </div>
-                  <div className="flex-1 overflow-auto bg-white">
-                    <table className="w-full text-left border-collapse min-w-[1300px]">
+                  <div className="vtw-results-table-wrap flex-1 overflow-auto bg-white">
+                    <table className="vtw-results-table w-full text-left border-collapse min-w-[1300px]">
                       <thead className="bg-[#ecf0f1] border-b border-[#bdc3c7] sticky top-0 z-20 shadow-sm text-black">
                         <tr>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] w-10 text-center">STT</th>
@@ -5421,7 +5421,7 @@ ${topKeywordsStr}`;
       </AnimatePresence>
 
       {/* Footer Info */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-4 py-1.5 flex justify-between items-center text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
+      <div className="vtw-footer-status fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-4 py-1.5 flex justify-between items-center text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
         <div className="flex gap-4 items-center">
           <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
           <div className="flex items-center gap-3">
