@@ -1792,22 +1792,102 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     return keyword; 
   };
 
+  const getAutoHuntSeeds = (regionCode?: string) => {
+    const region = regionCode || config.region || 'VN';
+    const seedMap: Record<string, string[]> = {
+      VN: [
+        'ai công cụ mới', 'chatgpt', 'gemini ai', 'tạo video bằng ai', 'kiếm tiền online',
+        'tin tức 24h', 'công nghệ mới', 'review app', 'youtube shorts', 'mẹo điện thoại',
+        'du lịch việt nam', 'ẩm thực hot', 'game mobile', 'bóng đá việt nam'
+      ],
+      US: [
+        'ai tools', 'chatgpt', 'gemini ai', 'make money online', 'youtube automation',
+        'viral shorts', 'tech news', 'productivity apps', 'iphone tips', 'trending news',
+        'travel vlog', 'gaming highlights', 'finance tips'
+      ],
+      GB: ['ai tools', 'chatgpt', 'uk trending news', 'tech news', 'side hustle', 'football highlights', 'travel vlog'],
+      JP: ['AI ツール', 'ChatGPT', '日本 トレンド', 'テックニュース', '旅行 vlog', 'ゲーム 実況'],
+      KR: ['AI 도구', 'ChatGPT', '한국 트렌드', '테크 뉴스', '여행 브이로그', '게임 하이라이트'],
+      TH: ['เครื่องมือ ai', 'chatgpt', 'เทรนด์ไทย', 'ข่าวเทคโนโลยี', 'ท่องเที่ยว', 'เกมมือถือ'],
+      ID: ['tools ai', 'chatgpt', 'tren indonesia', 'berita teknologi', 'cara menghasilkan uang', 'game mobile'],
+      PH: ['ai tools', 'chatgpt', 'philippines trending', 'tech news', 'side hustle', 'travel vlog'],
+      MY: ['ai tools', 'chatgpt', 'malaysia trending', 'tech news', 'buat duit online', 'travel vlog'],
+      SG: ['ai tools', 'chatgpt', 'singapore trending', 'tech news', 'side hustle', 'finance tips'],
+      DE: ['ki tools', 'chatgpt', 'deutschland trends', 'technik news', 'geld verdienen online'],
+      FR: ['outils ia', 'chatgpt', 'tendances france', 'actualité tech', 'gagner argent en ligne'],
+      BR: ['ferramentas ia', 'chatgpt', 'tendências brasil', 'notícias tecnologia', 'ganhar dinheiro online'],
+      MX: ['herramientas ia', 'chatgpt', 'tendencias méxico', 'noticias tecnología', 'ganar dinero online'],
+      ES: ['herramientas ia', 'chatgpt', 'tendencias españa', 'noticias tecnología', 'ganar dinero online'],
+      IT: ['strumenti ai', 'chatgpt', 'tendenze italia', 'notizie tecnologia', 'guadagnare online'],
+      RU: ['инструменты ai', 'chatgpt', 'тренды россия', 'технологии новости', 'заработок онлайн']
+    };
+
+    const fallback = ['ai tools', 'chatgpt', 'trending shorts', 'tech news', 'make money online', 'travel vlog', 'gaming highlights'];
+    return seedMap[region] || fallback;
+  };
+
+  const normalizeHunterKeyword = (value: string) =>
+    (value || '')
+      .toLowerCase()
+      .replace(/#/g, ' ')
+      .replace(/[^\p{L}\p{N}\s._-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const calculateHunterCandidateScore = (video: any, channel: any, seed: string) => {
+    const stats = video?.statistics || {};
+    const channelStats = channel?.statistics || {};
+    const views = parseInt(stats.viewCount) || 0;
+    const subs = parseInt(channelStats.subscriberCount) || 0;
+    const totalChannelViews = parseInt(channelStats.viewCount) || 0;
+    const channelVideoCount = parseInt(channelStats.videoCount) || 0;
+    const vph = calculateVPH(views, video?.snippet?.publishedAt);
+    const viewSubRatio = views / Math.max(1, subs);
+    const avgChannelView = totalChannelViews / Math.max(1, channelVideoCount);
+    const outlierScore = views / Math.max(1, avgChannelView);
+    const channelAgeDays = calculateChannelAge(channel?.snippet?.publishedAt || new Date().toISOString());
+    const uploadRegularity = channelVideoCount / Math.max(1, channelAgeDays / 30);
+    const title = normalizeHunterKeyword(video?.snippet?.title || '');
+    const seedText = normalizeHunterKeyword(seed);
+    const seedWords = seedText.split(' ').filter(Boolean);
+    const similarity = seedWords.length
+      ? seedWords.reduce((acc, word) => acc + (title.includes(word) ? 1 : 0), 0) / Math.max(1, seedWords.length)
+      : 0;
+
+    let score = 0;
+    score += Math.min(35, vph / 10); // VPH cao
+    score += Math.min(25, viewSubRatio * 2.5); // View/Sub Ratio cao
+    score += Math.min(20, outlierScore * 4); // Outlier Score cao
+    score += Math.min(10, uploadRegularity * 1.2); // Upload gần đây đều
+    score += Math.min(10, similarity * 10); // gần cụm trend đang scan
+
+    if (subs > 0 && subs <= 100000) score += 12;
+    else if (subs <= 500000) score += 6;
+
+    return {
+      score: Math.min(100, Math.round(score)),
+      vph,
+      viewSubRatio,
+      outlierScore,
+      uploadRegularity
+    };
+  };
+
   const startHunter = async () => {
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       return;
     }
-    if (!config.keyword) {
-      setLastError('Vui lòng nhập từ khóa gốc để bắt đầu săn kênh.');
-      return;
-    }
+
+    const rawKeyword = (config.keyword || '').trim();
+    const isAutoHunt = !rawKeyword;
 
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
     setIsHunting(true);
     isHuntingRef.current = true;
     setLastError(null);
-    setStatus('Đang khởi tạo...');
+    setStatus(isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...');
     setProgress(5);
     if (typeof AbortController !== 'undefined') {
       try {
@@ -1818,170 +1898,155 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
     }
 
-    const ideas = await fetchRealKeywordIdeas(config.keyword);
-    setKeywordIdeas(ideas);
-    
-    let keywordIndex = 0;
-    let regionIter = 0;
+    if (!isAutoHunt) {
+      const ideas = await fetchRealKeywordIdeas(rawKeyword);
+      setKeywordIdeas(ideas);
+    } else {
+      setKeywordIdeas([]);
+    }
 
     try {
-      // We only hunt for the current main config.keyword instead of auto-iterating the entire ideas list
-      if (isHuntingRef.current && resultsRef.current.length < STOP_LIMIT) {
-        let searchKeyword = config.keyword;
-        
-        // Find the idea in our list to show status if it exists
-        const ideaIdx = keywordIdeas.findIndex(i => i.text.toLowerCase() === config.keyword.toLowerCase());
-        
-        if (ideaIdx !== -1) {
-          setKeywordIdeas(prev => {
-            const next = [...prev];
-            next[ideaIdx].status = 'scanning';
-            return next;
-          });
-        }
+      const cycles = config.regions.includes('ALL')
+        ? REGIONS.map(r => r.code).filter(Boolean)
+        : config.regions;
+      const currentRegion = cycles.length > 0 ? cycles[0] : (config.region || 'VN');
+      const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
+      const publishedAfter = getPublishedAfterDate(config.publishedAfter);
 
-        // Determine regions to cycle through
-        const cycles = config.regions.includes('ALL') 
-          ? REGIONS.map(r => r.code) 
-          : config.regions;
-
-        // Determine region to use
-        const currentRegion = cycles.length > 0 ? cycles[0] : undefined; 
-        const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
-        
+      let scanKeywords: string[] = [];
+      if (isAutoHunt) {
+        scanKeywords = getAutoHuntSeeds(currentRegion).slice(0, 10);
+      } else {
+        let searchKeyword = rawKeyword;
         if (currentRegion && currentRegion !== 'VN') {
           const targetLang = getLanguageForRegion(currentRegion);
-          const translated = translateKeywordSimple(config.keyword, targetLang);
-          if (translated !== config.keyword) {
-            searchKeyword = translated;
-            setStatus('Đang quét: ' + config.keyword + ' -> ' + translated + ' (' + resultsRef.current.length + '/' + STOP_LIMIT + ')' + regionTag);
-          } else {
-            setStatus('Đang quét: ' + config.keyword + '... (' + resultsRef.current.length + '/' + STOP_LIMIT + ')' + regionTag);
-          }
-        } else {
-          setStatus('Đang quét: ' + config.keyword + '... (' + resultsRef.current.length + '/' + STOP_LIMIT + ')' + regionTag);
+          searchKeyword = translateKeywordSimple(rawKeyword, targetLang);
         }
-        
-        try {
-          const searchRes = await youtubeFetch('search', {
-            part: 'snippet',
-            type: 'video',
-            q: searchKeyword,
-            regionCode: currentRegion,
-            maxResults: Math.min(config.maxVideos, 50),
-            order: 'viewCount',
-            publishedAfter: getPublishedAfterDate(config.publishedAfter)
+        scanKeywords = [searchKeyword];
+      }
+
+      for (let k = 0; k < scanKeywords.length; k++) {
+        if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
+        const searchKeyword = scanKeywords[k];
+        const shownKeyword = isAutoHunt ? `tự động: ${searchKeyword}` : rawKeyword;
+
+        setStatus(
+          isAutoHunt
+            ? `Tự động lọc kênh hot ${regionTag}: cụm "${searchKeyword}" (${resultsRef.current.length}/${STOP_LIMIT})`
+            : `Đang quét: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
+        );
+
+        const searchRes = await youtubeFetch('search', {
+          part: 'snippet',
+          type: 'video',
+          q: searchKeyword,
+          regionCode: currentRegion,
+          maxResults: Math.min(Math.max(config.maxVideos, 20), 50),
+          order: 'viewCount',
+          publishedAfter
+        });
+
+        if (!searchRes.items?.length) continue;
+
+        const videoIds = searchRes.items
+          .map((item: any) => item?.id?.videoId)
+          .filter(Boolean)
+          .slice(0, 50);
+
+        const videoRes = await youtubeFetch('videos', {
+          part: 'snippet,statistics,contentDetails',
+          id: videoIds.join(',')
+        });
+
+        const videos = videoRes.items || [];
+        const channelIds = [...new Set(videos.map((v: any) => v.snippet.channelId))]
+          .filter((id: any) => !resultsRef.current.some(r => r.id === id));
+
+        if (channelIds.length === 0) continue;
+
+        const channelRes = await youtubeFetch('channels', {
+          part: 'snippet,statistics,contentDetails',
+          id: channelIds.join(','),
+        });
+
+        const channelMap = new Map();
+        (channelRes.items || []).forEach((channel: any) => channelMap.set(channel.id, channel));
+
+        const candidates = videos
+          .map((video: any) => {
+            const channel = channelMap.get(video.snippet.channelId);
+            if (!channel) return null;
+
+            const subs = parseInt(channel.statistics.subscriberCount) || 0;
+            const views = parseInt(channel.statistics.viewCount) || 0;
+            const videoCount = parseInt(channel.statistics.videoCount) || 0;
+            const bestVideoViews = parseInt(video.statistics?.viewCount) || 0;
+            const metrics = calculateHunterCandidateScore(video, channel, searchKeyword);
+
+            const passed =
+              subs >= config.minSub &&
+              subs <= config.maxSub &&
+              videoCount >= config.minVideo &&
+              (config.maxVideo ? videoCount <= config.maxVideo : true) &&
+              views >= config.minViews;
+
+            // Khi ô từ khóa trống, ưu tiên video mới hiệu suất tốt hơn tổng view toàn kênh.
+            const autoPassed = isAutoHunt
+              ? passed && (metrics.vph >= 1 || metrics.viewSubRatio >= 1 || metrics.outlierScore >= 1.5 || bestVideoViews >= Math.max(5000, config.minViews / 2))
+              : passed;
+
+            if (!autoPassed) return null;
+
+            return {
+              channel,
+              video,
+              metrics,
+              rankScore: metrics.score,
+              subs,
+              views,
+              videoCount
+            };
+          })
+          .filter(Boolean)
+          .sort((a: any, b: any) => b.rankScore - a.rankScore)
+          .slice(0, STOP_LIMIT);
+
+        for (const candidate of candidates as any[]) {
+          if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
+          if (resultsRef.current.some(r => r.id === candidate.channel.id)) continue;
+
+          const channel = candidate.channel;
+          const scoreText = isAutoHunt
+            ? (candidate.rankScore / 10).toFixed(1)
+            : calculateNicheScore(channel);
+
+          const newResult: ChannelResult = {
+            icon: channel.snippet.thumbnails.default.url,
+            name: channel.snippet.title,
+            id: channel.id,
+            url: `https://youtube.com/channel/${channel.id}`,
+            country: channel.snippet.country || currentRegion || 'N/A',
+            publishedAt: channel.snippet.publishedAt.split('T')[0],
+            age: calculateChannelAge(channel.snippet.publishedAt),
+            subs: candidate.subs,
+            views: candidate.views,
+            videos: candidate.videoCount,
+            score: scoreText,
+            keywordTitle: isAutoHunt
+              ? `Auto ${currentRegion || 'Global'} · ${searchKeyword} · VPH ${Math.round(candidate.metrics.vph).toLocaleString('vi-VN')}`
+              : rawKeyword,
+            lastVideoId: candidate.video.id
+          };
+
+          setResults(prev => {
+            const updated = [...prev, newResult].slice(0, STOP_LIMIT);
+            resultsRef.current = updated;
+            localStorage.setItem('youtube_hunter_results', JSON.stringify(updated));
+            return updated;
           });
 
-          // Calculate REAL score and competition based on results
-          const resultCount = searchRes.pageInfo.totalResults || 0;
-          const compValue = resultCount > 1000000 ? 'Rất Cao' : resultCount > 500000 ? 'Cao' : resultCount > 50000 ? 'Trung bình' : 'Thấp';
-          
-          let calculatedScore = 0;
-          if (resultCount < 10000) calculatedScore = 8 + Math.random() * 2;
-          else if (resultCount < 50000) calculatedScore = 6 + Math.random() * 2;
-          else if (resultCount < 200000) calculatedScore = 4 + Math.random() * 2;
-          else if (resultCount < 1000000) calculatedScore = 2 + Math.random() * 2;
-          else calculatedScore = 1 + Math.random() * 1.5;
-
-          const finalScore = Math.min(calculatedScore, 9.9).toFixed(1);
-
-          if (ideaIdx !== -1) {
-            setKeywordIdeas(prev => {
-              const next = [...prev];
-              next[ideaIdx].score = `${finalScore}/10`;
-              next[ideaIdx].competition = compValue;
-              next[ideaIdx].status = 'done';
-              return next;
-            });
-          }
-
-          // ONLY collect deep channel data if we haven't reached the result limit
-          if (isHuntingRef.current && resultsRef.current.length < STOP_LIMIT && searchRes.items && searchRes.items.length > 0) {
-            const channelIds = [...new Set(searchRes.items.map((item: any) => item.snippet.channelId))];
-            const newChannelIds = channelIds.filter(id => !resultsRef.current.some(r => r.id === id));
-            
-            setStatus(`Đã tìm thấy ${newChannelIds.length} kênh tiềm năng. Đang phân tích chi tiết...`);
-            
-            if (newChannelIds.length > 0) {
-              const chunkedIds = [];
-              for (let i = 0; i < newChannelIds.length; i += 50) {
-                chunkedIds.push(newChannelIds.slice(i, i + 50));
-              }
-
-              for (const ids of chunkedIds) {
-                if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
-                
-                const channelRes = await youtubeFetch('channels', {
-                  part: 'snippet,statistics,contentDetails',
-                  id: ids.join(','),
-                });
-
-                for (const channel of channelRes.items) {
-                  if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
-
-                  const subs = parseInt(channel.statistics.subscriberCount) || 0;
-                  const views = parseInt(channel.statistics.viewCount) || 0;
-                  const videos = parseInt(channel.statistics.videoCount) || 0;
-
-                  const passed = 
-                    subs >= config.minSub &&
-                    subs <= config.maxSub &&
-                    videos >= config.minVideo &&
-                    (config.maxVideo ? videos <= config.maxVideo : true) &&
-                    views >= config.minViews;
-
-                  if (passed) {
-                    const newResult: ChannelResult = {
-                      icon: channel.snippet.thumbnails.default.url,
-                      name: channel.snippet.title,
-                      id: channel.id,
-                      url: `https://youtube.com/channel/${channel.id}`,
-                      country: channel.snippet.country || 'N/A',
-                      publishedAt: channel.snippet.publishedAt.split('T')[0],
-                      age: calculateChannelAge(channel.snippet.publishedAt),
-                      subs,
-                      views,
-                      videos,
-                      score: calculateNicheScore(channel),
-                      keywordTitle: config.keyword,
-                      lastVideoId: searchRes.items.find((v: any) => v.snippet.channelId === channel.id)?.id?.videoId
-                    };
-                    
-                    setResults(prev => {
-                      const updated = [...prev, newResult];
-                      resultsRef.current = updated;
-                      localStorage.setItem('youtube_hunter_results', JSON.stringify(updated));
-                      return updated;
-                    });
-
-                   }
-                  
-                  // Update progress based on results found vs limit
-                  const currentProgress = Math.min(10 + (resultsRef.current.length / STOP_LIMIT) * 90, 99);
-                  setProgress(currentProgress);
-                }
-              }
-            }
-          }
-        } catch (fetchErr: any) {
-          if (ideaIdx !== -1) {
-            setKeywordIdeas(prev => {
-              const next = [...prev];
-              next[ideaIdx].status = 'idle';
-              return next;
-            });
-          }
-          if (fetchErr.name === 'AbortError') return;
-          throw fetchErr;
-        }
-
-        if (ideaIdx !== -1) {
-          setKeywordIdeas(prev => {
-            const next = [...prev];
-            next[ideaIdx].status = 'done';
-            return next;
-          });
+          const currentProgress = Math.min(10 + (resultsRef.current.length / STOP_LIMIT) * 90, 99);
+          setProgress(currentProgress);
         }
       }
 
@@ -1989,6 +2054,8 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         setStatus('🎯 ĐÃ GOM ĐỦ 10 KÊNH NGON! Đã tự động dừng.');
       } else if (!isHuntingRef.current) {
         setStatus('Đã dừng bởi người dùng.');
+      } else if (isAutoHunt) {
+        setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.`);
       } else {
         setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.`);
       }
@@ -2770,7 +2837,7 @@ ${topKeywordsStr}`;
                 <div className="vtw-filter-grid grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
                   <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: quân sự</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Việt Nam <span>▼</span></div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
                     </div>
@@ -2917,7 +2984,7 @@ ${topKeywordsStr}`;
                         className="w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
                         value={config.keyword}
                         onChange={(e) => setConfig({ ...config, keyword: e.target.value })}
-                        placeholder="Ví dụ: quân sự"
+                        placeholder="Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI"
                       />
                     </div>
                     <div className="flex items-center gap-2 relative">
@@ -3459,6 +3526,26 @@ ${topKeywordsStr}`;
                       <a href={`https://youtube.com/channel/${spyResult.channelInfo.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-[10px] mt-1 flex items-center gap-1">
                         Xem kênh <ExternalLink size={10} />
                       </a>
+                      <button
+                        type="button"
+                        onClick={(e) => openChannelActionMenu(e, {
+                          id: spyResult.channelInfo.id,
+                          name: spyResult.channelInfo.snippet.title,
+                          url: `https://youtube.com/channel/${spyResult.channelInfo.id}`,
+                          icon: spyResult.channelInfo.logo,
+                          country: spyResult.channelInfo.snippet.country || '',
+                          publishedAt: spyResult.channelInfo.snippet.publishedAt,
+                          age: calculateChannelAge(spyResult.channelInfo.snippet.publishedAt),
+                          subs: parseInt(spyResult.channelInfo.statistics.subscriberCount || '0'),
+                          views: parseInt(spyResult.channelInfo.statistics.viewCount || '0'),
+                          videos: parseInt(spyResult.channelInfo.statistics.videoCount || '0'),
+                          score: calculateNicheScore(spyResult.channelInfo),
+                          keywordTitle: ''
+                        })}
+                        className="vtw-mobile-action-btn mt-3 w-full bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-[10px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                      >
+                        THAO TÁC
+                      </button>
                     </div>
                     <div className="vtw-spy-report flex-1 bg-white border border-[#999] p-4 font-mono text-[13px] text-blue-800 leading-relaxed shadow-inner overflow-x-auto">
                       <div className="mb-2 border-b border-gray-100 pb-1 flex justify-between items-center">
@@ -3585,7 +3672,7 @@ ${topKeywordsStr}`;
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white border border-[#999] flex flex-col h-[40vh] min-h-0 overflow-hidden shadow-sm">
+                  <div className="vtw-spy-videos-box bg-white border border-[#999] flex flex-col h-[40vh] min-h-0 overflow-hidden shadow-sm">
                     <div className="bg-[#2c3e50] text-white px-2 py-1 font-bold flex justify-between shrink-0">
                       <span className="flex items-center gap-2 mt-0.5"><MonitorPlay size={14}/> Video mới nhất từ kênh</span>
                       <button onClick={() => downloadTXT('spy')} className="bg-green-600 hover:bg-green-700 px-3 py-0.5 rounded text-[11px]">Tải TXT</button>
