@@ -389,7 +389,8 @@ export default function App() {
         #vtw-account-status-root-20260519 .vtw-float-btn {
           position: fixed !important;
           top: 10px !important;
-          right: 300px !important;
+          left: auto !important;
+          right: 270px !important;
           bottom: auto !important;
           z-index: 2147483646 !important;
           height: 34px !important;
@@ -410,19 +411,15 @@ export default function App() {
           gap: 8px !important;
           line-height: 1 !important;
           white-space: nowrap !important;
-        }
-        @media (max-width: 1300px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn {
-            right: 245px !important;
-            min-width: 145px !important;
-            font-size: 11px !important;
-            padding: 7px 10px !important;
-          }
+          pointer-events: auto !important;
         }
         @media (max-width: 900px) {
           #vtw-account-status-root-20260519 .vtw-float-btn {
             right: 12px !important;
             top: 58px !important;
+            min-width: 145px !important;
+            font-size: 11px !important;
+            padding: 7px 10px !important;
           }
         }
         #vtw-account-status-root-20260519 .vtw-overlay {
@@ -477,6 +474,47 @@ export default function App() {
       setShowKeyInputModal(true);
     };
 
+    // VTW_HARD_ACCOUNT_POSITION_20260520:
+    // Không phụ thuộc header / Tailwind / khung tool. Nút được bơm vào body,
+    // sau đó tự đo vị trí cụm tài khoản Google để bám sát bên trái.
+    const placeHardAccountButton = () => {
+      const btn = document.getElementById('vtw-open-account-20260519') as HTMLButtonElement | null;
+      if (!btn) return;
+
+      let anchor: Element | null = null;
+      const avatarImgs = Array.from(document.querySelectorAll('img[alt="avatar"]'))
+        .filter((img) => !(img as HTMLElement).closest('#vtw-account-status-root-20260519'));
+      if (avatarImgs.length > 0) {
+        anchor = avatarImgs[0].closest('div[class*="rounded"]') || avatarImgs[0].parentElement;
+      }
+
+      if (!anchor && user?.displayName) {
+        anchor = Array.from(document.querySelectorAll('button,div,a'))
+          .find((el) => !(el as HTMLElement).closest('#vtw-account-status-root-20260519') && (el.textContent || '').includes(user.displayName || '')) || null;
+      }
+
+      if (!anchor) {
+        btn.style.top = '10px';
+        btn.style.left = 'auto';
+        btn.style.right = '285px';
+        return;
+      }
+
+      const rect = (anchor as HTMLElement).getBoundingClientRect();
+      const gap = 10;
+      const width = btn.offsetWidth || 170;
+      const top = Math.max(6, rect.top + (rect.height - 34) / 2);
+      const left = Math.max(8, rect.left - width - gap);
+
+      btn.style.top = `${top}px`;
+      btn.style.left = `${left}px`;
+      btn.style.right = 'auto';
+    };
+
+    window.setTimeout(placeHardAccountButton, 50);
+    window.setTimeout(placeHardAccountButton, 300);
+    window.addEventListener('resize', placeHardAccountButton);
+
     openBtn?.addEventListener('click', openPanel);
     closeBtn?.addEventListener('click', closePanel);
     overlay?.addEventListener('click', closePanel);
@@ -489,6 +527,7 @@ export default function App() {
       overlay?.removeEventListener('click', closePanel);
       logoutBtn?.removeEventListener('click', doLogout);
       settingsBtn?.removeEventListener('click', openApiSettings);
+      window.removeEventListener('resize', placeHardAccountButton);
     };
   }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
@@ -958,6 +997,51 @@ export default function App() {
         .replace(/\s+/g, ' ')
         .trim();
 
+    const hasVietnameseDiacritics = (value: string) =>
+      /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(value || '');
+
+    const hasVietnameseCommonWords = (value: string) => {
+      const v = ` ${normalizeText(value)} `;
+      return [
+        ' cach ', ' meo ', ' huong dan ', ' danh gia ', ' nau an ', ' mon an ',
+        ' cong thuc ', ' du lich ', ' suc khoe ', ' lam dep ', ' thoi quen ',
+        ' nguoi ', ' cho nguoi ', ' tai chinh ', ' dau tu ', ' chung khoan ',
+        ' kiem tien ', ' quan an ', ' gia dinh ', ' tieng anh ', ' hoc tap '
+      ].some(word => v.includes(word));
+    };
+
+    const looksLikeBadKeyword = (value: string) => {
+      const v = (value || '').trim();
+      if (!v) return true;
+      if (/[a-z0-9]{16,}/i.test(v.replace(/\s+/g, ''))) return true;
+      if (/[a-z]{5,}\d|\d[a-z]{5,}/i.test(v)) return true;
+      if ((v.match(/[0-9]/g) || []).length >= 5) return true;
+      return false;
+    };
+
+    const isKeywordLanguageOk = (keyword: string) => {
+      if (!keyword) return false;
+      if (looksLikeBadKeyword(keyword)) return false;
+
+      // Toàn cầu: cho phép đa ngôn ngữ, nhưng vẫn chặn key rác.
+      if (!trendingRegion) return true;
+
+      // Việt Nam: ưu tiên tiếng Việt, nhưng vẫn cho phép brand/thuật ngữ quốc tế ngắn.
+      if (trendingRegion === 'VN') {
+        return !/[가-힣ぁ-んァ-ン一-龯ก-๙А-Яа-я]/.test(keyword);
+      }
+
+      // Các khu vực khác: không để Gemini/Youtube đổ tiếng Việt vào.
+      if (hasVietnameseDiacritics(keyword) || hasVietnameseCommonWords(keyword)) return false;
+
+      if (['JP'].includes(trendingRegion)) return /[ぁ-んァ-ン一-龯]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
+      if (['KR'].includes(trendingRegion)) return /[가-힣]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
+      if (['TH'].includes(trendingRegion)) return /[ก-๙]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
+      if (['RU'].includes(trendingRegion)) return /[А-Яа-я]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
+
+      return true;
+    };
+
     const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
       'PHÁT TRIỂN BẢN THÂN': {
         hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
@@ -1129,6 +1213,7 @@ export default function App() {
       for (const raw of items) {
         const cleaned = cleanKeyword(raw);
         if (!cleaned || cleaned.length < 3 || cleaned.length > 42) continue;
+        if (!isKeywordLanguageOk(cleaned)) continue;
         if (category && !isRelevantForCategory(category, cleaned, strict)) continue;
 
         const key = normalizeText(cleaned);
@@ -1268,22 +1353,26 @@ export default function App() {
           const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
           const prompt = `
-Bạn là chuyên gia nghiên cứu trend YouTube tại ${regionLabel}.
-Hãy tạo đúng 5 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
+You are a YouTube trend keyword research expert for region: ${regionLabel}.
+Generate exactly 5 short trending keyword ideas for EACH category below.
 
-Yêu cầu bắt buộc:
-- Trả về JSON thuần, không markdown, không giải thích.
-- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3","key 4","key 5"]}.
-- Từ khóa phải ĐÚNG 100% với chủ đề và mô tả của chủ đề đó.
-- NGÔN NGỮ BẮT BUỘC: ${regionMeta.prompt}
-- Không đưa nhạc/bolero vào REVIEW SẢN PHẨM & UNBOXING.
-- Không đưa game/LCK/nhạc/bolero/reaction vào ẨM THỰC & NẤU ĂN hoặc TÀI CHÍNH & ĐẦU TƯ.
-- Không lặp lại các key YouTube đã có.
-- Mỗi lần tạo phải khác nhau, sắp xếp từ hot cao xuống thấp.
-- Mỗi key tối đa 6 từ, đúng ngôn ngữ khu vực đã chọn.
+MANDATORY OUTPUT RULES:
+- Return pure JSON only. No markdown. No explanation.
+- JSON format: {"CATEGORY NAME":["key 1","key 2","key 3","key 4","key 5"]}.
+- Category names in JSON keys must match the provided Vietnamese category labels exactly.
+- Keyword language rule: ${regionMeta.prompt}
+- If region is Hoa Kỳ / US, every keyword value must be natural American English. Absolutely no Vietnamese keyword values.
+- If region is not Việt Nam, do not output Vietnamese diacritics or Vietnamese phrases.
+- If region is Global, mix several markets naturally.
+- Keywords must be 100% relevant to the exact category description.
+- Do not put music/bolero into REVIEW SẢN PHẨM & UNBOXING unless the category is NHẠC & COVER.
+- Do not put game/LCK/music/bolero/reaction into ẨM THỰC & NẤU ĂN or TÀI CHÍNH & ĐẦU TƯ.
+- Do not repeat existing YouTube keys.
+- Each run must produce different keywords. Prioritize hottest trends first.
+- Each keyword must be 2 to 6 words, not random IDs, not gibberish.
 - Random seed: ${randomSeed}
 
-Dữ liệu chủ đề:
+CATEGORY DATA:
 ${JSON.stringify(categoriesNeedGemini, null, 2)}
 `;
 
@@ -1318,8 +1407,10 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
       const updatedNiches = sourceNiches.map((niche) => {
         const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
-        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, false);
-        const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
+        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, true);
+        const fallbackKeys = (trendingRegion === 'VN' || trendingRegion === '')
+          ? uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false)
+          : [];
 
         const finalKeys = uniqueLimit([
           ...youtubeKeys.slice(0, 2),
@@ -5636,7 +5727,7 @@ ${topKeywordsStr}`;
                             disabled={isFetchingDailyTrending}
                             className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật API...</> : <><Search size={16}/> Cập nhật Trending</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật trend</> : <><Search size={16}/> Cập nhật Trending</>}
                          </button>
                      </div>
                 </div>
