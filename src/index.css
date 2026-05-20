@@ -1208,3 +1208,284 @@
     margin-right: 0 !important;
   }
 }
+
+/* MOBILE_STEP_5_20260520
+   Vá phần còn chật: tab logged-in, khu tìm ngách, header, bảng tracking/video và badge PRO. */
+@media (max-width: 768px) {
+  html, body, #root {
+    background: #eef2f8 !important;
+  }
+
+  .vtw-mobile-app {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .vtw-app-header {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
+  .vtw-app-title img {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .vtw-app-title span {
+    max-width: calc(100vw - 168px) !important;
+    font-size: 12px !important;
+    line-height: 24px !important;
+  }
+
+  .vtw-header-actions {
+    max-width: 130px !important;
+  }
+
+  .vtw-header-actions > div {
+    max-width: 126px !important;
+    min-height: 34px !important;
+  }
+
+  .vtw-header-actions img {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .vtw-tabs {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 5px 6px 0 !important;
+    gap: 5px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .vtw-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .vtw-tab-btn,
+  .vtw-tabs > button,
+  .vtw-tabs > div {
+    flex: 0 0 76px !important;
+    width: 76px !important;
+    min-width: 76px !important;
+    max-width: 76px !important;
+    min-height: 52px !important;
+    padding: 5px 4px !important;
+    border-radius: 10px 10px 0 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    text-align: center !important;
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+  }
+
+  .vtw-tab-btn svg,
+  .vtw-tabs > button svg,
+  .vtw-tabs > div svg {
+    width: 13px !important;
+    height: 13px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .vtw-tab-full {
+    display: none !important;
+  }
+
+  .vtw-tab-short {
+    display: inline !important;
+    max-width: 70px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-weight: 900 !important;
+  }
+
+  .vtw-main-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 6px !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    overflow: visible !important;
+  }
+
+  .vtw-filter-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10px !important;
+  }
+
+  .vtw-filter-fields .flex.items-center.gap-2,
+  .vtw-filter-fields .flex.items-center.justify-between {
+    align-items: stretch !important;
+  }
+
+  .vtw-bottom-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    text-align: center !important;
+    padding: 12px !important;
+  }
+
+  .vtw-bottom-actions > * {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .vtw-results-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vtw-results-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .vtw-results-table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .vtw-results-table td:nth-child(3),
+  .vtw-results-table td:nth-child(4),
+  .vtw-results-table td:nth-child(5) {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Các bảng chưa có class riêng như Tracking: cho cuộn ngang trong card, không làm nát toàn trang. */
+  .vtw-main-panel table:not(.vtw-results-table) {
+    min-width: 720px !important;
+  }
+
+  .vtw-main-panel .overflow-auto,
+  .vtw-main-panel .overflow-x-auto {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Tab Tìm ngách: mobile không chia sidebar + content 2 cột nữa. */
+  .vtw-niche-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    border-radius: 16px !important;
+  }
+
+  .vtw-niche-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+
+  .vtw-niche-sidebar > div:first-child {
+    padding: 14px !important;
+  }
+
+  .vtw-niche-sidebar .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtw-niche-sidebar nav {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    padding: 0 10px 12px !important;
+  }
+
+  .vtw-niche-sidebar nav button {
+    border-left-width: 0 !important;
+    border-radius: 12px !important;
+    padding: 10px 8px !important;
+    font-size: 10px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .vtw-niche-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px !important;
+    overflow-x: hidden !important;
+  }
+
+  .vtw-niche-content .h-full.flex.flex-col.items-center.justify-center {
+    display: none !important;
+  }
+
+  .vtw-niche-content h2 {
+    font-size: 24px !important;
+  }
+
+  .vtw-niche-content .grid,
+  .vtw-niche-content [class*="grid-cols-"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtw-niche-content .flex.justify-between,
+  .vtw-niche-content .flex.items-end,
+  .vtw-niche-content .flex.gap-4 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  #vtw-account-status-root-20260519 .vtw-float-btn {
+    right: 12px !important;
+    bottom: 10px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+    height: 34px !important;
+    padding: 6px 8px !important;
+    box-shadow: 0 8px 20px rgba(37,99,235,.18) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .vtw-page-wrap {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .vtw-tab-btn,
+  .vtw-tabs > button,
+  .vtw-tabs > div {
+    flex-basis: 73px !important;
+    width: 73px !important;
+    min-width: 73px !important;
+    max-width: 73px !important;
+  }
+
+  .vtw-tab-short {
+    max-width: 66px !important;
+  }
+}

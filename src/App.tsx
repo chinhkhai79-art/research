@@ -2815,19 +2815,19 @@ ${topKeywordsStr}`;
             <div className="absolute inset-0 p-4 pt-2 blur-[2.5px] opacity-55 pointer-events-none select-none">
               <div className="vtw-tabs flex justify-center gap-1 mb-0 relative z-10">
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#3498db] text-white border-t border-x border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)] font-bold flex items-center gap-2">
-                  <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
+                  <Search size={16} /> <span className="vtw-tab-full">Tìm kênh & Đánh giá Từ khóa</span><span className="vtw-tab-short">Tìm kênh</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <BarChart2 size={16} /> Phân tích đối thủ (Spy)
+                  <BarChart2 size={16} /> <span className="vtw-tab-full">Phân tích đối thủ (Spy)</span><span className="vtw-tab-short">Spy</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
+                  <UserRoundSearch size={16} /> <span className="vtw-tab-full">Theo dõi Đối thủ (Tracking)</span><span className="vtw-tab-short">Tracking</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <Video size={16} /> Kiểm tra Link Video
+                  <Video size={16} /> <span className="vtw-tab-full">Kiểm tra Link Video</span><span className="vtw-tab-short">Video</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
+                  <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 Tìm ngách Youtube</span><span className="vtw-tab-short">Ngách</span>
                 </div>
               </div>
 
@@ -2935,36 +2935,36 @@ ${topKeywordsStr}`;
         ) : (
           <>
         {/* Tabs - Centered */}
-        <div className="flex justify-center gap-1 mb-0 relative z-10">
+        <div className="vtw-tabs flex justify-center gap-1 mb-0 relative z-10">
           <button 
             onClick={() => setActiveTab(1)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 1 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
+            <Search size={16} /> <span className="vtw-tab-full">Tìm kênh & Đánh giá Từ khóa</span><span className="vtw-tab-short">Tìm kênh</span>
           </button>
           <button 
             onClick={() => setActiveTab(2)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <BarChart2 size={16} /> Phân tích đối thủ (Spy)
+            <BarChart2 size={16} /> <span className="vtw-tab-full">Phân tích đối thủ (Spy)</span><span className="vtw-tab-short">Spy</span>
           </button>
           <button 
             onClick={() => setActiveTab(3)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
+            <UserRoundSearch size={16} /> <span className="vtw-tab-full">Theo dõi Đối thủ (Tracking)</span><span className="vtw-tab-short">Tracking</span>
           </button>
           <button 
             onClick={() => setActiveTab(4)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <Video size={16} /> Kiểm tra Link Video
+            <Video size={16} /> <span className="vtw-tab-full">Kiểm tra Link Video</span><span className="vtw-tab-short">Video</span>
           </button>
           <button 
             onClick={() => setActiveTab(5)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
+            <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 Tìm ngách Youtube</span><span className="vtw-tab-short">Ngách</span>
           </button>
         </div>
 
@@ -3929,9 +3929,9 @@ ${topKeywordsStr}`;
           ) : null}
 
           {activeTab === 5 ? (
-            <div className="flex h-[calc(100vh-140px)] bg-white border border-[#ccc] rounded-b-xl overflow-hidden shadow-2xl relative">
+            <div className="vtw-niche-layout flex h-[calc(100vh-140px)] bg-white border border-[#ccc] rounded-b-xl overflow-hidden shadow-2xl relative">
               {/* Internal Sidebar */}
-              <div className="w-[300px] bg-[#2c3e50] text-white flex flex-col border-r border-[#1a252f] shrink-0">
+              <div className="vtw-niche-sidebar w-[300px] bg-[#2c3e50] text-white flex flex-col border-r border-[#1a252f] shrink-0">
                 <div className="p-4 border-b border-[#34495e] flex flex-col gap-3">
                   <div className="flex items-center gap-2 text-blue-400 font-black italic text-lg uppercase tracking-wider">
                     <Zap size={24} fill="currentColor" /> NICHE RESEARCH
@@ -4072,7 +4072,7 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Main Content Area */}
-              <div className="flex-1 bg-gray-50 overflow-y-auto p-6">
+              <div className="vtw-niche-content flex-1 bg-gray-50 overflow-y-auto p-6">
                 {!nicheResults && nicheActiveSubTab !== 'history' && (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-70">
                     <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
