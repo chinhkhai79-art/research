@@ -387,11 +387,43 @@ export default function App() {
       <style>
         #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
         #vtw-account-status-root-20260519 .vtw-float-btn {
-          position: fixed !important; right: 18px !important; bottom: 64px !important; z-index: 2147483646 !important;
-          border: 3px solid #fff !important; border-radius: 999px !important; padding: 11px 16px !important;
-          background: ${isPremiumAccount ? 'linear-gradient(135deg,#2563eb,#06b6d4)' : subscriptionInfo?.active ? 'linear-gradient(135deg,#f59e0b,#f97316)' : 'linear-gradient(135deg,#ef4444,#dc2626)'} !important;
-          color: #fff !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase !important;
-          box-shadow: 0 14px 45px rgba(15,23,42,.35) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
+          position: fixed !important;
+          top: 10px !important;
+          right: 300px !important;
+          bottom: auto !important;
+          z-index: 2147483646 !important;
+          height: 34px !important;
+          min-width: 170px !important;
+          border: 2px solid #bfdbfe !important;
+          border-radius: 999px !important;
+          padding: 7px 14px !important;
+          background: ${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important;
+          color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important;
+          font-weight: 900 !important;
+          font-size: 12px !important;
+          text-transform: uppercase !important;
+          box-shadow: 0 8px 24px rgba(37,99,235,.22) !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+        }
+        @media (max-width: 1300px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            right: 245px !important;
+            min-width: 145px !important;
+            font-size: 11px !important;
+            padding: 7px 10px !important;
+          }
+        }
+        @media (max-width: 900px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            right: 12px !important;
+            top: 58px !important;
+          }
         }
         #vtw-account-status-root-20260519 .vtw-overlay {
           position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
@@ -403,7 +435,7 @@ export default function App() {
         #vtw-account-status-root-20260519 .vtw-label { font-size:10px !important; color:#94a3b8 !important; font-weight:900 !important; text-transform:uppercase !important; }
         #vtw-account-status-root-20260519 .vtw-value { font-size:15px !important; color:#0f172a !important; font-weight:900 !important; margin-top:5px !important; }
       </style>
-      <button class="vtw-float-btn" id="vtw-open-account-20260519">👑 ${accountLabel} · ${remainingText}</button>
+      <button class="vtw-float-btn" id="vtw-open-account-20260519">● ${accountLabel} · ${remainingText}</button>
       <div class="vtw-overlay" id="vtw-overlay-20260519">
         <div class="vtw-panel" onclick="event.stopPropagation()">
           <div class="vtw-head">
@@ -415,11 +447,6 @@ export default function App() {
             <button id="vtw-close-account-20260519" style="width:38px;height:38px;border-radius:999px;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:22px;cursor:pointer;">×</button>
           </div>
           <div style="padding:18px;">
-            <div style="border-radius:18px;padding:15px;margin-bottom:12px;border:1px solid ${isPremiumAccount ? '#bfdbfe' : subscriptionInfo?.active ? '#fde68a' : '#fecaca'};background:${isPremiumAccount ? '#eff6ff' : subscriptionInfo?.active ? '#fffbeb' : '#fef2f2'};">
-              <div style="font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;">Trạng thái</div>
-              <div style="font-size:22px;font-weight:900;margin-top:5px;color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#b45309' : '#b91c1c'};">${statusTitle}</div>
-              <div style="font-size:11px;font-weight:900;color:#f97316;margin-top:8px;">UI_PROOF_20260519_RENDERED</div>
-            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="vtw-card"><div class="vtw-label">Gói đã đăng ký</div><div class="vtw-value">${planText}</div></div>
               <div class="vtw-card" style="background:${subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2'} !important;border-color:${subscriptionInfo?.active ? '#86efac' : '#fecaca'} !important;"><div class="vtw-label" style="color:${subscriptionInfo?.active ? '#059669' : '#dc2626'} !important;">Còn lại</div><div class="vtw-value" style="color:${subscriptionInfo?.active ? '#047857' : '#b91c1c'} !important;">${remainingText}</div></div>
@@ -427,8 +454,8 @@ export default function App() {
               <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
             </div>
             <div style="display:flex;gap:10px;margin-top:16px;">
-              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm / cộng dồn' : 'Nâng cấp gói'}</a>
-              <button id="vtw-refresh-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Làm mới</button>
+              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
+              <button id="vtw-settings-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Cài đặt</button>
               <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
             </div>
           </div>
@@ -440,25 +467,28 @@ export default function App() {
     const openBtn = document.getElementById('vtw-open-account-20260519');
     const closeBtn = document.getElementById('vtw-close-account-20260519');
     const logoutBtn = document.getElementById('vtw-logout-account-20260519');
-    const refreshBtn = document.getElementById('vtw-refresh-account-20260519');
+    const settingsBtn = document.getElementById('vtw-settings-account-20260519');
 
     const openPanel = () => { if (overlay) overlay.style.display = 'flex'; };
     const closePanel = () => { if (overlay) overlay.style.display = 'none'; };
     const doLogout = async () => { await logoutUser(); closePanel(); };
-    const doRefresh = () => { if (user) refreshSubscription(user, false); };
+    const openApiSettings = () => {
+      closePanel();
+      setShowKeyInputModal(true);
+    };
 
     openBtn?.addEventListener('click', openPanel);
     closeBtn?.addEventListener('click', closePanel);
     overlay?.addEventListener('click', closePanel);
     logoutBtn?.addEventListener('click', doLogout);
-    refreshBtn?.addEventListener('click', doRefresh);
+    settingsBtn?.addEventListener('click', openApiSettings);
 
     return () => {
       openBtn?.removeEventListener('click', openPanel);
       closeBtn?.removeEventListener('click', closePanel);
       overlay?.removeEventListener('click', closePanel);
       logoutBtn?.removeEventListener('click', doLogout);
-      refreshBtn?.removeEventListener('click', doRefresh);
+      settingsBtn?.removeEventListener('click', openApiSettings);
     };
   }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
@@ -666,6 +696,21 @@ export default function App() {
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
+    const savedSuggestedNiches = localStorage.getItem(`youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`);
+    if (savedSuggestedNiches) {
+      try {
+        const parsedSuggestedNiches = JSON.parse(savedSuggestedNiches);
+        if (Array.isArray(parsedSuggestedNiches) && parsedSuggestedNiches.length > 0) {
+          setSuggestedNiches(parsedSuggestedNiches.map((niche: any) => ({
+            ...niche,
+            items: Array.isArray(niche.items) ? niche.items.slice(0, 5) : []
+          })));
+        }
+      } catch (error) {
+        console.warn('Không đọc được danh sách ngách đã lưu:', error);
+      }
+    }
+
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
     
@@ -859,108 +904,450 @@ export default function App() {
 
   const fetchDailyTrendingFromYouTube = async () => {
     if (config.apiKeys.length === 0) {
-      alert("Vui lòng nhập API Key để sử dụng tính năng này!");
+      alert('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
       return;
     }
+
     setIsFetchingDailyTrending(true);
-    
-    try {
-      const newNiches = [...suggestedNiches]; // always start with original or current categories
-      const batchSize = 3; // run limited batches to avoid hitting youtube rate limits quickly
-      
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      const publishedAfter = lastMonth.toISOString();
+    setStatus('Đang cập nhật trend');
 
-      for (let i = 0; i < newNiches.length; i += batchSize) {
-        const batch = newNiches.slice(i, i + batchSize);
-        
-        await Promise.all(batch.map(async (niche, idx) => {
-          const actualIdx = i + idx;
-          try {
-             // 1. Try to fetch TRENDING videos in this niche first (published in the last month)
-             let searchRes = await youtubeFetch('search', {
-               part: 'snippet',
-               q: niche.category,
-               type: 'video',
-               regionCode: trendingRegion,
-               order: 'viewCount', // hottest
-               publishedAfter: publishedAfter,
-               maxResults: 6
-             });
-             
-             // 1b. Fallback ONLY if there were no trending results, get the all-time hottest
-             if (!searchRes.items || searchRes.items.length === 0) {
-                 searchRes = await youtubeFetch('search', {
-                   part: 'snippet',
-                   q: niche.category,
-                   type: 'video',
-                   regionCode: trendingRegion,
-                   order: 'viewCount', // hottest all-time
-                   maxResults: 6
-                 });
-             }
-             
-             if (!searchRes.items || searchRes.items.length === 0) return; // Keep original if completely empty
-             
-             const videoIds = searchRes.items.map((item: any) => item.id.videoId).join(',');
-             
-             // 2. Fetch details (tags) for these exact videos
-             const videoRes = await youtubeFetch('videos', {
-               part: 'snippet',
-               id: videoIds
-             });
-             
-             if (!videoRes.items) return;
-             
-             const countMap: Record<string, number> = {};
-             videoRes.items.forEach((v: any) => {
-               if (v.snippet.tags) {
-                 v.snippet.tags.forEach((t: string) => {
-                   const cleaned = t.trim().toLowerCase();
-                   if (cleaned.length > 2 && !cleaned.includes('shorts')) {
-                     countMap[cleaned] = (countMap[cleaned] || 0) + 1;
-                   }
-                 });
-               }
-             });
-             
-             // Fallback if the videos strangely had zero tags combined
-             if (Object.keys(countMap).length === 0) {
-                 videoRes.items.forEach((v: any) => {
-                    const words = v.snippet.title.toLowerCase().split(/[\s,._\-()[\]{}|]+/);
-                    words.forEach((w: string) => {
-                       if (w.length > 4) countMap[w] = (countMap[w] || 0) + 1;
-                    });
-                 });
-             }
+    const REGION_LANGUAGE: Record<string, { language: string; prompt: string; searchHint: string }> = {
+      '': {
+        language: 'Đa ngôn ngữ',
+        prompt: 'Trộn ngẫu nhiên theo thị trường toàn cầu: có thể dùng tiếng Việt, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Thái, tiếng Indonesia, tiếng Tây Ban Nha. Không bắt buộc tất cả là tiếng Việt.',
+        searchHint: 'global trending'
+      },
+      VN: { language: 'Tiếng Việt', prompt: 'Tất cả từ khóa phải viết bằng tiếng Việt tự nhiên.', searchHint: 'hot trend việt nam' },
+      US: { language: 'English', prompt: 'All keywords must be in natural American English. Do not use Vietnamese.', searchHint: 'US trending' },
+      GB: { language: 'English', prompt: 'All keywords must be in natural British English. Do not use Vietnamese.', searchHint: 'UK trending' },
+      CA: { language: 'English', prompt: 'All keywords must be in natural English for Canada. Do not use Vietnamese.', searchHint: 'Canada trending' },
+      AU: { language: 'English', prompt: 'All keywords must be in natural English for Australia. Do not use Vietnamese.', searchHint: 'Australia trending' },
+      IN: { language: 'English/Hindi', prompt: 'Use natural India-market keywords, mainly English or Hindi. Do not use Vietnamese.', searchHint: 'India trending' },
+      JP: { language: '日本語', prompt: 'すべてのキーワードは自然な日本語で書いてください。ベトナム語は使わないでください。', searchHint: '日本 トレンド' },
+      KR: { language: '한국어', prompt: '모든 키워드는 자연스러운 한국어로 작성하세요. 베트남어를 사용하지 마세요.', searchHint: '한국 트렌드' },
+      TH: { language: 'ภาษาไทย', prompt: 'ใช้คำค้นหาเป็นภาษาไทยธรรมชาติเท่านั้น ห้ามใช้ภาษาเวียดนาม', searchHint: 'เทรนด์ไทย' },
+      ID: { language: 'Bahasa Indonesia', prompt: 'Semua keyword harus dalam Bahasa Indonesia yang natural. Jangan gunakan bahasa Vietnam.', searchHint: 'tren indonesia' },
+      PH: { language: 'English/Filipino', prompt: 'Use natural Philippines-market keywords in English or Filipino. Do not use Vietnamese.', searchHint: 'Philippines trending' },
+      MY: { language: 'Malay/English', prompt: 'Use natural Malaysia-market keywords in Malay or English. Do not use Vietnamese.', searchHint: 'Malaysia trending' },
+      SG: { language: 'English', prompt: 'All keywords must be in natural Singapore English. Do not use Vietnamese.', searchHint: 'Singapore trending' },
+      DE: { language: 'Deutsch', prompt: 'Alle Keywords müssen auf natürlichem Deutsch sein. Kein Vietnamesisch verwenden.', searchHint: 'Deutschland Trends' },
+      FR: { language: 'Français', prompt: 'Tous les mots-clés doivent être en français naturel. Ne pas utiliser le vietnamien.', searchHint: 'tendances france' },
+      RU: { language: 'Русский', prompt: 'Все ключевые слова должны быть на естественном русском языке. Не используйте вьетнамский.', searchHint: 'тренды россия' },
+      BR: { language: 'Português', prompt: 'Todas as palavras-chave devem estar em português natural do Brasil. Não use vietnamita.', searchHint: 'tendências brasil' },
+      MX: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural de México. No uses vietnamita.', searchHint: 'tendencias méxico' },
+      ES: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural. No uses vietnamita.', searchHint: 'tendencias españa' },
+      IT: { language: 'Italiano', prompt: 'Tutte le keyword devono essere in italiano naturale. Non usare vietnamita.', searchHint: 'tendenze italia' }
+    };
 
-             // Sort them by frequency (hottest keywords within the hottest videos top)
-             const topTags = Object.entries(countMap)
-               .sort((a,b) => b[1] - a[1]) // Giảm dần theo số lần xuất hiện
-               .map(x => x[0])
-               .slice(0, 10); // Lấy 10 keys (như cũ)
-               
-             if (topTags.length > 0) {
-               newNiches[actualIdx] = { ...newNiches[actualIdx], items: topTags };
-             }
-          } catch(e) {
-             console.error(`Error niche ${niche.category}:`, e);
-          }
-        }));
+    const regionMeta = REGION_LANGUAGE[trendingRegion] || REGION_LANGUAGE.US;
+    const regionLabel = REGIONS.find(r => r.code === trendingRegion)?.name || 'Toàn cầu (Global)';
+    const trendingStorageKey = `youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`;
+
+    const normalizeText = (value: string) =>
+      (value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd');
+
+    const cleanKeyword = (value: string) =>
+      (value || '')
+        .toLowerCase()
+        .replace(/#/g, '')
+        .replace(/[^\p{L}\p{N}\s&+.-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
+      'PHÁT TRIỂN BẢN THÂN': {
+        hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
+        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation', 'quan ly thoi gian', 'nang suat', 'lam viec nang suat', 'ky nang lam viec']
+      },
+      'SỨC KHỎE & LÀM ĐẸP': {
+        hint: 'sức khỏe, giảm cân, skincare, làm đẹp, yoga, fitness, chăm sóc cơ thể',
+        rules: ['suc khoe', 'lam dep', 'skincare', 'giam can', 'yoga', 'trang diem', 'mun', 'toc', 'health', 'beauty', 'fitness']
+      },
+      'CÔNG NGHỆ & AI': {
+        hint: 'AI, ChatGPT, Gemini, điện thoại, phần mềm, công nghệ, app, thủ thuật số',
+        rules: ['cong nghe', 'ai', 'chatgpt', 'gemini', 'iphone', 'android', 'dien thoai', 'may tinh', 'phan mem', 'technology']
+      },
+      'GIÁO DỤC & HỌC TẬP': {
+        hint: 'học tập, ngoại ngữ, IELTS, TOEIC, lập trình, ôn thi, phương pháp học',
+        rules: ['giao duc', 'hoc tap', 'hoc tieng', 'ielts', 'toeic', 'lap trinh', 'python', 'on thi', 'education', 'learning']
+      },
+      'ẨM THỰC & NẤU ĂN': {
+        hint: 'món ăn, công thức nấu ăn, review quán ăn, bếp, đồ ăn, ẩm thực gia đình',
+        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe', 'thuc pham', 'quan an', 'gia dinh ngon', 'bua an'],
+        banned: ['bac gau', 'wag bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lmht', 'league of legends', 'lien minh', 'game', 'free fire', 'tik tok free fire', 'tiktok free fire', 'chatgpt']
+      },
+      'DU LỊCH & KHÁM PHÁ': {
+        hint: 'du lịch, khám phá địa điểm, resort, vé máy bay, phượt, cắm trại, travel vlog',
+        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour', 'resort', 've may bay', 'cam trai', 'nghi duong', 'lich trinh'],
+        banned: ['bolero', 'hybe', 'lck', 'chatgpt']
+      },
+      'GIẢI TRÍ & HÀI HƯỚC': {
+        hint: 'giải trí, phim, hài, meme, reaction, drama, người nổi tiếng, thử thách',
+        rules: ['giai tri', 'hai', 'funny', 'meme', 'reaction', 'phim', 'anime', 'prank', 'thu thach', 'entertainment']
+      },
+      'THỂ THAO & THỂ HÌNH': {
+        hint: 'thể thao, gym, bóng đá, cầu lông, tennis, workout, fitness',
+        rules: ['the thao', 'gym', 'fitness', 'bong da', 'cau long', 'tennis', 'chay bo', 'workout', 'tang co', 'giam mo'],
+        banned: ['bolero', 'hybe']
+      },
+      'PETS & ĐỘNG VẬT': {
+        hint: 'thú cưng, chó mèo, động vật, chăm sóc pet, huấn luyện pet',
+        rules: ['pet', 'thu cung', 'dong vat', 'cho', 'meo', 'cat', 'dog', 'animal', 'grooming', 'bo sat'],
+        banned: ['bolero', 'hybe', 'lck']
+      },
+      'GIA ĐÌNH & ĐỜI SỐNG': {
+        hint: 'gia đình, đời sống, dọn nhà, nuôi con, mẹo nhà cửa, sống xanh',
+        rules: ['gia dinh', 'doi song', 'meo vat', 'don nha', 'nuoi con', 'me bim', 'trong rau', 'home', 'family', 'life']
+      },
+      'NGHỆ THUẬT & SÁNG TẠO': {
+        hint: 'vẽ, thiết kế, chụp ảnh, edit video, guitar, Canva, sáng tạo nội dung',
+        rules: ['nghe thuat', 'sang tao', 've tranh', 'chup anh', 'guitar', 'canva', 'edit video', 'art', 'creative', 'design']
+      },
+      'CÔNG NGHỆ Ô TÔ & XE MÁY': {
+        hint: 'ô tô, xe máy, xe điện, review xe, bảo dưỡng xe, phụ kiện xe',
+        rules: ['oto', 'xe may', 'xe dien', 'review xe', 'bao duong xe', 'phu kien oto', 'car', 'motorbike', 'vehicle'],
+        banned: ['bolero', 'hybe']
+      },
+      'TÂM LÝ HỌC & MỐI QUAN HỆ': {
+        hint: 'tâm lý học, tình yêu, mối quan hệ, MBTI, chữa lành, hôn nhân',
+        rules: ['tam ly', 'moi quan he', 'tinh yeu', 'chia tay', 'mbti', 'hon nhan', 'doc hai', 'psychology', 'relationship']
+      },
+      'ESPORTS & GAMING': {
+        hint: 'game, esports, Liên Quân, LCK, Valorant, PUBG, Genshin, LOL',
+        rules: ['game', 'gaming', 'esports', 'lien quan', 'tft', 'valorant', 'pubg', 'genshin', 'lol', 'mobile game', 'lck']
+      },
+      'HUYỀN BÍ & TÂM LINH': {
+        hint: 'huyền bí, tâm linh, tarot, giấc mơ, phong thủy, bí ẩn',
+        rules: ['huyen bi', 'tam linh', 'tarot', 'giac mo', 'bi an', 'phong thuy', 'nhan qua', 'supernatural', 'mystery']
+      },
+      'MẸO VẶT CUỘC SỐNG': {
+        hint: 'mẹo vặt, life hack, sửa chữa, tái chế, mẹo nhà bếp, mẹo sinh hoạt',
+        rules: ['meo vat', 'life hack', 'sua chua', 'tai che', 'bao quan', 'lo vi song', 'ung dung huu ich', 'tips']
+      },
+      'VĂN HÓA & LỊCH SỬ': {
+        hint: 'lịch sử, văn hóa, di tích, nhân vật lịch sử, chiến tranh, triều đại',
+        rules: ['lich su', 'van hoa', 'trieu dai', 'chien tranh', 'di tich', 'nhan vat lich su', 'history', 'culture']
+      },
+      'THỜI TRANG & PHONG CÁCH': {
+        hint: 'thời trang, phối đồ, local brand, sneaker, outfit, phong cách cá nhân',
+        rules: ['thoi trang', 'phoi do', 'local brand', 'vintage', 'sneaker', 'fashion', 'style', 'outfit']
+      },
+      'NÔNG NGHIỆP CÔNG NGHỆ CAO': {
+        hint: 'nông nghiệp, trồng trọt, thủy canh, nuôi tôm, cây cảnh, công nghệ nông nghiệp',
+        rules: ['nong nghiep', 'trong rau', 'thuy canh', 'nuoi tom', 'sau rieng', 'hoa lan', 'cay canh', 'agriculture']
+      },
+      'REVIEW SẢN PHẨM & UNBOXING': {
+        hint: 'review sản phẩm, unboxing, đồ công nghệ, đồ gia dụng, mỹ phẩm, Shopee, phụ kiện',
+        rules: ['review', 'unboxing', 'shopee', 'san pham', 'my pham', 'do cong nghe', 'ban phim', 'smartwatch', 'do gia dung'],
+        banned: ['bolero', 'nhac bolero', 'nhac', 'music', 'karaoke', 'cover', 'lck', 'lien minh', 'hybe', 'son tung']
+      },
+      'NHẠC & COVER': {
+        hint: 'nhạc, cover, bolero, lofi, karaoke, remix, acoustic, bài hát',
+        rules: ['nhac', 'cover', 'lofi', 'karaoke', 'beat', 'remix', 'acoustic', 'music', 'song', 'bolero']
+      },
+      'BẤT ĐỘNG SẢN & NHÀ CỬA': {
+        hint: 'bất động sản, nhà đất, căn hộ, nội thất, phong thủy nhà, thiết kế nhà',
+        rules: ['bat dong san', 'nha cua', 'can ho', 'nha pho', 'noi that', 'phong thuy nha', 'real estate', 'home']
+      },
+      'CÂU CHUYỆN KHỞI NGHIỆP': {
+        hint: 'khởi nghiệp, kinh doanh, startup, bán hàng, marketing, quản trị, kiếm tiền',
+        rules: ['khoi nghiep', 'kinh doanh', 'startup', 'ban hang', 'marketing 0 dong', 'quan cafe', 'business']
+      },
+      'CHUYỆN LẠ BỐN PHƯƠNG': {
+        hint: 'chuyện lạ, hiện tượng kỳ lạ, khám phá độc lạ, kỷ lục, sinh vật lạ',
+        rules: ['chuyen la', 'ky la', 'guinness', 'sinh vat bien', 'hien tuong', 'doc la', 'strange', 'weird']
+      },
+      'ASMR & MUKBANG': {
+        hint: 'ASMR, mukbang, ăn uống, âm thanh thư giãn, ăn cay, hải sản',
+        rules: ['asmr', 'mukbang', 'an uong', 'go phim', 'thu gian', 'hai san', 'do an cay']
+      },
+      'XÂY DỰNG & KIẾN TRÚC': {
+        hint: 'xây dựng, kiến trúc, thi công, chống thấm, máy xúc, thiết kế công trình',
+        rules: ['xay dung', 'kien truc', 'thi cong', 'chong tham', 'xi mang', 'may xuc', 'construction', 'architecture']
+      },
+      'MARKETING & TRUYỀN THÔNG': {
+        hint: 'marketing, affiliate, SEO, quảng cáo, content, truyền thông, case study',
+        rules: ['marketing', 'affiliate', 'seo', 'facebook ads', 'content', 'truyen thong', 'case study']
+      },
+      'TRỊ LIỆU ÂM THANH': {
+        hint: 'âm thanh chữa lành, 432hz, tiếng mưa, white noise, nhạc thiền, sleep music',
+        rules: ['am thanh', '432hz', 'tieng mua', 'song bien', 'nhac thien', 'white noise', 'sleep music', 'healing']
+      },
+      'ĐAN LEN & THÊU THÙA': {
+        hint: 'đan len, móc len, crochet, thêu, kim móc, đồ handmade len',
+        rules: ['dan len', 'moc len', 'crochet', 'theu', 'kim moc', 'tui xach len', 'knitting']
+      },
+      'TÀI CHÍNH & ĐẦU TƯ': {
+        hint: 'tài chính, đầu tư, chứng khoán, crypto, tiết kiệm tiền, kiếm tiền online, thẻ tín dụng',
+        rules: ['tai chinh', 'dau tu', 'chung khoan', 'crypto', 'tiet kiem tien', 'the tin dung', 'kiem tien online', 'finance', 'investment'],
+        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'nau an']
+      }
+    };
+
+    const GLOBAL_BLOCK_BY_CATEGORY = (category: string) => {
+      const blocks = [
+        'bac gau', 'bac gau vlog', 'wag bac gau', 'bac gau reaction',
+        'hybe', 'hybe labels', 'free fire', 'tik tok free fire', 'tiktok free fire',
+        'lck live', 'lck', 'lmht', 'league of legends', 'lien minh huyen thoai',
+        'roblox', 'minecraft', 'pubg', 'valorant', 'genshin',
+        'son tung', 'mtp', 'drama showbiz'
+      ];
+      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover', 'nhac remix', 'music video');
+      if (category !== 'ESPORTS & GAMING') blocks.push('game', 'gaming', 'esports', 'lien minh', 'lien quan');
+      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('reaction', 'prank drama');
+      if (category !== 'ẨM THỰC & NẤU ĂN') blocks.push('mukbang');
+      return blocks;
+    };
+
+    const isRelevantForCategory = (category: string, keyword: string, strict = false) => {
+      const cleaned = normalizeText(cleanKeyword(keyword));
+      if (!cleaned) return false;
+
+      const profile = CATEGORY_PROFILES[category];
+      const banned = [...(profile?.banned || []), ...GLOBAL_BLOCK_BY_CATEGORY(category)].map(normalizeText);
+
+      // Chặn cứng key lệch chủ đề. Đây là lớp lọc cuối cùng cho cả YouTube V3 và Gemini.
+      if (banned.some(bad => cleaned === bad || cleaned.includes(bad) || bad.includes(cleaned))) return false;
+
+      const rules = (profile?.rules || []).map(normalizeText);
+      const matchedRule = rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
+
+      // Khi dữ liệu đến từ YouTube/Gemini phải khớp domain chủ đề, không còn kiểu lấy trend chung rồi nhét vào mọi mục.
+      if (strict) return matchedRule;
+
+      return true;
+    };
+
+    const uniqueLimit = (items: string[], limit = 5, category?: string, strict = false) => {
+      const seen = new Set<string>();
+      const output: string[] = [];
+
+      for (const raw of items) {
+        const cleaned = cleanKeyword(raw);
+        if (!cleaned || cleaned.length < 3 || cleaned.length > 42) continue;
+        if (category && !isRelevantForCategory(category, cleaned, strict)) continue;
+
+        const key = normalizeText(cleaned);
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        output.push(cleaned);
+        if (output.length >= limit) break;
       }
 
-      setSuggestedNiches(newNiches);
-      alert("Đã cập nhật danh sách ngách từ dữ liệu API YouTube thành công!");
-    } catch(e) {
-      console.error(e);
-      alert("Không thể tải trending từ YouTube lúc này. Vui lòng kiểm tra API Key.");
+      return output;
+    };
+
+    const pickCandidateWords = (video: any) => {
+      const title = video?.snippet?.title || '';
+      const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
+      const description = video?.snippet?.description || '';
+      const candidates: string[] = [];
+
+      tags.forEach((tag: string) => {
+        const cleaned = cleanKeyword(tag);
+        if (cleaned && cleaned.length >= 3 && cleaned.length <= 42) candidates.push(cleaned);
+      });
+
+      const phrases = `${title} ${description}`
+        .split(/[|,.;:!?()\[\]{}"“”'’\n\r\t]+/g)
+        .map(cleanKeyword)
+        .filter(Boolean);
+
+      phrases.forEach((phrase) => {
+        if (phrase.length >= 4 && phrase.length <= 42) candidates.push(phrase);
+      });
+
+      return candidates;
+    };
+
+    const TARGETED_QUERY_BY_CATEGORY: Record<string, string> = {
+      'ẨM THỰC & NẤU ĂN': trendingRegion === 'VN'
+        ? 'ẩm thực nấu ăn món ngon công thức hot trend'
+        : trendingRegion === ''
+          ? 'food cooking recipe trending OR món ngon'
+          : `food cooking recipe trending ${regionMeta.searchHint}`,
+      'TÀI CHÍNH & ĐẦU TƯ': trendingRegion === 'VN'
+        ? 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
+        : trendingRegion === ''
+          ? 'finance investing stocks crypto trending OR tài chính đầu tư'
+          : `finance investing stocks crypto money trend ${regionMeta.searchHint}`
+    };
+
+    try {
+      // Luôn bắt đầu từ danh sách gốc để loại bỏ key sai đã lưu trước đó.
+      const sourceNiches = SUGGESTED_NICHES.map((base) => ({
+        ...base,
+        items: uniqueLimit(base.items, 5, base.category, false)
+      }));
+
+      const categoryKeywordMap: Record<string, string[]> = {};
+      sourceNiches.forEach((niche) => {
+        categoryKeywordMap[niche.category] = [];
+      });
+
+      // Tiết kiệm quota: 1 lượt videos.list chart=mostPopular = 1 quota, dùng làm nguồn trend chung.
+      const popularRes = await youtubeFetch('videos', {
+        part: 'snippet,statistics',
+        chart: 'mostPopular',
+        regionCode: trendingRegion || undefined,
+        maxResults: 50
+      });
+
+      const popularVideos = Array.isArray(popularRes?.items) ? popularRes.items : [];
+
+      popularVideos.forEach((video: any) => {
+        const haystack = normalizeText([
+          video?.snippet?.title || '',
+          video?.snippet?.description || '',
+          ...(Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [])
+        ].join(' '));
+
+        sourceNiches.forEach((niche) => {
+          const profile = CATEGORY_PROFILES[niche.category];
+          const matched = (profile?.rules || []).some((rule) => haystack.includes(normalizeText(rule)));
+
+          if (matched) {
+            categoryKeywordMap[niche.category].push(...pickCandidateWords(video));
+          }
+        });
+      });
+
+      // Sửa riêng 2 mục hay thiếu dữ liệu: 2 lượt search = khoảng 200 quota, tổng vẫn dưới 500.
+      for (const [category, query] of Object.entries(TARGETED_QUERY_BY_CATEGORY)) {
+        try {
+          const searchRes = await youtubeFetch('search', {
+            part: 'snippet',
+            q: query,
+            type: 'video',
+            regionCode: trendingRegion || undefined,
+            order: 'viewCount',
+            publishedAfter: getPublishedAfterDate('month'),
+            maxResults: 5
+          });
+
+          const ids = (searchRes?.items || [])
+            .map((item: any) => item?.id?.videoId)
+            .filter(Boolean);
+
+          if (ids.length > 0) {
+            const detailRes = await youtubeFetch('videos', {
+              part: 'snippet,statistics',
+              id: ids.join(',')
+            });
+
+            (detailRes?.items || []).forEach((video: any) => {
+              categoryKeywordMap[category].push(...pickCandidateWords(video));
+            });
+          }
+        } catch (error) {
+          console.warn(`Không lấy được dữ liệu YouTube riêng cho ${category}:`, error);
+        }
+      }
+
+      const youtubeKeywordMap: Record<string, string[]> = {};
+      sourceNiches.forEach((niche) => {
+        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, true);
+      });
+
+      const categoriesNeedGemini = sourceNiches.map((niche) => ({
+        category: niche.category,
+        description: CATEGORY_PROFILES[niche.category]?.hint || niche.category,
+        youtubeKeys: youtubeKeywordMap[niche.category]
+      }));
+
+      let geminiKeywordMap: Record<string, string[]> = {};
+
+      if (geminiApiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+          const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+          const prompt = `
+Bạn là chuyên gia nghiên cứu trend YouTube tại ${regionLabel}.
+Hãy tạo đúng 5 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
+
+Yêu cầu bắt buộc:
+- Trả về JSON thuần, không markdown, không giải thích.
+- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3","key 4","key 5"]}.
+- Từ khóa phải ĐÚNG 100% với chủ đề và mô tả của chủ đề đó.
+- NGÔN NGỮ BẮT BUỘC: ${regionMeta.prompt}
+- Không đưa nhạc/bolero vào REVIEW SẢN PHẨM & UNBOXING.
+- Không đưa game/LCK/nhạc/bolero/reaction vào ẨM THỰC & NẤU ĂN hoặc TÀI CHÍNH & ĐẦU TƯ.
+- Không lặp lại các key YouTube đã có.
+- Mỗi lần tạo phải khác nhau, sắp xếp từ hot cao xuống thấp.
+- Mỗi key tối đa 6 từ, đúng ngôn ngữ khu vực đã chọn.
+- Random seed: ${randomSeed}
+
+Dữ liệu chủ đề:
+${JSON.stringify(categoriesNeedGemini, null, 2)}
+`;
+
+          const response = await ai.models.generateContent({
+            model: geminiModel,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          });
+
+          const rawText = response.text || '';
+          const jsonText = rawText
+            .replace(/```json/gi, '')
+            .replace(/```/g, '')
+            .trim();
+
+          const firstBrace = jsonText.indexOf('{');
+          const lastBrace = jsonText.lastIndexOf('}');
+          const safeJson = firstBrace >= 0 && lastBrace > firstBrace
+            ? jsonText.slice(firstBrace, lastBrace + 1)
+            : jsonText;
+
+          const parsed = JSON.parse(safeJson);
+
+          sourceNiches.forEach((niche) => {
+            geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
+              ? uniqueLimit(parsed[niche.category], 5, niche.category, false)
+              : [];
+          });
+        } catch (error) {
+          console.warn('Gemini tạo trend bị lỗi, dùng dữ liệu dự phòng:', error);
+        }
+      }
+
+      const updatedNiches = sourceNiches.map((niche) => {
+        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
+        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, false);
+        const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
+
+        const finalKeys = uniqueLimit([
+          ...youtubeKeys.slice(0, 2),
+          ...aiKeys.slice(0, 5),
+          ...fallbackKeys
+        ], 5, niche.category, false);
+
+        return {
+          ...niche,
+          items: finalKeys
+        };
+      });
+
+      setSuggestedNiches(updatedNiches);
+      localStorage.setItem(trendingStorageKey, JSON.stringify(updatedNiches));
+
+      setStatus('Đã cập nhật Trending thành công.');
+      alert('Đã cập nhật Trending thành công.');
+    } catch (error: any) {
+      console.error(error);
+      setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
+      alert('Không thể cập nhật Trending. Vui lòng kiểm tra YouTube API Key / Gemini API Key.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
   };
 
-  const runNicheResearch = async (customKeyword?: string) => {
+    const runNicheResearch = async (customKeyword?: string) => {
     const kw = customKeyword || nicheInput;
     if (!kw.trim()) {
       alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
@@ -2356,53 +2743,6 @@ ${topKeywordsStr}`;
           </h1>
 
           <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-            {user && (
-              <div className="hidden xl:flex items-center gap-2 min-w-0">
-                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Tài khoản</div>
-                  <div className={`text-[10px] font-black uppercase leading-tight whitespace-nowrap ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : isPremiumAccount
-                        ? 'Đã nâng cấp PRO'
-                        : subscriptionInfo?.active
-                          ? 'Dùng thử 1 giờ'
-                          : 'Hết hạn'}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Gói</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight max-w-[115px] truncate">
-                    {subscriptionLoading && !subscriptionInfo
-                      ? 'Đang kiểm tra'
-                      : subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Ngày đăng ký</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}
-                  </div>
-                </div>
-
-                <div className="px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
-                  <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Hạn sử dụng</div>
-                  <div className="text-[10px] font-black text-slate-800 leading-tight whitespace-nowrap">
-                    {formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-
-                <div className={`px-2.5 py-1 rounded-xl border shadow-sm ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className={`text-[8px] font-black uppercase leading-none ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-                  <div className={`text-[10px] font-black leading-tight whitespace-nowrap ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {user ? (
               <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
                 <img
@@ -2480,67 +2820,107 @@ ${topKeywordsStr}`;
             </button>
           </div>
         </div>
-
-        {user && (
-          <div className="xl:hidden mt-2 grid grid-cols-2 md:grid-cols-5 gap-2">
-            <div className={`px-2 py-1.5 rounded-xl border ${isPremiumAccount ? 'bg-blue-50 border-blue-200' : subscriptionInfo?.active ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-              <div className="text-[8px] font-black text-slate-400 uppercase">Tài khoản</div>
-              <div className={`text-[10px] font-black uppercase truncate ${isPremiumAccount ? 'text-blue-700' : subscriptionInfo?.active ? 'text-amber-700' : 'text-red-700'}`}>
-                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : isPremiumAccount ? 'Đã nâng cấp PRO' : subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Hết hạn'}
-              </div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Gói</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">
-                {subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói')}
-              </div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Ngày đăng ký</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
-            </div>
-
-            <div className="px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-[8px] font-black text-slate-400 uppercase">Hạn sử dụng</div>
-              <div className="text-[10px] font-black text-slate-800 truncate">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
-            </div>
-
-            <div className={`px-2 py-1.5 rounded-xl border ${subscriptionInfo?.active ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-              <div className={`text-[8px] font-black uppercase ${subscriptionInfo?.active ? 'text-emerald-600' : 'text-red-600'}`}>Còn lại</div>
-              <div className={`text-[10px] font-black truncate ${subscriptionInfo?.active ? 'text-emerald-700' : 'text-red-700'}`}>
-                {subscriptionLoading && !subscriptionInfo ? 'Đang kiểm tra' : getRemainingText(subscriptionInfo?.expiresAt)}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Main Container */}
       <div className="p-4 pt-2">
         {!user ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <LogIn size={40} className="text-blue-600" />
+          <div className="relative min-h-[calc(100vh-92px)] overflow-hidden rounded-xl bg-blue-50/80">
+            {/* Nền preview giao diện chính khi chưa đăng nhập */}
+            <div className="absolute inset-0 p-4 pt-2 blur-[2.5px] opacity-55 pointer-events-none select-none">
+              <div className="flex justify-center gap-1 mb-0 relative z-10">
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#3498db] text-white border-t border-x border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)] font-bold flex items-center gap-2">
+                  <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <BarChart2 size={16} /> Phân tích đối thủ (Spy)
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <Video size={16} /> Kiểm tra Link Video
+                </div>
+                <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
+                  <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
+                </div>
+              </div>
+
+              <div className="bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
+                <div className="grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                  <div className="col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: quân sự</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Việt Nam <span>▼</span></div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
+                    </div>
+                    <div className="space-y-2 border-l border-[#ccc] pl-4">
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Quét tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
+                    </div>
+                    <div className="space-y-2 border-l border-[#ccc] pl-4">
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Views:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
+                    </div>
+                  </div>
+
+                  <div className="col-span-12 lg:col-span-3 flex items-start justify-end">
+                    <div className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm w-[500px] h-[110px]">
+                      <div className="flex items-center justify-between mb-2"><span className="text-[10px] font-black text-gray-400 uppercase">Hệ thống API</span><div className="flex gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400"></span><span className="w-2 h-2 rounded-full bg-indigo-500"></span></div></div>
+                      <div className="text-[11px] font-bold text-gray-700 flex justify-between"><span>YouTube V3:</span><span className="text-blue-600">0 Keys</span></div>
+                      <div className="text-[11px] font-bold text-gray-700 flex justify-between"><span>Gemini AI:</span><span className="text-green-600">Sẵn sàng</span></div>
+                      <div className="mt-2 h-7 bg-blue-600 rounded-lg text-white text-[10px] font-black flex items-center justify-center">CÀI ĐẶT</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm mt-4">
+                  <div className="font-bold text-[12px] text-[#d35400]">☑ Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</div>
+                  <div className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_0_#a04a00]">▶ BẮT ĐẦU SĂN KÊNH</div>
+                </div>
+
+                <div className="mt-4 bg-white border border-[#999] shadow-sm min-h-[450px] overflow-hidden">
+                  <div className="bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px]">
+                    <span>⊙ DANH SÁCH KÊNH QUÉT ĐƯỢC (TỰ ĐỘNG LỌC THEO ĐIỀU KIỆN)</span>
+                    <span className="flex gap-2"><span className="bg-[#2ecc71] px-3 py-1 rounded">Tải TXT</span><span className="bg-[#3498db] px-3 py-1 rounded">THEO DÕI TẤT CẢ</span><span className="bg-[#e74c3c] px-3 py-1 rounded">XÓA TẤT CẢ</span></span>
+                  </div>
+                  <div className="bg-[#ecf0f1] border-b border-[#bdc3c7] grid grid-cols-12 text-[11px] font-bold text-black">
+                    {['STT','ICON','TÊN KÊNH','MÃ KÊNH','URL','QG','NGÀY TẠO','TUỔI KÊNH','SUB','VIEWS','VIDEOS','ĐIỂM'].map((h, i) => (
+                      <div key={i} className="px-2 py-2 border-r border-[#ddd] text-center">{h}</div>
+                    ))}
+                  </div>
+                  <div className="text-center py-28 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm “Bắt đầu săn kênh” để bắt đầu...</div>
+                </div>
+              </div>
             </div>
-            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đăng nhập để sử dụng</h2>
-            <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
-              Vui lòng đăng nhập bằng tài khoản Google của bạn để truy cập tất cả các tính năng phân tích và tìm kiếm ngách trên YouTube.
-            </p>
-            <button 
-              onClick={async () => {
-                try {
-                  await loginWithGoogle();
-                } catch (e: any) {
-                  alert('Lỗi đăng nhập: ' + e.message);
-                }
-              }}
-              className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
-            >
-              <LogIn size={20} />
-              <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
-            </button>
+
+            {/* Lớp phủ đăng nhập */}
+            <div className="absolute inset-0 z-[60] flex items-start justify-center pt-24 bg-blue-50/45 backdrop-blur-[1px]">
+              <div className="bg-white rounded-2xl shadow-2xl border border-blue-100 p-12 text-center max-w-2xl w-full mx-4">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <LogIn size={40} className="text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Đăng nhập để sử dụng</h2>
+                <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
+                  Vui lòng đăng nhập bằng tài khoản Google của bạn để truy cập tất cả các tính năng phân tích và tìm kiếm ngách trên YouTube.
+                </p>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await loginWithGoogle();
+                    } catch (e: any) {
+                      alert('Lỗi đăng nhập: ' + e.message);
+                    }
+                  }}
+                  className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+                >
+                  <LogIn size={20} />
+                  <span>ĐĂNG NHẬP BẰNG GOOGLE</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : subscriptionLoading && !subscriptionInfo ? (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-12 text-center max-w-2xl mx-auto mt-20">
@@ -5266,10 +5646,10 @@ ${topKeywordsStr}`;
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{category.items.length} KEY</span>
+                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.map((item, itemIdx) => (
+                        {category.items.slice(0, 5).map((item, itemIdx) => (
                           <button
                             key={itemIdx}
                             onClick={() => {
