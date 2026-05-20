@@ -387,26 +387,55 @@ export default function App() {
       <style>
         #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
         #vtw-account-status-root-20260519 .vtw-float-btn {
-          position: fixed !important; top: 12px !important; right: 420px !important; bottom: auto !important; z-index: 2147483646 !important;
-          border: 2px solid #bfdbfe !important; border-radius: 999px !important; padding: 8px 14px !important;
+          position: absolute !important;
+          top: 11px !important;
+          right: 455px !important;
+          left: auto !important;
+          bottom: auto !important;
+          z-index: 2147483646 !important;
+          height: 30px !important;
+          max-width: 250px !important;
+          border: 2px solid #bfdbfe !important;
+          border-radius: 999px !important;
+          padding: 6px 13px !important;
           background: ${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important;
-          color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase !important;
-          box-shadow: 0 8px 24px rgba(37,99,235,.22) !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important;
+          color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important;
+          font-weight: 900 !important;
+          font-size: 11px !important;
+          text-transform: uppercase !important;
+          box-shadow: 0 6px 16px rgba(37,99,235,.18) !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+          pointer-events: auto !important;
+        }
+        @media (max-width: 1500px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn { right: 380px !important; }
         }
         @media (max-width: 1300px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn { right: 280px !important; font-size: 11px !important; padding: 7px 11px !important; }
+          #vtw-account-status-root-20260519 .vtw-float-btn { right: 260px !important; font-size: 10px !important; padding: 6px 10px !important; max-width: 210px !important; }
+        }
+        @media (min-width: 901px) {
+          #vtw-account-status-root-20260519 .vtw-float-btn {
+            transform: none !important;
+          }
         }
         @media (max-width: 900px) {
           #vtw-account-status-root-20260519 .vtw-float-btn {
+            position: fixed !important;
             right: 12px !important;
             left: auto !important;
             top: auto !important;
             bottom: 14px !important;
-            min-width: 132px !important;
+            min-width: 118px !important;
             max-width: calc(100vw - 24px) !important;
-            height: 42px !important;
-            padding: 9px 13px !important;
-            font-size: 11px !important;
+            height: 38px !important;
+            padding: 8px 12px !important;
+            font-size: 10px !important;
             z-index: 2147483646 !important;
           }
         }
