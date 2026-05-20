@@ -357,6 +357,12 @@ export default function App() {
       document.body.appendChild(root);
     }
 
+    // STEP_10: Khi đăng xuất thì ẩn hoàn toàn chip trạng thái/PRO để không hiện dòng "CHƯA ĐĂNG NHẬP".
+    if (!user) {
+      root.innerHTML = '';
+      return;
+    }
+
     const accountLabel = !user
       ? 'CHƯA ĐĂNG NHẬP'
       : subscriptionLoading && !subscriptionInfo
@@ -2753,7 +2759,8 @@ ${topKeywordsStr}`;
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche Pro</span>
           </h1>
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">

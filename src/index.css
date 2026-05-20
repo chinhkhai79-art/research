@@ -2375,3 +2375,60 @@
     display: inline !important;
   }
 }
+
+/* STEP_10_20260520: Ẩn chip account khi đăng xuất + tiêu đề mobile ngắn gọn. */
+#vtw-account-status-root-20260519:empty {
+  display: none !important;
+}
+
+.vtw-title-mobile {
+  display: none !important;
+}
+
+.vtw-title-full {
+  display: inline-block !important;
+}
+
+@media (max-width: 900px) {
+  .vtw-title-full {
+    display: none !important;
+  }
+
+  .vtw-title-mobile {
+    display: inline-block !important;
+    max-width: calc(100vw - 185px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
+    line-height: 24px !important;
+    font-weight: 900 !important;
+  }
+
+  .vtw-app-title {
+    max-width: calc(100vw - 150px) !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .vtw-app-title span.vtw-title-mobile {
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .vtw-title-mobile {
+    max-width: 128px !important;
+    font-size: 11px !important;
+  }
+}
+
+@media (min-width: 901px) {
+  .vtw-title-mobile {
+    display: none !important;
+  }
+
+  .vtw-title-full {
+    display: inline-block !important;
+  }
+}
