@@ -4512,3 +4512,80 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* STEP_40_SEARCH_SINGLE_FRAME_20260521
+   Fix lỗi ô tìm nhanh Tracking bị 2 khung: chỉ giữ 1 khung input sạch. */
+.vtw-tracking-search-box {
+  position: relative !important;
+  width: 320px !important;
+  min-width: 260px !important;
+  max-width: 100% !important;
+  height: 46px !important;
+  margin-left: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.vtw-tracking-search-input {
+  width: 100% !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  padding: 0 42px 0 46px !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.10) !important;
+  outline: none !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: #334155 !important;
+  line-height: 46px !important;
+}
+
+.vtw-tracking-search-input:focus {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16), 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+}
+
+.vtw-tracking-search-input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+.vtw-tracking-search-icon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+}
+
+.vtw-tracking-search-clear {
+  position: absolute !important;
+  right: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 3 !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-tracking-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}

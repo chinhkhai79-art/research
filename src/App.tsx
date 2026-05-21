@@ -3945,20 +3945,22 @@ ${topKeywordsStr}`;
                     </span>
                   </div>
                   
-                  {/* Search box for tracking list */}
-                  <div className="vtw-tracking-search-box ml-2 flex items-center bg-white border border-blue-200 rounded h-10 px-3 min-w-[250px] shadow-sm">
-                    <Search size={14} className="text-blue-400 mr-2" />
+                  {/* Search box for tracking list - one clean frame only */}
+                  <div className="vtw-tracking-search-box ml-2 relative min-w-[250px]">
+                    <Search size={16} className="vtw-tracking-search-icon text-blue-400" />
                     <input 
                       type="text"
                       placeholder="Tìm nhanh tên kênh..."
-                      className="bg-transparent text-[12px] font-bold outline-none w-full text-gray-700"
+                      className="vtw-tracking-search-input w-full text-gray-700"
                       value={trackingSearchTerm}
                       onChange={(e) => setTrackingSearchTerm(e.target.value)}
                     />
                     {trackingSearchTerm && (
                       <button 
+                        type="button"
                         onClick={() => setTrackingSearchTerm('')}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="vtw-tracking-search-clear text-gray-400 hover:text-gray-600"
+                        aria-label="Xóa tìm kiếm"
                       >
                         <X size={14} />
                       </button>
