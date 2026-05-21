@@ -24,7 +24,7 @@
 <body>
 <div id="toast"></div>
 <div class="wrap">
-  <div class="top"><div><h1>⚙️ Cấu hình thanh toán & SMTP</h1><div class="sub">Quản lý SePay, thông tin ngân hàng, webhook và email tự động sau thanh toán thành công.</div></div><span class="pill">/admin-settings.html</span></div>
+  <div class="top"><div><h1>⚙️ Cấu hình thanh toán & SMTP</h1><div class="sub">Quản lý SePay, thông tin ngân hàng, webhook và email tự động sau thanh toán thành công. Các ô sẽ tự lưu sau khi chỉnh.</div></div><span class="pill">/admin-settings.html</span></div>
   <div class="warn">Bảo mật: không dán Webhook Secret và App Password Gmail vào code công khai. Trang này lưu cấu hình vào Firestore qua API serverless. Nhớ đặt biến <b>ADMIN_SETTINGS_PASSWORD</b> trong Vercel.</div>
 
   <div class="login">
@@ -43,7 +43,7 @@
         <div class="body">
           <p class="section-note">Cấu hình tài khoản nhận tiền, tiền tố mã đơn và các gói Pro. Khi SePay báo giao dịch thành công, webhook sẽ nâng cấp Pro và cộng dồn hạn dùng.</p>
           <div class="grid">
-            <div class="full"><label>API Key / Webhook Secret SePay</label><div class="row-pass"><input id="sepayWebhookSecret" type="password" autocomplete="new-password" placeholder="Để trống nếu không đổi secret đã lưu"><button class="eye" type="button" data-eye="sepayWebhookSecret">👁</button></div><div class="hint">Vào SePay → Tích hợp Webhook → Bảo mật → API Key → nhập key tùy ý → copy vào đây.</div><div class="example">Ví dụ: sep_live_xxxxxxxxx hoặc chuỗi bí mật tự đặt trong SePay</div></div>
+            <div class="full"><label>API Key / Webhook Secret SePay</label><input id="sepayWebhookSecret" type="text" autocomplete="off" placeholder="Webhook Secret SePay đã lưu sẽ luôn hiện ở đây"><div class="hint">Ô này luôn hiển thị và tự lưu. Vào SePay → Tích hợp Webhook → Bảo mật → API Key → nhập key tùy ý → copy vào đây.</div><div class="example">Ví dụ: sep_live_xxxxxxxxx hoặc chuỗi bí mật tự đặt trong SePay</div></div>
             <div><label>Tên chủ tài khoản</label><input id="bankOwner" placeholder="Ví dụ: LE VAN KHAI"></div><div><label>Tên ngân hàng</label><input id="bankName" placeholder="Ví dụ: ACB"></div>
             <div><label>Số tài khoản</label><input id="bankAccount" placeholder="Ví dụ: 13131447"></div><div><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH"><div class="hint">Mã thanh toán sẽ dạng: RESEARCH + số.</div></div>
             <div class="full"><label>Webhook URL copy vào SePay</label><div class="copy-field"><input id="webhookUrl" readonly><button class="ghost" type="button" onclick="copyWebhookUrl()">Copy</button></div><div class="hint">Dán URL này vào SePay để nhận thông báo giao dịch tự động.</div></div>
@@ -92,6 +92,8 @@
 const $ = (id) => document.getElementById(id);
 const origin = window.location.origin;
 let toastTimer = null;
+let autoSaveTimer = null;
+let isLoadingSettings = false;
 
 function toast(msg, type='ok') {
   const el = $('toast');
@@ -108,8 +110,8 @@ function inline(msg, type='ok') {
 }
 function setBusy(id, busy, text) {
   const b = $(id); if (!b) return;
-  if (busy) { b.dataset.old = b.innerHTML; b.disabled = true; b.innerHTML = '⏳ ' + text; }
-  else { b.disabled = false; if (b.dataset.old) b.innerHTML = b.dataset.old; }
+  if (busy) { if (!b.dataset.old) b.dataset.old = b.innerHTML; b.disabled = true; b.classList.add('is-busy'); b.innerHTML = '⏳ ' + text; }
+  else { b.disabled = false; b.classList.remove('is-busy'); if (b.dataset.old) { b.innerHTML = b.dataset.old; delete b.dataset.old; } }
 }
 function password() {
   const p = $('adminPassword').value.trim();
@@ -161,9 +163,8 @@ async function saveSettings(mode='all', silent=false) {
   try {
     const payload = buildPayload();
     await api('/api/admin-settings', { method:'POST', body: JSON.stringify(payload) });
-    $('sepayWebhookSecret').value = '';
-    $('smtpPass').value = '';
     if (!silent) { inline('Đã lưu cấu hình thành công.'); toast('Đã lưu cấu hình thành công.'); }
+    else { inline('Đã tự lưu cấu hình.', 'info'); }
     return true;
   } catch(e) {
     inline(e.message, 'err'); toast(e.message, 'err');
@@ -174,9 +175,11 @@ async function saveSettings(mode='all', silent=false) {
 }
 async function loadSettings() {
   setBusy('btnLoad', true, 'Đang tải');
+  isLoadingSettings = true;
   try {
     const data = await api('/api/admin-settings?password=' + encodeURIComponent(password()));
     const s = data.settings || {}, sepay = s.sepay || {}, smtp = s.smtp || {};
+    $('sepayWebhookSecret').value = sepay.webhookSecret || s.payment?.webhookSecret || '';
     $('bankOwner').value = sepay.bankOwner || sepay.accountName || '';
     $('bankName').value = sepay.bankName || sepay.bankId || 'ACB';
     $('bankAccount').value = sepay.bankAccount || sepay.accountNo || '';
@@ -190,6 +193,7 @@ async function loadSettings() {
       {id:'12m',name:'GÓI 1 NĂM',amount:500000,days:365}
     ], null, 2);
     $('smtpUser').value = smtp.user || '';
+    $('smtpPass').value = smtp.pass || '';
     $('smtpHost').value = smtp.host || 'smtp.gmail.com';
     $('smtpPort').value = smtp.port || 465;
     $('smtpSecure').value = smtp.secure === false ? 'tls' : 'ssl';
@@ -197,7 +201,7 @@ async function loadSettings() {
     $('emailBaseUrl').value = smtp.baseUrl || origin;
     inline('Đã tải cấu hình.'); toast('Đã tải cấu hình.');
   } catch(e) { inline(e.message, 'err'); toast(e.message, 'err'); }
-  finally { setBusy('btnLoad', false); }
+  finally { setBusy('btnLoad', false); isLoadingSettings = false; }
 }
 async function testWebhook() {
   setBusy('btnWebhook', true, 'Đang kiểm tra');
@@ -226,6 +230,17 @@ async function sendTestEmail() {
   } catch(e) { toast(e.message, 'err'); inline(e.message, 'err'); }
   finally { setBusy('btnEmail', false); }
 }
+
+function scheduleAutoSave(mode='all') {
+  if (isLoadingSettings) return;
+  if (!password()) return;
+  clearTimeout(autoSaveTimer);
+  inline('Đang tự lưu...', 'info');
+  autoSaveTimer = setTimeout(async () => {
+    await saveSettings(mode, true);
+  }, 900);
+}
+
 function copyWebhookUrl() {
   const url = $('webhookUrl').value || (origin + '/api/sepay-webhook');
   navigator.clipboard.writeText(url);
@@ -236,6 +251,10 @@ function copyWebhookUrl() {
 $('webhookUrl').value = origin + '/api/sepay-webhook';
 $('webhookText').textContent = $('webhookUrl').value;
 $('adminPassword').value = localStorage.getItem('ADMIN_SETTINGS_PASSWORD_CACHE') || '';
+const sepayAutoFields = ['sepayWebhookSecret','bankOwner','bankName','bankAccount','paymentPrefix','webhookUrl','appBaseUrl','plansJson'];
+const smtpAutoFields = ['smtpUser','smtpPass','smtpHost','smtpPort','smtpSecure','smtpFromName','emailBaseUrl'];
+sepayAutoFields.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => scheduleAutoSave('sepay')); if (el && el.tagName === 'SELECT') el.addEventListener('change', () => scheduleAutoSave('sepay')); });
+smtpAutoFields.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => scheduleAutoSave('smtp')); if (el && el.tagName === 'SELECT') el.addEventListener('change', () => scheduleAutoSave('smtp')); });
 document.querySelectorAll('[data-eye]').forEach(btn => btn.addEventListener('click', () => { const el = $(btn.dataset.eye); el.type = el.type === 'password' ? 'text' : 'password'; }));
 $('settingsForm').addEventListener('submit', async (e) => { e.preventDefault(); await saveSettings('all'); });
 loadSettings();
