@@ -2,350 +2,267 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cấu hình thanh toán & SMTP - Văn Thế Web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cấu hình thanh toán & SMTP</title>
   <style>
-<<<<<<< HEAD
-    :root{--bg:#eef4ff;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#dbe5f3;--blue:#2563eb;--teal:#0f766e;--orange:#f97316;--red:#dc2626;--shadow:0 10px 30px rgba(15,23,42,.08)}
-    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#edf5ff,#f7faff);font-family:Arial,"Helvetica Neue",sans-serif;color:var(--text)}
-    .wrap{max-width:1360px;margin:0 auto;padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
-    h1{font-size:27px;margin:0;font-weight:900;letter-spacing:-.4px}.sub{color:var(--muted);font-size:13px;margin-top:4px}.pill{font-size:12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:7px 11px;border-radius:999px;font-weight:900;white-space:nowrap}
-    .warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:14px;font-size:13px;font-weight:700;line-height:1.45;margin-bottom:14px}
-    .login{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.login h2{margin:0 0 14px;font-size:18px;font-weight:900}.login-grid{display:grid;grid-template-columns:minmax(300px,1fr) auto;gap:14px;align-items:end}
-    .columns{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}.card h2{font-size:21px;margin:0;padding:16px 20px;border-bottom:1px solid var(--line);font-weight:900;display:flex;gap:10px;align-items:center;background:#fbfdff}.body{padding:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.full{grid-column:1/-1}
-    label{font-weight:900;font-size:13px;display:block;margin-bottom:7px;color:#111827} input,select,textarea{width:100%;border:1px solid #cfd9ea;border-radius:12px;padding:12px 13px;font-size:14px;background:#fff;outline:none;transition:.15s;font-family:Arial,"Helvetica Neue",sans-serif} textarea{font-family:Consolas,"Courier New",monospace;min-height:150px;resize:vertical;font-size:13px;line-height:1.45} input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
-    .row-pass{display:flex}.row-pass input{border-radius:12px 0 0 12px}.eye{width:54px;border:1px solid #cfd9ea;border-left:0;border-radius:0 12px 12px 0;background:#fff;cursor:pointer;font-size:16px}.hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4}.example{font-family:Consolas,monospace;background:#f8fafc;border:1px solid var(--line);padding:8px 10px;border-radius:10px;color:#334155;margin-top:7px;font-size:11px;overflow:auto;white-space:nowrap}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px} button,.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.15s;user-select:none} button:hover{filter:brightness(.98);transform:translateY(-1px)} button:active{transform:scale(.96);filter:brightness(.94)} button[disabled]{opacity:.65;cursor:not-allowed;transform:none}.primary{background:var(--teal);color:#fff}.blue{background:var(--blue);color:#fff}.orange{background:var(--orange);color:#fff}.ghost{background:#eef2ff;color:#1e40af;border:1px solid #bfdbfe}.danger{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
-    .help{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;line-height:1.55;margin-top:18px;box-shadow:var(--shadow)}.help h3{margin:0 0 8px;font-size:18px}.help ol{margin:8px 0 0 20px;padding:0}.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.small-box{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12px;color:#475569;line-height:1.45}.small-box b{color:#0f172a}
-    #toast{position:fixed;right:22px;top:22px;z-index:99999;display:none;max-width:430px;padding:14px 16px;border-radius:14px;font-size:14px;font-weight:900;box-shadow:0 20px 50px rgba(15,23,42,.22);border:1px solid transparent}.toast-ok{display:block!important;background:#ecfdf5;color:#047857;border-color:#86efac}.toast-err{display:block!important;background:#fef2f2;color:#b91c1c;border-color:#fecaca}.toast-info{display:block!important;background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
-    .inline-status{margin-top:12px;padding:11px 12px;border-radius:12px;font-size:13px;font-weight:900;display:none}.inline-ok{display:block;background:#ecfdf5;color:#047857;border:1px solid #86efac}.inline-err{display:block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.inline-info{display:block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}.section-note{font-size:12px;color:#64748b;margin:0 0 14px;line-height:1.45}.copy-field{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.sticky-save{position:sticky;bottom:0;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 20px;margin:18px -20px -20px;display:flex;gap:10px;justify-content:flex-end}
-    @media(max-width:980px){.columns,.grid,.login-grid{grid-template-columns:1fr}.wrap{padding:14px}h1{font-size:22px}.mini{grid-template-columns:1fr}.sticky-save{position:static}}
-  </style>
-</head>
-<body>
-<div id="toast"></div>
-<div class="wrap">
-  <div class="top"><div><h1>⚙️ Cấu hình thanh toán & SMTP</h1><div class="sub">Quản lý SePay, thông tin ngân hàng, webhook và email tự động sau thanh toán thành công. Các ô sẽ tự lưu sau khi chỉnh.</div></div><span class="pill">/admin-settings.html</span></div>
-  <div class="warn">Bảo mật: không dán Webhook Secret và App Password Gmail vào code công khai. Trang này lưu cấu hình vào Firestore qua API serverless. Nhớ đặt biến <b>ADMIN_SETTINGS_PASSWORD</b> trong Vercel.</div>
-
-  <div class="login">
-    <h2>🔐 Đăng nhập quản trị</h2>
-    <div class="login-grid">
-      <div><label>Mật khẩu quản trị</label><div class="row-pass"><input id="adminPassword" type="password" placeholder="Nhập ADMIN_SETTINGS_PASSWORD trên Vercel"><button class="eye" type="button" data-eye="adminPassword">👁</button></div><div class="hint">Trình duyệt chỉ giữ tạm bằng localStorage để tiện thao tác.</div></div>
-      <div class="actions" style="margin:0"><button id="btnLoad" class="blue" type="button" onclick="loadSettings()">Tải cấu hình</button><button class="ghost" type="button" onclick="copyWebhookUrl()">Copy Webhook URL</button></div>
-=======
-    :root{--bg:#f3f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--teal:#0f766e;--orange:#f97316}
+    :root {
+      --bg:#f3f7fb; --card:#fff; --line:#d8e1ee; --text:#0f172a; --muted:#64748b;
+      --blue:#2563eb; --orange:#f97316; --green:#059669; --red:#dc2626;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);font-family:Arial,"Helvetica Neue",sans-serif;color:var(--text)}
-    .wrap{max-width:1160px;margin:0 auto;padding:24px}
-    .top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
-    h1{font-size:28px;margin:0;font-weight:900}.sub{color:var(--muted);font-size:13px;margin-top:4px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 30px rgba(15,23,42,.06);overflow:hidden;margin-bottom:18px}
-    .card h2{font-size:22px;margin:0;padding:18px 22px;border-bottom:1px solid var(--line);font-weight:900;display:flex;gap:10px;align-items:center}
-    .body{padding:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.full{grid-column:1/-1}
-    label{font-weight:800;font-size:14px;display:block;margin-bottom:7px}
-    input,select,textarea{width:100%;border:1px solid #d7dde8;border-radius:12px;padding:13px 14px;font-size:15px;background:#fff;outline:none}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Helvetica Neue",sans-serif;font-size:14px;line-height:1.45}
+    .page{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    h1{font-size:28px;margin:0;font-weight:900;letter-spacing:-.02em}
+    .badge{display:inline-flex;align-items:center;gap:8px;background:#eaf2ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:8px 12px;font-weight:900;font-size:12px;text-decoration:none}
+    .notice{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:700;margin-bottom:16px}
+    .login,.grid-card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+    .head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);background:#fff}
+    .head h2{font-size:20px;margin:0;font-weight:900}
+    .body{padding:18px}
+    .login-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+    .field.full{grid-column:1/-1}
+    label{display:block;font-weight:900;margin-bottom:6px;font-size:13px}
+    .hint{color:var(--muted);font-size:12px;margin-top:5px}
+    input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:11px 12px;font-size:14px;outline:none;font-family:Arial,"Helvetica Neue",sans-serif}
     input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
-    textarea{min-height:90px;resize:vertical}.row-pass{display:flex}.row-pass input{border-radius:12px 0 0 12px}
-    .eye{width:58px;border:1px solid #d7dde8;border-left:0;border-radius:0 12px 12px 0;background:#fff;cursor:pointer;font-size:18px}
-    .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45}
-    .example{font-family:Consolas,monospace;background:#f8fafc;border:1px solid var(--line);padding:9px 10px;border-radius:10px;color:#334155;margin-top:6px;font-size:12px;overflow:auto}
-    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
-    button,.btn{border:0;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
-    .primary{background:var(--teal);color:#fff}.blue{background:var(--blue);color:#fff}.orange{background:var(--orange);color:#fff}.ghost{background:#eef2ff;color:#1e40af;border:1px solid #bfdbfe}
-    .status{margin-top:14px;padding:12px 14px;border-radius:12px;font-weight:800;display:none}.ok{display:block;background:#ecfdf5;color:#047857;border:1px solid #86efac}.err{display:block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
-    .warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:13px 14px;border-radius:14px;font-size:13px;font-weight:700;line-height:1.5;margin-bottom:18px}
-    .help{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;line-height:1.6}.help h3{margin:0 0 8px;font-size:18px}.help ol{margin:8px 0 0 20px;padding:0}
-    .pill{font-size:12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:6px 10px;border-radius:999px;font-weight:900}
-    @media(max-width:800px){.grid{grid-template-columns:1fr}.wrap{padding:14px}h1{font-size:22px}}
+    textarea{min-height:92px;resize:vertical;font-family:Consolas,"Courier New",monospace}
+    .secret-wrap{display:flex}.secret-wrap input{border-radius:10px 0 0 10px}.eye{width:48px;border:1px solid #cbd5e1;border-left:0;border-radius:0 10px 10px 0;background:#fff;cursor:pointer;font-weight:900}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    button,.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px}
+    .primary{background:var(--blue);color:#fff}.orange{background:var(--orange);color:#fff}.green{background:var(--green);color:#fff}.ghost{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}.gray{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+    button:active{transform:translateY(1px) scale(.99)} button[disabled]{opacity:.55;cursor:not-allowed}
+    .msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:800}.msg.ok{display:block;background:#ecfdf5;color:#047857;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.msg.warn{display:block;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+    .small-code{background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px;padding:9px 10px;font-family:Consolas,"Courier New",monospace;font-size:12px;overflow:auto;white-space:nowrap;margin-top:6px;color:#334155}
+    .help{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-top:16px}.help h3{margin:0 0 10px;font-size:18px}.help ol{margin:0;padding-left:20px}.help li{margin:5px 0}
+    .toast{position:fixed;right:18px;top:18px;z-index:99999;display:none;max-width:420px;padding:13px 16px;border-radius:14px;box-shadow:0 18px 50px rgba(15,23,42,.22);font-weight:900}.toast.show{display:block}.toast.ok{background:#ecfdf5;color:#047857;border:1px solid #86efac}.toast.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.toast.warn{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+    .copy-line{display:flex;gap:8px}.copy-line input{font-family:Consolas,"Courier New",monospace}.copy-line button{white-space:nowrap}
+    .muted{color:var(--muted);font-size:12px;font-weight:700}
+    @media(max-width:900px){.two-col,.form-grid,.login-row{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div id="toast" class="toast"></div>
+  <main class="page">
     <div class="top">
-      <div><h1>⚙️ Cấu hình thanh toán & SMTP</h1><div class="sub">Quản lý SePay, thông tin ngân hàng, webhook và email gửi thông báo thanh toán thành công.</div></div>
-      <span class="pill">/admin-settings.html</span>
->>>>>>> parent of ec7ddce (smtp)
+      <div>
+        <h1>⚙️ Cấu hình thanh toán & SMTP</h1>
+        <div class="muted">Quản lý SePay, thông tin ngân hàng, webhook và email thông báo thanh toán.</div>
+      </div>
+      <a class="badge" href="/admin-settings.html">/admin-settings.html</a>
     </div>
-    <div class="warn">Bảo mật: không dán Webhook Secret, App Password Gmail vào code công khai. Trang này lưu cấu hình vào Firestore qua serverless API. Đặt biến môi trường <b>ADMIN_SETTINGS_PASSWORD</b> trên Vercel để bảo vệ trang.</div>
 
-    <div class="card"><h2>🔐 Đăng nhập quản trị</h2><div class="body"><div class="grid">
-      <div><label>Mật khẩu quản trị</label><div class="row-pass"><input id="adminPassword" type="password" placeholder="Nhập ADMIN_SETTINGS_PASSWORD trên Vercel" /><button class="eye" type="button" data-eye="adminPassword">👁</button></div><div class="hint">Trình duyệt chỉ giữ tạm bằng localStorage để tiện thao tác.</div></div>
-      <div style="display:flex;align-items:end;gap:10px"><button class="blue" type="button" onclick="loadSettings()">Tải cấu hình</button><button class="ghost" type="button" onclick="copyWebhookUrl()">Copy Webhook URL</button></div>
-    </div><div id="topStatus" class="status"></div></div></div>
+    <div class="notice">Bảo mật: không dán Webhook Secret, App Password Gmail hoặc code công khai. Trang này lưu cấu hình vào Firestore qua serverless API. Đặt biến môi trường <b>ADMIN_SETTINGS_PASSWORD</b> trên Vercel để bảo vệ trang.</div>
 
-    <form id="settingsForm">
-      <div class="card"><h2>▣ SePay Thanh toán</h2><div class="body grid">
-        <div class="full"><label>API Key / Webhook Secret SePay</label><div class="row-pass"><input id="sepayWebhookSecret" type="password" autocomplete="new-password" placeholder="Để trống nếu không đổi secret đã lưu" /><button class="eye" type="button" data-eye="sepayWebhookSecret">👁</button></div><div class="hint">Vào SePay → Tích hợp Webhook → Bảo mật → chọn API Key → nhập key tùy ý → copy vào đây.</div><div class="example">Ví dụ: sep_live_xxxxxxxxx hoặc chuỗi bí mật anh tự đặt trong SePay</div></div>
-        <div><label>Tên chủ tài khoản</label><input id="bankOwner" placeholder="Ví dụ: LE VAN KHAI" /></div>
-        <div><label>Tên ngân hàng</label><input id="bankName" placeholder="Ví dụ: ACB" /></div>
-        <div><label>Số tài khoản</label><input id="bankAccount" placeholder="Ví dụ: 13131447" /></div>
-        <div><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH" /><div class="hint">Nội dung thanh toán sẽ có dạng: RESEARCH + mã đơn.</div></div>
-        <div><label>Webhook URL copy vào SePay</label><input id="webhookUrl" readonly /><div class="hint">Copy URL này dán vào SePay để nhận thông báo giao dịch tự động.</div></div>
-        <div><label>Base URL công cụ</label><input id="appBaseUrl" placeholder="https://research.vanthemmo.com" /></div>
-        <div class="full"><label>Gói Premium / Pro</label><textarea id="plansJson" spellcheck="false"></textarea><div class="hint">Dạng JSON. Có thể đổi giá và số ngày ở đây.</div><div class="example">Ví dụ: [{"id":"3m","name":"Gói 3 tháng","amount":180000,"days":90},{"id":"6m","name":"Gói 6 tháng","amount":300000,"days":180},{"id":"1y","name":"Gói 1 năm","amount":500000,"days":365}]</div></div>
-        <div class="full actions"><button class="ghost" type="button" onclick="testWebhook()">Kiểm tra webhook</button></div>
-      </div></div>
+    <section class="login">
+      <div class="head"><h2>🔐 Đăng nhập quản trị</h2><span id="loginState" class="muted">Chưa tải cấu hình</span></div>
+      <div class="body">
+        <div class="login-row">
+          <div class="field">
+            <label>Mật khẩu quản trị</label>
+            <div class="secret-wrap"><input id="adminPassword" type="password" placeholder="Nhập mật khẩu quản trị" /><button class="eye" type="button" data-toggle="adminPassword">👁</button></div>
+            <div class="hint">Trình duyệt chỉ giữ tạm bằng localStorage để tiện thao tác.</div>
+          </div>
+          <button id="loadBtn" class="primary" type="button">Tải cấu hình</button>
+          <button id="copyWebhookBtn" class="ghost" type="button">Copy Webhook URL</button>
+        </div>
+        <div id="topMsg" class="msg"></div>
+      </div>
+    </section>
 
-      <div class="card"><h2>✉️ Cấu hình Email SMTP</h2><div class="body grid">
-        <div><label>Email Gmail gửi mặc định</label><input id="smtpUser" placeholder="Ví dụ: vantheweb@gmail.com" /></div>
-        <div><label>App Password Gmail</label><div class="row-pass"><input id="smtpPass" type="password" autocomplete="new-password" placeholder="Để trống nếu không đổi App Password đã lưu" /><button class="eye" type="button" data-eye="smtpPass">👁</button></div><div class="hint">Dùng App Password 16 ký tự của Gmail, không dùng mật khẩu đăng nhập Gmail thường.</div></div>
-        <div><label>SMTP Host</label><input id="smtpHost" placeholder="smtp.gmail.com" /></div>
-        <div><label>SMTP Port</label><input id="smtpPort" type="number" placeholder="465" /></div>
-        <div><label>Bảo mật</label><select id="smtpSecure"><option value="ssl">SSL - Port 465</option><option value="tls">TLS - Port 587</option></select></div>
-        <div><label>Tên người gửi</label><input id="smtpFromName" placeholder="Văn Thế Web" /></div>
-        <div><label>Base URL website để mở mail</label><input id="emailBaseUrl" placeholder="https://research.vanthemmo.com" /></div>
-        <div><label>Email nhận test</label><input id="testEmail" placeholder="Nhập email để gửi thử" /></div>
-        <div class="full actions"><button class="primary" type="submit">Lưu cấu hình</button><button class="orange" type="button" onclick="sendTestEmail()">Gửi email test</button></div>
-      </div></div>
-    </form>
-
-    <div class="help"><h3>Hướng dẫn lấy App Password Gmail</h3><ol><li>Vào tài khoản Google → Bảo mật.</li><li>Bật xác minh 2 bước.</li><li>Vào App passwords / Mật khẩu ứng dụng.</li><li>Tạo mật khẩu cho ứng dụng Mail.</li><li>Copy chuỗi 16 ký tự dán vào ô App Password Gmail.</li></ol></div>
-  </div>
-
-<<<<<<< HEAD
-  <form id="settingsForm">
-    <div class="columns">
-      <div class="card">
-        <h2>▣ SePay Thanh toán</h2>
+    <div class="two-col">
+      <section class="grid-card">
+        <div class="head"><h2>▣ SePay Thanh toán</h2></div>
         <div class="body">
-          <p class="section-note">Cấu hình tài khoản nhận tiền, tiền tố mã đơn và các gói Pro. Khi SePay báo giao dịch thành công, webhook sẽ nâng cấp Pro và cộng dồn hạn dùng.</p>
-          <div class="grid">
-            <div class="full"><label>API Key / Webhook Secret SePay</label><input id="sepayWebhookSecret" type="text" autocomplete="off" placeholder="Webhook Secret SePay đã lưu sẽ luôn hiện ở đây"><div class="hint">Ô này luôn hiển thị và tự lưu. Vào SePay → Tích hợp Webhook → Bảo mật → API Key → nhập key tùy ý → copy vào đây.</div><div class="example">Ví dụ: sep_live_xxxxxxxxx hoặc chuỗi bí mật tự đặt trong SePay</div></div>
-            <div><label>Tên chủ tài khoản</label><input id="bankOwner" placeholder="Ví dụ: LE VAN KHAI"></div><div><label>Tên ngân hàng</label><input id="bankName" placeholder="Ví dụ: ACB"></div>
-            <div><label>Số tài khoản</label><input id="bankAccount" placeholder="Ví dụ: 13131447"></div><div><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH"><div class="hint">Mã thanh toán sẽ dạng: RESEARCH + số.</div></div>
-            <div class="full"><label>Webhook URL copy vào SePay</label><div class="copy-field"><input id="webhookUrl" readonly><button class="ghost" type="button" onclick="copyWebhookUrl()">Copy</button></div><div class="hint">Dán URL này vào SePay để nhận thông báo giao dịch tự động.</div></div>
-            <div class="full"><label>Base URL công cụ</label><input id="appBaseUrl" placeholder="https://research.vanthemmo.com"></div>
-            <div class="full"><label>Gói Premium / Pro</label><textarea id="plansJson" spellcheck="false"></textarea><div class="hint">Dạng JSON. Có thể đổi giá và số ngày ở đây.</div><div class="example">[{"id":"3m","name":"GÓI 3 THÁNG","amount":180000,"days":90},{"id":"6m","name":"GÓI 6 THÁNG","amount":300000,"days":180},{"id":"12m","name":"GÓI 1 NĂM","amount":500000,"days":365}]</div></div>
+          <div class="form-grid">
+            <div class="field full">
+              <label>API Key / Webhook Secret SePay</label>
+              <div class="secret-wrap"><input id="sepaySecret" type="text" placeholder="Dán API Key / Webhook Secret SePay" autocomplete="off" /><button class="eye" type="button" data-toggle="sepaySecret">👁</button></div>
+              <div class="hint">Vào SePay → Tích hợp Webhook → Bảo mật → chọn API Key → nhập/copy key vào đây. Ô này luôn hiện để dễ kiểm tra.</div>
+            </div>
+            <div class="field"><label>Tên chủ tài khoản</label><input id="bankOwner" placeholder="Ví dụ: LE VAN KHAI" /></div>
+            <div class="field"><label>Tên ngân hàng</label><input id="bankName" placeholder="Ví dụ: ACB" /></div>
+            <div class="field"><label>Số tài khoản</label><input id="bankAccount" placeholder="Ví dụ: 13131447" /></div>
+            <div class="field"><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH" /></div>
+            <div class="field full">
+              <label>Webhook URL copy vào SePay</label>
+              <div class="copy-line"><input id="webhookUrl" readonly /><button id="copyWebhookBtn2" class="ghost" type="button">Copy</button></div>
+            </div>
+            <div class="field full"><label>Base URL công cụ</label><input id="baseUrl" placeholder="https://research.vanthemmo.com" /></div>
           </div>
           <div class="actions">
-            <button id="btnSaveSepay" class="primary" type="button" onclick="saveSettings('sepay')">💾 Lưu cấu hình SePay</button>
-            <button id="btnWebhook" class="ghost" type="button" onclick="testWebhook()">📡 Lưu & kiểm tra webhook</button>
+            <button id="savePaymentBtn" class="green" type="button">Lưu thanh toán</button>
+            <button id="testWebhookBtn" class="ghost" type="button">Kiểm tra webhook</button>
           </div>
-          <div class="mini">
-            <div class="small-box"><b>Webhook đúng:</b><br>GET mở kiểm tra chạy.<br>POST từ SePay phải có API Key đúng.</div>
-            <div class="small-box"><b>Lưu trước khi test:</b><br>Nút kiểm tra webhook sẽ tự lưu cấu hình hiện tại rồi mới chạy test.</div>
-          </div>
+          <div id="paymentMsg" class="msg"></div>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <h2>✉️ Cấu hình Email SMTP</h2>
+      <section class="grid-card">
+        <div class="head"><h2>✉️ Cấu hình Email SMTP</h2></div>
         <div class="body">
-          <p class="section-note">Dùng để gửi email thông báo thanh toán thành công. Gmail cần App Password 16 ký tự, không dùng mật khẩu đăng nhập Gmail thường.</p>
-          <div class="grid">
-            <div><label>Email Gmail gửi mặc định</label><input id="smtpUser" placeholder="Ví dụ: vantheweb@gmail.com"></div>
-            <div><label>App Password Gmail</label><div class="row-pass"><input id="smtpPass" type="password" autocomplete="new-password" placeholder="Để trống nếu không đổi App Password đã lưu"><button class="eye" type="button" data-eye="smtpPass">👁</button></div><div class="hint">Chuỗi 16 ký tự của Gmail.</div></div>
-            <div><label>SMTP Host</label><input id="smtpHost" placeholder="smtp.gmail.com"></div><div><label>SMTP Port</label><input id="smtpPort" type="number" placeholder="465"></div>
-            <div><label>Bảo mật</label><select id="smtpSecure"><option value="ssl">SSL - Port 465</option><option value="tls">TLS - Port 587</option></select></div><div><label>Tên người gửi</label><input id="smtpFromName" placeholder="Văn Thế Web"></div>
-            <div><label>Base URL website để mở mail</label><input id="emailBaseUrl" placeholder="https://research.vanthemmo.com"></div><div><label>Email nhận test</label><input id="testEmail" placeholder="Nhập email để gửi thử"></div>
+          <div class="form-grid">
+            <div class="field"><label>Email Gmail gửi mặc định</label><input id="smtpUser" placeholder="Ví dụ: vantheweb@gmail.com" /></div>
+            <div class="field"><label>App Password Gmail</label><div class="secret-wrap"><input id="smtpPass" type="password" placeholder="Dán App Password 16 ký tự" autocomplete="off" /><button class="eye" type="button" data-toggle="smtpPass">👁</button></div><div class="hint">Dùng App Password 16 ký tự của Gmail, không dùng mật khẩu đăng nhập Gmail thường.</div></div>
+            <div class="field"><label>SMTP Host</label><input id="smtpHost" placeholder="smtp.gmail.com" /></div>
+            <div class="field"><label>SMTP Port</label><input id="smtpPort" placeholder="465" /></div>
+            <div class="field"><label>Bảo mật</label><select id="smtpSecure"><option value="ssl">SSL - Port 465</option><option value="tls">TLS - Port 587</option></select></div>
+            <div class="field"><label>Tên người gửi</label><input id="senderName" placeholder="Văn Thế Web" /></div>
+            <div class="field"><label>Base URL website để mở mail</label><input id="emailBaseUrl" placeholder="https://research.vanthemmo.com" /></div>
+            <div class="field"><label>Email nhận test</label><input id="testEmail" placeholder="Nhập email để gửi thử" /></div>
           </div>
-          <div class="actions"><button id="btnSaveSmtp" class="primary" type="button" onclick="saveSettings('smtp')">💾 Lưu cấu hình SMTP</button><button id="btnEmail" class="orange" type="button" onclick="sendTestEmail()">📨 Lưu & gửi email test</button></div>
-          <div class="mini">
-            <div class="small-box"><b>Gmail:</b><br>Host: smtp.gmail.com<br>Port SSL: 465<br>Port TLS: 587</div>
-            <div class="small-box"><b>Luồng tự động:</b><br>SePay thành công → nâng cấp Pro → cộng dồn hạn → gửi email.</div>
+          <div class="actions">
+            <button id="saveSmtpBtn" class="green" type="button">Lưu SMTP</button>
+            <button id="testEmailBtn" class="orange" type="button">Gửi email test</button>
           </div>
+          <div id="smtpMsg" class="msg"></div>
         </div>
-      </div>
+      </section>
     </div>
-    <div class="help sticky-save">
-      <button id="btnSaveAll" class="blue" type="submit">💾 Lưu tất cả cấu hình</button>
-    </div>
-  </form>
 
-  <div class="help"><h3>Hướng dẫn lấy App Password Gmail</h3><ol><li>Vào tài khoản Google → Bảo mật.</li><li>Bật xác minh 2 bước.</li><li>Vào App passwords / Mật khẩu ứng dụng.</li><li>Tạo mật khẩu cho ứng dụng Mail.</li><li>Copy chuỗi 16 ký tự dán vào ô App Password Gmail.</li></ol></div>
-  <div class="help"><h3>Hướng dẫn kiểm tra webhook đúng</h3><ol><li>Nhập đúng Webhook Secret giống API Key trong SePay.</li><li>Bấm <b>Lưu & kiểm tra webhook</b>.</li><li>Nếu thành công, trang sẽ báo webhook đã nhận POST test với secret đang lưu.</li><li>Webhook URL cần dán vào SePay: <b id="webhookText"></b></li></ol></div>
-</div>
-<script>
-const $ = (id) => document.getElementById(id);
-const origin = window.location.origin;
-let toastTimer = null;
-let autoSaveTimer = null;
-let isLoadingSettings = false;
+    <section class="help">
+      <h3>Hướng dẫn lấy App Password Gmail</h3>
+      <ol>
+        <li>Vào tài khoản Google → Bảo mật.</li>
+        <li>Bật xác minh 2 bước.</li>
+        <li>Vào App passwords / Mật khẩu ứng dụng.</li>
+        <li>Tạo mật khẩu cho ứng dụng Mail.</li>
+        <li>Copy chuỗi 16 ký tự dán vào ô App Password Gmail.</li>
+      </ol>
+      <div class="small-code">Ví dụ SMTP Gmail: smtp.gmail.com · SSL 465 · hoặc TLS 587</div>
+    </section>
+  </main>
 
-function toast(msg, type='ok') {
-  const el = $('toast');
-  clearTimeout(toastTimer);
-  el.className = type === 'err' ? 'toast-err' : type === 'info' ? 'toast-info' : 'toast-ok';
-  el.textContent = msg;
-  el.style.display = 'block';
-  toastTimer = setTimeout(() => { el.className=''; el.style.display='none'; }, 3000);
-}
-function inline(msg, type='ok') {
-  const el = $('topStatus');
-  el.className = 'inline-status ' + (type === 'err' ? 'inline-err' : type === 'info' ? 'inline-info' : 'inline-ok');
-  el.textContent = msg;
-}
-function setBusy(id, busy, text) {
-  const b = $(id); if (!b) return;
-  if (busy) { if (!b.dataset.old) b.dataset.old = b.innerHTML; b.disabled = true; b.classList.add('is-busy'); b.innerHTML = '⏳ ' + text; }
-  else { b.disabled = false; b.classList.remove('is-busy'); if (b.dataset.old) { b.innerHTML = b.dataset.old; delete b.dataset.old; } }
-}
-function password() {
-  const p = $('adminPassword').value.trim();
-  if (p) localStorage.setItem('ADMIN_SETTINGS_PASSWORD_CACHE', p);
-  return p || localStorage.getItem('ADMIN_SETTINGS_PASSWORD_CACHE') || '';
-}
-async function api(path, options={}) {
-  const res = await fetch(path, {...options, headers:{'Content-Type':'application/json', ...(options.headers || {})}});
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.success === false) throw new Error(data.message || data.error || 'Lỗi API');
-  return data;
-}
-function safeParsePlans() {
-  try {
-    const plans = JSON.parse($('plansJson').value || '[]');
-    if (!Array.isArray(plans)) throw new Error('Plans phải là mảng JSON');
-    return plans;
-  } catch(e) {
-    throw new Error('JSON gói Pro không hợp lệ: ' + e.message);
-  }
-}
-function buildPayload() {
-  return {
-    password: password(),
-    sepay: {
-      webhookSecret: $('sepayWebhookSecret').value.trim(),
-      bankOwner: $('bankOwner').value.trim(),
-      bankName: $('bankName').value.trim(),
-      bankAccount: $('bankAccount').value.trim(),
-      paymentPrefix: $('paymentPrefix').value.trim() || 'RESEARCH',
-      webhookUrl: $('webhookUrl').value.trim() || (origin + '/api/sepay-webhook'),
-      appBaseUrl: $('appBaseUrl').value.trim() || origin,
-      plans: safeParsePlans()
-    },
-    smtp: {
-      user: $('smtpUser').value.trim(),
-      pass: $('smtpPass').value.trim(),
-      host: $('smtpHost').value.trim() || 'smtp.gmail.com',
-      port: Number($('smtpPort').value || 465),
-      secure: $('smtpSecure').value === 'ssl',
-      fromName: $('smtpFromName').value.trim() || 'Văn Thế Web',
-      baseUrl: $('emailBaseUrl').value.trim() || origin
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const apiUrl = '/api/admin-settings';
+    const state = { loaded:false };
+
+    function toast(text, type='ok'){
+      const el = $('toast');
+      el.className = 'toast show ' + type;
+      el.textContent = text;
+      setTimeout(()=>{ el.className = 'toast'; }, 3000);
     }
-  };
-}
-async function saveSettings(mode='all', silent=false) {
-  const btn = mode === 'sepay' ? 'btnSaveSepay' : mode === 'smtp' ? 'btnSaveSmtp' : 'btnSaveAll';
-  setBusy(btn, true, 'Đang lưu');
-  try {
-    const payload = buildPayload();
-    await api('/api/admin-settings', { method:'POST', body: JSON.stringify(payload) });
-    if (!silent) { inline('Đã lưu cấu hình thành công.'); toast('Đã lưu cấu hình thành công.'); }
-    else { inline('Đã tự lưu cấu hình.', 'info'); }
-    return true;
-  } catch(e) {
-    inline(e.message, 'err'); toast(e.message, 'err');
-    return false;
-  } finally {
-    setBusy(btn, false);
-  }
-}
-async function loadSettings() {
-  setBusy('btnLoad', true, 'Đang tải');
-  isLoadingSettings = true;
-  try {
-    const data = await api('/api/admin-settings?password=' + encodeURIComponent(password()));
-    const s = data.settings || {}, sepay = s.sepay || {}, smtp = s.smtp || {};
-    $('sepayWebhookSecret').value = sepay.webhookSecret || s.payment?.webhookSecret || '';
-    $('bankOwner').value = sepay.bankOwner || sepay.accountName || '';
-    $('bankName').value = sepay.bankName || sepay.bankId || 'ACB';
-    $('bankAccount').value = sepay.bankAccount || sepay.accountNo || '';
-    $('paymentPrefix').value = sepay.paymentPrefix || sepay.orderPrefix || 'RESEARCH';
-    $('appBaseUrl').value = sepay.appBaseUrl || sepay.appDomain || origin;
-    $('webhookUrl').value = sepay.webhookUrl || (origin + '/api/sepay-webhook');
-    $('webhookText').textContent = $('webhookUrl').value;
-    $('plansJson').value = JSON.stringify(sepay.plans || [
-      {id:'3m',name:'GÓI 3 THÁNG',amount:180000,days:90},
-      {id:'6m',name:'GÓI 6 THÁNG',amount:300000,days:180},
-      {id:'12m',name:'GÓI 1 NĂM',amount:500000,days:365}
-    ], null, 2);
-    $('smtpUser').value = smtp.user || '';
-    $('smtpPass').value = smtp.pass || '';
-    $('smtpHost').value = smtp.host || 'smtp.gmail.com';
-    $('smtpPort').value = smtp.port || 465;
-    $('smtpSecure').value = smtp.secure === false ? 'tls' : 'ssl';
-    $('smtpFromName').value = smtp.fromName || 'Văn Thế Web';
-    $('emailBaseUrl').value = smtp.baseUrl || origin;
-    inline('Đã tải cấu hình.'); toast('Đã tải cấu hình.');
-  } catch(e) { inline(e.message, 'err'); toast(e.message, 'err'); }
-  finally { setBusy('btnLoad', false); isLoadingSettings = false; }
-}
-async function testWebhook() {
-  setBusy('btnWebhook', true, 'Đang kiểm tra');
-  try {
-    const saved = await saveSettings('sepay', true);
-    if (!saved) return;
-    const plans = safeParsePlans();
-    const amount = Number(plans[0]?.amount || 180000);
-    const data = await api('/api/test-webhook?amount=' + encodeURIComponent(amount));
-    if (data.success) {
-      inline('Webhook hoạt động đúng. Mã test: ' + (data.sent?.orderCode || ''), 'ok');
-      toast('Webhook hoạt động đúng.');
-    } else {
-      throw new Error(data.message || data.error || 'Webhook test chưa thành công');
+    function msg(id, text, type='ok'){
+      const el = $(id);
+      el.className = 'msg ' + type;
+      el.textContent = text;
+      if(text) setTimeout(()=>{ el.className='msg'; el.textContent=''; }, 3000);
     }
-  } catch(e) { inline(e.message, 'err'); toast(e.message, 'err'); }
-  finally { setBusy('btnWebhook', false); }
-}
-async function sendTestEmail() {
-  setBusy('btnEmail', true, 'Đang gửi');
-  try {
-    const saved = await saveSettings('smtp', true);
-    if (!saved) return;
-    await api('/api/test-email', { method:'POST', body: JSON.stringify({ password: password(), to: $('testEmail').value.trim() || $('smtpUser').value.trim() }) });
-    toast('Đã gửi email test.'); inline('Đã gửi email test.');
-  } catch(e) { toast(e.message, 'err'); inline(e.message, 'err'); }
-  finally { setBusy('btnEmail', false); }
-}
+    function adminPassword(){ return $('adminPassword').value.trim(); }
+    function authHeaders(){ return { 'Content-Type':'application/json', 'x-admin-password': adminPassword() }; }
+    function setBusy(btn, busy, text){ if(!btn)return; if(busy){ btn.dataset.old=btn.textContent; btn.textContent=text||'Đang xử lý...'; btn.disabled=true; } else { btn.textContent=btn.dataset.old||btn.textContent; btn.disabled=false; } }
+    function val(id, fallback=''){ const el=$(id); return el ? (el.value || fallback).trim() : fallback; }
+    function setVal(id, v){ const el=$(id); if(el) el.value = v || ''; }
+    function currentOrigin(){ return window.location.origin; }
+    function updateWebhookUrl(){
+      const base = val('baseUrl') || currentOrigin();
+      setVal('webhookUrl', base.replace(/\/$/,'') + '/api/sepay-webhook');
+    }
+    function fill(data){
+      data = data || {};
+      const payment = data.payment || data.sepay || {};
+      const smtp = data.smtp || data.email || {};
+      setVal('sepaySecret', payment.sepaySecret || payment.webhookSecret || payment.secret || '');
+      setVal('bankOwner', payment.bankOwner || payment.accountName || payment.owner || 'LE VAN KHAI');
+      setVal('bankName', payment.bankName || payment.bank || 'ACB');
+      setVal('bankAccount', payment.bankAccount || payment.accountNumber || '13131447');
+      setVal('paymentPrefix', payment.paymentPrefix || payment.prefix || 'RESEARCH');
+      setVal('baseUrl', payment.baseUrl || currentOrigin());
+      updateWebhookUrl();
+      setVal('smtpUser', smtp.smtpUser || smtp.user || '');
+      setVal('smtpPass', smtp.smtpPass || smtp.pass || '');
+      setVal('smtpHost', smtp.smtpHost || smtp.host || 'smtp.gmail.com');
+      setVal('smtpPort', String(smtp.smtpPort || smtp.port || '465'));
+      setVal('smtpSecure', smtp.smtpSecure || smtp.secureMode || 'ssl');
+      setVal('senderName', smtp.senderName || smtp.fromName || 'Văn Thế Web');
+      setVal('emailBaseUrl', smtp.emailBaseUrl || smtp.baseUrl || currentOrigin());
+    }
+    function paymentPayload(){
+      return { payment: {
+        sepaySecret: val('sepaySecret'), bankOwner: val('bankOwner'), bankName: val('bankName'), bankAccount: val('bankAccount'),
+        paymentPrefix: val('paymentPrefix'), baseUrl: val('baseUrl') || currentOrigin(), webhookUrl: val('webhookUrl')
+      }};
+    }
+    function smtpPayload(){
+      return { smtp: {
+        smtpUser: val('smtpUser'), smtpPass: val('smtpPass'), smtpHost: val('smtpHost') || 'smtp.gmail.com', smtpPort: Number(val('smtpPort') || 465),
+        smtpSecure: val('smtpSecure') || 'ssl', senderName: val('senderName') || 'Văn Thế Web', emailBaseUrl: val('emailBaseUrl') || currentOrigin()
+      }};
+    }
+    async function request(action, body={}){
+      const res = await fetch(apiUrl + '?action=' + encodeURIComponent(action), { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
+      const text = await res.text();
+      let data;
+      try{ data = JSON.parse(text); } catch(e){ data = { success:false, error:text || res.statusText }; }
+      if(!res.ok || data.success === false) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+      return data;
+    }
+    async function loadConfig(){
+      if(!adminPassword()) return msg('topMsg','Vui lòng nhập mật khẩu quản trị.','warn');
+      localStorage.setItem('admin_settings_password', adminPassword());
+      const btn=$('loadBtn'); setBusy(btn,true,'Đang tải...');
+      try{
+        const data = await request('get', {});
+        fill(data.settings || data.data || data);
+        state.loaded = true;
+        $('loginState').textContent = 'Đã tải cấu hình';
+        msg('topMsg','Đã tải cấu hình.','ok'); toast('Đã tải cấu hình.','ok');
+      }catch(e){ msg('topMsg', e.message, 'err'); toast(e.message,'err'); }
+      finally{ setBusy(btn,false); }
+    }
+    async function savePayment(){
+      if(!adminPassword()) return msg('paymentMsg','Vui lòng nhập mật khẩu quản trị.','warn');
+      const btn=$('savePaymentBtn'); setBusy(btn,true,'Đang lưu...');
+      try{ await request('save-payment', paymentPayload()); msg('paymentMsg','Đã lưu cấu hình thanh toán.','ok'); toast('Đã lưu cấu hình thanh toán.','ok'); }
+      catch(e){ msg('paymentMsg', e.message, 'err'); toast(e.message,'err'); }
+      finally{ setBusy(btn,false); }
+    }
+    async function saveSmtp(){
+      if(!adminPassword()) return msg('smtpMsg','Vui lòng nhập mật khẩu quản trị.','warn');
+      const btn=$('saveSmtpBtn'); setBusy(btn,true,'Đang lưu...');
+      try{ await request('save-smtp', smtpPayload()); msg('smtpMsg','Đã lưu cấu hình SMTP.','ok'); toast('Đã lưu cấu hình SMTP.','ok'); }
+      catch(e){ msg('smtpMsg', e.message, 'err'); toast(e.message,'err'); }
+      finally{ setBusy(btn,false); }
+    }
+    async function testWebhook(){
+      if(!adminPassword()) return msg('paymentMsg','Vui lòng nhập mật khẩu quản trị.','warn');
+      const btn=$('testWebhookBtn'); setBusy(btn,true,'Đang kiểm tra...');
+      try{ await savePayment(); const data = await request('test-webhook', paymentPayload()); msg('paymentMsg', data.message || 'Webhook hoạt động.', 'ok'); toast('Webhook hoạt động.','ok'); }
+      catch(e){ msg('paymentMsg', e.message, 'err'); toast(e.message,'err'); }
+      finally{ setBusy(btn,false); }
+    }
+    async function testEmail(){
+      if(!adminPassword()) return msg('smtpMsg','Vui lòng nhập mật khẩu quản trị.','warn');
+      if(!val('testEmail')) return msg('smtpMsg','Vui lòng nhập Email nhận test.','warn');
+      const btn=$('testEmailBtn'); setBusy(btn,true,'Đang gửi...');
+      try{ await saveSmtp(); const data = await request('test-email', {...smtpPayload(), testEmail: val('testEmail')}); msg('smtpMsg', data.message || 'Đã gửi email test.', 'ok'); toast('Đã gửi email test.','ok'); }
+      catch(e){ msg('smtpMsg', e.message, 'err'); toast(e.message,'err'); }
+      finally{ setBusy(btn,false); }
+    }
+    async function copyWebhook(){ updateWebhookUrl(); await navigator.clipboard.writeText(val('webhookUrl')); toast('Đã copy Webhook URL.','ok'); }
 
-function scheduleAutoSave(mode='all') {
-  if (isLoadingSettings) return;
-  if (!password()) return;
-  clearTimeout(autoSaveTimer);
-  inline('Đang tự lưu...', 'info');
-  autoSaveTimer = setTimeout(async () => {
-    await saveSettings(mode, true);
-  }, 900);
-}
-
-function copyWebhookUrl() {
-  const url = $('webhookUrl').value || (origin + '/api/sepay-webhook');
-  navigator.clipboard.writeText(url);
-  $('webhookText').textContent = url;
-  toast('Đã copy Webhook URL.'); inline('Đã copy Webhook URL.');
-}
-
-$('webhookUrl').value = origin + '/api/sepay-webhook';
-$('webhookText').textContent = $('webhookUrl').value;
-$('adminPassword').value = localStorage.getItem('ADMIN_SETTINGS_PASSWORD_CACHE') || '';
-const sepayAutoFields = ['sepayWebhookSecret','bankOwner','bankName','bankAccount','paymentPrefix','webhookUrl','appBaseUrl','plansJson'];
-const smtpAutoFields = ['smtpUser','smtpPass','smtpHost','smtpPort','smtpSecure','smtpFromName','emailBaseUrl'];
-sepayAutoFields.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => scheduleAutoSave('sepay')); if (el && el.tagName === 'SELECT') el.addEventListener('change', () => scheduleAutoSave('sepay')); });
-smtpAutoFields.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => scheduleAutoSave('smtp')); if (el && el.tagName === 'SELECT') el.addEventListener('change', () => scheduleAutoSave('smtp')); });
-document.querySelectorAll('[data-eye]').forEach(btn => btn.addEventListener('click', () => { const el = $(btn.dataset.eye); el.type = el.type === 'password' ? 'text' : 'password'; }));
-$('settingsForm').addEventListener('submit', async (e) => { e.preventDefault(); await saveSettings('all'); });
-=======
-<script>
-const $ = (id) => document.getElementById(id);
-const origin = window.location.origin;
-$("webhookUrl").value = origin + "/api/sepay-webhook";
-document.querySelectorAll("[data-eye]").forEach(btn => btn.addEventListener("click", () => { const el = $(btn.dataset.eye); el.type = el.type === "password" ? "text" : "password"; }));
-function password(){ const p=$("adminPassword").value.trim(); if(p) localStorage.setItem("ADMIN_SETTINGS_PASSWORD_CACHE",p); return p || localStorage.getItem("ADMIN_SETTINGS_PASSWORD_CACHE") || ""; }
-$("adminPassword").value = localStorage.getItem("ADMIN_SETTINGS_PASSWORD_CACHE") || "";
-function show(id,msg,type="ok"){ const el=$(id); el.className="status "+(type==="err"?"err":"ok"); el.textContent=msg; }
-function safeParsePlans(){ try{ const plans=JSON.parse($("plansJson").value||"[]"); if(!Array.isArray(plans)) throw new Error("Plans phải là mảng JSON"); return plans; }catch(e){ throw new Error("JSON gói Pro không hợp lệ: "+e.message); } }
-async function api(path,options={}){ const res=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(options.headers||{})}}); const data=await res.json().catch(()=>({})); if(!res.ok||data.success===false) throw new Error(data.message||"Lỗi API"); return data; }
-async function loadSettings(){ try{ const data=await api("/api/admin-settings?password="+encodeURIComponent(password())); const s=data.settings||{}, sepay=s.sepay||{}, smtp=s.smtp||{};
-$("bankOwner").value=sepay.bankOwner||"";$("bankName").value=sepay.bankName||"ACB";$("bankAccount").value=sepay.bankAccount||"";$("paymentPrefix").value=sepay.paymentPrefix||"RESEARCH";$("appBaseUrl").value=sepay.appBaseUrl||origin;$("webhookUrl").value=sepay.webhookUrl||(origin+"/api/sepay-webhook");
-$("plansJson").value=JSON.stringify(sepay.plans||[{id:"3m",name:"Gói 3 tháng",amount:180000,days:90},{id:"6m",name:"Gói 6 tháng",amount:300000,days:180},{id:"1y",name:"Gói 1 năm",amount:500000,days:365}],null,2);
-$("smtpUser").value=smtp.user||"";$("smtpHost").value=smtp.host||"smtp.gmail.com";$("smtpPort").value=smtp.port||465;$("smtpSecure").value=smtp.secure===false?"tls":"ssl";$("smtpFromName").value=smtp.fromName||"Văn Thế Web";$("emailBaseUrl").value=smtp.baseUrl||origin; show("topStatus","Đã tải cấu hình."); }catch(e){ show("topStatus",e.message,"err"); } }
-$("settingsForm").addEventListener("submit",async(e)=>{ e.preventDefault(); try{ const payload={password:password(),sepay:{webhookSecret:$("sepayWebhookSecret").value.trim(),bankOwner:$("bankOwner").value.trim(),bankName:$("bankName").value.trim(),bankAccount:$("bankAccount").value.trim(),paymentPrefix:$("paymentPrefix").value.trim()||"RESEARCH",webhookUrl:$("webhookUrl").value.trim(),appBaseUrl:$("appBaseUrl").value.trim()||origin,plans:safeParsePlans()},smtp:{user:$("smtpUser").value.trim(),pass:$("smtpPass").value.trim(),host:$("smtpHost").value.trim()||"smtp.gmail.com",port:Number($("smtpPort").value||465),secure:$("smtpSecure").value==="ssl",fromName:$("smtpFromName").value.trim()||"Văn Thế Web",baseUrl:$("emailBaseUrl").value.trim()||origin}}; await api("/api/admin-settings",{method:"POST",body:JSON.stringify(payload)}); $("sepayWebhookSecret").value=""; $("smtpPass").value=""; show("topStatus","Đã lưu cấu hình thành công."); }catch(e){ show("topStatus",e.message,"err"); } });
-async function sendTestEmail(){ try{ await api("/api/test-email",{method:"POST",body:JSON.stringify({password:password(),to:$("testEmail").value.trim()||$("smtpUser").value.trim()})}); show("topStatus","Đã gửi email test."); }catch(e){ show("topStatus",e.message,"err"); } }
-async function testWebhook(){ try{ const data=await api("/api/admin-settings?password="+encodeURIComponent(password())); show("topStatus",data.settings?.sepay?.webhookUrl?"Webhook URL đã sẵn sàng: "+data.settings.sepay.webhookUrl:"Chưa có Webhook URL."); }catch(e){ show("topStatus",e.message,"err"); } }
-function copyWebhookUrl(){ navigator.clipboard.writeText($("webhookUrl").value||(origin+"/api/sepay-webhook")); show("topStatus","Đã copy Webhook URL."); }
->>>>>>> parent of ec7ddce (smtp)
-loadSettings();
-</script>
+    document.addEventListener('click', (e)=>{
+      const t=e.target;
+      if(t && t.dataset && t.dataset.toggle){ const input=$(t.dataset.toggle); if(input){ input.type = input.type === 'password' ? 'text' : 'password'; } }
+    });
+    $('loadBtn').addEventListener('click', loadConfig);
+    $('savePaymentBtn').addEventListener('click', savePayment);
+    $('saveSmtpBtn').addEventListener('click', saveSmtp);
+    $('testWebhookBtn').addEventListener('click', testWebhook);
+    $('testEmailBtn').addEventListener('click', testEmail);
+    $('copyWebhookBtn').addEventListener('click', copyWebhook);
+    $('copyWebhookBtn2').addEventListener('click', copyWebhook);
+    $('baseUrl').addEventListener('input', updateWebhookUrl);
+    window.addEventListener('load', ()=>{
+      const saved = localStorage.getItem('admin_settings_password');
+      if(saved) setVal('adminPassword', saved);
+      fill({ payment:{ baseUrl: currentOrigin() }, smtp:{ emailBaseUrl: currentOrigin() }});
+    });
+  </script>
 </body>
 </html>
