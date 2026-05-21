@@ -4352,3 +4352,161 @@
     grid-column: auto !important;
   }
 }
+
+/* STEP 44: mobile search form layout + smaller controls + web tracking align */
+@media (min-width: 901px) {
+  .vtw-tracking-table td:nth-child(4),
+  .vtw-tracking-table td:nth-child(6) {
+    text-align: left !important;
+  }
+  .vtw-tracking-table td:nth-child(4) > div,
+  .vtw-tracking-table td:nth-child(6) > div {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Mobile search page: flatten groups and place exact two-column layout */
+  .vtw-main-search-card .vtw-filter-fields {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px 14px !important;
+  }
+  .vtw-main-search-card .vtw-filter-fields > div,
+  .vtw-main-search-card .vtw-filter-fields [class*="border-l"] {
+    display: contents !important;
+    border-left: 0 !important;
+    padding-left: 0 !important;
+  }
+  .vtw-main-search-card .vtw-field-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .vtw-main-search-card .vtw-row-keyword { order: 1; grid-column: 1 / -1 !important; }
+  .vtw-main-search-card .vtw-row-region { order: 2; }
+  .vtw-main-search-card .vtw-row-published { order: 3; }
+  .vtw-main-search-card .vtw-row-minsub { order: 4; }
+  .vtw-main-search-card .vtw-row-maxsub { order: 5; }
+  .vtw-main-search-card .vtw-row-minvideo { order: 6; }
+  .vtw-main-search-card .vtw-row-maxvideo { order: 7; }
+  .vtw-main-search-card .vtw-row-maxvideos { order: 8; }
+  .vtw-main-search-card .vtw-row-minviews { order: 9; }
+
+  .vtw-main-search-card .vtw-field-row label,
+  .vtw-main-search-card .vtw-field-row .w-1\/3 {
+    width: 100% !important;
+    text-align: left !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+  }
+  .vtw-main-search-card .vtw-field-row .w-2\/3,
+  .vtw-main-search-card .vtw-region-wrap,
+  .vtw-main-search-card .vtw-field-row input,
+  .vtw-main-search-card .vtw-field-row select,
+  .vtw-main-search-card .vtw-field-row button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .vtw-main-search-card .vtw-main-input,
+  .vtw-main-search-card .vtw-field-row input,
+  .vtw-main-search-card .vtw-field-row select,
+  .vtw-main-search-card .vtw-field-row button {
+    height: 42px !important;
+    min-height: 42px !important;
+    border-radius: 16px !important;
+    padding: 0 14px !important;
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+  }
+  .vtw-main-search-card .vtw-row-keyword .vtw-main-input {
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+
+  /* Region dropdown fix */
+  .vtw-main-search-card .vtw-region-wrap {
+    position: relative !important;
+    overflow: visible !important;
+  }
+  .vtw-main-search-card .vtw-region-button {
+    justify-content: space-between !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+  }
+  .vtw-main-search-card .vtw-region-dropdown {
+    top: calc(100% + 6px) !important;
+    left: 0 !important;
+    right: auto !important;
+    width: 100% !important;
+    max-height: 220px !important;
+    border-radius: 14px !important;
+    padding: 4px 0 !important;
+  }
+  .vtw-main-search-card .vtw-region-option {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+    gap: 10px !important;
+  }
+  .vtw-main-search-card .vtw-region-check {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    margin: 0 !important;
+    flex: 0 0 16px !important;
+  }
+
+  /* Compact toggle area in niche tab */
+  .vtw-auto-hunt-wrap,
+  .vtw-deep-drill-toggle {
+    gap: 10px !important;
+  }
+  .vtw-auto-hunt-wrap input[type="checkbox"],
+  .vtw-deep-drill-toggle input[type="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+  }
+  .vtw-auto-hunt-text,
+  .vtw-deep-drill-toggle label {
+    line-height: 1.2 !important;
+  }
+  .vtw-auto-hunt-text span,
+  .vtw-deep-drill-toggle .font-black {
+    font-size: 11px !important;
+  }
+  .vtw-deep-drill-toggle .text-\[10px\] {
+    font-size: 9.5px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .vtw-main-search-card .vtw-filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px 12px !important;
+  }
+  .vtw-main-search-card .vtw-main-input,
+  .vtw-main-search-card .vtw-field-row input,
+  .vtw-main-search-card .vtw-field-row select,
+  .vtw-main-search-card .vtw-field-row button {
+    height: 40px !important;
+    min-height: 40px !important;
+    border-radius: 14px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+  .vtw-main-search-card .vtw-field-row label,
+  .vtw-main-search-card .vtw-field-row .w-1\/3 {
+    font-size: 11px !important;
+  }
+  .vtw-main-search-card .vtw-region-option {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+  }
+}

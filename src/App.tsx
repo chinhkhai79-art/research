@@ -3296,7 +3296,7 @@ ${topKeywordsStr}`;
                 <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                   {/* Group 1 */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-keyword flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</label>
                       <input 
                         type="text" 
@@ -3306,12 +3306,12 @@ ${topKeywordsStr}`;
                         placeholder="Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI"
                       />
                     </div>
-                    <div className="flex items-center gap-2 relative">
+                    <div className="vtw-field-row vtw-row-region flex items-center gap-2 relative">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</label>
-                      <div className="w-2/3 relative" ref={regionRef}>
+                      <div className="vtw-region-wrap w-2/3 relative" ref={regionRef}>
                         <button 
                           onClick={() => setShowRegionList(!showRegionList)}
-                          className="vtw-main-input w-full border border-[#999] bg-white h-7 px-2 text-left truncate flex justify-between items-center text-[10px]"
+                          className="vtw-main-input vtw-region-button w-full border border-[#999] bg-white h-7 px-2 text-left truncate flex justify-between items-center text-[10px]"
                         >
                           {config.regions.includes('ALL') 
                             ? 'Tất cả khu vực' 
@@ -3319,28 +3319,28 @@ ${topKeywordsStr}`;
                           <span className="text-[8px]">▼</span>
                         </button>
                         {showRegionList && (
-                          <div className="absolute top-8 left-0 right-0 z-[100] bg-white border border-[#999] shadow-xl max-h-48 overflow-y-auto">
+                          <div className="vtw-region-dropdown absolute top-8 left-0 right-0 z-[100] bg-white border border-[#999] shadow-xl max-h-48 overflow-y-auto">
                             <div 
                               onClick={() => { toggleRegion('ALL'); setShowRegionList(false); }}
-                              className={`px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes('ALL') ? 'bg-blue-100 font-bold' : ''}`}
+                              className={`vtw-region-option px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes('ALL') ? 'bg-blue-100 font-bold' : ''}`}
                             >
-                              <input type="checkbox" checked={config.regions.includes('ALL')} readOnly /> Tất cả khu vực (Toàn cầu)
+                              <input type="checkbox" className="vtw-region-check" checked={config.regions.includes('ALL')} readOnly /> Tất cả khu vực (Toàn cầu)
                             </div>
                             <div className="border-t border-[#eee]"></div>
                             {REGIONS.filter(r => r.code !== '').map(r => (
                               <div 
                                 key={r.code}
                                 onClick={() => toggleRegion(r.code)}
-                                className={`px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes(r.code) ? 'bg-blue-100 font-bold' : ''}`}
+                                className={`vtw-region-option px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes(r.code) ? 'bg-blue-100 font-bold' : ''}`}
                               >
-                                <input type="checkbox" checked={config.regions.includes(r.code)} readOnly /> {r.name} ({r.code})
+                                <input type="checkbox" className="vtw-region-check" checked={config.regions.includes(r.code)} readOnly /> {r.name} ({r.code})
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-published flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</label>
                       <select 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-1 outline-none font-medium"
@@ -3358,7 +3358,7 @@ ${topKeywordsStr}`;
 
                   {/* Group 2 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
                       <input 
                         type="number" 
@@ -3367,7 +3367,7 @@ ${topKeywordsStr}`;
                         onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-minsub flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</label>
                       <input
                         type="number"
@@ -3377,7 +3377,7 @@ ${topKeywordsStr}`;
                         onChange={(e) => setConfig({ ...config, minSub: parseRangeNumber(e.target.value, 0) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-maxsub flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</label>
                       <input
                         type="number"
@@ -3391,7 +3391,7 @@ ${topKeywordsStr}`;
 
                   {/* Group 3 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-minvideo flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</label>
                       <input 
                         type="number" 
@@ -3400,7 +3400,7 @@ ${topKeywordsStr}`;
                         onChange={(e) => setConfig({ ...config, minVideo: parseInt(e.target.value) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-maxvideo flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</label>
                       <input 
                         type="number" 
@@ -3409,7 +3409,7 @@ ${topKeywordsStr}`;
                         onChange={(e) => setConfig({ ...config, maxVideo: parseInt(e.target.value) || 0 })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-minviews flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Lượt xem tối thiểu:</label>
                       <input 
                         type="number" 
@@ -3475,7 +3475,7 @@ ${topKeywordsStr}`;
               {/* Bottom Actions Row */}
               <div className="vtw-bottom-actions vtw-auto-hunt-box flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="vtw-auto-hunt-wrap flex items-center gap-2">
                     <input 
                       type="checkbox" 
                       id="autoHunt" 
