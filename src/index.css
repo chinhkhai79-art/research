@@ -3075,3 +3075,309 @@
     min-height: 26px !important;
   }
 }
+
+/* STEP 21: iPhone Safari hard fix - no duplicated auto channels, mobile table/card, text wrap, account modal safe area. */
+@media (hover: none), (pointer: coarse), (max-width: 1100px) {
+  html, body, #root {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .vtw-mobile-app,
+  .vtw-page-wrap,
+  .vtw-main-content,
+  .vtw-results-box,
+  .vtw-results-scroll,
+  .vtw-spy-panel,
+  .vtw-spy-result,
+  .vtw-spy-result-grid,
+  .vtw-spy-videos-box,
+  .vtw-tracking-panel,
+  .vtw-niche-panel {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Hunter result table: force real cards on iPhone/Android including landscape. */
+  .vtw-results-box {
+    display: block !important;
+    border-radius: 16px !important;
+    margin: 10px 4px 18px !important;
+  }
+
+  .vtw-results-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    border-radius: 14px 14px 0 0 !important;
+  }
+
+  .vtw-results-header > div {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .vtw-results-header button {
+    min-height: 34px !important;
+    flex: 1 1 96px !important;
+    justify-content: center !important;
+  }
+
+  .vtw-results-table,
+  .vtw-results-table tbody,
+  .vtw-results-table tr,
+  .vtw-results-table td {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-results-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  .vtw-results-table thead {
+    display: none !important;
+  }
+
+  .vtw-results-table tbody {
+    padding: 10px !important;
+    background: #eef2f7 !important;
+  }
+
+  .vtw-results-table tr {
+    height: auto !important;
+    margin: 0 0 14px !important;
+    padding: 12px !important;
+    border: 1px solid #d9e3ef !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08) !important;
+    overflow: hidden !important;
+  }
+
+  .vtw-results-table td {
+    display: grid !important;
+    grid-template-columns: 92px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 8px !important;
+    padding: 8px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px dashed #e5edf5 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    background: transparent !important;
+  }
+
+  .vtw-results-table td:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .vtw-results-table td::before {
+    display: block !important;
+    color: #64748b !important;
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    white-space: normal !important;
+    word-break: normal !important;
+  }
+
+  .vtw-results-table td:nth-child(1)::before { content: 'STT'; }
+  .vtw-results-table td:nth-child(2)::before { content: 'Icon'; }
+  .vtw-results-table td:nth-child(3)::before { content: 'Tên kênh'; }
+  .vtw-results-table td:nth-child(4)::before { content: 'Mã kênh'; }
+  .vtw-results-table td:nth-child(5)::before { content: 'URL'; }
+  .vtw-results-table td:nth-child(6)::before { content: 'Quốc gia'; }
+  .vtw-results-table td:nth-child(7)::before { content: 'Ngày tạo'; }
+  .vtw-results-table td:nth-child(8)::before { content: 'Tuổi kênh'; }
+  .vtw-results-table td:nth-child(9)::before { content: 'Sub'; }
+  .vtw-results-table td:nth-child(10)::before { content: 'Views'; }
+  .vtw-results-table td:nth-child(11)::before { content: 'Videos'; }
+  .vtw-results-table td:nth-child(12)::before { content: 'Điểm'; }
+  .vtw-results-table td:nth-child(13)::before { content: 'Thao tác'; }
+
+  .vtw-results-table img {
+    width: 44px !important;
+    height: 44px !important;
+    object-fit: cover !important;
+  }
+
+  .vtw-results-table a,
+  .vtw-results-table button,
+  .vtw-results-table div,
+  .vtw-spy-report a,
+  .vtw-spy-report span,
+  .vtw-spy-videos-box a,
+  .vtw-spy-videos-box button {
+    max-width: 100% !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .vtw-results-table td:last-child > div {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  .vtw-results-table td:last-child button {
+    width: 100% !important;
+    min-height: 38px !important;
+  }
+
+  /* Fix vertical orange auto-hunt text. */
+  .vtw-auto-hunt-box,
+  .vtw-auto-hunt-box * {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    white-space: normal !important;
+    word-break: normal !important;
+  }
+
+  .vtw-auto-hunt-box {
+    display: grid !important;
+    grid-template-columns: 44px 1fr !important;
+    gap: 10px !important;
+    align-items: center !important;
+    padding: 12px !important;
+  }
+
+  .vtw-auto-hunt-box .vtw-auto-hunt-text {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
+    color: #d35400 !important;
+    font-weight: 900 !important;
+  }
+
+  .vtw-start-button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Spy: open the latest video list completely on mobile. */
+  .vtw-spy-videos-box,
+  .vtw-spy-videos-box > div,
+  .vtw-spy-videos-box .flex-1,
+  .vtw-spy-videos-box .overflow-auto {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table,
+  .vtw-spy-videos-box .vtw-tracking-table tbody,
+  .vtw-spy-videos-box .vtw-tracking-table tr,
+  .vtw-spy-videos-box .vtw-tracking-table td {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table thead { display: none !important; }
+
+  .vtw-spy-videos-box .vtw-tracking-table tr {
+    margin: 10px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid #dbe5f0 !important;
+    background: #fff !important;
+    box-shadow: 0 8px 22px rgba(15,23,42,.08) !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td {
+    display: grid !important;
+    grid-template-columns: 86px minmax(0, 1fr) !important;
+    gap: 8px !important;
+    align-items: start !important;
+    border: 0 !important;
+    border-bottom: 1px dashed #e5edf5 !important;
+    padding: 8px 0 !important;
+    text-align: left !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td:last-child { border-bottom: 0 !important; }
+
+  .vtw-spy-videos-box .vtw-tracking-table td::before {
+    display: block !important;
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(1)::before { content: 'Thumb'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(2)::before { content: 'Video ID'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(3)::before { content: 'Phân tích'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(4)::before { content: 'Tiêu đề'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(5)::before { content: 'Ngày đăng'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(6)::before { content: 'Views'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(7)::before { content: 'Views/ngày'; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(8)::before { content: 'URL'; }
+
+  .vtw-spy-videos-box .vtw-tracking-table img {
+    width: 100px !important;
+    height: 58px !important;
+    object-fit: cover !important;
+  }
+
+  /* Account modal must never be hidden behind browser bars. */
+  .vtw-account-modal-overlay {
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .vtw-account-modal {
+    width: min(100%, 440px) !important;
+    max-height: calc(100dvh - 28px) !important;
+    overflow-y: auto !important;
+    border-radius: 24px !important;
+  }
+
+  .vtw-account-modal .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtw-account-modal .grid-cols-3,
+  .vtw-account-modal .grid-cols-2 + .grid,
+  .vtw-account-modal .grid {
+    gap: 10px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .vtw-account-modal-overlay {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+  .vtw-account-modal {
+    max-height: calc(100dvh - 16px) !important;
+  }
+}

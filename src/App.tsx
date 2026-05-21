@@ -1925,6 +1925,8 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         scanKeywords = [searchKeyword];
       }
 
+      const addedChannelIds = new Set<string>(resultsRef.current.map(r => r.id));
+
       for (let k = 0; k < scanKeywords.length; k++) {
         if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
         const searchKeyword = scanKeywords[k];
@@ -1960,7 +1962,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
         const videos = videoRes.items || [];
         const channelIds = [...new Set(videos.map((v: any) => v.snippet.channelId))]
-          .filter((id: any) => !resultsRef.current.some(r => r.id === id));
+          .filter((id: any) => !addedChannelIds.has(String(id)) && !resultsRef.current.some(r => r.id === id));
 
         if (channelIds.length === 0) continue;
 
@@ -2013,7 +2015,9 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
         for (const candidate of candidates as any[]) {
           if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
-          if (resultsRef.current.some(r => r.id === candidate.channel.id)) continue;
+          const candidateChannelId = String(candidate.channel.id);
+          if (addedChannelIds.has(candidateChannelId) || resultsRef.current.some(r => r.id === candidate.channel.id)) continue;
+          addedChannelIds.add(candidateChannelId);
 
           const channel = candidate.channel;
           const scoreText = isAutoHunt
@@ -2038,12 +2042,10 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
             lastVideoId: candidate.video.id
           };
 
-          setResults(prev => {
-            const updated = [...prev, newResult].slice(0, STOP_LIMIT);
-            resultsRef.current = updated;
-            localStorage.setItem('youtube_hunter_results', JSON.stringify(updated));
-            return updated;
-          });
+          const nextResults = [...resultsRef.current.filter(item => item.id !== newResult.id), newResult].slice(0, STOP_LIMIT);
+          resultsRef.current = nextResults;
+          localStorage.setItem('youtube_hunter_results', JSON.stringify(nextResults));
+          setResults(nextResults);
 
           const currentProgress = Math.min(10 + (resultsRef.current.length / STOP_LIMIT) * 90, 99);
           setProgress(currentProgress);
@@ -3152,7 +3154,7 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Bottom Actions Row */}
-              <div className="vtw-bottom-actions flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
+              <div className="vtw-bottom-actions vtw-auto-hunt-box flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <input 
@@ -3162,7 +3164,7 @@ ${topKeywordsStr}`;
                       checked={config.autoNiche}
                       onChange={(e) => setConfig({ ...config, autoNiche: e.target.checked })}
                     />
-                    <label htmlFor="autoHunt" className="font-bold text-[12px] text-[#d35400] cursor-pointer flex flex-col">
+                    <label htmlFor="autoHunt" className="vtw-auto-hunt-text font-bold text-[12px] text-[#d35400] cursor-pointer flex flex-col">
                       <span>Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</span>
                     </label>
                   </div>
@@ -3172,14 +3174,14 @@ ${topKeywordsStr}`;
                   {!isHunting ? (
                     <button 
                       onClick={startHunter}
-                      className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
+                      className="vtw-start-button min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
                     >
                       <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH
                     </button>
                   ) : (
                     <button 
                       onClick={stopHunter}
-                      className="min-w-[200px] bg-red-600 text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 shadow-[0_4px_0_#900] transition-all animate-pulse"
+                      className="vtw-start-button min-w-[200px] bg-red-600 text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 shadow-[0_4px_0_#900] transition-all animate-pulse"
                     >
                       <StopCircle size={20} fill="white" /> DỪNG QUÉT
                     </button>
