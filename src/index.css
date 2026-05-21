@@ -3792,3 +3792,53 @@
     height: 63px !important;
   }
 }
+
+/* STEP 25 - table sync, manual filters, diverse auto-hunt cleanup */
+.vtw-range-manual-note {
+  border: 1px dashed rgba(96, 165, 250, .35) !important;
+  background: rgba(15, 23, 42, .28) !important;
+  color: #93c5fd !important;
+  border-radius: 10px !important;
+  padding: 8px 10px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+}
+.vtw-range-manual-note-light {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+.vtw-results-table th:nth-child(5),
+.vtw-results-table th:nth-child(6),
+.vtw-results-table th:nth-child(7),
+.vtw-results-table td:nth-child(5),
+.vtw-results-table td:nth-child(6),
+.vtw-results-table td:nth-child(7) {
+  background: transparent !important;
+  color: #111827 !important;
+}
+.vtw-results-table td:nth-child(7) {
+  font-weight: 900 !important;
+  color: #047857 !important;
+}
+.vtw-results-table td:nth-child(8) a {
+  font-size: 8px !important;
+  max-width: 82px !important;
+}
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .vtw-results-table td:nth-child(7)::before { content: 'Thu nhập ($)' !important; }
+  .vtw-results-table td:nth-child(5),
+  .vtw-results-table td:nth-child(6),
+  .vtw-results-table td:nth-child(7) {
+    background: transparent !important;
+  }
+  .vtw-range-manual-note {
+    font-size: 12px !important;
+    padding: 9px 10px !important;
+  }
+  .vtw-niche-sidebar .vtw-range-number {
+    min-height: 40px !important;
+    font-size: 13px !important;
+  }
+}

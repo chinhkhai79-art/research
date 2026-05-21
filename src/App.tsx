@@ -753,10 +753,21 @@ export default function App() {
       group.items.some(item => normalized.includes(normalizeHunterKeyword(item)) || normalizeHunterKeyword(item).includes(normalized))
     );
     if (found) return found.category.replace(/&/g, 'và');
-    if (/ai|chatgpt|gemini|video|tool|cong cu|công cụ|automation|youtube|seo/i.test(normalized)) return 'Công nghệ và AI';
-    if (/tien|tiền|dau tu|đầu tư|crypto|chung khoan|chứng khoán|tai chinh|tài chính/i.test(normalized)) return 'Tài chính và đầu tư';
-    if (/game|gaming|lol|lien minh|liên minh|tiktok|short/i.test(normalized)) return 'Gaming và giải trí';
-    return 'Chủ đề theo ngách hot';
+    if (/ai|chatgpt|gemini|tool|cong cu|công cụ|automation|seo|app|điện thoại|dien thoai|công nghệ|cong nghe|tech/i.test(normalized)) return 'Công nghệ và AI';
+    if (/tin tức|tin tuc|news|24h|thời sự|thoi su/i.test(normalized)) return 'Tin tức và thời sự';
+    if (/du lịch|du lich|travel|vlog/i.test(normalized)) return 'Du lịch và khám phá';
+    if (/ẩm thực|am thuc|nấu ăn|nau an|food|ăn uống|an uong/i.test(normalized)) return 'Ẩm thực và nấu ăn';
+    if (/game|gaming|lol|lien minh|liên minh|mobile game|highlight|short/i.test(normalized)) return 'Gaming và giải trí';
+    if (/bóng đá|bong da|football|thể thao|the thao/i.test(normalized)) return 'Thể thao';
+    if (/sức khỏe|suc khoe|health|yoga|gym|tập luyện|tap luyen/i.test(normalized)) return 'Sức khỏe và làm đẹp';
+    if (/thú cưng|thu cung|pet|chó|cho|mèo|meo/i.test(normalized)) return 'Pets và động vật';
+    if (/học|hoc|tiếng anh|tieng anh|ielts|giáo dục|giao duc/i.test(normalized)) return 'Giáo dục và học tập';
+    if (/nhạc|nhac|lofi|music|cover/i.test(normalized)) return 'Nhạc và âm thanh';
+    if (/xe|ô tô|oto|car|review xe/i.test(normalized)) return 'Ô tô và xe máy';
+    if (/gia đình|gia dinh|mẹo gia đình|meo gia dinh|mẹo|meo/i.test(normalized)) return 'Mẹo vặt cuộc sống';
+    if (/bất động sản|bat dong san|real estate/i.test(normalized)) return 'Bất động sản';
+    if (/tien|tiền|dau tu|đầu tư|crypto|chung khoan|chứng khoán|tai chinh|tài chính|kiếm tiền|kiem tien/i.test(normalized)) return 'Tài chính và đầu tư';
+    return 'Chủ đề hot khác';
   };
 
   const estimateIncomeFromApiViews = (channel: ChannelResult) => {
@@ -826,10 +837,7 @@ export default function App() {
           <span>{title}<span className="text-[10px] text-gray-400 font-normal block">{subtitle}</span></span>
           <span className="text-blue-400 text-lg tabular-nums whitespace-nowrap">{formatVNNumber(min)} → {formatVNNumber(max)}</span>
         </div>
-        <div className="vtw-dual-range relative h-8 mb-3">
-          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} />
-          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} />
-        </div>
+        <div className="vtw-range-manual-note mb-3">Nhập số Min / Max thủ công</div>
         <div className="grid grid-cols-2 gap-2">
           <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} className="vtw-range-number" />
           <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} className="vtw-range-number" />
@@ -869,10 +877,7 @@ export default function App() {
           <div className="text-[11px] font-black uppercase text-[#2c3e50]">{title}</div>
           <div className="text-[11px] font-black text-blue-700 tabular-nums">{formatVNNumber(min)} → {formatVNNumber(max)}</div>
         </div>
-        <div className="vtw-dual-range vtw-dual-range-light relative h-8 mb-2">
-          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} />
-          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} />
-        </div>
+        <div className="vtw-range-manual-note vtw-range-manual-note-light mb-2">Nhập số Min / Max thủ công</div>
         <div className="grid grid-cols-2 gap-2">
           <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} className="vtw-range-number vtw-range-number-light" />
           <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} className="vtw-range-number vtw-range-number-light" />
@@ -1931,6 +1936,32 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     setStatus('Đã lưu cấu hình.');
   };
 
+
+  const shuffleList = <T,>(items: T[]) => {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const diversifySeedsByTopic = (seeds: string[]) => {
+    const usedTopics = new Set<string>();
+    const firstPass: string[] = [];
+    const secondPass: string[] = [];
+    for (const seed of seeds) {
+      const topic = getTopicFromKeyword(seed).toLowerCase();
+      if (!usedTopics.has(topic)) {
+        usedTopics.add(topic);
+        firstPass.push(seed);
+      } else {
+        secondPass.push(seed);
+      }
+    }
+    return [...firstPass, ...shuffleList(secondPass)];
+  };
+
   const getLanguageForRegion = (regionCodeCode: string): string => {
     const mapping: Record<string, string> = {
       'US': 'English', 'GB': 'English', 'CA': 'English', 'AU': 'English', 'NZ': 'English',
@@ -1986,9 +2017,9 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     const region = regionCode || config.region || 'VN';
     const seedMap: Record<string, string[]> = {
       VN: [
-        'ai công cụ mới', 'chatgpt', 'gemini ai', 'tạo video bằng ai', 'kiếm tiền online',
-        'tin tức 24h', 'công nghệ mới', 'review app', 'youtube shorts', 'mẹo điện thoại',
-        'du lịch việt nam', 'ẩm thực hot', 'game mobile', 'bóng đá việt nam'
+        'ai công cụ mới', 'mẹo điện thoại', 'du lịch việt nam', 'ẩm thực hot', 'game mobile',
+        'bóng đá việt nam', 'tin tức 24h', 'kiếm tiền online', 'sức khỏe tại nhà', 'review xe',
+        'chăm sóc thú cưng', 'học tiếng anh', 'nhạc lofi', 'mẹo gia đình', 'bất động sản'
       ],
       US: [
         'ai tools', 'chatgpt', 'gemini ai', 'make money online', 'youtube automation',
@@ -2105,7 +2136,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
 
       let scanKeywords: string[] = [];
       if (isAutoHunt) {
-        scanKeywords = getAutoHuntSeeds(currentRegion).slice(0, 10);
+        scanKeywords = diversifySeedsByTopic(shuffleList(getAutoHuntSeeds(currentRegion))).slice(0, 16);
       } else {
         let searchKeyword = rawKeyword;
         if (currentRegion && currentRegion !== 'VN') {
@@ -2116,6 +2147,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
 
       const addedChannelIds = new Set<string>(resultsRef.current.map(r => r.id));
+      const usedAutoSeedTopics = new Set<string>();
 
       for (let k = 0; k < scanKeywords.length; k++) {
         if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
@@ -2201,7 +2233,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
           })
           .filter(Boolean)
           .sort((a: any, b: any) => b.rankScore - a.rankScore)
-          .slice(0, STOP_LIMIT);
+          .slice(0, isAutoHunt ? 4 : STOP_LIMIT);
 
         for (const candidate of candidates as any[]) {
           if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
@@ -2210,6 +2242,8 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
           addedChannelIds.add(candidateChannelId);
 
           const channel = candidate.channel;
+          const autoSeedKey = getTopicFromKeyword(searchKeyword).toLowerCase();
+          if (isAutoHunt && usedAutoSeedTopics.has(autoSeedKey)) continue;
           const scoreText = isAutoHunt
             ? (candidate.rankScore / 10).toFixed(1)
             : calculateNicheScore(channel);
@@ -2232,6 +2266,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
             lastVideoId: candidate.video.id
           };
 
+          if (isAutoHunt) usedAutoSeedTopics.add(autoSeedKey);
           const nextResults = dedupeChannelResults([...resultsRef.current.filter(item => item.id !== newResult.id), newResult]);
           resultsRef.current = nextResults;
           localStorage.setItem('youtube_hunter_results', JSON.stringify(nextResults));
@@ -3510,9 +3545,9 @@ ${topKeywordsStr}`;
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] w-12 text-center">ICON</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[180px]">TÊN KÊNH</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px]">MÃ KÊNH</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[150px] text-blue-800">TỪ KHÓA/NGÁCH</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[135px] text-purple-800">CHỦ ĐỀ</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px] text-emerald-700">THU NHẬP ƯỚC TÍNH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[150px] text-gray-900">TỪ KHÓA/NGÁCH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[135px] text-gray-900">CHỦ ĐỀ</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px] text-gray-900">THU NHẬP ($)</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[110px]">URL</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center min-w-[88px]">QUỐC GIA</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-28">NGÀY TẠO</th>
@@ -3539,9 +3574,9 @@ ${topKeywordsStr}`;
                             <td className="px-2 py-1 text-center"><img src={r.icon} className="w-7 h-7 rounded-full border border-[#ccc] mx-auto shadow-sm" /></td>
                             <td className="px-2 py-1 font-bold whitespace-nowrap overflow-hidden text-ellipsis text-black">{r.name}</td>
                             <td className="px-2 py-1 text-[10px] font-mono text-[#7f8c8d] break-all">{r.id}</td>
-                            <td className="px-2 py-1 text-[10px] font-bold text-blue-800 bg-blue-50 max-w-[160px] whitespace-normal">{getChannelTrendKeyword(r)}</td>
-                            <td className="px-2 py-1 text-[10px] font-bold text-purple-800 bg-purple-50 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
-                            <td className="px-2 py-1 text-[10px] font-black text-emerald-700 bg-emerald-50 whitespace-nowrap" title="Ước tính từ views thật của YouTube Data API v3 × RPM tham khảo, không phải doanh thu thật YouTube trả.">{estimateIncomeFromApiViews(r)}</td>
+                            <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[160px] whitespace-normal">{getChannelTrendKeyword(r)}</td>
+                            <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
+                            <td className="px-2 py-1 text-[10px] font-black text-gray-800 whitespace-nowrap" title="Ước tính từ views thật của YouTube Data API v3 × RPM tham khảo, không phải doanh thu thật YouTube trả.">{estimateIncomeFromApiViews(r)}</td>
                             <td className="px-2 py-1 text-[9px] text-blue-600 underline hover:text-blue-800 max-w-[110px]"><a href={r.url} target="_blank" rel="noreferrer" title={r.url}>{formatChannelUrlShort(r.url, r.id)}</a></td>
                             <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryFullName(r.country)}</td>
                             <td className="px-2 py-1 text-center text-gray-500 whitespace-nowrap">{r.publishedAt}</td>
@@ -4252,6 +4287,44 @@ ${topKeywordsStr}`;
                        <span>30</span>
                        <span>50</span>
                        <span>100</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-2">
+                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
+                      Phạm vi Sub <span>{formatVNNumber(config.minSub)} → {formatVNNumber(config.maxSub)}</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={10000000}
+                        step={1000}
+                        value={config.minSub}
+                        onChange={(e) => {
+                          const nextMin = parseRangeNumber(e.target.value, 0);
+                          const [min, max] = clampRangePair(nextMin, config.maxSub, 0, 10000000);
+                          setConfig({ ...config, minSub: min, maxSub: max });
+                        }}
+                        className="vtw-range-number"
+                        placeholder="Min sub"
+                      />
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={10000000}
+                        step={1000}
+                        value={config.maxSub}
+                        onChange={(e) => {
+                          const nextMax = parseRangeNumber(e.target.value, 10000000);
+                          const [min, max] = clampRangePair(config.minSub, nextMax, 0, 10000000);
+                          setConfig({ ...config, minSub: min, maxSub: max });
+                        }}
+                        className="vtw-range-number"
+                        placeholder="Max sub"
+                      />
                     </div>
                   </div>
 
