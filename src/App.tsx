@@ -425,6 +425,9 @@ export default function App() {
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [selectedHistoryKeys, setSelectedHistoryKeys] = useState<string[]>([]);
+  const [geminiKeysHistory, setGeminiKeysHistory] = useState<string[]>([]);
+  const [selectedGeminiHistoryKeys, setSelectedGeminiHistoryKeys] = useState<string[]>([]);
+  const [showGeminiKeyHistory, setShowGeminiKeyHistory] = useState(false);
   const [showNicheModal, setShowNicheModal] = useState(false);
   const clearHistory = () => {
     triggerConfirm(
@@ -443,10 +446,46 @@ export default function App() {
     const currentKeys = config.apiKeys.map(k => k.trim()).filter(Boolean);
     const newKeys = [...new Set([...currentKeys, ...keysToAdd.map(k => k.trim()).filter(Boolean)])];
     setConfig({ ...config, apiKeys: newKeys });
+    setManualKeysInput(newKeys.join('\n'));
     localStorage.setItem('youtube_api_keys', JSON.stringify(newKeys));
+    localStorage.setItem('youtube_api_keys_text_draft', newKeys.join('\n'));
     setSelectedHistoryKeys([]);
     setShowKeyHistory(false);
-    setStatus(`Đã thêm ${keysToAdd.length} Key vào danh sách hoạt động.`);
+    setStatus(`Đã thêm ${keysToAdd.length} Key vào ô nhập YouTube API.`);
+  };
+
+  const useGeminiHistoryKey = (keysToUse: string[]) => {
+    const key = keysToUse.map(k => k.trim()).filter(Boolean)[0];
+    if (!key) return;
+    setGeminiApiKey(key);
+    localStorage.setItem('youtube_gemini_api_key', key);
+    const nextHistory = [...new Set([key, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+    setGeminiKeysHistory(nextHistory);
+    localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextHistory));
+    setSelectedGeminiHistoryKeys([]);
+    setShowGeminiKeyHistory(false);
+    setStatus('Đã khôi phục Gemini API Key vào ô nhập.');
+  };
+
+  const clearGeminiHistory = () => {
+    triggerConfirm(
+      "Xóa lịch sử Gemini",
+      "Bạn có chắc chắn muốn xóa toàn bộ lịch sử Gemini API Key không?",
+      () => {
+        setGeminiKeysHistory([]);
+        setSelectedGeminiHistoryKeys([]);
+        localStorage.removeItem('youtube_gemini_api_keys_history');
+      },
+      "XÁC NHẬN XÓA"
+    );
+  };
+
+  const removeFromGeminiHistory = (keyToRemove: string) => {
+    const next = geminiKeysHistory.filter(k => k !== keyToRemove);
+    setGeminiKeysHistory(next);
+    localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(next));
+    setSelectedGeminiHistoryKeys(prev => prev.filter(k => k !== keyToRemove));
+    setStatus("Đã xóa Gemini Key khỏi lịch sử.");
   };
 
   const removeFromHistory = (keyToRemove: string) => {
@@ -478,13 +517,16 @@ export default function App() {
       if (showKeyHistory && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
         setShowKeyHistory(false);
       }
+      if (showGeminiKeyHistory && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
+        setShowGeminiKeyHistory(false);
+      }
       if (menuPos.visible && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuPos(prev => ({ ...prev, visible: false }));
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyInputModal, showKeyHistory, menuPos.visible]);
+  }, [showRegionList, showKeyInputModal, showKeyHistory, showGeminiKeyHistory, menuPos.visible]);
 
   // Đóng bảng thao tác khi cuộn/đổi màn hình để không bị dính sai kênh.
   useEffect(() => {
@@ -587,6 +629,8 @@ export default function App() {
   useEffect(() => {
     const savedKeys = localStorage.getItem('youtube_api_keys');
     const savedKeyHistory = localStorage.getItem('youtube_api_keys_history');
+    const savedGeminiKeyHistory = localStorage.getItem('youtube_gemini_api_keys_history');
+    const savedKeysDraft = localStorage.getItem('youtube_api_keys_text_draft');
     const savedConfig = localStorage.getItem('youtube_hunter_config');
     const savedResults = localStorage.getItem('youtube_hunter_results');
     const savedTracking = localStorage.getItem('youtube_tracking_channels');
@@ -594,9 +638,15 @@ export default function App() {
     if (savedKeys) {
       const keys = JSON.parse(savedKeys);
       setConfig(prev => ({ ...prev, apiKeys: keys }));
+      setManualKeysInput(savedKeysDraft || (Array.isArray(keys) ? keys.join('\n') : ''));
+    } else if (savedKeysDraft) {
+      setManualKeysInput(savedKeysDraft);
     }
     if (savedKeyHistory) {
       setApiKeysHistory(JSON.parse(savedKeyHistory));
+    }
+    if (savedGeminiKeyHistory) {
+      try { setGeminiKeysHistory(JSON.parse(savedGeminiKeyHistory)); } catch {}
     }
     if (savedConfig) {
       const parsed = JSON.parse(savedConfig);
@@ -674,7 +724,13 @@ export default function App() {
     }
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
-    if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
+    if (savedGeminiKey) {
+      setGeminiApiKey(savedGeminiKey);
+      const currentGeminiHistory = savedGeminiKeyHistory ? JSON.parse(savedGeminiKeyHistory) : [];
+      const nextGeminiHistory = [...new Set([savedGeminiKey, ...(Array.isArray(currentGeminiHistory) ? currentGeminiHistory : [])])];
+      setGeminiKeysHistory(nextGeminiHistory);
+      localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextGeminiHistory));
+    }
     
     const savedGeminiModel = localStorage.getItem('youtube_gemini_model');
     if (savedGeminiModel) setGeminiModel(savedGeminiModel);
@@ -727,6 +783,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
   }, [geminiApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('youtube_api_keys_text_draft', manualKeysInput);
+  }, [manualKeysInput]);
 
   useEffect(() => {
     localStorage.setItem('youtube_gemini_model', geminiModel);
@@ -2064,6 +2124,8 @@ Rules:
     localStorage.setItem('youtube_api_keys_history', JSON.stringify(allKeys));
 
     localStorage.setItem('youtube_api_keys', JSON.stringify(config.apiKeys.map(k => k.trim()).filter(Boolean)));
+    setManualKeysInput(config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
+    localStorage.setItem('youtube_api_keys_text_draft', config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
     localStorage.setItem('youtube_hunter_config', JSON.stringify({
       ...config,
       apiKeys: [] // Don't double save keys
@@ -5693,6 +5755,114 @@ ${topKeywordsStr}`;
           </div>
         )}
 
+
+        {showGeminiKeyHistory && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden border border-indigo-100"
+            >
+              <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-4 flex justify-between items-center text-white">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg"><Bot size={24} /></div>
+                  <div>
+                    <h2 className="text-xl font-bold">Lịch sử Gemini API Key</h2>
+                    <p className="text-xs opacity-80">Chọn lại key Gemini đã từng nhập</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowGeminiKeyHistory(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={24} /></button>
+              </div>
+
+              <div className="p-4 border-b border-gray-100 bg-indigo-50 flex flex-wrap gap-3 justify-between items-center">
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => useGeminiHistoryKey(selectedGeminiHistoryKeys)}
+                    disabled={selectedGeminiHistoryKeys.length === 0}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95"
+                  >
+                    <CheckCircle2 size={18} /> Dùng Key chọn
+                  </button>
+                  <button 
+                    onClick={() => setSelectedGeminiHistoryKeys([...geminiKeysHistory])}
+                    className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                  >
+                    Tích chọn hết
+                  </button>
+                  <button 
+                    onClick={() => setSelectedGeminiHistoryKeys([])}
+                    className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold transition-all text-red-500"
+                  >
+                    Bỏ chọn hết
+                  </button>
+                </div>
+                <button onClick={clearGeminiHistory} className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                  <Trash2 size={18} /> Xóa lịch sử
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {geminiKeysHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                    <RotateCcw size={48} className="mb-4 opacity-20" />
+                    <p className="text-lg italic">Không có lịch sử Gemini Key</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {geminiKeysHistory.map((key, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                          selectedGeminiHistoryKeys.includes(key)
+                            ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-gray-50'
+                        }`}
+                        onClick={() => {
+                          if (selectedGeminiHistoryKeys.includes(key)) {
+                            setSelectedGeminiHistoryKeys(prev => prev.filter(k => k !== key));
+                          } else {
+                            setSelectedGeminiHistoryKeys([key]);
+                          }
+                        }}
+                      >
+                        <div className="pt-1">
+                          <input type="checkbox" checked={selectedGeminiHistoryKeys.includes(key)} onChange={() => {}} className="w-5 h-5 accent-indigo-600 rounded border-gray-300 cursor-pointer" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">GEMINI KEY #{idx + 1}</span>
+                            {geminiApiKey.trim() === key.trim() && (
+                              <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> ĐANG SỬ DỤNG
+                              </span>
+                            )}
+                          </div>
+                          <div className="font-mono text-sm break-all p-2 rounded border select-all text-gray-800 bg-gray-50 border-gray-100">{key}</div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerConfirm('Xóa Gemini Key', 'Bạn có chắc chắn muốn xóa Gemini Key này khỏi lịch sử không?', () => removeFromGeminiHistory(key), 'XÁC NHẬN XÓA');
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Xóa khỏi lịch sử"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button onClick={() => setShowGeminiKeyHistory(false)} className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors">Đóng</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showKeyInputModal && (
           <div className="vtw-api-modal-overlay fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
             <motion.div 
@@ -5717,6 +5887,22 @@ ${topKeywordsStr}`;
                       >
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
                         {showApiKeys ? 'ẨN' : 'HIỆN'} KEY
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowKeyHistory(true)}
+                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        title="Lịch sử API Key YouTube"
+                      >
+                        <HistoryIcon size={10} /> YOUTUBE
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGeminiKeyHistory(true)}
+                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        title="Lịch sử API Key Gemini"
+                      >
+                        <HistoryIcon size={10} /> GEMINI
                       </button>
                     </div>
                   </div>
@@ -5879,10 +6065,18 @@ ${topKeywordsStr}`;
                     localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
                     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
                     localStorage.setItem('youtube_gemini_model', geminiModel);
+                    localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
                     
                     const newHistory = [...new Set([...apiKeysHistory, ...keys])];
                     setApiKeysHistory(newHistory);
                     localStorage.setItem('youtube_api_keys_history', JSON.stringify(newHistory));
+
+                    const cleanGeminiKey = geminiApiKey.trim();
+                    if (cleanGeminiKey) {
+                      const newGeminiHistory = [...new Set([cleanGeminiKey, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+                      setGeminiKeysHistory(newGeminiHistory);
+                      localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(newGeminiHistory));
+                    }
                     
                     setShowKeyInputModal(false);
                     setStatus(`Đã cập nhật hệ thống API thành công.`);
