@@ -677,7 +677,7 @@ export default function App() {
     // Handle payment success return
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('paid') === 'success') {
-      alert(`Thanh toán thành công! Mã đơn: ${urlParams.get('orderCode') || ''}`);
+      setStatus(`Thanh toán thành công! Mã đơn: ${urlParams.get('orderCode') || ''}`);
       // Clean up URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -1122,444 +1122,360 @@ export default function App() {
 
   const fetchDailyTrendingFromYouTube = async () => {
     if (config.apiKeys.length === 0) {
-      alert('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
+      setStatus('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
       return;
     }
 
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật trend');
+    setStatus('Đang lấy dữ liệu thật từ YouTube API V3...');
 
-    const REGION_LANGUAGE: Record<string, { language: string; prompt: string; searchHint: string }> = {
-      '': {
-        language: 'Đa ngôn ngữ',
-        prompt: 'Trộn ngẫu nhiên theo thị trường toàn cầu: có thể dùng tiếng Việt, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Thái, tiếng Indonesia, tiếng Tây Ban Nha. Không bắt buộc tất cả là tiếng Việt.',
-        searchHint: 'global trending'
-      },
-      VN: { language: 'Tiếng Việt', prompt: 'Tất cả từ khóa phải viết bằng tiếng Việt tự nhiên.', searchHint: 'hot trend việt nam' },
-      US: { language: 'English', prompt: 'All keywords must be in natural American English. Do not use Vietnamese.', searchHint: 'US trending' },
-      GB: { language: 'English', prompt: 'All keywords must be in natural British English. Do not use Vietnamese.', searchHint: 'UK trending' },
-      CA: { language: 'English', prompt: 'All keywords must be in natural English for Canada. Do not use Vietnamese.', searchHint: 'Canada trending' },
-      AU: { language: 'English', prompt: 'All keywords must be in natural English for Australia. Do not use Vietnamese.', searchHint: 'Australia trending' },
-      IN: { language: 'English/Hindi', prompt: 'Use natural India-market keywords, mainly English or Hindi. Do not use Vietnamese.', searchHint: 'India trending' },
-      JP: { language: '日本語', prompt: 'すべてのキーワードは自然な日本語で書いてください。ベトナム語は使わないでください。', searchHint: '日本 トレンド' },
-      KR: { language: '한국어', prompt: '모든 키워드는 자연스러운 한국어로 작성하세요. 베트남어를 사용하지 마세요.', searchHint: '한국 트렌드' },
-      TH: { language: 'ภาษาไทย', prompt: 'ใช้คำค้นหาเป็นภาษาไทยธรรมชาติเท่านั้น ห้ามใช้ภาษาเวียดนาม', searchHint: 'เทรนด์ไทย' },
-      ID: { language: 'Bahasa Indonesia', prompt: 'Semua keyword harus dalam Bahasa Indonesia yang natural. Jangan gunakan bahasa Vietnam.', searchHint: 'tren indonesia' },
-      PH: { language: 'English/Filipino', prompt: 'Use natural Philippines-market keywords in English or Filipino. Do not use Vietnamese.', searchHint: 'Philippines trending' },
-      MY: { language: 'Malay/English', prompt: 'Use natural Malaysia-market keywords in Malay or English. Do not use Vietnamese.', searchHint: 'Malaysia trending' },
-      SG: { language: 'English', prompt: 'All keywords must be in natural Singapore English. Do not use Vietnamese.', searchHint: 'Singapore trending' },
-      DE: { language: 'Deutsch', prompt: 'Alle Keywords müssen auf natürlichem Deutsch sein. Kein Vietnamesisch verwenden.', searchHint: 'Deutschland Trends' },
-      FR: { language: 'Français', prompt: 'Tous les mots-clés doivent être en français naturel. Ne pas utiliser le vietnamien.', searchHint: 'tendances france' },
-      RU: { language: 'Русский', prompt: 'Все ключевые слова должны быть на естественном русском языке. Не используйте вьетнамский.', searchHint: 'тренды россия' },
-      BR: { language: 'Português', prompt: 'Todas as palavras-chave devem estar em português natural do Brasil. Não use vietnamita.', searchHint: 'tendências brasil' },
-      MX: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural de México. No uses vietnamita.', searchHint: 'tendencias méxico' },
-      ES: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural. No uses vietnamita.', searchHint: 'tendencias españa' },
-      IT: { language: 'Italiano', prompt: 'Tutte le keyword devono essere in italiano naturale. Non usare vietnamita.', searchHint: 'tendenze italia' }
-    };
+    const selectedRegion = trendingRegion || config.region || 'VN';
+    const regionLabel = REGIONS.find(r => r.code === selectedRegion)?.name || 'Toàn cầu';
+    const storageKey = `youtube_suggested_niches_trending_v4_${selectedRegion || 'GLOBAL'}`;
+    const publishedAfter = getPublishedAfterDate('month');
 
-    const regionMeta = REGION_LANGUAGE[trendingRegion] || REGION_LANGUAGE.US;
-    const regionLabel = REGIONS.find(r => r.code === trendingRegion)?.name || 'Toàn cầu (Global)';
-    const trendingStorageKey = `youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`;
-
-    const normalizeText = (value: string) =>
-      (value || '')
+    const removeVietnameseTone = (value: string) =>
+      String(value || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/g, 'd');
+        .replace(/đ/g, 'd')
+        .trim();
 
-    const cleanKeyword = (value: string) =>
-      (value || '')
-        .toLowerCase()
-        .replace(/#/g, '')
-        .replace(/[^\p{L}\p{N}\s&+.-]/gu, ' ')
+    const cleanTrendPhrase = (value: string) =>
+      String(value || '')
+        .replace(/#[\w\p{L}\p{N}_-]+/gu, ' $& ')
+        .replace(/https?:\/\/\S+/gi, ' ')
+        .replace(/[|•·,_;:!?()[\]{}"“”'’]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
-    const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
+    const compactKeyword = (value: string) => {
+      const cleaned = cleanTrendPhrase(value)
+        .replace(/^#/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      return words.slice(0, 6).join(' ').toLowerCase();
+    };
+
+    const isVietnameseLike = (value: string) => {
+      const raw = String(value || '').toLowerCase();
+      const noTone = removeVietnameseTone(raw);
+      return /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(raw)
+        || /\b(cua|của|cho|voi|với|khong|không|cach|cách|huong dan|hướng dẫn|viet nam|việt nam|ngay|ngày|nguoi|người|lam|làm|mon|món)\b/.test(noTone);
+    };
+
+    const languageOk = (value: string) => {
+      const normalized = removeVietnameseTone(value);
+      if (['US', 'GB', 'CA', 'AU', 'SG'].includes(selectedRegion)) return !isVietnameseLike(value) && /[a-z]/i.test(value);
+      if (selectedRegion === 'VN') return /[a-zăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value);
+      if (selectedRegion === 'JP') return /[ぁ-んァ-ン一-龯]/.test(value) || (!isVietnameseLike(value) && /[a-z]/i.test(value));
+      if (selectedRegion === 'KR') return /[가-힣]/.test(value) || (!isVietnameseLike(value) && /[a-z]/i.test(value));
+      if (selectedRegion === 'RU') return /[а-яё]/i.test(value) || (!isVietnameseLike(value) && /[a-z]/i.test(value));
+      return !isVietnameseLike(value) || selectedRegion === 'VN';
+    };
+
+    const categorySeeds: Record<string, { vn: string; en: string; must: RegExp; ban?: RegExp }> = {
       'PHÁT TRIỂN BẢN THÂN': {
-        hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
-        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation', 'quan ly thoi gian', 'nang suat', 'lam viec nang suat', 'ky nang lam viec']
+        vn: 'phát triển bản thân thói quen năng suất thành công',
+        en: 'self improvement habits productivity motivation',
+        must: /(self|motivation|habit|productivity|mindset|success|confidence|discipline|thói quen|năng suất|thành công|tự tin|trì hoãn|phát triển)/i
       },
       'SỨC KHỎE & LÀM ĐẸP': {
-        hint: 'sức khỏe, giảm cân, skincare, làm đẹp, yoga, fitness, chăm sóc cơ thể',
-        rules: ['suc khoe', 'lam dep', 'skincare', 'giam can', 'yoga', 'trang diem', 'mun', 'toc', 'health', 'beauty', 'fitness']
+        vn: 'sức khỏe làm đẹp skincare giảm cân yoga tại nhà',
+        en: 'health beauty skincare weight loss yoga workout',
+        must: /(health|beauty|skincare|weight loss|yoga|workout|fitness|diet|makeup|sức khỏe|làm đẹp|giảm cân|tập|mụn|da|tóc)/i
       },
       'CÔNG NGHỆ & AI': {
-        hint: 'AI, ChatGPT, Gemini, điện thoại, phần mềm, công nghệ, app, thủ thuật số',
-        rules: ['cong nghe', 'ai', 'chatgpt', 'gemini', 'iphone', 'android', 'dien thoai', 'may tinh', 'phan mem', 'technology']
+        vn: 'công nghệ AI ChatGPT công cụ AI ứng dụng AI',
+        en: 'ai tools chatgpt technology apps automation',
+        must: /(ai|chatgpt|gemini|technology|tech|app|software|iphone|android|automation|công nghệ|trí tuệ|điện thoại|ứng dụng|phần mềm)/i
       },
       'GIÁO DỤC & HỌC TẬP': {
-        hint: 'học tập, ngoại ngữ, IELTS, TOEIC, lập trình, ôn thi, phương pháp học',
-        rules: ['giao duc', 'hoc tap', 'hoc tieng', 'ielts', 'toeic', 'lap trinh', 'python', 'on thi', 'education', 'learning']
+        vn: 'học tập tiếng anh ielts tự học kỹ năng',
+        en: 'study tips english learning ielts education',
+        must: /(study|learn|learning|english|ielts|education|school|exam|học|tiếng anh|ôn thi|lập trình|kiến thức|kỹ năng)/i
       },
       'ẨM THỰC & NẤU ĂN': {
-        hint: 'món ăn, công thức nấu ăn, review quán ăn, bếp, đồ ăn, ẩm thực gia đình',
-        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe', 'thuc pham', 'quan an', 'gia dinh ngon', 'bua an'],
-        banned: ['bac gau', 'wag bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lmht', 'league of legends', 'lien minh', 'game', 'free fire', 'tik tok free fire', 'tiktok free fire', 'chatgpt']
+        vn: 'ẩm thực nấu ăn món ngon công thức món ăn gia đình',
+        en: 'food cooking recipe meal restaurant review',
+        must: /(food|cook|cooking|recipe|meal|restaurant|kitchen|mukbang|ẩm thực|nấu|món|ăn|công thức|bếp|quán)/i,
+        ban: /(game|lck|league|bolero|reaction|chatgpt|ai tool)/i
       },
       'DU LỊCH & KHÁM PHÁ': {
-        hint: 'du lịch, khám phá địa điểm, resort, vé máy bay, phượt, cắm trại, travel vlog',
-        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour', 'resort', 've may bay', 'cam trai', 'nghi duong', 'lich trinh'],
-        banned: ['bolero', 'hybe', 'lck', 'chatgpt']
+        vn: 'du lịch khám phá địa điểm travel vlog',
+        en: 'travel vlog destination trip guide adventure',
+        must: /(travel|trip|vlog|tour|destination|adventure|camping|du lịch|khám phá|phượt|địa điểm|homestay)/i
       },
       'GIẢI TRÍ & HÀI HƯỚC': {
-        hint: 'giải trí, phim, hài, meme, reaction, drama, người nổi tiếng, thử thách',
-        rules: ['giai tri', 'hai', 'funny', 'meme', 'reaction', 'phim', 'anime', 'prank', 'thu thach', 'entertainment']
+        vn: 'giải trí hài hước phim ngắn reaction meme',
+        en: 'funny entertainment meme reaction short film',
+        must: /(funny|meme|reaction|entertainment|comedy|movie|film|drama|giải trí|hài|phim|thử thách|meme)/i
       },
       'THỂ THAO & THỂ HÌNH': {
-        hint: 'thể thao, gym, bóng đá, cầu lông, tennis, workout, fitness',
-        rules: ['the thao', 'gym', 'fitness', 'bong da', 'cau long', 'tennis', 'chay bo', 'workout', 'tang co', 'giam mo'],
-        banned: ['bolero', 'hybe']
+        vn: 'thể thao gym bóng đá workout fitness',
+        en: 'sports fitness gym football workout',
+        must: /(sport|fitness|gym|football|workout|tennis|basketball|soccer|thể thao|bóng đá|tập|gym|cầu lông)/i
       },
       'PETS & ĐỘNG VẬT': {
-        hint: 'thú cưng, chó mèo, động vật, chăm sóc pet, huấn luyện pet',
-        rules: ['pet', 'thu cung', 'dong vat', 'cho', 'meo', 'cat', 'dog', 'animal', 'grooming', 'bo sat'],
-        banned: ['bolero', 'hybe', 'lck']
+        vn: 'thú cưng chó mèo động vật chăm sóc pet',
+        en: 'pets dogs cats animals pet care',
+        must: /(pet|dog|cat|animal|puppy|kitten|grooming|thú cưng|chó|mèo|động vật|huấn luyện)/i
       },
       'GIA ĐÌNH & ĐỜI SỐNG': {
-        hint: 'gia đình, đời sống, dọn nhà, nuôi con, mẹo nhà cửa, sống xanh',
-        rules: ['gia dinh', 'doi song', 'meo vat', 'don nha', 'nuoi con', 'me bim', 'trong rau', 'home', 'family', 'life']
+        vn: 'gia đình đời sống mẹo nhà cửa nuôi con',
+        en: 'family life home tips parenting cleaning',
+        must: /(family|home|parenting|cleaning|life tips|mom|dad|gia đình|đời sống|dọn nhà|nuôi con|mẹo)/i
       },
       'NGHỆ THUẬT & SÁNG TẠO': {
-        hint: 'vẽ, thiết kế, chụp ảnh, edit video, guitar, Canva, sáng tạo nội dung',
-        rules: ['nghe thuat', 'sang tao', 've tranh', 'chup anh', 'guitar', 'canva', 'edit video', 'art', 'creative', 'design']
+        vn: 'sáng tạo nghệ thuật vẽ canva edit video',
+        en: 'creative art drawing canva video editing',
+        must: /(art|creative|drawing|design|canva|edit|photography|guitar|vẽ|sáng tạo|thiết kế|chụp ảnh|video)/i
       },
       'CÔNG NGHỆ Ô TÔ & XE MÁY': {
-        hint: 'ô tô, xe máy, xe điện, review xe, bảo dưỡng xe, phụ kiện xe',
-        rules: ['oto', 'xe may', 'xe dien', 'review xe', 'bao duong xe', 'phu kien oto', 'car', 'motorbike', 'vehicle'],
-        banned: ['bolero', 'hybe']
+        vn: 'ô tô xe máy review xe phụ kiện xe',
+        en: 'car motorcycle auto review vehicle accessories',
+        must: /(car|auto|vehicle|motorcycle|bike|tesla|ô tô|xe máy|phụ kiện xe|review xe)/i
       },
       'TÂM LÝ HỌC & MỐI QUAN HỆ': {
-        hint: 'tâm lý học, tình yêu, mối quan hệ, MBTI, chữa lành, hôn nhân',
-        rules: ['tam ly', 'moi quan he', 'tinh yeu', 'chia tay', 'mbti', 'hon nhan', 'doc hai', 'psychology', 'relationship']
+        vn: 'tâm lý học mối quan hệ tình yêu chữa lành',
+        en: 'psychology relationship dating healing love',
+        must: /(psychology|relationship|dating|love|healing|mental|tâm lý|tình yêu|mối quan hệ|chữa lành)/i
       },
       'ESPORTS & GAMING': {
-        hint: 'game, esports, Liên Quân, LCK, Valorant, PUBG, Genshin, LOL',
-        rules: ['game', 'gaming', 'esports', 'lien quan', 'tft', 'valorant', 'pubg', 'genshin', 'lol', 'mobile game', 'lck']
+        vn: 'game esports liên quân free fire highlight',
+        en: 'gaming esports gameplay highlights mobile game',
+        must: /(game|gaming|esport|gameplay|highlight|free fire|roblox|minecraft|liên quân|liên minh|pubg)/i
       },
       'HUYỀN BÍ & TÂM LINH': {
-        hint: 'huyền bí, tâm linh, tarot, giấc mơ, phong thủy, bí ẩn',
-        rules: ['huyen bi', 'tam linh', 'tarot', 'giac mo', 'bi an', 'phong thuy', 'nhan qua', 'supernatural', 'mystery']
+        vn: 'huyền bí tâm linh bí ẩn tarot phong thủy',
+        en: 'mystery spiritual tarot paranormal astrology',
+        must: /(mystery|spiritual|tarot|paranormal|astrology|dream|huyền bí|tâm linh|bí ẩn|phong thủy|giấc mơ)/i
       },
       'MẸO VẶT CUỘC SỐNG': {
-        hint: 'mẹo vặt, life hack, sửa chữa, tái chế, mẹo nhà bếp, mẹo sinh hoạt',
-        rules: ['meo vat', 'life hack', 'sua chua', 'tai che', 'bao quan', 'lo vi song', 'ung dung huu ich', 'tips']
+        vn: 'mẹo vặt cuộc sống mẹo nhà bếp thủ thuật',
+        en: 'life hacks tips tricks home hacks',
+        must: /(life hack|tips|tricks|how to|cleaning|mẹo|thủ thuật|cách làm|tái chế)/i
       },
       'VĂN HÓA & LỊCH SỬ': {
-        hint: 'lịch sử, văn hóa, di tích, nhân vật lịch sử, chiến tranh, triều đại',
-        rules: ['lich su', 'van hoa', 'trieu dai', 'chien tranh', 'di tich', 'nhan vat lich su', 'history', 'culture']
+        vn: 'lịch sử văn hóa khám phá triều đại sự kiện',
+        en: 'history culture ancient facts documentary',
+        must: /(history|culture|ancient|documentary|war|facts|lịch sử|văn hóa|triều đại|di tích)/i
       },
       'THỜI TRANG & PHONG CÁCH': {
-        hint: 'thời trang, phối đồ, local brand, sneaker, outfit, phong cách cá nhân',
-        rules: ['thoi trang', 'phoi do', 'local brand', 'vintage', 'sneaker', 'fashion', 'style', 'outfit']
+        vn: 'thời trang phối đồ phong cách outfit',
+        en: 'fashion style outfit clothing trends',
+        must: /(fashion|style|outfit|clothing|sneaker|makeup|thời trang|phối đồ|phong cách|quần áo)/i
       },
       'NÔNG NGHIỆP CÔNG NGHỆ CAO': {
-        hint: 'nông nghiệp, trồng trọt, thủy canh, nuôi tôm, cây cảnh, công nghệ nông nghiệp',
-        rules: ['nong nghiep', 'trong rau', 'thuy canh', 'nuoi tom', 'sau rieng', 'hoa lan', 'cay canh', 'agriculture']
+        vn: 'nông nghiệp trồng cây chăn nuôi thủy canh',
+        en: 'farming agriculture gardening hydroponics',
+        must: /(farm|farming|agriculture|garden|hydroponic|trồng|nông nghiệp|chăn nuôi|cây cảnh|nuôi)/i
       },
       'REVIEW SẢN PHẨM & UNBOXING': {
-        hint: 'review sản phẩm, unboxing, đồ công nghệ, đồ gia dụng, mỹ phẩm, Shopee, phụ kiện',
-        rules: ['review', 'unboxing', 'shopee', 'san pham', 'my pham', 'do cong nghe', 'ban phim', 'smartwatch', 'do gia dung'],
-        banned: ['bolero', 'nhac bolero', 'nhac', 'music', 'karaoke', 'cover', 'lck', 'lien minh', 'hybe', 'son tung']
+        vn: 'review sản phẩm unboxing đồ công nghệ mỹ phẩm',
+        en: 'product review unboxing gadgets shopping',
+        must: /(review|unboxing|product|shopping|gadget|đánh giá|sản phẩm|mở hộp|mua)/i,
+        ban: /(bolero|karaoke|lck|gameplay)/i
       },
       'NHẠC & COVER': {
-        hint: 'nhạc, cover, bolero, lofi, karaoke, remix, acoustic, bài hát',
-        rules: ['nhac', 'cover', 'lofi', 'karaoke', 'beat', 'remix', 'acoustic', 'music', 'song', 'bolero']
+        vn: 'nhạc cover lofi remix karaoke acoustic',
+        en: 'music cover lofi remix karaoke acoustic',
+        must: /(music|song|cover|lofi|remix|karaoke|acoustic|nhạc|bài hát|beat)/i
       },
       'BẤT ĐỘNG SẢN & NHÀ CỬA': {
-        hint: 'bất động sản, nhà đất, căn hộ, nội thất, phong thủy nhà, thiết kế nhà',
-        rules: ['bat dong san', 'nha cua', 'can ho', 'nha pho', 'noi that', 'phong thuy nha', 'real estate', 'home']
+        vn: 'bất động sản nhà cửa căn hộ nội thất',
+        en: 'real estate home interior apartment house',
+        must: /(real estate|house|home|apartment|interior|property|bất động sản|nhà|căn hộ|nội thất)/i
       },
       'CÂU CHUYỆN KHỞI NGHIỆP': {
-        hint: 'khởi nghiệp, kinh doanh, startup, bán hàng, marketing, quản trị, kiếm tiền',
-        rules: ['khoi nghiep', 'kinh doanh', 'startup', 'ban hang', 'marketing 0 dong', 'quan cafe', 'business']
+        vn: 'khởi nghiệp kinh doanh bán hàng marketing',
+        en: 'startup business marketing entrepreneurship sales',
+        must: /(startup|business|marketing|sales|entrepreneur|khởi nghiệp|kinh doanh|bán hàng|startup)/i
       },
       'CHUYỆN LẠ BỐN PHƯƠNG': {
-        hint: 'chuyện lạ, hiện tượng kỳ lạ, khám phá độc lạ, kỷ lục, sinh vật lạ',
-        rules: ['chuyen la', 'ky la', 'guinness', 'sinh vat bien', 'hien tuong', 'doc la', 'strange', 'weird']
+        vn: 'chuyện lạ khám phá kỳ lạ sự thật thú vị',
+        en: 'strange facts weird discoveries amazing',
+        must: /(strange|weird|amazing|facts|discovery|kỳ lạ|chuyện lạ|khám phá|sự thật)/i
       },
       'ASMR & MUKBANG': {
-        hint: 'ASMR, mukbang, ăn uống, âm thanh thư giãn, ăn cay, hải sản',
-        rules: ['asmr', 'mukbang', 'an uong', 'go phim', 'thu gian', 'hai san', 'do an cay']
+        vn: 'asmr mukbang ăn uống âm thanh thư giãn',
+        en: 'asmr mukbang eating sounds relaxing',
+        must: /(asmr|mukbang|eating sounds|relaxing sound|âm thanh|ăn uống)/i
       },
       'XÂY DỰNG & KIẾN TRÚC': {
-        hint: 'xây dựng, kiến trúc, thi công, chống thấm, máy xúc, thiết kế công trình',
-        rules: ['xay dung', 'kien truc', 'thi cong', 'chong tham', 'xi mang', 'may xuc', 'construction', 'architecture']
+        vn: 'xây dựng kiến trúc nhà đẹp thi công',
+        en: 'construction architecture building house design',
+        must: /(construction|architecture|building|house design|xây dựng|kiến trúc|thi công|nhà đẹp)/i
       },
       'MARKETING & TRUYỀN THÔNG': {
-        hint: 'marketing, affiliate, SEO, quảng cáo, content, truyền thông, case study',
-        rules: ['marketing', 'affiliate', 'seo', 'facebook ads', 'content', 'truyen thong', 'case study']
+        vn: 'marketing truyền thông affiliate seo tiktok ads',
+        en: 'marketing social media seo affiliate ads',
+        must: /(marketing|seo|affiliate|ads|social media|content|truyền thông|quảng cáo|tiktok|facebook)/i
       },
       'TRỊ LIỆU ÂM THANH': {
-        hint: 'âm thanh chữa lành, 432hz, tiếng mưa, white noise, nhạc thiền, sleep music',
-        rules: ['am thanh', '432hz', 'tieng mua', 'song bien', 'nhac thien', 'white noise', 'sleep music', 'healing']
+        vn: 'âm thanh chữa lành tiếng mưa thiền ngủ ngon',
+        en: 'healing sound sleep music rain meditation',
+        must: /(healing sound|sleep music|rain sound|meditation|white noise|âm thanh|chữa lành|tiếng mưa|thiền)/i
       },
       'ĐAN LEN & THÊU THÙA': {
-        hint: 'đan len, móc len, crochet, thêu, kim móc, đồ handmade len',
-        rules: ['dan len', 'moc len', 'crochet', 'theu', 'kim moc', 'tui xach len', 'knitting']
+        vn: 'móc len đan len thêu thủ công crochet',
+        en: 'crochet knitting embroidery handmade',
+        must: /(crochet|knitting|embroidery|handmade|móc len|đan len|thêu|len)/i
       },
       'TÀI CHÍNH & ĐẦU TƯ': {
-        hint: 'tài chính, đầu tư, chứng khoán, crypto, tiết kiệm tiền, kiếm tiền online, thẻ tín dụng',
-        rules: ['tai chinh', 'dau tu', 'chung khoan', 'crypto', 'tiet kiem tien', 'the tin dung', 'kiem tien online', 'finance', 'investment'],
-        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'nau an']
+        vn: 'tài chính đầu tư chứng khoán crypto kiếm tiền',
+        en: 'finance investing stocks crypto money',
+        must: /(finance|invest|stock|crypto|money|trading|tài chính|đầu tư|chứng khoán|kiếm tiền|tiền)/i,
+        ban: /(game|bolero|mukbang)/i
       }
     };
 
-    const GLOBAL_BLOCK_BY_CATEGORY = (category: string) => {
-      const blocks = [
-        'bac gau', 'bac gau vlog', 'wag bac gau', 'bac gau reaction',
-        'hybe', 'hybe labels', 'free fire', 'tik tok free fire', 'tiktok free fire',
-        'lck live', 'lck', 'lmht', 'league of legends', 'lien minh huyen thoai',
-        'roblox', 'minecraft', 'pubg', 'valorant', 'genshin',
-        'son tung', 'mtp', 'drama showbiz'
-      ];
-      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover', 'nhac remix', 'music video');
-      if (category !== 'ESPORTS & GAMING') blocks.push('game', 'gaming', 'esports', 'lien minh', 'lien quan');
-      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('reaction', 'prank drama');
-      if (category !== 'ẨM THỰC & NẤU ĂN') blocks.push('mukbang');
-      return blocks;
+    const getSeedQuery = (category: string) => {
+      const seed = categorySeeds[category];
+      if (!seed) return selectedRegion === 'VN' ? category.toLowerCase() : category.toLowerCase().replace(/&/g, '');
+      if (selectedRegion === 'VN') return seed.vn;
+      if (selectedRegion === '') return `${seed.en} global trend`;
+      return `${seed.en} ${regionLabel}`;
     };
 
-    const isRelevantForCategory = (category: string, keyword: string, strict = false) => {
-      const cleaned = normalizeText(cleanKeyword(keyword));
-      if (!cleaned) return false;
+    const tokenBanned = /\b(official|video|shorts|viral|full|new|update|2024|2025|2026|part|episode|channel|youtube|subscribe|like|comment|follow)\b/i;
 
-      const profile = CATEGORY_PROFILES[category];
-      const banned = [...(profile?.banned || []), ...GLOBAL_BLOCK_BY_CATEGORY(category)].map(normalizeText);
-
-      // Chặn cứng key lệch chủ đề. Đây là lớp lọc cuối cùng cho cả YouTube V3 và Gemini.
-      if (banned.some(bad => cleaned === bad || cleaned.includes(bad) || bad.includes(cleaned))) return false;
-
-      const rules = (profile?.rules || []).map(normalizeText);
-      const matchedRule = rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
-
-      // Khi dữ liệu đến từ YouTube/Gemini phải khớp domain chủ đề, không còn kiểu lấy trend chung rồi nhét vào mọi mục.
-      if (strict) return matchedRule;
-
-      return true;
+    const addPhraseFromText = (text: string, output: string[]) => {
+      const cleaned = cleanTrendPhrase(text);
+      if (!cleaned) return;
+      const chunks = cleaned.split(/[\-–—/\\]+/g).map(compactKeyword).filter(Boolean);
+      chunks.forEach((chunk) => {
+        const words = chunk.split(/\s+/).filter(Boolean);
+        if (words.length >= 2 && words.length <= 6 && !tokenBanned.test(chunk)) output.push(chunk);
+        for (let n = 2; n <= Math.min(4, words.length); n++) {
+          for (let i = 0; i <= words.length - n; i++) {
+            const phrase = words.slice(i, i + n).join(' ');
+            if (phrase.length >= 4 && !tokenBanned.test(phrase)) output.push(phrase);
+          }
+        }
+      });
     };
 
-    const uniqueLimit = (items: string[], limit = 5, category?: string, strict = false) => {
-      const seen = new Set<string>();
+    const extractCandidates = (video: any) => {
       const output: string[] = [];
-
-      for (const raw of items) {
-        const cleaned = cleanKeyword(raw);
-        if (!cleaned || cleaned.length < 3 || cleaned.length > 42) continue;
-        if (category && !isRelevantForCategory(category, cleaned, strict)) continue;
-
-        const key = normalizeText(cleaned);
-        if (seen.has(key)) continue;
-
-        seen.add(key);
-        output.push(cleaned);
-        if (output.length >= limit) break;
-      }
-
-      return output;
-    };
-
-    const pickCandidateWords = (video: any) => {
       const title = video?.snippet?.title || '';
-      const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
       const description = video?.snippet?.description || '';
-      const candidates: string[] = [];
-
-      tags.forEach((tag: string) => {
-        const cleaned = cleanKeyword(tag);
-        if (cleaned && cleaned.length >= 3 && cleaned.length <= 42) candidates.push(cleaned);
-      });
-
-      const phrases = `${title} ${description}`
-        .split(/[|,.;:!?()\[\]{}"“”'’\n\r\t]+/g)
-        .map(cleanKeyword)
-        .filter(Boolean);
-
-      phrases.forEach((phrase) => {
-        if (phrase.length >= 4 && phrase.length <= 42) candidates.push(phrase);
-      });
-
-      return candidates;
+      addPhraseFromText(title, output);
+      if (Array.isArray(video?.snippet?.tags)) {
+        video.snippet.tags.forEach((tag: string) => output.push(compactKeyword(tag)));
+      }
+      description.split('\n').slice(0, 6).forEach((line: string) => addPhraseFromText(line, output));
+      return output.filter(Boolean);
     };
 
-    const TARGETED_QUERY_BY_CATEGORY: Record<string, string> = {
-      'ẨM THỰC & NẤU ĂN': trendingRegion === 'VN'
-        ? 'ẩm thực nấu ăn món ngon công thức hot trend'
-        : trendingRegion === ''
-          ? 'food cooking recipe trending OR món ngon'
-          : `food cooking recipe trending ${regionMeta.searchHint}`,
-      'TÀI CHÍNH & ĐẦU TƯ': trendingRegion === 'VN'
-        ? 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
-        : trendingRegion === ''
-          ? 'finance investing stocks crypto trending OR tài chính đầu tư'
-          : `finance investing stocks crypto money trend ${regionMeta.searchHint}`
+    const scoreVideo = (video: any, channel: any) => {
+      const views = Number(video?.statistics?.viewCount || 0);
+      const subs = Number(channel?.statistics?.subscriberCount || 0);
+      const vph = calculateVPH(views, video?.snippet?.publishedAt);
+      const ratio = views / Math.max(subs, 1);
+      return Math.round((Math.log10(views + 10) * 18) + Math.min(vph, 5000) / 35 + Math.min(ratio, 500) * 2 + (subs <= 50000 ? 120 : 0));
     };
 
     try {
-      // Luôn bắt đầu từ danh sách gốc để loại bỏ key sai đã lưu trước đó.
-      const sourceNiches = SUGGESTED_NICHES.map((base) => ({
-        ...base,
-        items: uniqueLimit(base.items, 5, base.category, false)
-      }));
+      const updated = [] as { category: string; items: string[] }[];
 
-      const categoryKeywordMap: Record<string, string[]> = {};
-      sourceNiches.forEach((niche) => {
-        categoryKeywordMap[niche.category] = [];
-      });
+      for (let idx = 0; idx < SUGGESTED_NICHES.length; idx++) {
+        const category = SUGGESTED_NICHES[idx].category;
+        const seed = categorySeeds[category];
+        const query = getSeedQuery(category);
+        setStatus(`Đang lấy trend thật: ${category} (${idx + 1}/${SUGGESTED_NICHES.length})...`);
 
-      // Tiết kiệm quota: 1 lượt videos.list chart=mostPopular = 1 quota, dùng làm nguồn trend chung.
-      const popularRes = await youtubeFetch('videos', {
-        part: 'snippet,statistics',
-        chart: 'mostPopular',
-        regionCode: trendingRegion || undefined,
-        maxResults: 50
-      });
-
-      const popularVideos = Array.isArray(popularRes?.items) ? popularRes.items : [];
-
-      popularVideos.forEach((video: any) => {
-        const haystack = normalizeText([
-          video?.snippet?.title || '',
-          video?.snippet?.description || '',
-          ...(Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [])
-        ].join(' '));
-
-        sourceNiches.forEach((niche) => {
-          const profile = CATEGORY_PROFILES[niche.category];
-          const matched = (profile?.rules || []).some((rule) => haystack.includes(normalizeText(rule)));
-
-          if (matched) {
-            categoryKeywordMap[niche.category].push(...pickCandidateWords(video));
-          }
+        const searchRes = await youtubeFetch('search', {
+          part: 'snippet',
+          q: query,
+          type: 'video',
+          regionCode: selectedRegion || undefined,
+          publishedAfter,
+          order: 'viewCount',
+          maxResults: 12,
+          relevanceLanguage: selectedRegion === 'VN' ? 'vi' : ['US','GB','CA','AU','SG'].includes(selectedRegion) ? 'en' : undefined
         });
-      });
 
-      // Sửa riêng 2 mục hay thiếu dữ liệu: 2 lượt search = khoảng 200 quota, tổng vẫn dưới 500.
-      for (const [category, query] of Object.entries(TARGETED_QUERY_BY_CATEGORY)) {
-        try {
-          const searchRes = await youtubeFetch('search', {
-            part: 'snippet',
-            q: query,
-            type: 'video',
-            regionCode: trendingRegion || undefined,
-            order: 'viewCount',
-            publishedAfter: getPublishedAfterDate('month'),
-            maxResults: 5
+        const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
+        if (videoIds.length === 0) {
+          updated.push({ category, items: SUGGESTED_NICHES[idx].items.slice(0, 5) });
+          continue;
+        }
+
+        const videoDetail = await youtubeFetch('videos', {
+          part: 'snippet,statistics',
+          id: videoIds.join(',')
+        });
+
+        const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
+        const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
+        const channelDetail = channelIds.length > 0 ? await youtubeFetch('channels', {
+          part: 'snippet,statistics',
+          id: channelIds.join(',')
+        }) : { items: [] };
+
+        const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
+        const phraseScores = new Map<string, number>();
+        const loosePhraseScores = new Map<string, number>();
+        const filteredVideos = videos
+          .map((video: any) => ({ video, channel: channelMap.get(video?.snippet?.channelId) }))
+          .filter(({ channel }: any) => {
+            const subs = Number(channel?.statistics?.subscriberCount || 0);
+            return subs > 0 && subs <= 1000000;
           });
 
-          const ids = (searchRes?.items || [])
-            .map((item: any) => item?.id?.videoId)
-            .filter(Boolean);
+        const preferredVideos = filteredVideos.some(({ channel }: any) => Number(channel?.statistics?.subscriberCount || 0) <= 50000)
+          ? filteredVideos.filter(({ channel }: any) => Number(channel?.statistics?.subscriberCount || 0) <= 50000)
+          : filteredVideos;
 
-          if (ids.length > 0) {
-            const detailRes = await youtubeFetch('videos', {
-              part: 'snippet,statistics',
-              id: ids.join(',')
-            });
+        preferredVideos.forEach(({ video, channel }: any) => {
+          const baseScore = scoreVideo(video, channel);
+          extractCandidates(video).forEach((phrase) => {
+            const normalizedPhrase = removeVietnameseTone(phrase);
+            if (!languageOk(phrase)) return;
+            if (seed?.ban && seed.ban.test(normalizedPhrase)) return;
+            if (phrase.length < 3 || phrase.length > 42) return;
 
-            (detailRes?.items || []).forEach((video: any) => {
-              categoryKeywordMap[category].push(...pickCandidateWords(video));
-            });
-          }
-        } catch (error) {
-          console.warn(`Không lấy được dữ liệu YouTube riêng cho ${category}:`, error);
-        }
+            const loosePrev = loosePhraseScores.get(phrase) || 0;
+            loosePhraseScores.set(phrase, loosePrev + baseScore);
+
+            if (seed?.must && !seed.must.test(`${phrase} ${normalizedPhrase} ${query}`)) return;
+            const prev = phraseScores.get(phrase) || 0;
+            phraseScores.set(phrase, prev + baseScore + 20);
+          });
+        });
+
+        const ranked = [...phraseScores.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([phrase]) => phrase)
+          .filter((phrase, index, arr) => {
+            const key = removeVietnameseTone(phrase);
+            return arr.findIndex(item => removeVietnameseTone(item) === key) === index;
+          })
+          .slice(0, 5);
+
+        const looseRanked = [...loosePhraseScores.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([phrase]) => phrase)
+          .filter((phrase) => !ranked.some(item => removeVietnameseTone(item) === removeVietnameseTone(phrase)));
+
+        updated.push({
+          category,
+          items: [
+            ...ranked,
+            ...looseRanked
+          ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 5)
+        });
       }
 
-      const youtubeKeywordMap: Record<string, string[]> = {};
-      sourceNiches.forEach((niche) => {
-        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, true);
-      });
-
-      const categoriesNeedGemini = sourceNiches.map((niche) => ({
-        category: niche.category,
-        description: CATEGORY_PROFILES[niche.category]?.hint || niche.category,
-        youtubeKeys: youtubeKeywordMap[niche.category]
-      }));
-
-      let geminiKeywordMap: Record<string, string[]> = {};
-
-      if (geminiApiKey) {
-        try {
-          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-          const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-          const prompt = `
-Bạn là chuyên gia nghiên cứu trend YouTube tại ${regionLabel}.
-Hãy tạo đúng 5 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
-
-Yêu cầu bắt buộc:
-- Trả về JSON thuần, không markdown, không giải thích.
-- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3","key 4","key 5"]}.
-- Từ khóa phải ĐÚNG 100% với chủ đề và mô tả của chủ đề đó.
-- NGÔN NGỮ BẮT BUỘC: ${regionMeta.prompt}
-- Không đưa nhạc/bolero vào REVIEW SẢN PHẨM & UNBOXING.
-- Không đưa game/LCK/nhạc/bolero/reaction vào ẨM THỰC & NẤU ĂN hoặc TÀI CHÍNH & ĐẦU TƯ.
-- Không lặp lại các key YouTube đã có.
-- Mỗi lần tạo phải khác nhau, sắp xếp từ hot cao xuống thấp.
-- Mỗi key tối đa 6 từ, đúng ngôn ngữ khu vực đã chọn.
-- Random seed: ${randomSeed}
-
-Dữ liệu chủ đề:
-${JSON.stringify(categoriesNeedGemini, null, 2)}
-`;
-
-          const response = await ai.models.generateContent({
-            model: geminiModel,
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-          });
-
-          const rawText = response.text || '';
-          const jsonText = rawText
-            .replace(/```json/gi, '')
-            .replace(/```/g, '')
-            .trim();
-
-          const firstBrace = jsonText.indexOf('{');
-          const lastBrace = jsonText.lastIndexOf('}');
-          const safeJson = firstBrace >= 0 && lastBrace > firstBrace
-            ? jsonText.slice(firstBrace, lastBrace + 1)
-            : jsonText;
-
-          const parsed = JSON.parse(safeJson);
-
-          sourceNiches.forEach((niche) => {
-            geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
-              ? uniqueLimit(parsed[niche.category], 5, niche.category, false)
-              : [];
-          });
-        } catch (error) {
-          console.warn('Gemini tạo trend bị lỗi, dùng dữ liệu dự phòng:', error);
-        }
-      }
-
-      const updatedNiches = sourceNiches.map((niche) => {
-        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
-        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, false);
-        const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
-
-        const finalKeys = uniqueLimit([
-          ...youtubeKeys.slice(0, 2),
-          ...aiKeys.slice(0, 5),
-          ...fallbackKeys
-        ], 5, niche.category, false);
-
-        return {
-          ...niche,
-          items: finalKeys
-        };
-      });
-
-      setSuggestedNiches(updatedNiches);
-      localStorage.setItem(trendingStorageKey, JSON.stringify(updatedNiches));
-
-      setStatus('Đã cập nhật Trending thành công.');
-      alert('Đã cập nhật Trending thành công.');
+      setSuggestedNiches(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      setStatus(`Đã cập nhật trending theo dữ liệu YouTube API V3 cho ${regionLabel}.`);
     } catch (error: any) {
       console.error(error);
       setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
-      alert('Không thể cập nhật Trending. Vui lòng kiểm tra YouTube API Key / Gemini API Key.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -1573,7 +1489,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     }
 
     if (config.apiKeys.length === 0) {
-      alert('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
+      setStatus('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
       return;
     }
 
@@ -1615,7 +1531,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       const videoIds = videoItems.map((i: any) => i.id.videoId);
 
       if (videoIds.length === 0) {
-        alert('Không tìm thấy dữ liệu thật từ YouTube API cho từ khóa này.');
+        setStatus('Không tìm thấy dữ liệu thật từ YouTube API cho từ khóa này.');
         setIsNicheSearching(false);
         return;
       }
@@ -1632,7 +1548,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
 
       if (allDetailedVideos.length === 0) {
-        alert('Không lấy được thông tin chi tiết video.');
+        setStatus('Không lấy được thông tin chi tiết video.');
         setIsNicheSearching(false);
         return;
       }
@@ -1784,7 +1700,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       setStatus(`Đã phân tích xong ngách: ${kw}`);
     } catch (err) {
       console.error(err);
-      alert('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key or Quota.');
+      setStatus('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key hoặc Quota.');
     } finally {
       setIsNicheSearching(false);
     }
@@ -2743,7 +2659,7 @@ ${topKeywordsStr}`;
         return next;
       });
       setStatus('Cập nhật tracking hoàn tất.');
-      alert(`Đã cập nhật số liệu mới nhất cho ${trackingChannels.length} kênh!`);
+      setStatus(`Đã cập nhật số liệu mới nhất cho ${trackingChannels.length} kênh.`);
     } catch (err: any) {
       setStatus(`Lỗi: ${err.message}`);
     }
@@ -2934,7 +2850,7 @@ ${topKeywordsStr}`;
     setTrackingChannels(updatedTracking);
     localStorage.setItem('youtube_tracking_channels', JSON.stringify(updatedTracking));
     setStatus(`Đã thêm ${newChannels.length} kênh vào tracking.`);
-    alert(`Đã thêm ${newChannels.length} kênh mới vào danh sách theo dõi!`);
+    setStatus(`Đã thêm ${newChannels.length} kênh mới vào danh sách theo dõi.`);
   };
 
   const goToSpy = (channelId: string) => {
@@ -3066,7 +2982,7 @@ ${topKeywordsStr}`;
           return limited;
         });
       } else {
-        alert('Không tìm thấy video. Vui lòng kiểm tra lại ID/URL.');
+        setStatus('Không tìm thấy video. Vui lòng kiểm tra lại ID/URL.');
         setStatus('Không tìm thấy video.');
       }
     } catch (error) {
@@ -3198,7 +3114,7 @@ ${topKeywordsStr}`;
                   try {
                     await loginWithGoogle();
                   } catch (e: any) {
-                    alert('Lỗi đăng nhập: ' + e.message);
+                    setStatus('Lỗi đăng nhập: ' + e.message);
                   }
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px] shrink-0"
@@ -3222,7 +3138,7 @@ ${topKeywordsStr}`;
               </a>
             ) : (
               <button
-                onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
+                onClick={() => setStatus('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
                 title="Cần đăng nhập để Nâng cấp Gói"
               >
@@ -3332,7 +3248,7 @@ ${topKeywordsStr}`;
                     try {
                       await loginWithGoogle();
                     } catch (e: any) {
-                      alert('Lỗi đăng nhập: ' + e.message);
+                      setStatus('Lỗi đăng nhập: ' + e.message);
                     }
                   }}
                   className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
@@ -6071,8 +5987,8 @@ ${topKeywordsStr}`;
                 
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
-                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU TRENDING TỪ YOUTUBE API</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật danh sách từ khóa ngách hot nhất hôm nay theo quốc gia</span>
+                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật 5 từ khóa/cụm từ khóa hot theo từng chủ đề và quốc gia</span>
                      </h3>
                      <div className="flex items-center gap-3">
                          <div className="relative">
@@ -6092,7 +6008,7 @@ ${topKeywordsStr}`;
                             disabled={isFetchingDailyTrending}
                             className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật API...</> : <><Search size={16}/> Cập nhật Trending</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang lấy dữ liệu...</> : <><Search size={16}/> Cập nhật Trending</>}
                          </button>
                      </div>
                 </div>
