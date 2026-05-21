@@ -1,23 +1,19 @@
-BẢN SỬA NHANH - CẤU HÌNH THANH TOÁN & SMTP
+BẢN FIX ADMIN SETTINGS - SEPAY + SMTP
 
-Cách dùng:
-1. Giải nén ZIP.
-2. Dán đè toàn bộ file/thư mục vào repo GitHub hiện tại.
-3. Commit lên GitHub để Vercel tự deploy.
-4. Vào: https://research.vanthemmo.com/admin-settings.html
-5. Nhập mật khẩu quản trị ADMIN_SETTINGS_PASSWORD.
-6. Cấu hình SePay + SMTP rồi bấm Lưu cấu hình.
+Dán đè toàn bộ file/folder trong ZIP này lên repo hiện tại rồi Deploy lại Vercel.
 
-Đã sửa trong bản này:
-- /api/sepay-webhook mở trên trình duyệt sẽ trả JSON 200, không còn crash 500 chỉ vì mở GET.
-- Webhook Secret lấy ưu tiên từ trang /admin-settings.html, sau đó mới fallback SEPAY_API_KEY trong Vercel.
-- Giao diện admin-settings chia 2 cột: SePay bên trái, SMTP bên phải.
-- Các nút có hiệu ứng đã bấm, loading và thông báo toast tự tắt sau 3 giây.
-- Nút kiểm tra webhook gọi trực tiếp /api/sepay-webhook để dễ biết server có chạy không.
+Đã sửa:
+1) Trang /admin-settings.html có nút LƯU riêng cho SePay.
+2) Trang /admin-settings.html có nút LƯU riêng cho SMTP.
+3) Có nút LƯU TẤT CẢ ở cuối trang.
+4) Nút "Lưu & kiểm tra webhook" sẽ tự lưu cấu hình SePay hiện tại rồi mới gọi /api/test-webhook.
+5) /api/test-webhook lấy Webhook Secret từ cấu hình đã lưu trong Firestore, không còn phụ thuộc cứng vào SEPAY_API_KEY.
+6) Thông báo nổi tự tắt sau 3 giây, nút có hiệu ứng bấm.
 
-Lưu ý biến môi trường cần có trên Vercel:
-- FIREBASE_SERVICE_ACCOUNT
-- FIRESTORE_DATABASE_ID nếu Firestore của anh không dùng database mặc định
-- ADMIN_SETTINGS_PASSWORD
+Cần có biến môi trường trên Vercel:
+- ADMIN_SETTINGS_PASSWORD: mật khẩu vào trang /admin-settings.html
+- Firebase Admin env như app đang dùng sẵn
 
-Nodemailer đã nằm trong package.json.
+Ghi chú:
+- Webhook URL copy vào SePay: https://research.vanthemmo.com/api/sepay-webhook
+- Webhook Secret trong SePay phải giống ô "API Key / Webhook Secret SePay" trên trang admin.
