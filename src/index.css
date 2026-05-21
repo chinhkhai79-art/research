@@ -3381,3 +3381,166 @@
     max-height: calc(100dvh - 16px) !important;
   }
 }
+
+/* STEP 22 – hard mobile stability fixes for real iPhone Safari/Chrome */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+  /* Do not let the auto-hunt note collapse into one-letter vertical text. */
+  .vtw-auto-hunt-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    min-height: 0 !important;
+  }
+
+  .vtw-auto-hunt-box > div,
+  .vtw-auto-hunt-box > div > div {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-auto-hunt-box > div:first-child > div {
+    display: grid !important;
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .vtw-auto-hunt-text,
+  .vtw-auto-hunt-text span {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
+  }
+
+  .vtw-start-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Four action buttons in one row on channel cards. */
+  .vtw-results-table td:last-child > .vtw-channel-actions,
+  .vtw-channel-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  .vtw-channel-actions button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    padding: 8px 5px !important;
+    border-radius: 9px !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+  }
+
+  .vtw-channel-actions .vtw-delete-action {
+    background: #fff1f2 !important;
+    color: #ef4444 !important;
+    border: 1px solid #fecdd3 !important;
+  }
+
+  .vtw-channel-actions .vtw-delete-action span {
+    display: inline !important;
+  }
+
+  /* Keep all numbers readable and separated on iPhone. */
+  .vtw-footer-status span,
+  .vtw-footer-status b {
+    word-spacing: 2px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .vtw-results-table td,
+  .vtw-results-table td::before {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+  }
+
+  .vtw-results-table td:nth-child(8),
+  .vtw-results-table td:nth-child(9),
+  .vtw-results-table td:nth-child(10),
+  .vtw-results-table td:nth-child(11) {
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  /* Account modal: never hide the bottom buttons behind iPhone browser bars. */
+  .vtw-account-modal-overlay {
+    align-items: flex-start !important;
+    padding-top: max(12px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(120px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .vtw-account-modal {
+    max-height: calc(100svh - 132px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .vtw-account-modal .grid:last-child,
+  .vtw-account-modal .flex:last-child {
+    padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Niche suggestion modal: make the top trending box two clean rows. */
+  .fixed.z-\[2000\] .mb-6.flex.justify-between.items-center {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+
+  .fixed.z-\[2000\] .mb-6.flex.justify-between.items-center h3,
+  .fixed.z-\[2000\] .mb-6.flex.justify-between.items-center h3 span {
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    line-height: 1.2 !important;
+  }
+
+  .fixed.z-\[2000\] .mb-6.flex.justify-between.items-center > div {
+    display: grid !important;
+    grid-template-columns: 92px minmax(0, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .fixed.z-\[2000\] .mb-6.flex.justify-between.items-center select,
+  .fixed.z-\[2000\] .mb-6.flex.justify-between.items-center button {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .vtw-account-modal-overlay {
+    padding-bottom: 80px !important;
+  }
+  .vtw-account-modal {
+    max-height: calc(100svh - 88px) !important;
+  }
+}

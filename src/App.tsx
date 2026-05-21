@@ -588,7 +588,12 @@ export default function App() {
         return next;
       });
     }
-    if (savedResults) setResults(JSON.parse(savedResults));
+    if (savedResults) {
+      const cleaned = dedupeChannelResults(JSON.parse(savedResults));
+      setResults(cleaned);
+      resultsRef.current = cleaned;
+      localStorage.setItem('youtube_hunter_results', JSON.stringify(cleaned));
+    }
     if (savedTracking) setTrackingChannels(JSON.parse(savedTracking));
     
     const savedSpyProjects = localStorage.getItem('youtube_spy_projects');
@@ -711,11 +716,37 @@ export default function App() {
     return false;
   };
 
+  const formatVNNumber = (value: any) => {
+    const n = Number(value || 0);
+    if (!Number.isFinite(n)) return '0';
+    return new Intl.NumberFormat('vi-VN').format(n);
+  };
+
+  const dedupeChannelResults = (items: ChannelResult[]) => {
+    const seen = new Set<string>();
+    const next: ChannelResult[] = [];
+    for (const item of items || []) {
+      const key = String(item?.id || item?.url || item?.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      next.push(item);
+    }
+    return next.slice(0, STOP_LIMIT);
+  };
+
   const updateQuotaUsage = (amount: number) => {
-    setQuotaUsed(prev => prev + amount);
-    setTotalQuotaToday(prev => {
-      const next = prev + amount;
+    const safeAmount = Number(amount || 0);
+    if (!Number.isFinite(safeAmount) || safeAmount <= 0) return;
+
+    setQuotaUsed(prev => prev + safeAmount);
+    setTotalQuotaToday(() => {
       const today = new Date().toISOString().split('T')[0];
+      let current = 0;
+      try {
+        const saved = JSON.parse(localStorage.getItem('youtube_quota_today') || '{}');
+        if (saved?.date === today) current = Number(saved.value || 0);
+      } catch (_) {}
+      const next = current + safeAmount;
       localStorage.setItem('youtube_quota_today', JSON.stringify({ value: next, date: today }));
       return next;
     });
@@ -2042,7 +2073,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
             lastVideoId: candidate.video.id
           };
 
-          const nextResults = [...resultsRef.current.filter(item => item.id !== newResult.id), newResult].slice(0, STOP_LIMIT);
+          const nextResults = dedupeChannelResults([...resultsRef.current.filter(item => item.id !== newResult.id), newResult]);
           resultsRef.current = nextResults;
           localStorage.setItem('youtube_hunter_results', JSON.stringify(nextResults));
           setResults(nextResults);
@@ -2344,7 +2375,7 @@ ${topKeywordsStr}`;
         content += `   ID Kênh: ${r.id}\n`;
         content += `   Đường dẫn: ${r.url}\n`;
         content += `   Thông tin: ${r.country || 'N/A'} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
-        content += `   Chỉ số: ${r.subs.toLocaleString()} Subs | ${r.views.toLocaleString()} Views | ${r.videos.toLocaleString()} Videos\n`;
+        content += `   Chỉ số: ${formatVNNumber(r.subs)} Subs | ${formatVNNumber(r.views)} Views | ${formatVNNumber(r.videos)} Videos\n`;
         content += `   Đánh giá: ĐIỂM SEO [${r.score}]\n`;
         content += '--------------------------------------------------\n';
       });
@@ -3355,13 +3386,13 @@ ${topKeywordsStr}`;
                             <td className="px-2 py-1 text-[10px] text-blue-600 underline truncate hover:text-blue-800"><a href={r.url} target="_blank" rel="noreferrer">{r.url}</a></td>
                             <td className="px-2 py-1 text-center font-bold text-gray-600">{r.country}</td>
                             <td className="px-2 py-1 text-center text-gray-500 whitespace-nowrap">{r.publishedAt}</td>
-                            <td className="px-2 py-1 text-right text-green-700 font-medium">{r.age.toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right text-black font-bold">{r.subs.toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right text-blue-800 font-bold">{r.views.toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right text-gray-800">{r.videos.toLocaleString()}</td>
+                            <td className="px-2 py-1 text-right text-green-700 font-medium">{formatVNNumber(r.age)}</td>
+                            <td className="px-2 py-1 text-right text-black font-bold">{formatVNNumber(r.subs)}</td>
+                            <td className="px-2 py-1 text-right text-blue-800 font-bold">{formatVNNumber(r.views)}</td>
+                            <td className="px-2 py-1 text-right text-gray-800">{formatVNNumber(r.videos)}</td>
                             <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
                             <td className="px-2 py-1 text-center">
-                              <div className="flex items-center justify-center gap-1">
+                              <div className="vtw-channel-actions flex items-center justify-center gap-1">
                                 <button
                                   type="button"
                                   onClick={(e) => openChannelActionMenu(e, r)}
@@ -3401,10 +3432,10 @@ ${topKeywordsStr}`;
                                       setStatus(`Đã xóa kênh ${r.name}`);
                                     });
                                   }}
-                                  className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-125"
+                                  className="vtw-delete-action text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-95 font-black uppercase"
                                   title="Xóa"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={12} /> <span>XÓA</span>
                                 </button>
                               </div>
                             </td>
@@ -5490,9 +5521,9 @@ ${topKeywordsStr}`;
           <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
           <div className="flex items-center gap-3">
             <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
+            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{formatVNNumber(quotaUsed)}</b> units</span>
             <span className="text-gray-400">|</span>
-            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {totalQuotaToday.toLocaleString()} units</span>
+            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {formatVNNumber(totalQuotaToday)} units</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
