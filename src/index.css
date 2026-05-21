@@ -4191,3 +4191,49 @@
     gap: 8px !important;
   }
 }
+
+
+/* STEP 32: bộ lọc gọn giống Phạm vi Sub */
+.vtw-compact-filter-box {
+  background: #2f3d50 !important;
+  border: 1px solid rgba(125, 151, 180, .35) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+  min-height: 98px !important;
+}
+.vtw-compact-filter-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+}
+.vtw-compact-filter-title {
+  color: #f8fafc !important;
+  font-weight: 900 !important;
+  font-size: 13px !important;
+  line-height: 1.1 !important;
+}
+.vtw-compact-filter-value {
+  color: #60a5fa !important;
+  font-weight: 900 !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.vtw-compact-range-input {
+  width: 100% !important;
+  height: 6px !important;
+  accent-color: #2f86ff !important;
+  cursor: pointer !important;
+}
+.vtw-compact-range-scale {
+  display: flex !important;
+  justify-content: space-between !important;
+  color: #9fb2c5 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  margin-top: 8px !important;
+}

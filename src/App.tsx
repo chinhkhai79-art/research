@@ -851,10 +851,10 @@ export default function App() {
       onChange(absoluteMin, nextMax);
     };
     return (
-      <div className="vtw-range-box vtw-single-range-box bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-        <div className="flex justify-between gap-3 text-gray-200 font-bold text-[13px] mb-3">
-          <span>{title}<span className="text-[10px] text-gray-400 font-normal block">{subtitle}</span></span>
-          <span className="text-blue-400 text-lg tabular-nums whitespace-nowrap">0 → {formatVNNumber(safeMax)}</span>
+      <div className="vtw-range-box vtw-single-range-box vtw-compact-filter-box">
+        <div className="vtw-compact-filter-head">
+          <span className="vtw-compact-filter-title">{title}</span>
+          <span className="vtw-compact-filter-value">0 → {formatVNNumber(safeMax)}</span>
         </div>
         <input
           type="range"
@@ -863,9 +863,9 @@ export default function App() {
           step={step}
           value={safeMax}
           onChange={(e) => updateMaxOnly(parseRangeNumber(e.target.value, absoluteMax))}
-          className="vtw-single-range-input w-full accent-blue-500"
+          className="vtw-single-range-input vtw-compact-range-input"
         />
-        <div className="vtw-single-range-scale flex justify-between text-[9px] text-gray-400 font-bold mt-2">
+        <div className="vtw-single-range-scale vtw-compact-range-scale">
           <span>0</span>
           <span>{formatVNNumber(Math.round(absoluteMax / 2))}</span>
           <span>{formatVNNumber(absoluteMax)}</span>
@@ -4465,9 +4465,9 @@ ${topKeywordsStr}`;
                   <div className="px-4 mb-2 text-[10px] uppercase font-bold text-[#95a5a6]">Công cụ Phân tích</div>
                   <nav className="space-y-0.5">
                     {[
-                      { id: 'summary', label: 'Dashboard Tổng quan', icon: Home },
-                      { id: 'channels', label: 'Kênh/Ngách Trending', icon: Users },
                       { id: 'videos', label: 'Top Videos Trending', icon: BarChart3 },
+                      { id: 'channels', label: 'Kênh/Ngách Trending', icon: Users },
+                      { id: 'summary', label: 'Dashboard Tổng quan', icon: Home },
                       { id: 'shorts', label: 'Khám phá Shorts', icon: Smartphone },
                       { id: 'keywords', label: 'Bản đồ Từ khóa', icon: LayoutGrid },
                       { id: 'thumbnails', label: 'Mẫu Thumbnail', icon: Image },
@@ -4614,7 +4614,7 @@ ${topKeywordsStr}`;
                                   <div className="flex items-center gap-4">
                                      <div className="flex flex-col items-end">
                                         <span className="text-[9px] text-gray-400 font-bold uppercase">Trending</span>
-                                        <span className="text-[11px] font-black text-emerald-600">+{kw.vph.toFixed(1)} VPH</span>
+                                        <span className="text-[11px] font-black text-emerald-600">+{formatVNNumber(Math.round(kw.vph))} VPH</span>
                                      </div>
                                      <div className={`w-10 h-6 rounded flex items-center justify-center text-[10px] font-bold ${kw.score > 70 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                                         {kw.score}
@@ -4642,11 +4642,11 @@ ${topKeywordsStr}`;
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">Lượt xem</span>
-                                           <span className="text-[10px] font-black text-gray-700">{v.statistics.viewCount.toLocaleString()}</span>
+                                           <span className="text-[10px] font-black text-gray-700">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                         </div>
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">VPH (Tốc độ)</span>
-                                           <span className="text-[10px] font-black text-blue-600">+{v.vph.toFixed(0)}</span>
+                                           <span className="text-[10px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))}</span>
                                         </div>
                                         <div className="flex items-center gap-2 ml-auto mt-1 z-20">
                                           <button 
@@ -4708,7 +4708,7 @@ ${topKeywordsStr}`;
                                         <td className="px-6 py-4 text-center font-mono text-[14px] font-black text-gray-300">0{i+1}</td>
                                         <td className="px-6 py-4 text-right font-bold text-gray-500">{kw.count} videos</td>
                                         <td className="px-6 py-4 text-right">
-                                           <div className="text-[13px] font-black text-blue-600">+{kw.vph.toLocaleString()} VPH</div>
+                                           <div className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(kw.vph))} VPH</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <button 
@@ -4821,11 +4821,11 @@ ${topKeywordsStr}`;
                                <div className="grid grid-cols-2 gap-2 border-t pt-3">
                                   <div className="flex flex-col">
                                      <span className="text-[9px] text-gray-400 font-bold uppercase">Lượt xem</span>
-                                     <span className="text-[13px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()}</span>
+                                     <span className="text-[13px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col items-end">
                                      <span className="text-[9px] text-gray-400 font-bold uppercase">Tăng trưởng/h</span>
-                                     <span className="text-[13px] font-black text-blue-600">+{v.vph.toFixed(0)} VPH</span>
+                                     <span className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
                                   </div>
                                </div>
                             </div>
@@ -4847,11 +4847,11 @@ ${topKeywordsStr}`;
                             <div className="absolute bottom-0 left-0 right-0 p-4">
                                <div className="flex items-center gap-4 text-white mb-2">
                                   <div className="flex flex-col">
-                                     <span className="text-[16px] font-black">{v.statistics.viewCount.toLocaleString()}</span>
+                                     <span className="text-[16px] font-black">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                      <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">Views</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[16px] font-black text-blue-400">+{v.vph.toFixed(0)}</span>
+                                     <span className="text-[16px] font-black text-blue-400">+{formatVNNumber(Math.round(v.vph || 0))}</span>
                                      <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">VPH</span>
                                   </div>
                                </div>
@@ -4950,7 +4950,7 @@ ${topKeywordsStr}`;
                                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
                                      <div className="flex gap-2 items-center">
                                         <Eye size={14} className="text-gray-400" />
-                                        <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.viewCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">views</span></span>
+                                        <span className="text-[12px] font-bold text-gray-600">{formatVNNumber(parseInt(c.statistics.viewCount) || 0)} <span className="font-medium text-gray-400 lowercase">views</span></span>
                                      </div>
                                   </div>
                                </div>
@@ -5000,7 +5000,7 @@ ${topKeywordsStr}`;
                             <div className="mt-3 flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                                <div className="flex flex-col">
                                   <span className="text-[8px] text-gray-400 font-bold uppercase">View/VPH</span>
-                                  <span className="text-[11px] font-black text-gray-700">{v.statistics.viewCount.toLocaleString()} / <span className="text-blue-500">+{v.vph.toFixed(0)}</span></span>
+                                  <span className="text-[11px] font-black text-gray-700">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-blue-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
                                </div>
                             </div>
                          </div>
@@ -5168,7 +5168,7 @@ ${topKeywordsStr}`;
                             </div>
                             <div className="text-[9px] text-gray-500 mt-1 flex justify-between items-center">
                               <span><a href={`https://youtube.com/channel/${p.snippet.channelId}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 transition-colors">{p.snippet.channelTitle}</a></span>
-                              <span className="font-mono">{parseInt(p.statistics.viewCount).toLocaleString()} views</span>
+                              <span className="font-mono">{formatVNNumber(parseInt(p.statistics.viewCount) || 0)} views</span>
                             </div>
                           </div>
                         ))}
@@ -6179,7 +6179,7 @@ ${topKeywordsStr}`;
                                </div>
                                <div className="flex flex-col items-end">
                                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views / VPH</span>
-                                  <span className="text-[11px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()} / <span className="text-orange-500">+{v.vph.toFixed(0)}</span></span>
+                                  <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
                                </div>
                             </div>
                          </div>
