@@ -5972,7 +5972,6 @@ ${topKeywordsStr}`;
                   </div>
                   <div>
                     <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
-                    <p className="text-[11px] text-blue-200 font-bold opacity-80 uppercase tracking-tighter">Click vào từ khóa để tự động điền và phân tích nhanh</p>
                   </div>
                 </div>
                 <button 
@@ -5988,7 +5987,7 @@ ${topKeywordsStr}`;
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật 5 từ khóa/cụm từ khóa hot theo từng chủ đề và quốc gia</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Ghi chú: Chức năng này dùng YouTube API để kiếm kênh/ngách có VPH hot trend trong 30 ngày theo quốc gia đã chọn.</span>
                      </h3>
                      <div className="flex items-center gap-3">
                          <div className="relative">
