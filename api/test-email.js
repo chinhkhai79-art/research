@@ -1,13 +1,35 @@
-import { setCors } from '../lib/cors.js';
-import { sendPaymentSuccessEmail } from '../lib/mailer.js';
-import { getAppSettings, requireAdmin } from '../lib/appSettings.js';
+import { requireAdminPassword } from '../lib/appSettings.js';
+import { sendMail, buildPaymentSuccessEmail } from '../lib/mailer.js';
+
 export default async function handler(req, res) {
-  if (setCors(req, res)) return;
-  if (!requireAdmin(req, res)) return;
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
   try {
-    const s = await getAppSettings();
-    const to = String(req.query.to || req.body?.to || s.smtp.testTo || s.smtp.user || '').trim();
-    const result = await sendPaymentSuccessEmail({ to, name:'Khải', planName:'GÓI 3 THÁNG', amount:180000, orderCode:'RESEARCH_TEST_EMAIL', expiresAt:new Date(Date.now()+90*86400000), toolUrl:s.payment.appDomain+'/' }, s.smtp);
-    return res.status(result.success ? 200 : 500).json({ success:result.success, to, messageId:result.messageId, error:result.error, skipped:result.skipped, smtp:{ enabled:s.smtp.enabled, hasUser:Boolean(s.smtp.user), hasPass:Boolean(s.smtp.pass), host:s.smtp.host, port:s.smtp.port, secure:s.smtp.secure } });
-  } catch(e){ return res.status(500).json({ success:false, error:e.message }); }
+    if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method not allowed' });
+    requireAdminPassword(req.body?.password);
+
+    const to = req.body?.to;
+    if (!to) return res.status(400).json({ success: false, message: 'Thiếu email nhận test.' });
+
+    await sendMail({
+      to,
+      subject: 'Test SMTP thành công - Văn Thế Web',
+      html: buildPaymentSuccessEmail({
+        name: 'Khải',
+        email: to,
+        planName: 'Gói test',
+        amount: 10000,
+        orderCode: 'TEST-' + Date.now(),
+        expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+        appUrl: 'https://research.vanthemmo.com'
+      })
+    });
+
+    return res.status(200).json({ success: true, message: 'Đã gửi email test.' });
+  } catch (e) {
+    return res.status(e.statusCode || 500).json({ success: false, message: e.message || 'Không gửi được email test' });
+  }
 }
