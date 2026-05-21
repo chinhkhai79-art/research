@@ -3352,7 +3352,7 @@ ${topKeywordsStr}`;
                     </button>
                   </div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                    <table className="vtw-tracking-table w-full text-left border-collapse">
+                    <table className="vtw-keyword-ideas-table vtw-tracking-table w-full text-left border-collapse">
                       <thead className="bg-[#fdf2e9] sticky top-0 z-10 border-b border-orange-200">
                         <tr>
                           <th className="px-3 py-1.5 text-[11px] font-bold text-orange-800 border-r border-orange-100 italic w-12 text-center">STT</th>
