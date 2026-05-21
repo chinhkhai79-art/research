@@ -546,9 +546,9 @@ export default function App() {
   } | null>(null);
   const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
-  const [videoFilters, setVideoFilters] = useState({ trendScore: 0, views: 0, vph: 0 });
+  const [videoFilters, setVideoFilters] = useState({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 });
   const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
-  const [channelFilters, setChannelFilters] = useState({ views: 0, subscribers: 0, videosCount: 0 });
+  const [channelFilters, setChannelFilters] = useState({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -779,6 +779,106 @@ export default function App() {
     if (channelId) return `.../${channelId.slice(-10)}`;
     const raw = String(url || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
     return raw.length > 28 ? raw.slice(0, 25) + '...' : raw;
+  };
+
+
+  const parseRangeNumber = (value: string, fallback = 0) => {
+    const n = Number(String(value || '').replace(/[^0-9]/g, ''));
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const clampRangePair = (min: number, max: number, absoluteMin: number, absoluteMax: number): [number, number] => {
+    const safeMin = Math.max(absoluteMin, Math.min(min, absoluteMax));
+    const safeMax = Math.max(absoluteMin, Math.min(max, absoluteMax));
+    return safeMin <= safeMax ? [safeMin, safeMax] : [safeMax, safeMin];
+  };
+
+  const RangeFilterBox = ({
+    title,
+    subtitle,
+    min,
+    max,
+    absoluteMin,
+    absoluteMax,
+    step,
+    onChange,
+  }: {
+    title: string;
+    subtitle: string;
+    min: number;
+    max: number;
+    absoluteMin: number;
+    absoluteMax: number;
+    step: number;
+    onChange: (min: number, max: number) => void;
+  }) => {
+    const updateMin = (value: number) => {
+      const [nextMin, nextMax] = clampRangePair(value, max, absoluteMin, absoluteMax);
+      onChange(nextMin, nextMax);
+    };
+    const updateMax = (value: number) => {
+      const [nextMin, nextMax] = clampRangePair(min, value, absoluteMin, absoluteMax);
+      onChange(nextMin, nextMax);
+    };
+    return (
+      <div className="vtw-range-box bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+        <div className="flex justify-between gap-3 text-gray-200 font-bold text-[13px] mb-3">
+          <span>{title}<span className="text-[10px] text-gray-400 font-normal block">{subtitle}</span></span>
+          <span className="text-blue-400 text-lg tabular-nums whitespace-nowrap">{formatVNNumber(min)} → {formatVNNumber(max)}</span>
+        </div>
+        <div className="vtw-dual-range relative h-8 mb-3">
+          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} />
+          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} className="vtw-range-number" />
+          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} className="vtw-range-number" />
+        </div>
+      </div>
+    );
+  };
+
+  const LightRangeFilterBox = ({
+    title,
+    min,
+    max,
+    absoluteMin,
+    absoluteMax,
+    step,
+    onChange,
+  }: {
+    title: string;
+    min: number;
+    max: number;
+    absoluteMin: number;
+    absoluteMax: number;
+    step: number;
+    onChange: (min: number, max: number) => void;
+  }) => {
+    const updateMin = (value: number) => {
+      const [nextMin, nextMax] = clampRangePair(value, max, absoluteMin, absoluteMax);
+      onChange(nextMin, nextMax);
+    };
+    const updateMax = (value: number) => {
+      const [nextMin, nextMax] = clampRangePair(min, value, absoluteMin, absoluteMax);
+      onChange(nextMin, nextMax);
+    };
+    return (
+      <div className="vtw-sub-range col-span-12 rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="text-[11px] font-black uppercase text-[#2c3e50]">{title}</div>
+          <div className="text-[11px] font-black text-blue-700 tabular-nums">{formatVNNumber(min)} → {formatVNNumber(max)}</div>
+        </div>
+        <div className="vtw-dual-range vtw-dual-range-light relative h-8 mb-2">
+          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} />
+          <input type="range" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} className="vtw-range-number vtw-range-number-light" />
+          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} className="vtw-range-number vtw-range-number-light" />
+        </div>
+      </div>
+    );
   };
 
   const dedupeChannelResults = (items: ChannelResult[]) => {
@@ -3143,24 +3243,15 @@ ${topKeywordsStr}`;
                         onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</label>
-                      <input 
-                        type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
-                        value={config.minSub}
-                        onChange={(e) => setConfig({ ...config, minSub: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</label>
-                      <input 
-                        type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
-                        value={config.maxSub}
-                        onChange={(e) => setConfig({ ...config, maxSub: parseInt(e.target.value) })}
-                      />
-                    </div>
+                    <LightRangeFilterBox
+                      title="Phạm vi Sub"
+                      min={config.minSub}
+                      max={config.maxSub}
+                      absoluteMin={0}
+                      absoluteMax={10000000}
+                      step={1000}
+                      onChange={(min, max) => setConfig({ ...config, minSub: min, maxSub: max })}
+                    />
                   </div>
 
                   {/* Group 3 */}
@@ -4367,7 +4458,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
-                               <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
+                               <div key={i} className="vtw-niche-top-video flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
                                   <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200">
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                   </div>
@@ -4477,41 +4568,51 @@ ${topKeywordsStr}`;
                       <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
                         <div className="flex justify-between items-center mb-6 pt-2">
                            <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
-                           <button onClick={() => setVideoFilters({ trendScore: 0, views: 0, vph: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                           <button onClick={() => setVideoFilters({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Outlier Score <span className="text-[10px] text-gray-400 font-normal block">Range (0-100+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.trendScore}</span>
-                              </div>
-                              <input type="range" min="0" max="100" value={videoFilters.trendScore} onChange={(e) => setVideoFilters({...videoFilters, trendScore: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.views >= 1000000 ? (videoFilters.views/1000000).toFixed(1) + 'M+' : videoFilters.views >= 1000 ? (videoFilters.views/1000).toFixed(0) + 'K+' : videoFilters.views}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={videoFilters.views} onChange={(e) => setVideoFilters({...videoFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views Per Hour (VPH) <span className="text-[10px] text-gray-400 font-normal block">Range (0-1000+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.vph >= 1000 ? (videoFilters.vph/1000).toFixed(1) + 'K+' : videoFilters.vph}</span>
-                              </div>
-                              <input type="range" min="0" max="10000" step="50" value={videoFilters.vph} onChange={(e) => setVideoFilters({...videoFilters, vph: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
+                          <RangeFilterBox
+                            title="Outlier Score"
+                            subtitle="Phạm vi 0–100+"
+                            min={videoFilters.trendScoreMin}
+                            max={videoFilters.trendScoreMax}
+                            absoluteMin={0}
+                            absoluteMax={100}
+                            step={1}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, trendScoreMin: min, trendScoreMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Views"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={videoFilters.viewsMin}
+                            max={videoFilters.viewsMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={50000}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, viewsMin: min, viewsMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Views Per Hour (VPH)"
+                            subtitle="Phạm vi 0–10.000+"
+                            min={videoFilters.vphMin}
+                            max={videoFilters.vphMax}
+                            absoluteMin={0}
+                            absoluteMax={10000}
+                            step={50}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, vphMin: min, vphMax: max })}
+                          />
                         </div>
                       </div>
                     </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {nicheResults.videos.filter((v: any) => {
-                         if (v.trendScore < videoFilters.trendScore) return false;
-                         if (parseInt(v.statistics.viewCount) < videoFilters.views) return false;
-                         if (v.vph < videoFilters.vph) return false;
+                         if (v.trendScore < videoFilters.trendScoreMin || v.trendScore > videoFilters.trendScoreMax) return false;
+                         const videoViews = parseInt(v.statistics.viewCount) || 0;
+                         if (videoViews < videoFilters.viewsMin || videoViews > videoFilters.viewsMax) return false;
+                         if (v.vph < videoFilters.vphMin || v.vph > videoFilters.vphMax) return false;
                          return true;
                       }).map((v: any, i: number) => (
-                         <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                         <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
@@ -4604,38 +4705,50 @@ ${topKeywordsStr}`;
                       <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
                         <div className="flex justify-between items-center mb-6 pt-2">
                            <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
-                           <button onClick={() => setChannelFilters({ views: 0, subscribers: 0, videosCount: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                           <button onClick={() => setChannelFilters({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Subscribers <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.subscribers >= 1000000 ? (channelFilters.subscribers/1000000).toFixed(1) + 'M+' : channelFilters.subscribers >= 1000 ? (channelFilters.subscribers/1000).toFixed(0) + 'K+' : channelFilters.subscribers}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.subscribers} onChange={(e) => setChannelFilters({...channelFilters, subscribers: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.views >= 1000000 ? (channelFilters.views/1000000).toFixed(1) + 'M+' : channelFilters.views >= 1000 ? (channelFilters.views/1000).toFixed(0) + 'K+' : channelFilters.views}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.views} onChange={(e) => setChannelFilters({...channelFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Video Count <span className="text-[10px] text-gray-400 font-normal block">Range (0-10,000+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.videosCount >= 1000 ? (channelFilters.videosCount/1000).toFixed(1) + 'K+' : channelFilters.videosCount}</span>
-                              </div>
-                              <input type="range" min="0" max="10000" step="100" value={channelFilters.videosCount} onChange={(e) => setChannelFilters({...channelFilters, videosCount: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
+                          <RangeFilterBox
+                            title="Subscribers"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={channelFilters.subscribersMin}
+                            max={channelFilters.subscribersMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={50000}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, subscribersMin: min, subscribersMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Views"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={channelFilters.viewsMin}
+                            max={channelFilters.viewsMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={50000}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, viewsMin: min, viewsMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Video Count"
+                            subtitle="Phạm vi 0–10.000+"
+                            min={channelFilters.videosMin}
+                            max={channelFilters.videosMax}
+                            absoluteMin={0}
+                            absoluteMax={10000}
+                            step={100}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, videosMin: min, videosMax: max })}
+                          />
                         </div>
                       </div>
                     </div>
                    <div className="space-y-4">
                       {nicheResults.channels.filter((c: any) => {
-                         if ((parseInt(c.statistics.subscriberCount) || 0) < channelFilters.subscribers) return false;
-                         if ((parseInt(c.statistics.viewCount) || 0) < channelFilters.views) return false;
-                         if ((parseInt(c.statistics.videoCount) || 0) < channelFilters.videosCount) return false;
+                         const subsCount = parseInt(c.statistics.subscriberCount) || 0;
+                         const viewsCount = parseInt(c.statistics.viewCount) || 0;
+                         const videosCount = parseInt(c.statistics.videoCount) || 0;
+                         if (subsCount < channelFilters.subscribersMin || subsCount > channelFilters.subscribersMax) return false;
+                         if (viewsCount < channelFilters.viewsMin || viewsCount > channelFilters.viewsMax) return false;
+                         if (videosCount < channelFilters.videosMin || videosCount > channelFilters.videosMax) return false;
                          return true;
                       }).map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
@@ -5867,7 +5980,7 @@ ${topKeywordsStr}`;
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
-                      <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                      <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                          <div className="relative aspect-video">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">

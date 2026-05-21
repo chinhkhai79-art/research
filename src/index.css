@@ -3649,3 +3649,146 @@
     padding-right: 4px !important;
   }
 }
+
+/* STEP 24 - Range sliders, uniform thumbnails, and cleaner mobile cards */
+.vtw-dual-range {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.vtw-dual-range::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 50% !important;
+  height: 8px !important;
+  transform: translateY(-50%) !important;
+  border-radius: 999px !important;
+  background: #334155 !important;
+}
+.vtw-dual-range-light::before { background: #dbeafe !important; }
+.vtw-dual-range input[type="range"] {
+  position: absolute !important;
+  width: 100% !important;
+  pointer-events: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  height: 28px !important;
+  margin: 0 !important;
+  z-index: 2 !important;
+}
+.vtw-dual-range input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 999px !important;
+  background: #2d8cff !important;
+  border: 2px solid white !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25) !important;
+}
+.vtw-dual-range input[type="range"]::-moz-range-thumb {
+  pointer-events: auto !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 999px !important;
+  background: #2d8cff !important;
+  border: 2px solid white !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25) !important;
+}
+.vtw-range-number {
+  width: 100% !important;
+  border: 1px solid #475569 !important;
+  background: #111827 !important;
+  color: #e5f0ff !important;
+  border-radius: 10px !important;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  outline: none !important;
+}
+.vtw-range-number-light {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #bfdbfe !important;
+}
+.vtw-sub-range { grid-column: 1 / -1 !important; }
+.vtw-niche-video-card .relative.aspect-video,
+.vtw-niche-top-video > div:first-child {
+  width: 168px !important;
+  min-width: 168px !important;
+  height: 94px !important;
+  border-radius: 12px !important;
+}
+.vtw-niche-video-card img[src*="ytimg"],
+.vtw-niche-top-video img[src*="ytimg"] {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+@media (max-width: 900px) {
+  .vtw-range-box {
+    padding: 18px !important;
+  }
+  .vtw-range-number {
+    min-height: 42px !important;
+    font-size: 14px !important;
+  }
+  .vtw-niche-video-card {
+    display: grid !important;
+    grid-template-columns: 132px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    align-items: start !important;
+  }
+  .vtw-niche-video-card .relative.aspect-video {
+    width: 132px !important;
+    min-width: 132px !important;
+    height: 74px !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+  .vtw-niche-video-card > .p-4 {
+    padding: 0 !important;
+    min-width: 0 !important;
+  }
+  .vtw-niche-video-card h4 {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+  .vtw-niche-top-video {
+    display: grid !important;
+    grid-template-columns: 120px minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+  .vtw-niche-top-video > div:first-child {
+    width: 120px !important;
+    min-width: 120px !important;
+    height: 68px !important;
+  }
+}
+@media (max-width: 430px) {
+  .vtw-niche-video-card {
+    grid-template-columns: 118px minmax(0, 1fr) !important;
+  }
+  .vtw-niche-video-card .relative.aspect-video {
+    width: 118px !important;
+    min-width: 118px !important;
+    height: 66px !important;
+  }
+  .vtw-niche-top-video {
+    grid-template-columns: 112px minmax(0, 1fr) !important;
+  }
+  .vtw-niche-top-video > div:first-child {
+    width: 112px !important;
+    min-width: 112px !important;
+    height: 63px !important;
+  }
+}
