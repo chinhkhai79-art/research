@@ -567,9 +567,9 @@ export default function App() {
   } | null>(null);
   const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
-  const [videoFilters, setVideoFilters] = useState({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 });
+  const [videoFilters, setVideoFilters] = useState({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subMin: 0, subMax: 10000000 });
   const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
-  const [channelFilters, setChannelFilters] = useState({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 });
+  const [channelFilters, setChannelFilters] = useState({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subscribersMin: 0, subscribersMax: 10000000 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -1580,6 +1580,9 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
           ...v,
           vph,
           trendScore,
+          channelSubscriberCount: parseInt(chan?.statistics?.subscriberCount || '0') || 0,
+          channelViewCount: parseInt(chan?.statistics?.viewCount || '0') || 0,
+          channelVideoCount: parseInt(chan?.statistics?.videoCount || '0') || 0,
           engagementRate: calculateEngagementRate(stats),
           viewPerDay: views / Math.max(1, (new Date().getTime() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
         };
@@ -4737,51 +4740,52 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
                     <div className="mb-6">
-                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
-                        <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
-                           <button onClick={() => setVideoFilters({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                      <div className="vtw-niche-result-filter-panel bg-[#294054] p-5 rounded-2xl shadow-xl border border-[#3c5870]">
+                        <div className="flex justify-between items-center mb-4 pt-1">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-400" /> THANH LỌC KẾT QUẢ TOP VIDEO</div>
+                           <button onClick={() => setVideoFilters({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subMin: 0, subMax: 10000000 })} className="bg-[#3a5268] hover:bg-[#46627c] text-gray-100 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc</button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <RangeFilterBox
-                            title="Outlier Score"
-                            subtitle="Phạm vi 0–100+"
-                            min={videoFilters.trendScoreMin}
-                            max={videoFilters.trendScoreMax}
-                            absoluteMin={0}
-                            absoluteMax={100}
-                            step={1}
-                            onChange={(min, max) => setVideoFilters({ ...videoFilters, trendScoreMin: min, trendScoreMax: max })}
-                          />
-                          <RangeFilterBox
-                            title="Views"
-                            subtitle="Phạm vi 0–10.000.000+"
-                            min={videoFilters.viewsMin}
-                            max={videoFilters.viewsMax}
-                            absoluteMin={0}
-                            absoluteMax={10000000}
-                            step={50000}
-                            onChange={(min, max) => setVideoFilters({ ...videoFilters, viewsMin: min, viewsMax: max })}
-                          />
-                          <RangeFilterBox
-                            title="Views Per Hour (VPH)"
+                            title="VPH"
                             subtitle="Phạm vi 0–10.000+"
                             min={videoFilters.vphMin}
                             max={videoFilters.vphMax}
                             absoluteMin={0}
                             absoluteMax={10000}
-                            step={50}
+                            step={10}
                             onChange={(min, max) => setVideoFilters({ ...videoFilters, vphMin: min, vphMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="View"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={videoFilters.viewsMin}
+                            max={videoFilters.viewsMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={10000}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, viewsMin: min, viewsMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Sub"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={videoFilters.subMin}
+                            max={videoFilters.subMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={10000}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, subMin: min, subMax: max })}
                           />
                         </div>
                       </div>
                     </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {nicheResults.videos.filter((v: any) => {
-                         if (v.trendScore < videoFilters.trendScoreMin || v.trendScore > videoFilters.trendScoreMax) return false;
                          const videoViews = parseInt(v.statistics.viewCount) || 0;
+                         const channelSubs = Number(v.channelSubscriberCount || 0);
+                         if (Math.round(v.vph || 0) < videoFilters.vphMin || Math.round(v.vph || 0) > videoFilters.vphMax) return false;
                          if (videoViews < videoFilters.viewsMin || videoViews > videoFilters.viewsMax) return false;
-                         if (v.vph < videoFilters.vphMin || v.vph > videoFilters.vphMax) return false;
+                         if (channelSubs < videoFilters.subMin || channelSubs > videoFilters.subMax) return false;
                          return true;
                       }).map((v: any, i: number) => (
                          <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
@@ -4874,41 +4878,41 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
                     <div className="mb-6">
-                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
-                        <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
-                           <button onClick={() => setChannelFilters({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                      <div className="vtw-niche-result-filter-panel bg-[#294054] p-5 rounded-2xl shadow-xl border border-[#3c5870]">
+                        <div className="flex justify-between items-center mb-4 pt-1">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-400" /> THANH LỌC KẾT QUẢ KÊNH / NGÁCH</div>
+                           <button onClick={() => setChannelFilters({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subscribersMin: 0, subscribersMax: 10000000 })} className="bg-[#3a5268] hover:bg-[#46627c] text-gray-100 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc</button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                           <RangeFilterBox
-                            title="Subscribers"
-                            subtitle="Phạm vi 0–10.000.000+"
-                            min={channelFilters.subscribersMin}
-                            max={channelFilters.subscribersMax}
+                            title="VPH"
+                            subtitle="Phạm vi 0–10.000+"
+                            min={channelFilters.vphMin}
+                            max={channelFilters.vphMax}
                             absoluteMin={0}
-                            absoluteMax={10000000}
-                            step={50000}
-                            onChange={(min, max) => setChannelFilters({ ...channelFilters, subscribersMin: min, subscribersMax: max })}
+                            absoluteMax={10000}
+                            step={10}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, vphMin: min, vphMax: max })}
                           />
                           <RangeFilterBox
-                            title="Views"
+                            title="View"
                             subtitle="Phạm vi 0–10.000.000+"
                             min={channelFilters.viewsMin}
                             max={channelFilters.viewsMax}
                             absoluteMin={0}
                             absoluteMax={10000000}
-                            step={50000}
+                            step={10000}
                             onChange={(min, max) => setChannelFilters({ ...channelFilters, viewsMin: min, viewsMax: max })}
                           />
                           <RangeFilterBox
-                            title="Video Count"
-                            subtitle="Phạm vi 0–10.000+"
-                            min={channelFilters.videosMin}
-                            max={channelFilters.videosMax}
+                            title="Sub"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={channelFilters.subscribersMin}
+                            max={channelFilters.subscribersMax}
                             absoluteMin={0}
-                            absoluteMax={10000}
-                            step={100}
-                            onChange={(min, max) => setChannelFilters({ ...channelFilters, videosMin: min, videosMax: max })}
+                            absoluteMax={10000000}
+                            step={10000}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, subscribersMin: min, subscribersMax: max })}
                           />
                         </div>
                       </div>
@@ -4917,10 +4921,10 @@ ${topKeywordsStr}`;
                       {nicheResults.channels.filter((c: any) => {
                          const subsCount = parseInt(c.statistics.subscriberCount) || 0;
                          const viewsCount = parseInt(c.statistics.viewCount) || 0;
-                         const videosCount = parseInt(c.statistics.videoCount) || 0;
-                         if (subsCount < channelFilters.subscribersMin || subsCount > channelFilters.subscribersMax) return false;
+                         const bestVph = Math.round(c.bestVideo?.vph || 0);
+                         if (bestVph < channelFilters.vphMin || bestVph > channelFilters.vphMax) return false;
                          if (viewsCount < channelFilters.viewsMin || viewsCount > channelFilters.viewsMax) return false;
-                         if (videosCount < channelFilters.videosMin || videosCount > channelFilters.videosMax) return false;
+                         if (subsCount < channelFilters.subscribersMin || subsCount > channelFilters.subscribersMax) return false;
                          return true;
                       }).map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
@@ -4950,6 +4954,11 @@ ${topKeywordsStr}`;
                                      <div className="flex gap-2 items-center">
                                         <Eye size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{formatVNNumber(parseInt(c.statistics.viewCount) || 0)} <span className="font-medium text-gray-400 lowercase">views</span></span>
+                                     </div>
+                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                                     <div className="flex gap-2 items-center">
+                                        <TrendingUp size={14} className="text-gray-400" />
+                                        <span className="text-[12px] font-bold text-blue-600">+{formatVNNumber(Math.round(c.bestVideo?.vph || 0))} <span className="font-medium text-gray-400 uppercase">VPH</span></span>
                                      </div>
                                   </div>
                                </div>
