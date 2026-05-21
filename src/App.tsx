@@ -107,6 +107,11 @@ interface TrackingChannel {
   id: string;
   name: string;
   icon?: string;
+  topic?: string;
+  nicheKeyword?: string;
+  estimatedIncomeText?: string;
+  country?: string;
+  url?: string;
   history: Array<{
     date: string;
     subs: number;
@@ -807,6 +812,34 @@ export default function App() {
     return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
   };
 
+  const getTrackingNiche = (channel: TrackingChannel) => {
+    return channel.nicheKeyword || 'Chưa cập nhật';
+  };
+
+  const getTrackingTopic = (channel: TrackingChannel) => {
+    return channel.topic || getTopicFromKeyword(getTrackingNiche(channel));
+  };
+
+  const getTrackingIncome = (channel: TrackingChannel) => {
+    if (channel.estimatedIncomeText) return channel.estimatedIncomeText;
+    const last = channel.history?.[channel.history.length - 1];
+    if (!last) return 'Đang cập nhật';
+    return estimateIncomeFromApiViews({
+      icon: channel.icon || '',
+      name: channel.name,
+      id: channel.id,
+      url: channel.url || `https://youtube.com/channel/${channel.id}`,
+      country: channel.country || '',
+      publishedAt: '',
+      age: 0,
+      subs: last.subs,
+      views: last.views,
+      videos: last.videos,
+      score: '',
+      keywordTitle: channel.nicheKeyword || ''
+    });
+  };
+
   const formatChannelUrlShort = (url?: string, id?: string) => {
     const channelId = String(id || '').trim();
     if (channelId) return `.../${channelId.slice(-10)}`;
@@ -862,8 +895,9 @@ export default function App() {
           max={absoluteMax}
           step={step}
           value={safeMax}
-          onChange={(e) => updateMaxOnly(parseRangeNumber(e.target.value, absoluteMax))}
-          className="vtw-single-range-input vtw-compact-range-input"
+          onInput={(e) => updateMaxOnly(Number((e.currentTarget as HTMLInputElement).value))}
+          onChange={(e) => updateMaxOnly(Number(e.currentTarget.value))}
+          className="vtw-real-range vtw-single-range-input vtw-compact-range-input"
         />
         <div className="vtw-single-range-scale vtw-compact-range-scale">
           <span>0</span>
@@ -2699,6 +2733,9 @@ ${topKeywordsStr}`;
         content += `【${idx + 1}】 KÊNH: ${c.name.toUpperCase()}\n`;
         content += `   ID Kênh: ${c.id}\n`;
         content += `   Link: https://www.youtube.com/channel/${c.id}\n`;
+        content += `   Chủ đề: ${getTrackingTopic(c)}\n`;
+        content += `   Ngách: ${getTrackingNiche(c)}\n`;
+        content += `   Thu nhập ($): ${getTrackingIncome(c)}\n`;
         content += `   Lịch sử Sub: ${h.map(i => i.subs.toLocaleString()).join(' → ')}\n`;
         content += `   Tăng Sub: +${subDiff.toLocaleString()} / lượt check gần nhất\n`;
         content += `   Lịch sử View: ${h.map(i => i.views.toLocaleString()).join(' → ')}\n`;
@@ -2773,6 +2810,11 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
+        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
+        nicheKeyword: getChannelTrendKeyword(channel),
+        estimatedIncomeText: estimateIncomeFromApiViews(channel),
+        country: channel.country,
+        url: channel.url,
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -2807,6 +2849,11 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
+        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
+        nicheKeyword: getChannelTrendKeyword(channel),
+        estimatedIncomeText: estimateIncomeFromApiViews(channel),
+        country: channel.country,
+        url: channel.url,
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -4179,11 +4226,13 @@ ${topKeywordsStr}`;
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] w-10 text-center">STT</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tên Kênh</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Mã Kênh</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Chủ đề</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Ngách</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Thu nhập ($)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử Sub (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng Sub/Ngày</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử View (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng View/Ngày</th>
-                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] bg-blue-50/50 !text-black">Đánh giá</th>
                       <th className="px-2 py-1 font-normal text-[11px] text-center w-12">XÓA</th>
                     </tr>
                   </thead>
@@ -4201,15 +4250,15 @@ ${topKeywordsStr}`;
                           id: c.id,
                           name: c.name,
                           url: `https://youtube.com/channel/${c.id}`,
-                          icon: '', // Fallback
-                          country: '',
+                          icon: c.icon || '', // Fallback
+                          country: c.country || '',
                           publishedAt: '',
                           age: 0,
                           subs: c.history[c.history.length - 1]?.subs || 0,
                           views: c.history[c.history.length - 1]?.views || 0,
                           videos: c.history[c.history.length - 1]?.videos || 0,
                           score: '',
-                          keywordTitle: ''
+                          keywordTitle: c.nicheKeyword || ''
                         })}
                       >
                         <td className="px-2 py-1 text-center text-gray-500 font-mono border-r border-[#eee] w-10">{i + 1}</td>
@@ -4239,6 +4288,15 @@ ${topKeywordsStr}`;
                             <span>{c.id}</span>
                             <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
+                        </td>
+                        <td className="px-2 py-1 text-[10px] font-bold text-gray-700 bg-slate-50/70">
+                          {getTrackingTopic(c)}
+                        </td>
+                        <td className="px-2 py-1 text-[10px] font-bold text-blue-700 bg-blue-50/50">
+                          {getTrackingNiche(c)}
+                        </td>
+                        <td className="px-2 py-1 text-[10px] font-black text-emerald-700 bg-emerald-50/50 whitespace-nowrap">
+                          {getTrackingIncome(c)}
                         </td>
                         <td className="px-2 py-1 text-[10px] bg-gray-50/50">
                           <div className="flex flex-wrap gap-1 items-center justify-center">
@@ -4280,19 +4338,6 @@ ${topKeywordsStr}`;
                           </div>
                         </td>
                         <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
-                        <td className="px-2 py-1 text-[10px] text-center">
-                          {(() => {
-                            const viewsGrowthStr = getGrowth(c.history, 'views').replace('+', '');
-                            const viewsGrowthNum = parseInt(viewsGrowthStr.replace(/,/g, '')) || 0;
-                            return (
-                              <div className="flex flex-col items-center">
-                                <span className={`px-2 py-0.5 rounded text-white font-bold whitespace-nowrap text-[9px] shadow-sm ${viewsGrowthNum > 10000 ? 'bg-red-600' : viewsGrowthNum > 1000 ? 'bg-orange-600' : 'bg-emerald-600'}`}>
-                                  {viewsGrowthNum > 10000 ? '🔥 TĂNG TRƯỞNG MẠNH' : viewsGrowthNum > 1000 ? '⚡ TĂNG TRƯỞNG TỐT' : '📈 DỮ LIỆU ỔN ĐỊNH'}
-                                </span>
-                              </div>
-                            );
-                          })()}
-                        </td>
                         <td className="px-2 py-1 text-center">
                              <button 
                                type="button"

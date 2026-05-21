@@ -4237,3 +4237,112 @@
   font-weight: 900 !important;
   margin-top: 8px !important;
 }
+
+
+/* STEP 33-34: Tracking columns + real draggable range sliders */
+.vtw-tracking-table th,
+.vtw-tracking-table td {
+  vertical-align: middle !important;
+}
+
+.vtw-real-range,
+.vtw-single-range-input,
+.vtw-compact-range-input,
+.vtw-range-box input[type="range"],
+.vtw-compact-filter-box input[type="range"],
+.vtw-niche-sidebar input[type="range"] {
+  width: 100% !important;
+  height: 34px !important;
+  display: block !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  touch-action: pan-y !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+  position: relative !important;
+  z-index: 30 !important;
+  cursor: grab !important;
+}
+
+.vtw-real-range:active,
+.vtw-single-range-input:active,
+.vtw-compact-range-input:active,
+.vtw-range-box input[type="range"]:active,
+.vtw-compact-filter-box input[type="range"]:active,
+.vtw-niche-sidebar input[type="range"]:active {
+  cursor: grabbing !important;
+}
+
+.vtw-real-range::-webkit-slider-runnable-track,
+.vtw-single-range-input::-webkit-slider-runnable-track,
+.vtw-compact-range-input::-webkit-slider-runnable-track,
+.vtw-range-box input[type="range"]::-webkit-slider-runnable-track,
+.vtw-compact-filter-box input[type="range"]::-webkit-slider-runnable-track,
+.vtw-niche-sidebar input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+}
+
+.vtw-real-range::-webkit-slider-thumb,
+.vtw-single-range-input::-webkit-slider-thumb,
+.vtw-compact-range-input::-webkit-slider-thumb,
+.vtw-range-box input[type="range"]::-webkit-slider-thumb,
+.vtw-compact-filter-box input[type="range"]::-webkit-slider-thumb,
+.vtw-niche-sidebar input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 24px !important;
+  height: 24px !important;
+  margin-top: -8px !important;
+  border-radius: 999px !important;
+  background: #2f86ff !important;
+  border: 3px solid #fff !important;
+  box-shadow: 0 2px 9px rgba(0,0,0,.28) !important;
+}
+
+.vtw-real-range::-moz-range-track,
+.vtw-single-range-input::-moz-range-track,
+.vtw-compact-range-input::-moz-range-track,
+.vtw-range-box input[type="range"]::-moz-range-track,
+.vtw-compact-filter-box input[type="range"]::-moz-range-track,
+.vtw-niche-sidebar input[type="range"]::-moz-range-track {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+}
+
+.vtw-real-range::-moz-range-thumb,
+.vtw-single-range-input::-moz-range-thumb,
+.vtw-compact-range-input::-moz-range-thumb,
+.vtw-range-box input[type="range"]::-moz-range-thumb,
+.vtw-compact-filter-box input[type="range"]::-moz-range-thumb,
+.vtw-niche-sidebar input[type="range"]::-moz-range-thumb {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 999px !important;
+  background: #2f86ff !important;
+  border: 3px solid #fff !important;
+  box-shadow: 0 2px 9px rgba(0,0,0,.28) !important;
+}
+
+.vtw-compact-filter-box,
+.vtw-range-box,
+.vtw-single-range-box {
+  overflow: visible !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-tracking-table td:nth-child(1)::before { content: 'STT' !important; }
+  .vtw-tracking-table td:nth-child(2)::before { content: 'Tên kênh' !important; }
+  .vtw-tracking-table td:nth-child(3)::before { content: 'Mã kênh' !important; }
+  .vtw-tracking-table td:nth-child(4)::before { content: 'Chủ đề' !important; }
+  .vtw-tracking-table td:nth-child(5)::before { content: 'Ngách' !important; }
+  .vtw-tracking-table td:nth-child(6)::before { content: 'Thu nhập ($)' !important; }
+  .vtw-tracking-table td:nth-child(7)::before { content: 'Lịch sử Sub' !important; }
+  .vtw-tracking-table td:nth-child(8)::before { content: 'Tăng Sub/ngày' !important; }
+  .vtw-tracking-table td:nth-child(9)::before { content: 'Lịch sử View' !important; }
+  .vtw-tracking-table td:nth-child(10)::before { content: 'Tăng View/ngày' !important; }
+  .vtw-tracking-table td:nth-child(11)::before { content: 'Xóa' !important; }
+}
