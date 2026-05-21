@@ -4434,3 +4434,85 @@
     font-size: 12px !important;
   }
 }
+
+/* STEP_36_SINGLE_SLIDER_FILTERS_20260521
+   Bỏ ô nhập Min/Max trong bộ lọc; dùng 1 thanh trượt thật, kéo trái/phải tiện hơn. */
+.vtw-filter-card-slider-only {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  border: 1px solid #dbeafe !important;
+  border-radius: 18px !important;
+  padding: 16px 18px !important;
+  overflow: visible !important;
+}
+.vtw-filter-card-slider-only .vtw-filter-card-head-light {
+  margin-bottom: 14px !important;
+}
+.vtw-filter-single-range {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: block !important;
+  width: 100% !important;
+  height: 34px !important;
+  padding: 0 !important;
+  margin: 4px 0 0 !important;
+  border: 0 !important;
+  outline: none !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  cursor: grab !important;
+  pointer-events: auto !important;
+  touch-action: pan-y !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+.vtw-filter-single-range:active { cursor: grabbing !important; }
+.vtw-filter-single-range::-webkit-slider-runnable-track {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, .08) !important;
+}
+.vtw-filter-single-range::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 24px !important;
+  height: 24px !important;
+  margin-top: -8px !important;
+  border-radius: 999px !important;
+  background: #2f86ff !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: 0 2px 10px rgba(47, 134, 255, .45) !important;
+}
+.vtw-filter-single-range::-moz-range-track {
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+}
+.vtw-filter-single-range::-moz-range-thumb {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 999px !important;
+  background: #2f86ff !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: 0 2px 10px rgba(47, 134, 255, .45) !important;
+}
+.vtw-filter-range-scale-light {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.vtw-filter-card-slider-only .vtw-filter-card-inputs-light {
+  display: none !important;
+}
+@media (max-width: 768px) {
+  .vtw-filter-card-slider-only {
+    padding: 14px !important;
+  }
+  .vtw-filter-single-range {
+    height: 40px !important;
+  }
+}

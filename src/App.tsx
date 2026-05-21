@@ -872,24 +872,22 @@ export default function App() {
     step: number;
     onChange: (min: number, max: number) => void;
   }) => {
+    // STEP_36: bỏ ô nhập Min/Max trong bộ lọc cứng đầu, dùng 1 thanh kéo thật.
+    // Bộ lọc luôn chạy từ absoluteMin đến giá trị đang kéo; không dùng số lẻ.
     const normalizedStep = Math.max(10, Number(step || 10));
     const snapToStep = (value: number) => {
       const raw = Math.round(Number(value || 0) / normalizedStep) * normalizedStep;
       return Math.max(absoluteMin, Math.min(raw, absoluteMax));
     };
-    const safeMin = snapToStep(Number(min || 0));
-    const safeMax = snapToStep(Number(max || absoluteMax));
-    const updateMin = (value: number) => {
-      const nextMin = Math.min(snapToStep(value), safeMax);
-      onChange(nextMin, safeMax);
-    };
+    const safeMax = snapToStep(Number(max ?? absoluteMax));
+    const safeMin = absoluteMin;
     const updateMax = (value: number) => {
-      const nextMax = Math.max(snapToStep(value), safeMin);
+      const nextMax = snapToStep(value);
       onChange(safeMin, nextMax);
     };
 
     return (
-      <div className="vtw-filter-card-light">
+      <div className="vtw-filter-card-light vtw-filter-card-slider-only">
         <div className="vtw-filter-card-head-light">
           <div>
             <div className="vtw-filter-card-title-light">{title}</div>
@@ -897,31 +895,20 @@ export default function App() {
           </div>
           <div className="vtw-filter-card-value-light">{formatVNNumber(safeMin)} → {formatVNNumber(safeMax)}</div>
         </div>
-        <div className="vtw-filter-card-inputs-light">
-          <label>
-            <span>Min</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={absoluteMin}
-              max={absoluteMax}
-              step={normalizedStep}
-              value={safeMin}
-              onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))}
-            />
-          </label>
-          <label>
-            <span>Max</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={absoluteMin}
-              max={absoluteMax}
-              step={normalizedStep}
-              value={safeMax}
-              onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))}
-            />
-          </label>
+        <input
+          className="vtw-filter-single-range"
+          type="range"
+          min={absoluteMin}
+          max={absoluteMax}
+          step={normalizedStep}
+          value={safeMax}
+          onInput={(e) => updateMax(Number(e.currentTarget.value))}
+          onChange={(e) => updateMax(Number(e.currentTarget.value))}
+        />
+        <div className="vtw-filter-range-scale-light">
+          <span>{formatVNNumber(absoluteMin)}</span>
+          <span>{formatVNNumber(Math.round((absoluteMin + absoluteMax) / 2 / normalizedStep) * normalizedStep)}</span>
+          <span>{formatVNNumber(absoluteMax)}</span>
         </div>
       </div>
     );
@@ -4804,7 +4791,7 @@ ${topKeywordsStr}`;
                             max={videoFilters.trendScoreMax}
                             absoluteMin={0}
                             absoluteMax={100}
-                            step={1}
+                            step={10}
                             onChange={(min, max) => setVideoFilters({ ...videoFilters, trendScoreMin: min, trendScoreMax: max })}
                           />
                           <RangeFilterBox
