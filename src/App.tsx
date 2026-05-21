@@ -567,9 +567,9 @@ export default function App() {
   } | null>(null);
   const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
-  const [videoFilters, setVideoFilters] = useState({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subMin: 0, subMax: 10000000 });
+  const [videoFilters, setVideoFilters] = useState({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000, subsMax: 10000000 });
   const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
-  const [channelFilters, setChannelFilters] = useState({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subscribersMin: 0, subscribersMax: 10000000 });
+  const [channelFilters, setChannelFilters] = useState({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000, vphMax: 10000 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -619,10 +619,32 @@ export default function App() {
     if (savedTracking) setTrackingChannels(JSON.parse(savedTracking));
     
     const savedSpyProjects = localStorage.getItem('youtube_spy_projects');
-    if (savedSpyProjects) setSpyProjects(JSON.parse(savedSpyProjects));
+    if (savedSpyProjects) {
+      try {
+        const parsedSpyProjects = JSON.parse(savedSpyProjects);
+        setSpyProjects(parsedSpyProjects);
+        if (Array.isArray(parsedSpyProjects) && parsedSpyProjects[0]) {
+          setSpyResult(parsedSpyProjects[0]);
+          if (parsedSpyProjects[0]?.channelInfo?.id) setSpyInput(parsedSpyProjects[0].channelInfo.id);
+        }
+      } catch (error) {
+        console.warn('Không đọc được lịch sử Spy đã lưu:', error);
+      }
+    }
 
     const savedVideoProjects = localStorage.getItem('youtube_video_projects');
-    if (savedVideoProjects) setVideoProjects(JSON.parse(savedVideoProjects));
+    if (savedVideoProjects) {
+      try {
+        const parsedVideoProjects = JSON.parse(savedVideoProjects);
+        setVideoProjects(parsedVideoProjects);
+        if (Array.isArray(parsedVideoProjects) && parsedVideoProjects[0]) {
+          setVideoResult(parsedVideoProjects[0]);
+          if (parsedVideoProjects[0]?.id) setVideoInput(parsedVideoProjects[0].id);
+        }
+      } catch (error) {
+        console.warn('Không đọc được lịch sử Video đã lưu:', error);
+      }
+    }
 
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
@@ -869,6 +891,46 @@ export default function App() {
           <span>0</span>
           <span>{formatVNNumber(Math.round(absoluteMax / 2))}</span>
           <span>{formatVNNumber(absoluteMax)}</span>
+        </div>
+      </div>
+    );
+  };
+
+
+  const InlineFilterSlider = ({
+    title,
+    value,
+    max,
+    step,
+    onChange,
+  }: {
+    title: string;
+    value: number;
+    max: number;
+    step: number;
+    onChange: (value: number) => void;
+  }) => {
+    const safeValue = Math.max(0, Math.min(Number(value || 0), max));
+    return (
+      <div className="vtw-inline-filter-item">
+        <div className="vtw-inline-filter-head">
+          <span>{title}</span>
+          <strong>0 → {formatVNNumber(safeValue)}</strong>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={max}
+          step={step}
+          value={safeValue}
+          onChange={(e) => onChange(parseRangeNumber(e.target.value, max))}
+          onInput={(e) => onChange(parseRangeNumber((e.target as HTMLInputElement).value, max))}
+          className="vtw-inline-filter-range"
+        />
+        <div className="vtw-inline-filter-scale">
+          <span>0</span>
+          <span>{formatVNNumber(Math.round(max / 2))}</span>
+          <span>{formatVNNumber(max)}</span>
         </div>
       </div>
     );
@@ -1576,13 +1638,13 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         const vph = calculateVPH(views, v.snippet.publishedAt);
         const trendScore = calculateTrendScore(v, chan);
         
+        const channelSubscriberCount = parseInt(chan?.statistics?.subscriberCount) || 0;
         return {
           ...v,
           vph,
           trendScore,
-          channelSubscriberCount: parseInt(chan?.statistics?.subscriberCount || '0') || 0,
-          channelViewCount: parseInt(chan?.statistics?.viewCount || '0') || 0,
-          channelVideoCount: parseInt(chan?.statistics?.videoCount || '0') || 0,
+          channelStats: chan?.statistics || {},
+          channelSubscriberCount,
           engagementRate: calculateEngagementRate(stats),
           viewPerDay: views / Math.max(1, (new Date().getTime() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
         };
@@ -4242,8 +4304,8 @@ ${topKeywordsStr}`;
                             <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-right">
-                          <div className="flex flex-wrap gap-1 items-center justify-end">
+                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-left">
+                          <div className="flex flex-wrap gap-1 items-center justify-start">
                             {c.history.length > 1 ? (
                               <>
                                 <span className="text-gray-400">
@@ -4261,9 +4323,9 @@ ${topKeywordsStr}`;
                             )}
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'subs')}</td>
-                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-right">
-                          <div className="flex flex-wrap gap-1 items-center justify-end">
+                        <td className="px-2 py-1 text-left font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'subs')}</td>
+                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-left">
+                          <div className="flex flex-wrap gap-1 items-center justify-start">
                             {c.history.length > 1 ? (
                               <>
                                 <span className="text-gray-400">
@@ -4281,13 +4343,13 @@ ${topKeywordsStr}`;
                             )}
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
-                        <td className="px-2 py-1 text-[10px] text-center">
+                        <td className="px-2 py-1 text-left font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
+                        <td className="px-2 py-1 text-[10px] text-left">
                           {(() => {
                             const viewsGrowthStr = getGrowth(c.history, 'views').replace('+', '');
                             const viewsGrowthNum = parseInt(viewsGrowthStr.replace(/,/g, '')) || 0;
                             return (
-                              <div className="flex flex-col items-center">
+                              <div className="flex flex-col items-start">
                                 <span className={`px-2 py-0.5 rounded text-white font-bold whitespace-nowrap text-[9px] shadow-sm ${viewsGrowthNum > 10000 ? 'bg-red-600' : viewsGrowthNum > 1000 ? 'bg-orange-600' : 'bg-emerald-600'}`}>
                                   {viewsGrowthNum > 10000 ? '🔥 TĂNG TRƯỞNG MẠNH' : viewsGrowthNum > 1000 ? '⚡ TĂNG TRƯỞNG TỐT' : '📈 DỮ LIỆU ỔN ĐỊNH'}
                                 </span>
@@ -4295,7 +4357,7 @@ ${topKeywordsStr}`;
                             );
                           })()}
                         </td>
-                        <td className="px-2 py-1 text-center">
+                        <td className="px-2 py-1 text-left">
                              <button 
                                type="button"
                                onClick={(e) => {
@@ -4721,7 +4783,7 @@ ${topKeywordsStr}`;
                                            </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                           <div className="flex flex-col items-center">
+                                           <div className="flex flex-col items-start">
                                               <div className="w-12 bg-gray-200 h-1.5 rounded-full overflow-hidden mb-1">
                                                  <div className="h-full bg-emerald-500" style={{ width: `${kw.score}%` }}></div>
                                               </div>
@@ -4739,55 +4801,8 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
-                    <div className="mb-6">
-                      <div className="vtw-niche-result-filter-panel bg-[#294054] p-5 rounded-2xl shadow-xl border border-[#3c5870]">
-                        <div className="flex justify-between items-center mb-4 pt-1">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-400" /> THANH LỌC KẾT QUẢ TOP VIDEO</div>
-                           <button onClick={() => setVideoFilters({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subMin: 0, subMax: 10000000 })} className="bg-[#3a5268] hover:bg-[#46627c] text-gray-100 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                          <RangeFilterBox
-                            title="VPH"
-                            subtitle="Phạm vi 0–10.000+"
-                            min={videoFilters.vphMin}
-                            max={videoFilters.vphMax}
-                            absoluteMin={0}
-                            absoluteMax={10000}
-                            step={10}
-                            onChange={(min, max) => setVideoFilters({ ...videoFilters, vphMin: min, vphMax: max })}
-                          />
-                          <RangeFilterBox
-                            title="View"
-                            subtitle="Phạm vi 0–10.000.000+"
-                            min={videoFilters.viewsMin}
-                            max={videoFilters.viewsMax}
-                            absoluteMin={0}
-                            absoluteMax={10000000}
-                            step={10000}
-                            onChange={(min, max) => setVideoFilters({ ...videoFilters, viewsMin: min, viewsMax: max })}
-                          />
-                          <RangeFilterBox
-                            title="Sub"
-                            subtitle="Phạm vi 0–10.000.000+"
-                            min={videoFilters.subMin}
-                            max={videoFilters.subMax}
-                            absoluteMin={0}
-                            absoluteMax={10000000}
-                            step={10000}
-                            onChange={(min, max) => setVideoFilters({ ...videoFilters, subMin: min, subMax: max })}
-                          />
-                        </div>
-                      </div>
-                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {nicheResults.videos.filter((v: any) => {
-                         const videoViews = parseInt(v.statistics.viewCount) || 0;
-                         const channelSubs = Number(v.channelSubscriberCount || 0);
-                         if (Math.round(v.vph || 0) < videoFilters.vphMin || Math.round(v.vph || 0) > videoFilters.vphMax) return false;
-                         if (videoViews < videoFilters.viewsMin || videoViews > videoFilters.viewsMax) return false;
-                         if (channelSubs < videoFilters.subMin || channelSubs > videoFilters.subMax) return false;
-                         return true;
-                      }).map((v: any, i: number) => (
+                      {nicheResults.videos.map((v: any, i: number) => (
                          <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -4877,56 +4892,8 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
-                    <div className="mb-6">
-                      <div className="vtw-niche-result-filter-panel bg-[#294054] p-5 rounded-2xl shadow-xl border border-[#3c5870]">
-                        <div className="flex justify-between items-center mb-4 pt-1">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-400" /> THANH LỌC KẾT QUẢ KÊNH / NGÁCH</div>
-                           <button onClick={() => setChannelFilters({ vphMin: 0, vphMax: 10000, viewsMin: 0, viewsMax: 10000000, subscribersMin: 0, subscribersMax: 10000000 })} className="bg-[#3a5268] hover:bg-[#46627c] text-gray-100 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                          <RangeFilterBox
-                            title="VPH"
-                            subtitle="Phạm vi 0–10.000+"
-                            min={channelFilters.vphMin}
-                            max={channelFilters.vphMax}
-                            absoluteMin={0}
-                            absoluteMax={10000}
-                            step={10}
-                            onChange={(min, max) => setChannelFilters({ ...channelFilters, vphMin: min, vphMax: max })}
-                          />
-                          <RangeFilterBox
-                            title="View"
-                            subtitle="Phạm vi 0–10.000.000+"
-                            min={channelFilters.viewsMin}
-                            max={channelFilters.viewsMax}
-                            absoluteMin={0}
-                            absoluteMax={10000000}
-                            step={10000}
-                            onChange={(min, max) => setChannelFilters({ ...channelFilters, viewsMin: min, viewsMax: max })}
-                          />
-                          <RangeFilterBox
-                            title="Sub"
-                            subtitle="Phạm vi 0–10.000.000+"
-                            min={channelFilters.subscribersMin}
-                            max={channelFilters.subscribersMax}
-                            absoluteMin={0}
-                            absoluteMax={10000000}
-                            step={10000}
-                            onChange={(min, max) => setChannelFilters({ ...channelFilters, subscribersMin: min, subscribersMax: max })}
-                          />
-                        </div>
-                      </div>
-                    </div>
                    <div className="space-y-4">
-                      {nicheResults.channels.filter((c: any) => {
-                         const subsCount = parseInt(c.statistics.subscriberCount) || 0;
-                         const viewsCount = parseInt(c.statistics.viewCount) || 0;
-                         const bestVph = Math.round(c.bestVideo?.vph || 0);
-                         if (bestVph < channelFilters.vphMin || bestVph > channelFilters.vphMax) return false;
-                         if (viewsCount < channelFilters.viewsMin || viewsCount > channelFilters.viewsMax) return false;
-                         if (subsCount < channelFilters.subscribersMin || subsCount > channelFilters.subscribersMax) return false;
-                         return true;
-                      }).map((c: any, i: number) => (
+                      {nicheResults.channels.map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
@@ -4954,11 +4921,6 @@ ${topKeywordsStr}`;
                                      <div className="flex gap-2 items-center">
                                         <Eye size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{formatVNNumber(parseInt(c.statistics.viewCount) || 0)} <span className="font-medium text-gray-400 lowercase">views</span></span>
-                                     </div>
-                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-                                     <div className="flex gap-2 items-center">
-                                        <TrendingUp size={14} className="text-gray-400" />
-                                        <span className="text-[12px] font-bold text-blue-600">+{formatVNNumber(Math.round(c.bestVideo?.vph || 0))} <span className="font-medium text-gray-400 uppercase">VPH</span></span>
                                      </div>
                                   </div>
                                </div>

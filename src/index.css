@@ -4510,3 +4510,246 @@
     font-size: 12px !important;
   }
 }
+
+/* STEP 45 - bỏ bộ lọc lớn, thay bằng 3 thanh lọc riêng VPH / View / Sub */
+.vtw-inline-filter-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.vtw-inline-filter-item {
+  background: #ffffff !important;
+  border: 1px solid #dbeafe !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06) !important;
+  min-width: 0 !important;
+}
+.vtw-inline-filter-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+.vtw-inline-filter-head span {
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .02em !important;
+}
+.vtw-inline-filter-head strong {
+  font-size: 13px !important;
+  color: #2563eb !important;
+  font-weight: 1000 !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.vtw-inline-filter-range {
+  width: 100% !important;
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+  accent-color: #2563eb !important;
+  cursor: pointer !important;
+  height: 22px !important;
+  display: block !important;
+  margin: 2px 0 8px !important;
+  touch-action: pan-x !important;
+}
+.vtw-inline-filter-scale {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  color: #64748b !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+@media (max-width: 900px) {
+  .vtw-inline-filter-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+  .vtw-inline-filter-item {
+    padding: 12px !important;
+    border-radius: 14px !important;
+  }
+  .vtw-inline-filter-head span,
+  .vtw-inline-filter-head strong {
+    font-size: 12px !important;
+  }
+}
+
+/* STEP 46: bỏ bộ lọc cứng đầu + căn trái toàn bộ số liệu + nhớ lần check cuối */
+.vtw-inline-filter-row,
+.vtw-filter-section,
+.vtw-filter-panel,
+.vtw-compact-filter-box,
+.vtw-compact-filter-head,
+.vtw-compact-range-input,
+.vtw-compact-range-scale {
+  display: none !important;
+}
+
+/* Tracking web: các cột lịch sử sub/view và tăng trưởng căn trái, không dồn sang phải */
+.vtw-tracking-table th,
+.vtw-tracking-table td,
+.vtw-tracking-table td:nth-child(4),
+.vtw-tracking-table td:nth-child(6),
+.vtw-tracking-table td:nth-child(7),
+.vtw-tracking-table td:nth-child(8) {
+  text-align: left !important;
+}
+.vtw-tracking-table td:nth-child(4) > div,
+.vtw-tracking-table td:nth-child(6) > div,
+.vtw-tracking-table td:nth-child(7) > div,
+.vtw-tracking-table td:nth-child(8) > div {
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+}
+
+/* Mobile Spy/Video: tất cả label và giá trị nằm về bên trái, không căn phải */
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .vtw-spy-report,
+  .vtw-spy-report *,
+  .vtw-spy-videos-box,
+  .vtw-spy-videos-box *,
+  .vtw-video-result,
+  .vtw-video-result *,
+  .vtw-tracking-table,
+  .vtw-tracking-table * {
+    text-align: left !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td,
+  .vtw-tracking-table td {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-items: start !important;
+    align-items: start !important;
+    gap: 6px !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td::before,
+  .vtw-tracking-table td::before {
+    justify-self: start !important;
+    text-align: left !important;
+  }
+
+  .vtw-spy-videos-box .vtw-tracking-table td > *,
+  .vtw-tracking-table td > * {
+    justify-self: start !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
+  .vtw-spy-report .flex,
+  .vtw-spy-report .flex-wrap,
+  .vtw-spy-report .justify-between,
+  .vtw-spy-report .items-center {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+}
+
+
+/* STEP 47: Tracking mobile chỉ 1 cột dọc, không chia đôi, không lệch số liệu */
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .vtw-tracking-panel .vtw-tracking-table,
+  .vtw-tracking-panel .vtw-tracking-table tbody,
+  .vtw-tracking-panel .vtw-tracking-table tr,
+  .vtw-tracking-panel .vtw-tracking-table td {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table tr {
+    padding: 14px 16px !important;
+    margin: 0 0 12px !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    border: 1px solid #dbeafe !important;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, .07) !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td {
+    padding: 8px 0 !important;
+    border-right: 0 !important;
+    border-bottom: 1px dashed #e5edf5 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    line-height: 1.35 !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td:last-child {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td::before {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 0 5px !important;
+    color: #64748b !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: .02em !important;
+    text-transform: uppercase !important;
+    text-align: left !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td > div,
+  .vtw-tracking-panel .vtw-tracking-table td > span,
+  .vtw-tracking-panel .vtw-tracking-table td > a,
+  .vtw-tracking-panel .vtw-tracking-table td > button {
+    justify-content: flex-start !important;
+    justify-items: start !important;
+    align-items: center !important;
+    text-align: left !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td:nth-child(4) > div,
+  .vtw-tracking-panel .vtw-tracking-table td:nth-child(6) > div {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    font-size: 15px !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td:nth-child(5),
+  .vtw-tracking-panel .vtw-tracking-table td:nth-child(7) {
+    font-size: 16px !important;
+    text-align: left !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td:nth-child(8) span {
+    white-space: normal !important;
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+
+  .vtw-tracking-panel .vtw-tracking-table td:nth-child(9) button {
+    display: inline-flex !important;
+    margin-left: 0 !important;
+  }
+}
