@@ -4888,3 +4888,153 @@
     column-gap: 10px !important;
   }
 }
+
+/* STEP 42: API modal polish, tracking search single blue frame, right alignment */
+.vtw-api-modal * {
+  line-height: 1.25;
+}
+.vtw-api-modal-header h2 {
+  font-size: clamp(18px, 4.8vw, 28px) !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.05 !important;
+}
+.vtw-api-modal-header p {
+  font-size: clamp(9px, 2.7vw, 12px) !important;
+  line-height: 1.2 !important;
+}
+.vtw-api-modal label,
+.vtw-api-modal .vtw-model-label {
+  font-size: clamp(11px, 3vw, 13px) !important;
+  letter-spacing: 0.08em !important;
+}
+.vtw-model-select {
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(147,197,253,.6);
+  border-radius: 16px;
+  padding: 10px;
+}
+.vtw-model-label {
+  color: #64748b;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.vtw-model-current-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  max-width: 100%;
+  background: linear-gradient(135deg,#2563eb,#4f46e5);
+  color: white;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(37,99,235,.18);
+}
+.vtw-model-current-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vtw-model-options {
+  margin-top: 8px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 12px 28px rgba(15,23,42,.08);
+}
+.vtw-model-option {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  border-bottom: 1px solid #eef2ff;
+  background: white;
+}
+.vtw-model-option-active {
+  background: #2563eb !important;
+  color: white !important;
+}
+.vtw-youtube-key-guide li {
+  display: block !important;
+  margin-bottom: 6px;
+  line-height: 1.35 !important;
+}
+.vtw-tracking-search-box {
+  border: 2px solid #60a5fa !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  box-shadow: 0 10px 22px rgba(37,99,235,.12) !important;
+  overflow: hidden !important;
+}
+.vtw-tracking-search-icon { display: none !important; }
+.vtw-tracking-search-input {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  padding: 0 42px 0 18px !important;
+  height: 48px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  background: transparent !important;
+}
+.vtw-tracking-search-input::placeholder {
+  color: #94a3b8 !important;
+}
+.vtw-tracking-search-clear {
+  position: absolute !important;
+  right: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+/* right-align numeric tracking columns on desktop */
+.vtw-tracking-table th:nth-child(7),
+.vtw-tracking-table th:nth-child(8),
+.vtw-tracking-table th:nth-child(9),
+.vtw-tracking-table th:nth-child(10),
+.vtw-tracking-table td:nth-child(7),
+.vtw-tracking-table td:nth-child(8),
+.vtw-tracking-table td:nth-child(9),
+.vtw-tracking-table td:nth-child(10) {
+  text-align: right !important;
+}
+.vtw-tracking-table td:nth-child(7) .flex,
+.vtw-tracking-table td:nth-child(9) .flex {
+  justify-content: flex-end !important;
+}
+@media (max-width: 768px) {
+  .vtw-api-modal {
+    max-width: calc(100vw - 20px) !important;
+  }
+  .vtw-api-modal-content {
+    padding: 14px !important;
+    gap: 14px !important;
+  }
+  .vtw-api-modal-content > div {
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+  .vtw-api-modal input,
+  .vtw-api-modal textarea {
+    font-size: 13px !important;
+  }
+  .vtw-model-current-button {
+    font-size: 10px !important;
+    padding: 7px 9px !important;
+  }
+  .vtw-tracking-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+  }
+}

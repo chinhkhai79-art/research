@@ -593,6 +593,7 @@ export default function App() {
     if (savedKeys) {
       const keys = JSON.parse(savedKeys);
       setConfig(prev => ({ ...prev, apiKeys: keys }));
+      setManualKeysInput(Array.isArray(keys) ? keys.join('\n') : '');
     }
     if (savedKeyHistory) {
       setApiKeysHistory(JSON.parse(savedKeyHistory));
@@ -1568,6 +1569,8 @@ ${JSON.stringify(categories, null, 2)}
       
       if (response.status === 403 || response.status === 401) {
         setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
+        setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k.trim() !== activeKey) }));
+        setStatus(`BỎ QUA KEY HẾT QUOTA/LỖI: ${activeKey.slice(0,8)}...`);
         if (rotateApiKey()) {
           return youtubeFetch(endpoint, params, retryCount + 1);
         }
@@ -1596,12 +1599,12 @@ ${JSON.stringify(categories, null, 2)}
         const reason = data.error.errors[0]?.reason;
         if (['quotaExceeded', 'dailyLimitExceeded', 'keyInvalid', 'forbidden', 'unauthorized', 'accessNotConfigured'].includes(reason)) {
           setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
+          setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k.trim() !== activeKey) }));
           
           if (['keyInvalid', 'unauthorized', 'forbidden'].includes(reason)) {
-            setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
-            setStatus(`XOÁ KEY CHẾT: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+            setStatus(`XOÁ KEY CHẾT KHỎI PHIÊN: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
           } else {
-            setStatus(`BỎ QUA KEY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+            setStatus(`BỎ QUA KEY HẾT QUOTA HÔM NAY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
           }
           
           if (rotateApiKey()) {
@@ -3947,7 +3950,6 @@ ${topKeywordsStr}`;
                   
                   {/* Search box for tracking list - one clean frame only */}
                   <div className="vtw-tracking-search-box ml-2 relative min-w-[250px]">
-                    <Search size={16} className="vtw-tracking-search-icon text-blue-400" />
                     <input 
                       type="text"
                       placeholder="Tìm nhanh tên kênh..."
@@ -5435,54 +5437,35 @@ ${topKeywordsStr}`;
                         {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
-                    <div className="mt-3 flex items-center gap-2 text-[10px] text-indigo-600 font-bold uppercase tracking-tight bg-white/50 w-fit px-3 py-1 rounded-full border border-indigo-100">
-                      <Zap size={12} fill="currentColor" />
-                      Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
-                    </div>
-
                     {/* Model Selection UI */}
-                    <div className="mt-4">
-                      <button 
-                        type="button"
-                        onClick={() => setShowModelOptions(!showModelOptions)}
-                        className="flex items-center justify-between w-full text-left"
-                      >
-                        <span className="text-[11px] font-black text-gray-400 tracking-widest uppercase">Chọn model Gemini</span>
-                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">
-                          Đang dùng: {geminiModel}
-                        </div>
-                      </button>
+                    <div className="vtw-model-select mt-4">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="vtw-model-label">MODEL GEMINI</span>
+                        <button 
+                          type="button"
+                          onClick={() => setShowModelOptions(!showModelOptions)}
+                          className="vtw-model-current-button"
+                        >
+                          <span>Đang dùng: {geminiModel}</span>
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
 
                       {showModelOptions && (
-                        <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                          <button
-                            type="button"
-                            onClick={() => setShowModelOptions(!showModelOptions)}
-                            className="w-full text-left px-4 py-2 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                          >
-                            <span className="text-[12px] font-bold text-gray-800">{GEMINI_MODELS.find(m => m.id === geminiModel)?.name}</span>
-                            <ChevronDown size={14} className="text-gray-400" />
-                          </button>
-                          
-                          <div className="max-h-[150px] overflow-y-auto">
-                            {GEMINI_MODELS.map(model => (
-                              <button
-                                key={model.id}
-                                type="button"
-                                onClick={() => {
-                                  setGeminiModel(model.id);
-                                  setShowModelOptions(false);
-                                }}
-                                className={`w-full text-left px-4 py-2 text-[12px] transition-colors border-b border-gray-50 last:border-0 ${
-                                  model.id === geminiModel 
-                                    ? 'bg-blue-600 text-white font-bold' 
-                                    : 'text-gray-600 hover:bg-gray-50'
-                                }`}
-                              >
-                                {model.name}
-                              </button>
-                            ))}
-                          </div>
+                        <div className="vtw-model-options">
+                          {GEMINI_MODELS.map(model => (
+                            <button
+                              key={model.id}
+                              type="button"
+                              onClick={() => {
+                                setGeminiModel(model.id);
+                                setShowModelOptions(false);
+                              }}
+                              className={`vtw-model-option ${model.id === geminiModel ? 'vtw-model-option-active' : ''}`}
+                            >
+                              {model.name}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -5506,15 +5489,6 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
                   
-                  <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
-                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
-                    <ul className="space-y-1 font-medium opacity-90">
-                      <li className="flex items-center gap-2">🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
-                      <li className="flex items-center gap-2">🔹 Hệ thống sẽ <b>tự động xoay vòng Key</b> để quét dữ liệu mượt mà hơn.</li>
-                      <li className="flex items-center gap-2">🔹 Dữ liệu được bảo mật và lưu cục bộ trên trình duyệt của bạn.</li>
-                    </ul>
-                  </div>
-
                   <div className="relative">
                     <textarea 
                       value={manualKeysInput}
@@ -5530,6 +5504,15 @@ ${topKeywordsStr}`;
                     >
                       {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
+                  </div>
+
+                  <div className="vtw-youtube-key-guide bg-white border border-red-100 p-4 rounded-2xl text-[11px] text-gray-600 mt-4 shadow-sm relative z-10">
+                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
+                    <ul className="space-y-1 font-medium opacity-90">
+                      <li>🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
+                      <li>🔹 Key nào hôm nay hết quota/lỗi sẽ bị bỏ qua khỏi phiên chạy hiện tại và chuyển sang key kế tiếp.</li>
+                      <li>🔹 Danh sách key đã nhập vẫn được giữ trong ô nhập để anh dễ quản lý.</li>
+                    </ul>
                   </div>
                 </div>
               </div>
