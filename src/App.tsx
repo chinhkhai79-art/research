@@ -1449,8 +1449,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     const runNicheResearch = async (customKeyword?: string) => {
     let kw = (customKeyword || nicheInput || '').trim();
     if (!kw) {
-      const autoSeeds = diversifySeedsByTopic(shuffleList(getAutoHuntSeeds(nicheRegion || config.region || 'VN')));
-      kw = autoSeeds[0] || 'ai tools';
+      kw = getNextAutoNicheSeed(nicheRegion || config.region || 'VN');
       setNicheInput(kw);
     }
 
@@ -1961,6 +1960,30 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
     }
     return [...firstPass, ...shuffleList(secondPass)];
+  };
+
+  const getNextAutoNicheSeed = (regionCode?: string) => {
+    const region = regionCode || config.region || 'VN';
+    const seeds = diversifySeedsByTopic(getAutoHuntSeeds(region));
+    if (!seeds.length) return 'ai tools';
+
+    const storeKey = `youtube_auto_niche_used_${region}`;
+    let used: string[] = [];
+    try {
+      used = JSON.parse(localStorage.getItem(storeKey) || '[]');
+      if (!Array.isArray(used)) used = [];
+    } catch (_) {
+      used = [];
+    }
+
+    let next = seeds.find(seed => !used.includes(seed));
+    if (!next) {
+      used = [];
+      next = shuffleList(seeds)[0] || seeds[0];
+    }
+
+    localStorage.setItem(storeKey, JSON.stringify([...used, next].slice(-seeds.length)));
+    return next;
   };
 
   const getLanguageForRegion = (regionCodeCode: string): string => {
@@ -3279,15 +3302,26 @@ ${topKeywordsStr}`;
                         onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
                       />
                     </div>
-                    <LightRangeFilterBox
-                      title="Phạm vi Sub"
-                      min={config.minSub}
-                      max={config.maxSub}
-                      absoluteMin={0}
-                      absoluteMax={10000000}
-                      step={1000}
-                      onChange={(min, max) => setConfig({ ...config, minSub: min, maxSub: max })}
-                    />
+                    <div className="flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        value={config.minSub}
+                        onChange={(e) => setConfig({ ...config, minSub: parseRangeNumber(e.target.value, 0) })}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        value={config.maxSub}
+                        onChange={(e) => setConfig({ ...config, maxSub: parseRangeNumber(e.target.value, 10000000) })}
+                      />
+                    </div>
                   </div>
 
                   {/* Group 3 */}
@@ -3573,7 +3607,11 @@ ${topKeywordsStr}`;
                           >
                             <td className="px-2 py-1 text-center font-mono text-gray-400 border-r border-[#ddd] w-10">{i + 1}</td>
                             <td className="px-2 py-1 text-center"><img src={r.icon} className="w-7 h-7 rounded-full border border-[#ccc] mx-auto shadow-sm" /></td>
-                            <td className="px-2 py-1 font-bold whitespace-nowrap overflow-hidden text-ellipsis text-black">{r.name}</td>
+                            <td className="px-2 py-1 font-bold whitespace-nowrap overflow-hidden text-ellipsis text-black">
+                              <a href={r.url} target="_blank" rel="noreferrer" className="hover:underline text-black" title={`Mở kênh ${r.name}`}>
+                                {r.name}
+                              </a>
+                            </td>
                             <td className="px-2 py-1 text-[10px] font-mono text-[#7f8c8d] break-all">{r.id}</td>
                             <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[160px] whitespace-normal">{getChannelTrendKeyword(r)}</td>
                             <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
@@ -4270,62 +4308,39 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <label className="text-[9px] uppercase font-bold text-[#95a5a6] flex justify-between">
                       Số lượng phân tích <span>{nicheVideoCount} items</span>
                     </label>
                     <input
-                      type="number"
-                      inputMode="numeric"
+                      type="range"
                       min={10}
                       max={100}
                       step={10}
                       value={nicheVideoCount}
-                      onChange={(e) => {
-                        const value = Math.max(10, Math.min(100, parseRangeNumber(e.target.value, 20)));
-                        setNicheVideoCount(value);
-                      }}
-                      className="vtw-range-number vtw-range-number-niche"
-                      placeholder="10 - 100"
+                      onChange={(e) => setNicheVideoCount(parseInt(e.target.value, 10))}
+                      className="w-full accent-blue-500"
                     />
-                    <div className="text-[8px] text-[#7f8c8d] px-1 font-bold">Nhập số thủ công từ 10 đến 100 items</div>
+                    <div className="flex justify-between text-[8px] text-[#95a5a6] font-bold px-1">
+                      <span>10</span><span>30</span><span>50</span><span>100</span>
+                    </div>
                   </div>
 
                   <div className="space-y-2 mt-2">
                     <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
-                      Phạm vi Sub <span>{formatVNNumber(config.minSub)} → {formatVNNumber(config.maxSub)}</span>
+                      Phạm vi Sub <span>0 → {formatVNNumber(config.maxSub)}</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={10000000}
-                        step={1000}
-                        value={config.minSub}
-                        onChange={(e) => {
-                          const nextMin = parseRangeNumber(e.target.value, 0);
-                          const [min, max] = clampRangePair(nextMin, config.maxSub, 0, 10000000);
-                          setConfig({ ...config, minSub: min, maxSub: max });
-                        }}
-                        className="vtw-range-number"
-                        placeholder="Min sub"
-                      />
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={10000000}
-                        step={1000}
-                        value={config.maxSub}
-                        onChange={(e) => {
-                          const nextMax = parseRangeNumber(e.target.value, 10000000);
-                          const [min, max] = clampRangePair(config.minSub, nextMax, 0, 10000000);
-                          setConfig({ ...config, minSub: min, maxSub: max });
-                        }}
-                        className="vtw-range-number"
-                        placeholder="Max sub"
-                      />
+                    <input
+                      type="range"
+                      min={0}
+                      max={10000000}
+                      step={1000}
+                      value={config.maxSub}
+                      onChange={(e) => setConfig({ ...config, minSub: 0, maxSub: parseInt(e.target.value, 10) || 0 })}
+                      className="w-full accent-blue-500"
+                    />
+                    <div className="flex justify-between text-[8px] text-[#95a5a6] font-bold px-1">
+                      <span>0</span><span>1M</span><span>5M</span><span>10M</span>
                     </div>
                   </div>
 
