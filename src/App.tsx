@@ -3173,10 +3173,10 @@ ${topKeywordsStr}`;
                   <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
+                  <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
+                  <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
                   <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 TÌM NGÁCH YOUTUBE</span><span className="vtw-tab-short">Ngách</span>
@@ -3301,16 +3301,16 @@ ${topKeywordsStr}`;
             <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
           </button>
           <button 
-            onClick={() => setActiveTab(3)}
-            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
-          >
-            <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
-          </button>
-          <button 
             onClick={() => setActiveTab(4)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab(3)}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+          >
+            <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
           </button>
           <button 
             onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
@@ -4765,11 +4765,11 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                       {nicheResults.videos.map((v: any, i: number) => (
                          <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
-                            <div className="relative aspect-video">
-                               <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <div className="relative aspect-video bg-black rounded-t-2xl overflow-hidden">
+                               <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                   {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
                                </div>
@@ -4778,17 +4778,23 @@ ${topKeywordsStr}`;
                                      SCORE {v.trendScore}
                                   </div>
                                </div>
-                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
-                                  <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
-                                     <ExternalLink size={14} /> Xem ngay video này
-                                  </a>
-                                  <button 
-                                     onClick={() => analyzeVideo(v.id)}
-                                     className="w-full bg-orange-600 text-white py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
-                                  >
-                                     <Video size={14} /> Phân tích Video (Check)
-                                  </button>
-                               </div>
+                            </div>
+                            <div className="p-3 border-b border-gray-100 grid grid-cols-1 gap-2">
+                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black border border-gray-200 py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-50">
+                                  <ExternalLink size={13} /> Xem video
+                               </a>
+                               <button 
+                                  onClick={() => analyzeVideo(v.id)}
+                                  className="w-full bg-orange-600 text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
+                               >
+                                  <Video size={13} /> Phân tích video
+                               </button>
+                               <button 
+                                  onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
+                                  className="w-full bg-[#2c3e50] text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-[#1f2d3a]"
+                               >
+                                  <BarChart2 size={13} /> Bóc tách kênh này
+                               </button>
                             </div>
                             <div className="p-4">
                                <div className="flex items-center gap-2 mb-2">
@@ -4907,7 +4913,7 @@ ${topKeywordsStr}`;
                                   </div>
                                </button>
                                <button 
-                                 onClick={() => { setSpyInput(c.id); setActiveTab(2); }}
+                                 onClick={() => { setSpyInput(c.id); setActiveTab(2); analyzeSpy(c.id); }}
                                  className="px-6 py-3 bg-[#e67e22] text-white rounded-2xl text-[12px] font-black uppercase tracking-tight shadow-md hover:bg-[#d35400] active:scale-95 transition-all flex items-center gap-2"
                                >
                                   <BarChart2 size={16} /> Bóc tách kênh này
