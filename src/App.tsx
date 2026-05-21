@@ -653,7 +653,12 @@ export default function App() {
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
-    const savedSuggestedNiches = localStorage.getItem(`youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`);
+    // Bước 54: ô Từ khóa/Key luôn lấy lại từ khóa cuối người dùng đã tìm kiếm.
+    const savedLastNicheKeyword = localStorage.getItem('youtube_last_niche_keyword');
+    if (savedLastNicheKeyword) setNicheInput(savedLastNicheKeyword);
+
+    const savedSuggestedNiches = localStorage.getItem(`youtube_suggested_niches_trending_v4_${trendingRegion || 'GLOBAL'}`)
+      || localStorage.getItem(`youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`);
     if (savedSuggestedNiches) {
       try {
         const parsedSuggestedNiches = JSON.parse(savedSuggestedNiches);
@@ -1378,6 +1383,73 @@ export default function App() {
       return Math.round((Math.log10(views + 10) * 18) + Math.min(vph, 5000) / 35 + Math.min(ratio, 500) * 2 + (subs <= 50000 ? 120 : 0));
     };
 
+    const getRegionLanguageName = (code: string) => {
+      const mapping: Record<string, string> = {
+        VN: 'Vietnamese', US: 'English', GB: 'English', CA: 'English', AU: 'English', NZ: 'English',
+        SG: 'English', PH: 'English', IN: 'English', JP: 'Japanese', KR: 'Korean', RU: 'Russian',
+        BR: 'Portuguese', PT: 'Portuguese', ES: 'Spanish', MX: 'Spanish', AR: 'Spanish', CO: 'Spanish',
+        FR: 'French', DE: 'German', TH: 'Thai', ID: 'Indonesian', MY: 'Malay', IT: 'Italian',
+        TR: 'Turkish', SA: 'Arabic', EG: 'Arabic'
+      };
+      return mapping[code] || 'English';
+    };
+
+    const normalizeGeminiKeywordList = (raw: string) => {
+      let arr: string[] = [];
+      try {
+        const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+        if (Array.isArray(parsed)) arr = parsed.map(String);
+        else if (Array.isArray(parsed?.keywords)) arr = parsed.keywords.map(String);
+      } catch (_) {
+        arr = raw
+          .replace(/```json|```/g, '')
+          .split(/[\n,;]+/g)
+          .map(line => line.replace(/^[-*\d.")\s]+/g, '').trim());
+      }
+
+      const seen = new Set<string>();
+      return arr
+        .map(item => item.replace(/^#/, '').replace(/["“”']/g, '').replace(/\s+/g, ' ').trim())
+        .filter(item => item.length >= 3 && item.length <= 42)
+        .filter(item => languageOk(item))
+        .filter(item => {
+          const key = removeVietnameseTone(item);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 5);
+    };
+
+    const generateGeminiNicheKeywords = async (category: string, count = 5) => {
+      if (!geminiApiKey) return [] as string[];
+      try {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const lang = getRegionLanguageName(selectedRegion);
+        const prompt = `Return exactly ${count} YouTube niche keyword phrases for this region and category.
+Region code: ${selectedRegion || 'GLOBAL'}
+Region name: ${regionLabel}
+Language required: ${lang}
+Category: ${category}
+Rules:
+- Output must be ONLY a JSON array of strings.
+- Each string must be 2 to 6 words.
+- Do not repeat ideas.
+- Use the natural search language of the selected region only.
+- Do not use Vietnamese unless the selected region is Vietnam.
+- Avoid channels above 1 million subscribers; focus on small/medium hot-trend opportunities from the last 30 days.
+- Keywords must logically match the category.`;
+        const response = await ai.models.generateContent({
+          model: geminiModel,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
+        return normalizeGeminiKeywordList(response.text || '');
+      } catch (e) {
+        console.warn('Gemini fallback keyword generation failed:', e);
+        return [] as string[];
+      }
+    };
+
     try {
       const updated = [] as { category: string; items: string[] }[];
 
@@ -1400,7 +1472,8 @@ export default function App() {
 
         const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
         if (videoIds.length === 0) {
-          updated.push({ category, items: SUGGESTED_NICHES[idx].items.slice(0, 5) });
+          const aiItems = await generateGeminiNicheKeywords(category, 5);
+          updated.push({ category, items: aiItems.length ? aiItems : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk) });
           continue;
         }
 
@@ -1461,12 +1534,23 @@ export default function App() {
           .map(([phrase]) => phrase)
           .filter((phrase) => !ranked.some(item => removeVietnameseTone(item) === removeVietnameseTone(phrase)));
 
+        let items = [
+          ...ranked,
+          ...looseRanked
+        ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 5);
+
+        // Nếu YouTube API không đủ dữ liệu đúng chủ đề/khu vực thì dùng Gemini để bù từ khóa,
+        // nhưng vẫn khóa ngôn ngữ theo khu vực đã chọn để tránh sai vùng.
+        if (items.length < 5) {
+          const aiItems = await generateGeminiNicheKeywords(category, 5 - items.length);
+          items = [...items, ...aiItems]
+            .filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i)
+            .slice(0, 5);
+        }
+
         updated.push({
           category,
-          items: [
-            ...ranked,
-            ...looseRanked
-          ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 5)
+          items: items.length ? items : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk)
         });
       }
 
@@ -1486,6 +1570,10 @@ export default function App() {
     if (!kw) {
       kw = getNextAutoNicheSeed(nicheRegion || config.region || 'VN');
       setNicheInput(kw);
+    }
+
+    if (kw) {
+      localStorage.setItem('youtube_last_niche_keyword', kw);
     }
 
     if (config.apiKeys.length === 0) {
@@ -5994,7 +6082,7 @@ ${topKeywordsStr}`;
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Ghi chú: Chức năng này dùng YouTube API để kiếm kênh/ngách có VPH hot trend trong 30 ngày theo quốc gia đã chọn.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Ghi chú: Tự tìm kênh/ngách VPH hot trend trong 30 ngày theo khu vực; nếu YouTube chưa đủ dữ liệu, Gemini sẽ gợi ý đúng ngôn ngữ khu vực.</span>
                      </h3>
                      <div className="flex items-center gap-3">
                          <div className="relative">
@@ -6032,6 +6120,7 @@ ${topKeywordsStr}`;
                             key={itemIdx}
                             onClick={() => {
                               setNicheInput(item);
+                              localStorage.setItem('youtube_last_niche_keyword', item);
                               setShowNicheModal(false);
                               // Auto start research after a small delay
                               setTimeout(() => {
