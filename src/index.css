@@ -4332,3 +4332,112 @@
     height: 34px !important;
   }
 }
+
+/* STEP_38_20260521
+   Gỡ bộ lọc lỗi trong tab Ngách, đồng bộ khung Spy/Tracking, cập nhật gợi ý bằng Gemini. */
+.vtw-spy-toolbar,
+.vtw-tracking-toolbar {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  border: 1px solid #cfe3ff !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+  padding: 18px !important;
+  gap: 14px !important;
+}
+
+.vtw-spy-toolbar label {
+  color: #0f172a !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.vtw-spy-toolbar input,
+.vtw-tracking-toolbar input {
+  border: 1px solid #bfdbfe !important;
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  height: 46px !important;
+  padding: 0 16px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.vtw-spy-toolbar button,
+.vtw-tracking-toolbar button {
+  border-radius: 12px !important;
+  min-height: 46px !important;
+  padding: 0 18px !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10) !important;
+}
+
+.vtw-tracking-toolbar > div:first-child {
+  flex-wrap: wrap !important;
+}
+
+.vtw-tracking-toolbar p {
+  background: #fff7ed !important;
+  border: 1px solid #fed7aa !important;
+  color: #ea580c !important;
+  padding: 10px 14px !important;
+  border-radius: 14px !important;
+  max-width: 360px !important;
+  margin-left: auto !important;
+}
+
+.vtw-spy-report,
+.vtw-spy-profile,
+.vtw-spy-videos-box,
+.vtw-tracking-table-box {
+  border-color: #dbeafe !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07) !important;
+}
+
+.vtw-tracking-table th {
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  background: #eef6ff !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-spy-toolbar,
+  .vtw-tracking-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .vtw-spy-toolbar input,
+  .vtw-spy-toolbar button,
+  .vtw-tracking-toolbar input,
+  .vtw-tracking-toolbar button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vtw-tracking-toolbar p {
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    text-align: left !important;
+  }
+
+  /* Cập nhật nhãn mobile cho bảng Tracking sau khi bỏ cột Đánh giá và thêm cột mới. */
+  .vtw-tracking-table td:nth-child(1)::before { content: 'STT' !important; }
+  .vtw-tracking-table td:nth-child(2)::before { content: 'Tên kênh' !important; }
+  .vtw-tracking-table td:nth-child(3)::before { content: 'Mã kênh' !important; }
+  .vtw-tracking-table td:nth-child(4)::before { content: 'Chủ đề' !important; }
+  .vtw-tracking-table td:nth-child(5)::before { content: 'Ngách' !important; }
+  .vtw-tracking-table td:nth-child(6)::before { content: 'Thu nhập ($)' !important; }
+  .vtw-tracking-table td:nth-child(7)::before { content: 'Lịch sử sub' !important; }
+  .vtw-tracking-table td:nth-child(8)::before { content: 'Tăng sub/ngày' !important; }
+  .vtw-tracking-table td:nth-child(9)::before { content: 'Lịch sử view' !important; }
+  .vtw-tracking-table td:nth-child(10)::before { content: 'Tăng view/ngày' !important; }
+  .vtw-tracking-table td:nth-child(11)::before { content: 'Xóa' !important; }
+}
