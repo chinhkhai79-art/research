@@ -107,9 +107,6 @@ interface TrackingChannel {
   id: string;
   name: string;
   icon?: string;
-  topic?: string;
-  nicheKeyword?: string;
-  estimatedIncome?: string;
   history: Array<{
     date: string;
     subs: number;
@@ -568,7 +565,7 @@ export default function App() {
     channels: any[];
     thumbnails: any[];
   } | null>(null);
-  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('videos');
+  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
   const [videoFilters, setVideoFilters] = useState({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 });
   const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
@@ -593,7 +590,6 @@ export default function App() {
     if (savedKeys) {
       const keys = JSON.parse(savedKeys);
       setConfig(prev => ({ ...prev, apiKeys: keys }));
-      setManualKeysInput(Array.isArray(keys) ? keys.join('\n') : '');
     }
     if (savedKeyHistory) {
       setApiKeysHistory(JSON.parse(savedKeyHistory));
@@ -811,56 +807,6 @@ export default function App() {
     return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
   };
 
-
-  const estimateChannelIncome = (views: number, country?: string) => {
-    const pseudoChannel = { views: Number(views || 0), country: String(country || '').toUpperCase() } as ChannelResult;
-    return estimateIncomeFromApiViews(pseudoChannel);
-  };
-
-  const cleanApiKeyword = (raw?: string) => {
-    const value = String(raw || '')
-      .replace(/["“”']/g, ' ')
-      .replace(/https?:\/\/\S+/g, ' ')
-      .replace(/[|•#,_]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!value) return 'Đang cập nhật';
-    const parts = value.split(/\s{2,}|;|\||,/).map(s => s.trim()).filter(Boolean);
-    const first = (parts[0] || value).split(/\s+/).slice(0, 5).join(' ');
-    return first || 'Đang cập nhật';
-  };
-
-  const topicCategoryNameFromUrl = (url?: string) => {
-    const raw = String(url || '').toLowerCase();
-    if (!raw) return '';
-    if (raw.includes('technology')) return 'Công nghệ và AI';
-    if (raw.includes('health')) return 'Sức khỏe và làm đẹp';
-    if (raw.includes('food')) return 'Ẩm thực và nấu ăn';
-    if (raw.includes('travel')) return 'Du lịch và khám phá';
-    if (raw.includes('sports')) return 'Thể thao';
-    if (raw.includes('music')) return 'Nhạc và âm thanh';
-    if (raw.includes('gaming')) return 'Gaming và giải trí';
-    if (raw.includes('education')) return 'Giáo dục và học tập';
-    if (raw.includes('news')) return 'Tin tức và thời sự';
-    if (raw.includes('film') || raw.includes('entertainment')) return 'Gaming và giải trí';
-    return '';
-  };
-
-  const getApiKeywordFromChannelItem = (item: any, fallback?: TrackingChannel) => {
-    const apiKeywords = item?.brandingSettings?.channel?.keywords;
-    if (apiKeywords) return cleanApiKeyword(apiKeywords);
-    const description = item?.snippet?.description;
-    if (description) return cleanApiKeyword(description);
-    const title = item?.snippet?.title || fallback?.name;
-    return cleanApiKeyword(title || fallback?.nicheKeyword || fallback?.topic || 'Đang cập nhật');
-  };
-
-  const getApiTopicFromChannelItem = (item: any, keyword: string, fallback?: TrackingChannel) => {
-    const apiTopic = topicCategoryNameFromUrl(item?.topicDetails?.topicCategories?.[0]);
-    if (apiTopic) return apiTopic;
-    return getTopicFromKeyword(keyword || fallback?.nicheKeyword || fallback?.topic || fallback?.name || '');
-  };
-
   const formatChannelUrlShort = (url?: string, id?: string) => {
     const channelId = String(id || '').trim();
     if (channelId) return `.../${channelId.slice(-10)}`;
@@ -899,83 +845,26 @@ export default function App() {
     step: number;
     onChange: (min: number, max: number) => void;
   }) => {
-    const sliderRef = useRef<HTMLDivElement>(null);
-    const safeStep = Math.max(10, Math.round((absoluteMax - absoluteMin) / 10));
     const safeMax = Math.max(absoluteMin, Math.min(Number(max || 0), absoluteMax));
-    const percent = absoluteMax === absoluteMin ? 0 : ((safeMax - absoluteMin) / (absoluteMax - absoluteMin)) * 100;
-
-    const snapValue = (value: number) => {
-      const clamped = Math.max(absoluteMin, Math.min(value, absoluteMax));
-      const snapped = Math.round(clamped / safeStep) * safeStep;
-      return Math.max(absoluteMin, Math.min(snapped, absoluteMax));
-    };
-
     const updateMaxOnly = (value: number) => {
-      onChange(absoluteMin, snapValue(value));
+      const nextMax = Math.max(absoluteMin, Math.min(value, absoluteMax));
+      onChange(absoluteMin, nextMax);
     };
-
-    const updateFromPointer = (clientX: number) => {
-      const el = sliderRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      updateMaxOnly(absoluteMin + ratio * (absoluteMax - absoluteMin));
-    };
-
-    const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      updateFromPointer(event.clientX);
-    };
-
-    const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-      if (event.buttons !== 1) return;
-      event.preventDefault();
-      updateFromPointer(event.clientX);
-    };
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
-        event.preventDefault();
-        updateMaxOnly(safeMax - safeStep);
-      }
-      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
-        event.preventDefault();
-        updateMaxOnly(safeMax + safeStep);
-      }
-      if (event.key === 'Home') {
-        event.preventDefault();
-        updateMaxOnly(absoluteMin);
-      }
-      if (event.key === 'End') {
-        event.preventDefault();
-        updateMaxOnly(absoluteMax);
-      }
-    };
-
     return (
-      <div className="vtw-range-box vtw-single-range-box vtw-compact-filter-box vtw-drag-range-box">
+      <div className="vtw-range-box vtw-single-range-box vtw-compact-filter-box">
         <div className="vtw-compact-filter-head">
           <span className="vtw-compact-filter-title">{title}</span>
           <span className="vtw-compact-filter-value">0 → {formatVNNumber(safeMax)}</span>
         </div>
-        <div
-          ref={sliderRef}
-          className="vtw-drag-slider"
-          role="slider"
-          tabIndex={0}
-          aria-label={title}
-          aria-valuemin={absoluteMin}
-          aria-valuemax={absoluteMax}
-          aria-valuenow={safeMax}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onKeyDown={handleKeyDown}
-        >
-          <div className="vtw-drag-slider-track" />
-          <div className="vtw-drag-slider-fill" style={{ width: `${percent}%` }} />
-          <div className="vtw-drag-slider-thumb" style={{ left: `${percent}%` }} />
-        </div>
+        <input
+          type="range"
+          min={absoluteMin}
+          max={absoluteMax}
+          step={step}
+          value={safeMax}
+          onChange={(e) => updateMaxOnly(parseRangeNumber(e.target.value, absoluteMax))}
+          className="vtw-single-range-input vtw-compact-range-input"
+        />
         <div className="vtw-single-range-scale vtw-compact-range-scale">
           <span>0</span>
           <span>{formatVNNumber(Math.round(absoluteMax / 2))}</span>
@@ -1141,41 +1030,52 @@ export default function App() {
   };
 
   const fetchDailyTrendingFromYouTube = async () => {
-    if (!geminiApiKey) {
-      alert('Vui lòng nhập Gemini API Key để cập nhật gợi ý trending.');
+    if (config.apiKeys.length === 0) {
+      alert('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
       return;
     }
 
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật gợi ý trending bằng Gemini AI...');
+    setStatus('Đang cập nhật trend');
 
-    const REGION_LANGUAGE: Record<string, { prompt: string }> = {
-      '': { prompt: 'Trộn ngẫu nhiên theo thị trường toàn cầu. Có thể dùng nhiều ngôn ngữ tự nhiên theo từng thị trường, không bắt buộc tiếng Việt.' },
-      VN: { prompt: 'Tất cả từ khóa phải viết bằng tiếng Việt tự nhiên, phù hợp thị trường Việt Nam.' },
-      US: { prompt: 'All keywords must be natural American English.' },
-      GB: { prompt: 'All keywords must be natural British English.' },
-      CA: { prompt: 'All keywords must be natural English for Canada.' },
-      AU: { prompt: 'All keywords must be natural English for Australia.' },
-      IN: { prompt: 'Use natural India-market keywords, mainly English or Hindi.' },
-      JP: { prompt: 'すべてのキーワードは自然な日本語で書いてください。' },
-      KR: { prompt: '모든 키워드는 자연스러운 한국어로 작성하세요.' },
-      TH: { prompt: 'ใช้คำค้นหาเป็นภาษาไทยธรรมชาติเท่านั้น' },
-      ID: { prompt: 'Semua keyword harus dalam Bahasa Indonesia yang natural.' },
-      PH: { prompt: 'Use natural Philippines-market keywords in English or Filipino.' },
-      MY: { prompt: 'Use natural Malaysia-market keywords in Malay or English.' },
-      SG: { prompt: 'All keywords must be natural Singapore English.' },
-      DE: { prompt: 'Alle Keywords müssen auf natürlichem Deutsch sein.' },
-      FR: { prompt: 'Tous les mots-clés doivent être en français naturel.' },
-      RU: { prompt: 'Все ключевые слова должны быть на естественном русском языке.' },
-      BR: { prompt: 'Todas as palavras-chave devem estar em português natural do Brasil.' },
-      MX: { prompt: 'Todas las palabras clave deben estar en español natural de México.' },
-      ES: { prompt: 'Todas las palabras clave deben estar en español natural.' },
-      IT: { prompt: 'Tutte le keyword devono essere in italiano naturale.' }
+    const REGION_LANGUAGE: Record<string, { language: string; prompt: string; searchHint: string }> = {
+      '': {
+        language: 'Đa ngôn ngữ',
+        prompt: 'Trộn ngẫu nhiên theo thị trường toàn cầu: có thể dùng tiếng Việt, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Thái, tiếng Indonesia, tiếng Tây Ban Nha. Không bắt buộc tất cả là tiếng Việt.',
+        searchHint: 'global trending'
+      },
+      VN: { language: 'Tiếng Việt', prompt: 'Tất cả từ khóa phải viết bằng tiếng Việt tự nhiên.', searchHint: 'hot trend việt nam' },
+      US: { language: 'English', prompt: 'All keywords must be in natural American English. Do not use Vietnamese.', searchHint: 'US trending' },
+      GB: { language: 'English', prompt: 'All keywords must be in natural British English. Do not use Vietnamese.', searchHint: 'UK trending' },
+      CA: { language: 'English', prompt: 'All keywords must be in natural English for Canada. Do not use Vietnamese.', searchHint: 'Canada trending' },
+      AU: { language: 'English', prompt: 'All keywords must be in natural English for Australia. Do not use Vietnamese.', searchHint: 'Australia trending' },
+      IN: { language: 'English/Hindi', prompt: 'Use natural India-market keywords, mainly English or Hindi. Do not use Vietnamese.', searchHint: 'India trending' },
+      JP: { language: '日本語', prompt: 'すべてのキーワードは自然な日本語で書いてください。ベトナム語は使わないでください。', searchHint: '日本 トレンド' },
+      KR: { language: '한국어', prompt: '모든 키워드는 자연스러운 한국어로 작성하세요. 베트남어를 사용하지 마세요.', searchHint: '한국 트렌드' },
+      TH: { language: 'ภาษาไทย', prompt: 'ใช้คำค้นหาเป็นภาษาไทยธรรมชาติเท่านั้น ห้ามใช้ภาษาเวียดนาม', searchHint: 'เทรนด์ไทย' },
+      ID: { language: 'Bahasa Indonesia', prompt: 'Semua keyword harus dalam Bahasa Indonesia yang natural. Jangan gunakan bahasa Vietnam.', searchHint: 'tren indonesia' },
+      PH: { language: 'English/Filipino', prompt: 'Use natural Philippines-market keywords in English or Filipino. Do not use Vietnamese.', searchHint: 'Philippines trending' },
+      MY: { language: 'Malay/English', prompt: 'Use natural Malaysia-market keywords in Malay or English. Do not use Vietnamese.', searchHint: 'Malaysia trending' },
+      SG: { language: 'English', prompt: 'All keywords must be in natural Singapore English. Do not use Vietnamese.', searchHint: 'Singapore trending' },
+      DE: { language: 'Deutsch', prompt: 'Alle Keywords müssen auf natürlichem Deutsch sein. Kein Vietnamesisch verwenden.', searchHint: 'Deutschland Trends' },
+      FR: { language: 'Français', prompt: 'Tous les mots-clés doivent être en français naturel. Ne pas utiliser le vietnamien.', searchHint: 'tendances france' },
+      RU: { language: 'Русский', prompt: 'Все ключевые слова должны быть на естественном русском языке. Не используйте вьетнамский.', searchHint: 'тренды россия' },
+      BR: { language: 'Português', prompt: 'Todas as palavras-chave devem estar em português natural do Brasil. Não use vietnamita.', searchHint: 'tendências brasil' },
+      MX: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural de México. No uses vietnamita.', searchHint: 'tendencias méxico' },
+      ES: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural. No uses vietnamita.', searchHint: 'tendencias españa' },
+      IT: { language: 'Italiano', prompt: 'Tutte le keyword devono essere in italiano naturale. Non usare vietnamita.', searchHint: 'tendenze italia' }
     };
 
-    const regionMeta = REGION_LANGUAGE[trendingRegion] || REGION_LANGUAGE.VN;
+    const regionMeta = REGION_LANGUAGE[trendingRegion] || REGION_LANGUAGE.US;
     const regionLabel = REGIONS.find(r => r.code === trendingRegion)?.name || 'Toàn cầu (Global)';
     const trendingStorageKey = `youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`;
+
+    const normalizeText = (value: string) =>
+      (value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd');
 
     const cleanKeyword = (value: string) =>
       (value || '')
@@ -1185,72 +1085,390 @@ export default function App() {
         .replace(/\s+/g, ' ')
         .trim();
 
-    const uniqueLimit = (items: string[], limit = 5) => {
+    const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
+      'PHÁT TRIỂN BẢN THÂN': {
+        hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
+        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation', 'quan ly thoi gian', 'nang suat', 'lam viec nang suat', 'ky nang lam viec']
+      },
+      'SỨC KHỎE & LÀM ĐẸP': {
+        hint: 'sức khỏe, giảm cân, skincare, làm đẹp, yoga, fitness, chăm sóc cơ thể',
+        rules: ['suc khoe', 'lam dep', 'skincare', 'giam can', 'yoga', 'trang diem', 'mun', 'toc', 'health', 'beauty', 'fitness']
+      },
+      'CÔNG NGHỆ & AI': {
+        hint: 'AI, ChatGPT, Gemini, điện thoại, phần mềm, công nghệ, app, thủ thuật số',
+        rules: ['cong nghe', 'ai', 'chatgpt', 'gemini', 'iphone', 'android', 'dien thoai', 'may tinh', 'phan mem', 'technology']
+      },
+      'GIÁO DỤC & HỌC TẬP': {
+        hint: 'học tập, ngoại ngữ, IELTS, TOEIC, lập trình, ôn thi, phương pháp học',
+        rules: ['giao duc', 'hoc tap', 'hoc tieng', 'ielts', 'toeic', 'lap trinh', 'python', 'on thi', 'education', 'learning']
+      },
+      'ẨM THỰC & NẤU ĂN': {
+        hint: 'món ăn, công thức nấu ăn, review quán ăn, bếp, đồ ăn, ẩm thực gia đình',
+        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe', 'thuc pham', 'quan an', 'gia dinh ngon', 'bua an'],
+        banned: ['bac gau', 'wag bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lmht', 'league of legends', 'lien minh', 'game', 'free fire', 'tik tok free fire', 'tiktok free fire', 'chatgpt']
+      },
+      'DU LỊCH & KHÁM PHÁ': {
+        hint: 'du lịch, khám phá địa điểm, resort, vé máy bay, phượt, cắm trại, travel vlog',
+        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour', 'resort', 've may bay', 'cam trai', 'nghi duong', 'lich trinh'],
+        banned: ['bolero', 'hybe', 'lck', 'chatgpt']
+      },
+      'GIẢI TRÍ & HÀI HƯỚC': {
+        hint: 'giải trí, phim, hài, meme, reaction, drama, người nổi tiếng, thử thách',
+        rules: ['giai tri', 'hai', 'funny', 'meme', 'reaction', 'phim', 'anime', 'prank', 'thu thach', 'entertainment']
+      },
+      'THỂ THAO & THỂ HÌNH': {
+        hint: 'thể thao, gym, bóng đá, cầu lông, tennis, workout, fitness',
+        rules: ['the thao', 'gym', 'fitness', 'bong da', 'cau long', 'tennis', 'chay bo', 'workout', 'tang co', 'giam mo'],
+        banned: ['bolero', 'hybe']
+      },
+      'PETS & ĐỘNG VẬT': {
+        hint: 'thú cưng, chó mèo, động vật, chăm sóc pet, huấn luyện pet',
+        rules: ['pet', 'thu cung', 'dong vat', 'cho', 'meo', 'cat', 'dog', 'animal', 'grooming', 'bo sat'],
+        banned: ['bolero', 'hybe', 'lck']
+      },
+      'GIA ĐÌNH & ĐỜI SỐNG': {
+        hint: 'gia đình, đời sống, dọn nhà, nuôi con, mẹo nhà cửa, sống xanh',
+        rules: ['gia dinh', 'doi song', 'meo vat', 'don nha', 'nuoi con', 'me bim', 'trong rau', 'home', 'family', 'life']
+      },
+      'NGHỆ THUẬT & SÁNG TẠO': {
+        hint: 'vẽ, thiết kế, chụp ảnh, edit video, guitar, Canva, sáng tạo nội dung',
+        rules: ['nghe thuat', 'sang tao', 've tranh', 'chup anh', 'guitar', 'canva', 'edit video', 'art', 'creative', 'design']
+      },
+      'CÔNG NGHỆ Ô TÔ & XE MÁY': {
+        hint: 'ô tô, xe máy, xe điện, review xe, bảo dưỡng xe, phụ kiện xe',
+        rules: ['oto', 'xe may', 'xe dien', 'review xe', 'bao duong xe', 'phu kien oto', 'car', 'motorbike', 'vehicle'],
+        banned: ['bolero', 'hybe']
+      },
+      'TÂM LÝ HỌC & MỐI QUAN HỆ': {
+        hint: 'tâm lý học, tình yêu, mối quan hệ, MBTI, chữa lành, hôn nhân',
+        rules: ['tam ly', 'moi quan he', 'tinh yeu', 'chia tay', 'mbti', 'hon nhan', 'doc hai', 'psychology', 'relationship']
+      },
+      'ESPORTS & GAMING': {
+        hint: 'game, esports, Liên Quân, LCK, Valorant, PUBG, Genshin, LOL',
+        rules: ['game', 'gaming', 'esports', 'lien quan', 'tft', 'valorant', 'pubg', 'genshin', 'lol', 'mobile game', 'lck']
+      },
+      'HUYỀN BÍ & TÂM LINH': {
+        hint: 'huyền bí, tâm linh, tarot, giấc mơ, phong thủy, bí ẩn',
+        rules: ['huyen bi', 'tam linh', 'tarot', 'giac mo', 'bi an', 'phong thuy', 'nhan qua', 'supernatural', 'mystery']
+      },
+      'MẸO VẶT CUỘC SỐNG': {
+        hint: 'mẹo vặt, life hack, sửa chữa, tái chế, mẹo nhà bếp, mẹo sinh hoạt',
+        rules: ['meo vat', 'life hack', 'sua chua', 'tai che', 'bao quan', 'lo vi song', 'ung dung huu ich', 'tips']
+      },
+      'VĂN HÓA & LỊCH SỬ': {
+        hint: 'lịch sử, văn hóa, di tích, nhân vật lịch sử, chiến tranh, triều đại',
+        rules: ['lich su', 'van hoa', 'trieu dai', 'chien tranh', 'di tich', 'nhan vat lich su', 'history', 'culture']
+      },
+      'THỜI TRANG & PHONG CÁCH': {
+        hint: 'thời trang, phối đồ, local brand, sneaker, outfit, phong cách cá nhân',
+        rules: ['thoi trang', 'phoi do', 'local brand', 'vintage', 'sneaker', 'fashion', 'style', 'outfit']
+      },
+      'NÔNG NGHIỆP CÔNG NGHỆ CAO': {
+        hint: 'nông nghiệp, trồng trọt, thủy canh, nuôi tôm, cây cảnh, công nghệ nông nghiệp',
+        rules: ['nong nghiep', 'trong rau', 'thuy canh', 'nuoi tom', 'sau rieng', 'hoa lan', 'cay canh', 'agriculture']
+      },
+      'REVIEW SẢN PHẨM & UNBOXING': {
+        hint: 'review sản phẩm, unboxing, đồ công nghệ, đồ gia dụng, mỹ phẩm, Shopee, phụ kiện',
+        rules: ['review', 'unboxing', 'shopee', 'san pham', 'my pham', 'do cong nghe', 'ban phim', 'smartwatch', 'do gia dung'],
+        banned: ['bolero', 'nhac bolero', 'nhac', 'music', 'karaoke', 'cover', 'lck', 'lien minh', 'hybe', 'son tung']
+      },
+      'NHẠC & COVER': {
+        hint: 'nhạc, cover, bolero, lofi, karaoke, remix, acoustic, bài hát',
+        rules: ['nhac', 'cover', 'lofi', 'karaoke', 'beat', 'remix', 'acoustic', 'music', 'song', 'bolero']
+      },
+      'BẤT ĐỘNG SẢN & NHÀ CỬA': {
+        hint: 'bất động sản, nhà đất, căn hộ, nội thất, phong thủy nhà, thiết kế nhà',
+        rules: ['bat dong san', 'nha cua', 'can ho', 'nha pho', 'noi that', 'phong thuy nha', 'real estate', 'home']
+      },
+      'CÂU CHUYỆN KHỞI NGHIỆP': {
+        hint: 'khởi nghiệp, kinh doanh, startup, bán hàng, marketing, quản trị, kiếm tiền',
+        rules: ['khoi nghiep', 'kinh doanh', 'startup', 'ban hang', 'marketing 0 dong', 'quan cafe', 'business']
+      },
+      'CHUYỆN LẠ BỐN PHƯƠNG': {
+        hint: 'chuyện lạ, hiện tượng kỳ lạ, khám phá độc lạ, kỷ lục, sinh vật lạ',
+        rules: ['chuyen la', 'ky la', 'guinness', 'sinh vat bien', 'hien tuong', 'doc la', 'strange', 'weird']
+      },
+      'ASMR & MUKBANG': {
+        hint: 'ASMR, mukbang, ăn uống, âm thanh thư giãn, ăn cay, hải sản',
+        rules: ['asmr', 'mukbang', 'an uong', 'go phim', 'thu gian', 'hai san', 'do an cay']
+      },
+      'XÂY DỰNG & KIẾN TRÚC': {
+        hint: 'xây dựng, kiến trúc, thi công, chống thấm, máy xúc, thiết kế công trình',
+        rules: ['xay dung', 'kien truc', 'thi cong', 'chong tham', 'xi mang', 'may xuc', 'construction', 'architecture']
+      },
+      'MARKETING & TRUYỀN THÔNG': {
+        hint: 'marketing, affiliate, SEO, quảng cáo, content, truyền thông, case study',
+        rules: ['marketing', 'affiliate', 'seo', 'facebook ads', 'content', 'truyen thong', 'case study']
+      },
+      'TRỊ LIỆU ÂM THANH': {
+        hint: 'âm thanh chữa lành, 432hz, tiếng mưa, white noise, nhạc thiền, sleep music',
+        rules: ['am thanh', '432hz', 'tieng mua', 'song bien', 'nhac thien', 'white noise', 'sleep music', 'healing']
+      },
+      'ĐAN LEN & THÊU THÙA': {
+        hint: 'đan len, móc len, crochet, thêu, kim móc, đồ handmade len',
+        rules: ['dan len', 'moc len', 'crochet', 'theu', 'kim moc', 'tui xach len', 'knitting']
+      },
+      'TÀI CHÍNH & ĐẦU TƯ': {
+        hint: 'tài chính, đầu tư, chứng khoán, crypto, tiết kiệm tiền, kiếm tiền online, thẻ tín dụng',
+        rules: ['tai chinh', 'dau tu', 'chung khoan', 'crypto', 'tiet kiem tien', 'the tin dung', 'kiem tien online', 'finance', 'investment'],
+        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'nau an']
+      }
+    };
+
+    const GLOBAL_BLOCK_BY_CATEGORY = (category: string) => {
+      const blocks = [
+        'bac gau', 'bac gau vlog', 'wag bac gau', 'bac gau reaction',
+        'hybe', 'hybe labels', 'free fire', 'tik tok free fire', 'tiktok free fire',
+        'lck live', 'lck', 'lmht', 'league of legends', 'lien minh huyen thoai',
+        'roblox', 'minecraft', 'pubg', 'valorant', 'genshin',
+        'son tung', 'mtp', 'drama showbiz'
+      ];
+      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover', 'nhac remix', 'music video');
+      if (category !== 'ESPORTS & GAMING') blocks.push('game', 'gaming', 'esports', 'lien minh', 'lien quan');
+      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('reaction', 'prank drama');
+      if (category !== 'ẨM THỰC & NẤU ĂN') blocks.push('mukbang');
+      return blocks;
+    };
+
+    const isRelevantForCategory = (category: string, keyword: string, strict = false) => {
+      const cleaned = normalizeText(cleanKeyword(keyword));
+      if (!cleaned) return false;
+
+      const profile = CATEGORY_PROFILES[category];
+      const banned = [...(profile?.banned || []), ...GLOBAL_BLOCK_BY_CATEGORY(category)].map(normalizeText);
+
+      // Chặn cứng key lệch chủ đề. Đây là lớp lọc cuối cùng cho cả YouTube V3 và Gemini.
+      if (banned.some(bad => cleaned === bad || cleaned.includes(bad) || bad.includes(cleaned))) return false;
+
+      const rules = (profile?.rules || []).map(normalizeText);
+      const matchedRule = rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
+
+      // Khi dữ liệu đến từ YouTube/Gemini phải khớp domain chủ đề, không còn kiểu lấy trend chung rồi nhét vào mọi mục.
+      if (strict) return matchedRule;
+
+      return true;
+    };
+
+    const uniqueLimit = (items: string[], limit = 5, category?: string, strict = false) => {
       const seen = new Set<string>();
       const output: string[] = [];
+
       for (const raw of items) {
-        const cleaned = cleanKeyword(String(raw || ''));
-        if (!cleaned || cleaned.length < 3 || cleaned.length > 48) continue;
-        const key = cleaned.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+        const cleaned = cleanKeyword(raw);
+        if (!cleaned || cleaned.length < 3 || cleaned.length > 42) continue;
+        if (category && !isRelevantForCategory(category, cleaned, strict)) continue;
+
+        const key = normalizeText(cleaned);
         if (seen.has(key)) continue;
+
         seen.add(key);
         output.push(cleaned);
         if (output.length >= limit) break;
       }
+
       return output;
     };
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-      const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const categories = SUGGESTED_NICHES.map(niche => niche.category);
-      const prompt = `
-Bạn là chuyên gia nghiên cứu trend nội dung YouTube cho khu vực ${regionLabel}.
-Hãy tạo đúng 5 từ khóa/ngách ngắn, có khả năng đang được quan tâm, cho MỖI chủ đề bên dưới.
+    const pickCandidateWords = (video: any) => {
+      const title = video?.snippet?.title || '';
+      const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
+      const description = video?.snippet?.description || '';
+      const candidates: string[] = [];
 
-Yêu cầu bắt buộc:
-- Chỉ trả về JSON thuần, không markdown, không giải thích.
-- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3","key 4","key 5"]}.
-- ${regionMeta.prompt}
-- Mỗi từ khóa tối đa 6 từ.
-- Không lặp từ khóa giữa các chủ đề nếu có thể.
-- Từ khóa phải đúng với chủ đề, tránh nhét trend sai chủ đề.
-- Mỗi lần tạo cần có một phần khác nhau để tránh trùng lặp.
-- Random seed: ${randomSeed}
-
-Danh sách chủ đề:
-${JSON.stringify(categories, null, 2)}
-`;
-
-      const response = await ai.models.generateContent({
-        model: geminiModel,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      tags.forEach((tag: string) => {
+        const cleaned = cleanKeyword(tag);
+        if (cleaned && cleaned.length >= 3 && cleaned.length <= 42) candidates.push(cleaned);
       });
 
-      const rawText = response.text || '';
-      const jsonText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const firstBrace = jsonText.indexOf('{');
-      const lastBrace = jsonText.lastIndexOf('}');
-      const safeJson = firstBrace >= 0 && lastBrace > firstBrace ? jsonText.slice(firstBrace, lastBrace + 1) : jsonText;
-      const parsed = JSON.parse(safeJson);
+      const phrases = `${title} ${description}`
+        .split(/[|,.;:!?()\[\]{}"“”'’\n\r\t]+/g)
+        .map(cleanKeyword)
+        .filter(Boolean);
 
-      const updatedNiches = SUGGESTED_NICHES.map((niche) => {
-        const aiItems = Array.isArray(parsed?.[niche.category]) ? uniqueLimit(parsed[niche.category], 5) : [];
-        const fallbackItems = uniqueLimit(niche.items || [], 5);
+      phrases.forEach((phrase) => {
+        if (phrase.length >= 4 && phrase.length <= 42) candidates.push(phrase);
+      });
+
+      return candidates;
+    };
+
+    const TARGETED_QUERY_BY_CATEGORY: Record<string, string> = {
+      'ẨM THỰC & NẤU ĂN': trendingRegion === 'VN'
+        ? 'ẩm thực nấu ăn món ngon công thức hot trend'
+        : trendingRegion === ''
+          ? 'food cooking recipe trending OR món ngon'
+          : `food cooking recipe trending ${regionMeta.searchHint}`,
+      'TÀI CHÍNH & ĐẦU TƯ': trendingRegion === 'VN'
+        ? 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
+        : trendingRegion === ''
+          ? 'finance investing stocks crypto trending OR tài chính đầu tư'
+          : `finance investing stocks crypto money trend ${regionMeta.searchHint}`
+    };
+
+    try {
+      // Luôn bắt đầu từ danh sách gốc để loại bỏ key sai đã lưu trước đó.
+      const sourceNiches = SUGGESTED_NICHES.map((base) => ({
+        ...base,
+        items: uniqueLimit(base.items, 5, base.category, false)
+      }));
+
+      const categoryKeywordMap: Record<string, string[]> = {};
+      sourceNiches.forEach((niche) => {
+        categoryKeywordMap[niche.category] = [];
+      });
+
+      // Tiết kiệm quota: 1 lượt videos.list chart=mostPopular = 1 quota, dùng làm nguồn trend chung.
+      const popularRes = await youtubeFetch('videos', {
+        part: 'snippet,statistics',
+        chart: 'mostPopular',
+        regionCode: trendingRegion || undefined,
+        maxResults: 50
+      });
+
+      const popularVideos = Array.isArray(popularRes?.items) ? popularRes.items : [];
+
+      popularVideos.forEach((video: any) => {
+        const haystack = normalizeText([
+          video?.snippet?.title || '',
+          video?.snippet?.description || '',
+          ...(Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [])
+        ].join(' '));
+
+        sourceNiches.forEach((niche) => {
+          const profile = CATEGORY_PROFILES[niche.category];
+          const matched = (profile?.rules || []).some((rule) => haystack.includes(normalizeText(rule)));
+
+          if (matched) {
+            categoryKeywordMap[niche.category].push(...pickCandidateWords(video));
+          }
+        });
+      });
+
+      // Sửa riêng 2 mục hay thiếu dữ liệu: 2 lượt search = khoảng 200 quota, tổng vẫn dưới 500.
+      for (const [category, query] of Object.entries(TARGETED_QUERY_BY_CATEGORY)) {
+        try {
+          const searchRes = await youtubeFetch('search', {
+            part: 'snippet',
+            q: query,
+            type: 'video',
+            regionCode: trendingRegion || undefined,
+            order: 'viewCount',
+            publishedAfter: getPublishedAfterDate('month'),
+            maxResults: 5
+          });
+
+          const ids = (searchRes?.items || [])
+            .map((item: any) => item?.id?.videoId)
+            .filter(Boolean);
+
+          if (ids.length > 0) {
+            const detailRes = await youtubeFetch('videos', {
+              part: 'snippet,statistics',
+              id: ids.join(',')
+            });
+
+            (detailRes?.items || []).forEach((video: any) => {
+              categoryKeywordMap[category].push(...pickCandidateWords(video));
+            });
+          }
+        } catch (error) {
+          console.warn(`Không lấy được dữ liệu YouTube riêng cho ${category}:`, error);
+        }
+      }
+
+      const youtubeKeywordMap: Record<string, string[]> = {};
+      sourceNiches.forEach((niche) => {
+        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, true);
+      });
+
+      const categoriesNeedGemini = sourceNiches.map((niche) => ({
+        category: niche.category,
+        description: CATEGORY_PROFILES[niche.category]?.hint || niche.category,
+        youtubeKeys: youtubeKeywordMap[niche.category]
+      }));
+
+      let geminiKeywordMap: Record<string, string[]> = {};
+
+      if (geminiApiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+          const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+          const prompt = `
+Bạn là chuyên gia nghiên cứu trend YouTube tại ${regionLabel}.
+Hãy tạo đúng 5 từ khóa trend ngắn cho MỖI chủ đề bên dưới.
+
+Yêu cầu bắt buộc:
+- Trả về JSON thuần, không markdown, không giải thích.
+- JSON có dạng: {"TÊN CHỦ ĐỀ":["key 1","key 2","key 3","key 4","key 5"]}.
+- Từ khóa phải ĐÚNG 100% với chủ đề và mô tả của chủ đề đó.
+- NGÔN NGỮ BẮT BUỘC: ${regionMeta.prompt}
+- Không đưa nhạc/bolero vào REVIEW SẢN PHẨM & UNBOXING.
+- Không đưa game/LCK/nhạc/bolero/reaction vào ẨM THỰC & NẤU ĂN hoặc TÀI CHÍNH & ĐẦU TƯ.
+- Không lặp lại các key YouTube đã có.
+- Mỗi lần tạo phải khác nhau, sắp xếp từ hot cao xuống thấp.
+- Mỗi key tối đa 6 từ, đúng ngôn ngữ khu vực đã chọn.
+- Random seed: ${randomSeed}
+
+Dữ liệu chủ đề:
+${JSON.stringify(categoriesNeedGemini, null, 2)}
+`;
+
+          const response = await ai.models.generateContent({
+            model: geminiModel,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          });
+
+          const rawText = response.text || '';
+          const jsonText = rawText
+            .replace(/```json/gi, '')
+            .replace(/```/g, '')
+            .trim();
+
+          const firstBrace = jsonText.indexOf('{');
+          const lastBrace = jsonText.lastIndexOf('}');
+          const safeJson = firstBrace >= 0 && lastBrace > firstBrace
+            ? jsonText.slice(firstBrace, lastBrace + 1)
+            : jsonText;
+
+          const parsed = JSON.parse(safeJson);
+
+          sourceNiches.forEach((niche) => {
+            geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
+              ? uniqueLimit(parsed[niche.category], 5, niche.category, false)
+              : [];
+          });
+        } catch (error) {
+          console.warn('Gemini tạo trend bị lỗi, dùng dữ liệu dự phòng:', error);
+        }
+      }
+
+      const updatedNiches = sourceNiches.map((niche) => {
+        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
+        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, false);
+        const fallbackKeys = uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false);
+
+        const finalKeys = uniqueLimit([
+          ...youtubeKeys.slice(0, 2),
+          ...aiKeys.slice(0, 5),
+          ...fallbackKeys
+        ], 5, niche.category, false);
+
         return {
           ...niche,
-          items: uniqueLimit([...aiItems, ...fallbackItems], 5)
+          items: finalKeys
         };
       });
 
       setSuggestedNiches(updatedNiches);
       localStorage.setItem(trendingStorageKey, JSON.stringify(updatedNiches));
-      setStatus('Đã cập nhật gợi ý trending bằng Gemini AI.');
-      alert('Đã cập nhật gợi ý trending thành công.');
+
+      setStatus('Đã cập nhật Trending thành công.');
+      alert('Đã cập nhật Trending thành công.');
     } catch (error: any) {
       console.error(error);
-      setStatus(`Lỗi cập nhật gợi ý trending: ${error?.message || 'Không xác định'}`);
-      alert('Không thể cập nhật gợi ý trending. Vui lòng kiểm tra Gemini API Key.');
+      setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
+      alert('Không thể cập nhật Trending. Vui lòng kiểm tra YouTube API Key / Gemini API Key.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -1569,8 +1787,6 @@ ${JSON.stringify(categories, null, 2)}
       
       if (response.status === 403 || response.status === 401) {
         setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-        setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k.trim() !== activeKey) }));
-        setStatus(`BỎ QUA KEY HẾT QUOTA/LỖI: ${activeKey.slice(0,8)}...`);
         if (rotateApiKey()) {
           return youtubeFetch(endpoint, params, retryCount + 1);
         }
@@ -1599,12 +1815,12 @@ ${JSON.stringify(categories, null, 2)}
         const reason = data.error.errors[0]?.reason;
         if (['quotaExceeded', 'dailyLimitExceeded', 'keyInvalid', 'forbidden', 'unauthorized', 'accessNotConfigured'].includes(reason)) {
           setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-          setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k.trim() !== activeKey) }));
           
           if (['keyInvalid', 'unauthorized', 'forbidden'].includes(reason)) {
-            setStatus(`XOÁ KEY CHẾT KHỎI PHIÊN: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+            setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
+            setStatus(`XOÁ KEY CHẾT: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
           } else {
-            setStatus(`BỎ QUA KEY HẾT QUOTA HÔM NAY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
+            setStatus(`BỎ QUA KEY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
           }
           
           if (rotateApiKey()) {
@@ -2376,7 +2592,7 @@ ${topKeywordsStr}`;
       let allItems: any[] = [];
       for (const ids of chunkedIds) {
         const res = await youtubeFetch('channels', {
-          part: 'snippet,statistics,topicDetails,brandingSettings',
+          part: 'snippet,statistics',
           id: ids.join(',')
         });
         if (res.items) {
@@ -2414,19 +2630,7 @@ ${topKeywordsStr}`;
             history[history.length - 1] = newSnapshot;
           }
 
-          const apiKeyword = getApiKeywordFromChannelItem(item, c);
-          const apiTopic = getApiTopicFromChannelItem(item, apiKeyword, c);
-          const apiIncome = estimateChannelIncome(newSnapshot.views, item.snippet?.country || '');
-
-          return {
-            ...c,
-            name: item.snippet?.title || c.name,
-            history,
-            icon: updatedIcon,
-            topic: apiTopic,
-            nicheKeyword: apiKeyword,
-            estimatedIncome: apiIncome
-          };
+          return { ...c, history, icon: updatedIcon };
         });
         localStorage.setItem('youtube_tracking_channels', JSON.stringify(next));
         return next;
@@ -2569,9 +2773,6 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
-        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
-        nicheKeyword: getChannelTrendKeyword(channel),
-        estimatedIncome: estimateChannelIncome(channel.views, channel.country),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -2606,9 +2807,6 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
-        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
-        nicheKeyword: getChannelTrendKeyword(channel),
-        estimatedIncome: estimateChannelIncome(channel.views, channel.country),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -3079,12 +3277,12 @@ ${topKeywordsStr}`;
           </button>
           <button 
             onClick={() => setActiveTab(4)}
-            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <Video size={16} /> <span className="vtw-tab-full">Kiểm tra Link Video</span><span className="vtw-tab-short">Video</span>
           </button>
           <button 
-            onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
+            onClick={() => setActiveTab(5)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 Tìm ngách Youtube</span><span className="vtw-tab-short">Ngách</span>
@@ -3355,7 +3553,7 @@ ${topKeywordsStr}`;
                     </button>
                   </div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                    <table className="vtw-keyword-ideas-table vtw-tracking-table w-full text-left border-collapse">
+                    <table className="vtw-tracking-table w-full text-left border-collapse">
                       <thead className="bg-[#fdf2e9] sticky top-0 z-10 border-b border-orange-200">
                         <tr>
                           <th className="px-3 py-1.5 text-[11px] font-bold text-orange-800 border-r border-orange-100 italic w-12 text-center">STT</th>
@@ -3548,7 +3746,7 @@ ${topKeywordsStr}`;
                                   className="vtw-delete-action text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-95 font-black uppercase"
                                   title="Xóa"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={12} /> <span>XÓA</span>
                                 </button>
                               </div>
                             </td>
@@ -3948,21 +4146,19 @@ ${topKeywordsStr}`;
                     </span>
                   </div>
                   
-                  {/* Search box for tracking list - one clean frame only */}
-                  <div className="vtw-tracking-search-box ml-2 relative min-w-[250px]">
+                  {/* Search box for tracking list */}
+                  <div className="vtw-tracking-search-box ml-2 flex items-center bg-white border-2 border-blue-200 rounded-xl h-10 px-3 min-w-[250px] shadow-sm">
                     <input 
                       type="text"
                       placeholder="Tìm nhanh tên kênh..."
-                      className="vtw-tracking-search-input w-full text-gray-700"
+                      className="bg-transparent text-[12px] font-bold outline-none w-full text-gray-700 placeholder:text-slate-400"
                       value={trackingSearchTerm}
                       onChange={(e) => setTrackingSearchTerm(e.target.value)}
                     />
                     {trackingSearchTerm && (
                       <button 
-                        type="button"
                         onClick={() => setTrackingSearchTerm('')}
-                        className="vtw-tracking-search-clear text-gray-400 hover:text-gray-600"
-                        aria-label="Xóa tìm kiếm"
+                        className="text-gray-400 hover:text-gray-600 shrink-0"
                       >
                         <X size={14} />
                       </button>
@@ -3982,13 +4178,11 @@ ${topKeywordsStr}`;
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] w-10 text-center">STT</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tên Kênh</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Mã Kênh</th>
-                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Chủ đề</th>
-                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Ngách</th>
-                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Thu nhập ($)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử Sub (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng Sub/Ngày</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử View (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng View/Ngày</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] bg-blue-50/50 !text-black">Đánh giá</th>
                       <th className="px-2 py-1 font-normal text-[11px] text-center w-12">XÓA</th>
                     </tr>
                   </thead>
@@ -4045,11 +4239,8 @@ ${topKeywordsStr}`;
                             <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-[10px] font-bold text-slate-700 bg-slate-50/60">{c.topic || 'Chưa cập nhật'}</td>
-                        <td className="px-2 py-1 text-[10px] font-bold text-blue-700 bg-blue-50/40">{c.nicheKeyword || 'Chưa cập nhật'}</td>
-                        <td className="px-2 py-1 text-[10px] font-black text-emerald-700 bg-emerald-50/40 whitespace-nowrap">{c.estimatedIncome || 'Đang cập nhật'}</td>
-                        <td className="px-2 py-1 text-[10px] bg-gray-50/50">
-                          <div className="flex flex-wrap gap-1 items-center justify-center">
+                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-right">
+                          <div className="flex flex-wrap gap-1 items-center justify-end">
                             {c.history.length > 1 ? (
                               <>
                                 <span className="text-gray-400">
@@ -4068,8 +4259,8 @@ ${topKeywordsStr}`;
                           </div>
                         </td>
                         <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'subs')}</td>
-                        <td className="px-2 py-1 text-[10px] bg-gray-50/50">
-                          <div className="flex flex-wrap gap-1 items-center justify-center">
+                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-right">
+                          <div className="flex flex-wrap gap-1 items-center justify-end">
                             {c.history.length > 1 ? (
                               <>
                                 <span className="text-gray-400">
@@ -4088,6 +4279,19 @@ ${topKeywordsStr}`;
                           </div>
                         </td>
                         <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
+                        <td className="px-2 py-1 text-[10px] text-center">
+                          {(() => {
+                            const viewsGrowthStr = getGrowth(c.history, 'views').replace('+', '');
+                            const viewsGrowthNum = parseInt(viewsGrowthStr.replace(/,/g, '')) || 0;
+                            return (
+                              <div className="flex flex-col items-center">
+                                <span className={`px-2 py-0.5 rounded text-white font-bold whitespace-nowrap text-[9px] shadow-sm ${viewsGrowthNum > 10000 ? 'bg-red-600' : viewsGrowthNum > 1000 ? 'bg-orange-600' : 'bg-emerald-600'}`}>
+                                  {viewsGrowthNum > 10000 ? '🔥 TĂNG TRƯỞNG MẠNH' : viewsGrowthNum > 1000 ? '⚡ TĂNG TRƯỞNG TỐT' : '📈 DỮ LIỆU ỔN ĐỊNH'}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td className="px-2 py-1 text-center">
                              <button 
                                type="button"
@@ -4532,8 +4736,54 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
+                    <div className="mb-6">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 pt-2">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
+                           <button onClick={() => setVideoFilters({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <RangeFilterBox
+                            title="Outlier Score"
+                            subtitle="Phạm vi 0–100+"
+                            min={videoFilters.trendScoreMin}
+                            max={videoFilters.trendScoreMax}
+                            absoluteMin={0}
+                            absoluteMax={100}
+                            step={1}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, trendScoreMin: min, trendScoreMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Views"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={videoFilters.viewsMin}
+                            max={videoFilters.viewsMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={50000}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, viewsMin: min, viewsMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Views Per Hour (VPH)"
+                            subtitle="Phạm vi 0–10.000+"
+                            min={videoFilters.vphMin}
+                            max={videoFilters.vphMax}
+                            absoluteMin={0}
+                            absoluteMax={10000}
+                            step={50}
+                            onChange={(min, max) => setVideoFilters({ ...videoFilters, vphMin: min, vphMax: max })}
+                          />
+                        </div>
+                      </div>
+                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {nicheResults.videos.map((v: any, i: number) => (
+                      {nicheResults.videos.filter((v: any) => {
+                         if (v.trendScore < videoFilters.trendScoreMin || v.trendScore > videoFilters.trendScoreMax) return false;
+                         const videoViews = parseInt(v.statistics.viewCount) || 0;
+                         if (videoViews < videoFilters.viewsMin || videoViews > videoFilters.viewsMax) return false;
+                         if (v.vph < videoFilters.vphMin || v.vph > videoFilters.vphMax) return false;
+                         return true;
+                      }).map((v: any, i: number) => (
                          <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                             <div className="relative aspect-video">
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -4623,8 +4873,56 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
+                    <div className="mb-6">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
+                        <div className="flex justify-between items-center mb-6 pt-2">
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
+                           <button onClick={() => setChannelFilters({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <RangeFilterBox
+                            title="Subscribers"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={channelFilters.subscribersMin}
+                            max={channelFilters.subscribersMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={50000}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, subscribersMin: min, subscribersMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Views"
+                            subtitle="Phạm vi 0–10.000.000+"
+                            min={channelFilters.viewsMin}
+                            max={channelFilters.viewsMax}
+                            absoluteMin={0}
+                            absoluteMax={10000000}
+                            step={50000}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, viewsMin: min, viewsMax: max })}
+                          />
+                          <RangeFilterBox
+                            title="Video Count"
+                            subtitle="Phạm vi 0–10.000+"
+                            min={channelFilters.videosMin}
+                            max={channelFilters.videosMax}
+                            absoluteMin={0}
+                            absoluteMax={10000}
+                            step={100}
+                            onChange={(min, max) => setChannelFilters({ ...channelFilters, videosMin: min, videosMax: max })}
+                          />
+                        </div>
+                      </div>
+                    </div>
                    <div className="space-y-4">
-                      {nicheResults.channels.map((c: any, i: number) => (
+                      {nicheResults.channels.filter((c: any) => {
+                         const subsCount = parseInt(c.statistics.subscriberCount) || 0;
+                         const viewsCount = parseInt(c.statistics.viewCount) || 0;
+                         const videosCount = parseInt(c.statistics.videoCount) || 0;
+                         if (subsCount < channelFilters.subscribersMin || subsCount > channelFilters.subscribersMax) return false;
+                         if (viewsCount < channelFilters.viewsMin || viewsCount > channelFilters.viewsMax) return false;
+                         if (videosCount < channelFilters.videosMin || videosCount > channelFilters.videosMax) return false;
+                         return true;
+                      }).map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
@@ -5437,35 +5735,54 @@ ${topKeywordsStr}`;
                         {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
+                    <div className="mt-3 flex items-center gap-2 text-[10px] text-indigo-600 font-bold uppercase tracking-tight bg-white/50 w-fit px-3 py-1 rounded-full border border-indigo-100">
+                      <Zap size={12} fill="currentColor" />
+                      Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
+                    </div>
+
                     {/* Model Selection UI */}
-                    <div className="vtw-model-select mt-4">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="vtw-model-label">MODEL GEMINI</span>
-                        <button 
-                          type="button"
-                          onClick={() => setShowModelOptions(!showModelOptions)}
-                          className="vtw-model-current-button"
-                        >
-                          <span>Đang dùng: {geminiModel}</span>
-                          <ChevronDown size={14} />
-                        </button>
-                      </div>
+                    <div className="mt-4">
+                      <button 
+                        type="button"
+                        onClick={() => setShowModelOptions(!showModelOptions)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <span className="text-[11px] font-black text-gray-400 tracking-widest uppercase">Chọn model Gemini</span>
+                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                          Đang dùng: {geminiModel}
+                        </div>
+                      </button>
 
                       {showModelOptions && (
-                        <div className="vtw-model-options">
-                          {GEMINI_MODELS.map(model => (
-                            <button
-                              key={model.id}
-                              type="button"
-                              onClick={() => {
-                                setGeminiModel(model.id);
-                                setShowModelOptions(false);
-                              }}
-                              className={`vtw-model-option ${model.id === geminiModel ? 'vtw-model-option-active' : ''}`}
-                            >
-                              {model.name}
-                            </button>
-                          ))}
+                        <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                          <button
+                            type="button"
+                            onClick={() => setShowModelOptions(!showModelOptions)}
+                            className="w-full text-left px-4 py-2 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="text-[12px] font-bold text-gray-800">{GEMINI_MODELS.find(m => m.id === geminiModel)?.name}</span>
+                            <ChevronDown size={14} className="text-gray-400" />
+                          </button>
+                          
+                          <div className="max-h-[150px] overflow-y-auto">
+                            {GEMINI_MODELS.map(model => (
+                              <button
+                                key={model.id}
+                                type="button"
+                                onClick={() => {
+                                  setGeminiModel(model.id);
+                                  setShowModelOptions(false);
+                                }}
+                                className={`w-full text-left px-4 py-2 text-[12px] transition-colors border-b border-gray-50 last:border-0 ${
+                                  model.id === geminiModel 
+                                    ? 'bg-blue-600 text-white font-bold' 
+                                    : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                              >
+                                {model.name}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -5489,6 +5806,15 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
                   
+                  <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
+                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
+                    <ul className="space-y-1 font-medium opacity-90">
+                      <li className="flex items-center gap-2">🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
+                      <li className="flex items-center gap-2">🔹 Hệ thống sẽ <b>tự động xoay vòng Key</b> để quét dữ liệu mượt mà hơn.</li>
+                      <li className="flex items-center gap-2">🔹 Dữ liệu được bảo mật và lưu cục bộ trên trình duyệt của bạn.</li>
+                    </ul>
+                  </div>
+
                   <div className="relative">
                     <textarea 
                       value={manualKeysInput}
@@ -5504,15 +5830,6 @@ ${topKeywordsStr}`;
                     >
                       {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
-                  </div>
-
-                  <div className="vtw-youtube-key-guide bg-white border border-red-100 p-4 rounded-2xl text-[11px] text-gray-600 mt-4 shadow-sm relative z-10">
-                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
-                    <ul className="space-y-1 font-medium opacity-90">
-                      <li>🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
-                      <li>🔹 Key nào hôm nay hết quota/lỗi sẽ bị bỏ qua khỏi phiên chạy hiện tại và chuyển sang key kế tiếp.</li>
-                      <li>🔹 Danh sách key đã nhập vẫn được giữ trong ô nhập để anh dễ quản lý.</li>
-                    </ul>
                   </div>
                 </div>
               </div>
@@ -5735,7 +6052,7 @@ ${topKeywordsStr}`;
                 
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
-                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> GỢI Ý NGÁCH TRENDING TỪ GEMINI AI</span>
+                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU TRENDING TỪ YOUTUBE API</span>
                         <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật danh sách từ khóa ngách hot nhất hôm nay theo quốc gia</span>
                      </h3>
                      <div className="flex items-center gap-3">
@@ -5756,7 +6073,7 @@ ${topKeywordsStr}`;
                             disabled={isFetchingDailyTrending}
                             className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo gợi ý...</> : <><Search size={16}/> Cập nhật gợi ý</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật API...</> : <><Search size={16}/> Cập nhật Trending</>}
                          </button>
                      </div>
                 </div>
