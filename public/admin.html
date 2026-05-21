@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin quản lý tài khoản - Văn Thế Web</title>
+  <style>
+    :root {
+      --bg:#07111f; --card:#0f1b2d; --card2:#0b1526; --line:#223650;
+      --text:#ffffff; --muted:#9fb3ce; --cyan:#22d3ee; --green:#22c55e;
+      --red:#ef4444; --orange:#f97316; --blue:#2563eb;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;background:radial-gradient(circle at top,#10213a,#07111f 55%);color:var(--text);min-height:100vh}
+    .wrap{width:96%;max-width:1380px;margin:0 auto;padding:26px 0 50px}
+    .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+    .title h1{margin:0;font-size:32px;font-weight:900;letter-spacing:-.4px}
+    .title p{margin:8px 0 0;color:var(--muted);line-height:1.5;font-size:14px}
+    .links{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .top a{color:#22d3ee;font-weight:900;text-decoration:none;background:#0b1526;border:1px solid var(--line);padding:10px 12px;border-radius:12px}
+    .card{background:rgba(15,27,45,.96);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.24)}
+    .grid{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;margin-bottom:14px;align-items:end}
+    .grid2{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field label{display:block;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+    input,select,textarea{width:100%;border:1px solid var(--line);border-radius:14px;background:#0b1526;color:#fff;padding:13px 14px;font-size:15px;outline:none}
+    textarea{min-height:88px;resize:vertical}
+    input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+    button{border:0;border-radius:14px;padding:13px 16px;font-size:14px;font-weight:900;cursor:pointer;transition:.15s}
+    button:active{transform:scale(.97)}
+    .btn{background:var(--cyan);color:#00111f}.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    .btn-green{background:var(--green);color:#06210f}.btn-red{background:var(--red);color:white}
+    .btn-dark{background:#172338;color:white;border:1px solid var(--line)} .btn-orange{background:var(--orange);color:white}
+    .status{margin:12px 0 0;padding:12px 14px;border-radius:14px;background:#10253a;border:1px solid #1f4967;color:#b9d8ee;line-height:1.5;font-size:13px}
+    .status.ok{background:#062e1a;border-color:#22c55e;color:#bbf7d0}.status.err{background:#3a1111;border-color:#ef4444;color:#fecaca}
+    table{width:100%;border-collapse:collapse;margin-top:14px;overflow:hidden;border-radius:16px}
+    th,td{padding:12px 10px;border-bottom:1px solid #182942;text-align:left;font-size:13px;vertical-align:top}
+    th{color:#9fb3ce;text-transform:uppercase;font-size:11px;letter-spacing:.08em;background:#0b1526;position:sticky;top:0;z-index:2}
+    tr:hover td{background:#0c192b}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;text-transform:uppercase}
+    .pro{background:#06351d;color:#86efac}.trial{background:#3a2a07;color:#fde68a}.expired{background:#3a1111;color:#fecaca}
+    .muted{color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.small{padding:8px 10px;font-size:12px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tab{background:#172338;color:#cfe4ff;border:1px solid var(--line)}.tab.active{background:#22d3ee;color:#00111f}
+    .hidden{display:none!important}.scroll{overflow:auto;max-height:620px;border-radius:14px}
+    .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+    .quick button{padding:10px;font-size:12px;background:#0b1526;color:#cfe4ff;border:1px solid var(--line)}
+    @media(max-width:950px){.top,.grid,.grid2,.row,.quick{grid-template-columns:1fr;display:grid}.links{justify-content:flex-start}.title h1{font-size:25px}table{white-space:nowrap}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title">
+        <h1>Admin quản lý tài khoản</h1>
+        <p>Xem tài khoản đăng ký, tìm theo email/UID, kiểm tra Trial/PRO/Hết hạn, cộng ngày, khóa PRO và ghi log vào Firestore.</p>
+      </div>
+      <div class="links">
+        <a href="/admin-settings.html">⚙ Cấu hình thanh toán & SMTP</a>
+        <a href="/">← Về tool</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div class="field">
+          <label>Mật khẩu quản trị</label>
+          <input id="adminSecret" type="password" placeholder="ADMIN_SECRET hoặc ADMIN_SETTINGS_PASSWORD trên Vercel" />
+        </div>
+        <div class="field">
+          <label>Tìm email / UID / tên</label>
+          <input id="searchText" placeholder="VD: user@gmail.com hoặc UID Firebase" onkeydown="if(event.key==='Enter') loadUsers()" />
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="saveSecretAndLoad()">Lưu & tải danh sách</button>
+          <button class="btn-dark" onclick="loadUsers()">Tải lại</button>
+        </div>
+      </div>
+      <div id="status" class="status">Nhập mật khẩu quản trị rồi bấm “Lưu & tải danh sách”.</div>
+    </div>
+
+    <div class="tabs">
+      <button id="tabUsers" class="tab active" onclick="showTab('users')">Danh sách tài khoản</button>
+      <button id="tabAction" class="tab" onclick="showTab('action')">Kích hoạt / khóa PRO</button>
+      <button id="tabLogs" class="tab" onclick="showTab('logs'); loadLogs()">Admin logs</button>
+    </div>
+
+    <div id="actionPanel" class="grid2 hidden">
+      <div class="card">
+        <h2 style="margin:0 0 14px;font-size:22px;">Kích hoạt thủ công / Cộng ngày</h2>
+        <div class="row">
+          <div class="field"><label>Email khách</label><input id="activateEmail" placeholder="email@gmail.com" /></div>
+          <div class="field"><label>UID Google nếu có</label><input id="activateUid" placeholder="UID Firebase Auth" /></div>
+        </div>
+
+        <div class="quick">
+          <button onclick="setDays(30,'manual_30d','KÍCH HOẠT THỦ CÔNG 30 NGÀY')">+30 ngày</button>
+          <button onclick="setDays(90,'3m','GÓI 3 THÁNG')">+90 ngày</button>
+          <button onclick="setDays(180,'6m','GÓI 6 THÁNG')">+180 ngày</button>
+          <button onclick="setDays(365,'12m','GÓI 1 NĂM')">+365 ngày</button>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <div class="field">
+            <label>Gói</label>
+            <select id="planId" onchange="syncDaysFromPlan()">
+              <option value="manual_30d">KÍCH HOẠT THỦ CÔNG 30 NGÀY</option>
+              <option value="3m">GÓI 3 THÁNG - 90 NGÀY</option>
+              <option value="6m">GÓI 6 THÁNG - 180 NGÀY</option>
+              <option value="12m">GÓI 1 NĂM - 365 NGÀY</option>
+              <option value="custom">TÙY NHẬP SỐ NGÀY</option>
+            </select>
+          </div>
+          <div class="field"><label>Số ngày cộng thêm</label><input id="days" type="number" value="30" min="1" /></div>
+        </div>
+        <div class="field" style="margin-top:12px;"><label>Ghi chú</label><textarea id="reason" placeholder="VD: Khách chuyển khoản sai nội dung, kích hoạt thủ công."></textarea></div>
+        <div class="actions" style="margin-top:12px;">
+          <button class="btn-green" onclick="activateUser()">Kích hoạt / cộng ngày</button>
+          <button class="btn-red" onclick="disableUser()">Khóa / hủy PRO</button>
+          <button class="btn-dark" onclick="clearForm()">Xóa ô nhập</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 14px;font-size:22px;">Hướng dẫn nhanh</h2>
+        <div class="status">
+          <b>Biến môi trường dùng được:</b><br>
+          <span class="mono">ADMIN_SECRET</span> hoặc <span class="mono">ADMIN_SETTINGS_PASSWORD</span> hoặc <span class="mono">ADMIN_PASSWORD</span><br><br>
+          <b>Email-only:</b> Nếu chỉ nhập email, hệ thống sẽ tìm tài khoản có email đó. Nếu chưa có, hệ thống tạo bản ghi chờ theo email. Khi khách đăng nhập Google bằng đúng email, API subscription sẽ tự gộp quyền PRO về UID Google thật.<br><br>
+          <b>Cộng dồn:</b> Nếu tài khoản đang còn hạn, ngày mới sẽ cộng tiếp từ ngày hết hạn cũ. Nếu đã hết hạn, cộng từ thời điểm hiện tại.
+        </div>
+      </div>
+    </div>
+
+    <div id="usersPanel" class="card">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+        <h2 style="margin:0;font-size:22px;">Danh sách tài khoản</h2>
+        <div class="muted" id="countText">0 tài khoản</div>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th><th>UID</th><th>Trạng thái</th><th>Gói</th><th>Hết hạn</th><th>Còn lại</th><th>Đơn gần nhất</th><th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="logsPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+        <h2 style="margin:0;font-size:22px;">Admin logs</h2>
+        <button class="btn-dark" onclick="loadLogs()">Tải lại log</button>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Thời gian</th><th>Hành động</th><th>Tài khoản</th><th>Gói/ngày</th><th>Ghi chú</th></tr></thead>
+          <tbody id="logsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+const PLAN_MAP = {
+  'manual_30d': { name: 'KÍCH HOẠT THỦ CÔNG 30 NGÀY', days: 30 },
+  '3m': { name: 'GÓI 3 THÁNG', days: 90 },
+  '6m': { name: 'GÓI 6 THÁNG', days: 180 },
+  '12m': { name: 'GÓI 1 NĂM', days: 365 },
+  'custom': { name: 'GÓI TÙY CHỈNH', days: 30 }
+};
+
+function qs(id){ return document.getElementById(id); }
+function secret(){ return qs('adminSecret').value.trim(); }
+function esc(v){ return String(v ?? '').replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s])); }
+function setStatus(msg, type=''){ const el=qs('status'); el.className='status '+type; el.innerHTML=msg; }
+function fmtDate(v){ if(!v) return 'Chưa có'; const d=new Date(v); if(isNaN(d)) return String(v); return d.toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}); }
+function showTab(name){
+  qs('usersPanel').classList.toggle('hidden', name !== 'users');
+  qs('actionPanel').classList.toggle('hidden', name !== 'action');
+  qs('logsPanel').classList.toggle('hidden', name !== 'logs');
+  qs('tabUsers').classList.toggle('active', name === 'users');
+  qs('tabAction').classList.toggle('active', name === 'action');
+  qs('tabLogs').classList.toggle('active', name === 'logs');
+}
+function syncDaysFromPlan(){ const p=PLAN_MAP[qs('planId').value] || PLAN_MAP.custom; qs('days').value = p.days; }
+function setDays(days, planId, planName){ qs('planId').value=planId; qs('days').value=days; setStatus(`Đã chọn ${esc(planName)}.`, 'ok'); }
+function clearForm(){ qs('activateEmail').value=''; qs('activateUid').value=''; qs('reason').value=''; qs('planId').value='manual_30d'; syncDaysFromPlan(); }
+
+async function api(path, opts={}){
+  const headers = {
+    'Content-Type':'application/json',
+    'x-admin-secret': secret(),
+    'x-admin-key': secret(),
+    ...(opts.headers||{})
+  };
+  const res = await fetch(path, { ...opts, headers });
+  const raw = await res.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; } catch { data = { success:false, error: raw || `API trả về không phải JSON. HTTP ${res.status}` }; }
+  if(!res.ok || data.success === false) throw new Error(data.error || data.message || `API lỗi HTTP ${res.status}`);
+  return data;
+}
+
+function saveSecretAndLoad(){ localStorage.setItem('ADMIN_SECRET_RESEARCH', secret()); loadUsers(); }
+
+async function loadUsers(){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    const q = qs('searchText').value.trim();
+    setStatus('Đang tải danh sách...', '');
+    const data = await api('/api/admin-users' + (q ? '?q='+encodeURIComponent(q) : ''));
+    renderUsers(data.users || []);
+    setStatus('Đã tải danh sách tài khoản.', 'ok');
+    showTab('users');
+  }catch(e){ setStatus('Lỗi tải danh sách: '+esc(e.message), 'err'); }
+}
+
+function renderUsers(users){
+  qs('countText').textContent = `${users.length} tài khoản`;
+  qs('usersBody').innerHTML = users.map(u=>{
+    const badge = u.status === 'PRO'
+      ? '<span class="badge pro">PRO</span>'
+      : u.status === 'TRIAL'
+        ? '<span class="badge trial">TRIAL</span>'
+        : '<span class="badge expired">HẾT HẠN</span>';
+    const manual = u.manualActivation ? '<br><span class="muted">Manual/Pending</span>' : '';
+    return `<tr>
+      <td><b>${esc(u.email || '')}</b><br><span class="muted">${esc(u.name || '')}</span>${manual}</td>
+      <td class="mono">${esc(u.uid || '')}</td>
+      <td>${badge}</td>
+      <td>${esc(u.planName || 'Chưa có')}</td>
+      <td>${esc(fmtDate(u.expiresAt))}</td>
+      <td><b>${esc(u.remainingText || '---')}</b></td>
+      <td class="mono">${esc(u.lastPaymentOrderCode || '')}</td>
+      <td><div class="actions">
+        <button class="btn small" onclick='fillUser(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Chọn</button>
+        <button class="btn-green small" onclick='quickAdd(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')}, 30)'>+30</button>
+        <button class="btn-red small" onclick='quickDisable(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Khóa</button>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="muted">Chưa có tài khoản.</td></tr>';
+}
+
+function fillUser(uid,email){ qs('activateUid').value=uid||''; qs('activateEmail').value=email||''; showTab('action'); window.scrollTo({top:0,behavior:'smooth'}); }
+function quickAdd(uid,email,days){ fillUser(uid,email); setDays(days,'manual_30d','KÍCH HOẠT THỦ CÔNG 30 NGÀY'); activateUser(); }
+function quickDisable(uid,email){ fillUser(uid,email); disableUser(); }
+
+async function activateUser(){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    if(!confirm('Xác nhận kích hoạt/cộng ngày cho tài khoản này?')) return;
+    const plan = PLAN_MAP[qs('planId').value] || PLAN_MAP.custom;
+    const body = {
+      uid: qs('activateUid').value.trim(),
+      email: qs('activateEmail').value.trim(),
+      planId: qs('planId').value,
+      planName: plan.name,
+      days: Number(qs('days').value || plan.days),
+      reason: qs('reason').value.trim()
+    };
+    if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
+    setStatus('Đang kích hoạt/cộng ngày...', '');
+    const data = await api('/api/admin-activate-user', { method:'POST', body: JSON.stringify(body) });
+    setStatus(`Đã kích hoạt/cộng ngày PRO. Hết hạn mới: <b>${esc(fmtDate(data.expiresAt))}</b>`, 'ok');
+    await loadUsers();
+  }catch(e){ setStatus('Lỗi kích hoạt: '+esc(e.message), 'err'); }
+}
+
+async function disableUser(){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    if(!confirm('Xác nhận khóa/hủy PRO tài khoản này?')) return;
+    const body = { uid: qs('activateUid').value.trim(), email: qs('activateEmail').value.trim(), reason: qs('reason').value.trim() };
+    if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
+    setStatus('Đang khóa/hủy PRO...', '');
+    const data = await api('/api/admin-disable-user', { method:'POST', body: JSON.stringify(body) });
+    setStatus(`Đã khóa/hủy PRO. Số tài khoản ảnh hưởng: <b>${esc(data.affectedCount || 0)}</b>`, 'ok');
+    await loadUsers();
+  }catch(e){ setStatus('Lỗi khóa tài khoản: '+esc(e.message), 'err'); }
+}
+
+async function loadLogs(){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    const data = await api('/api/admin-logs?limit=150');
+    const logs = data.logs || [];
+    qs('logsBody').innerHTML = logs.map(l => `<tr>
+      <td>${esc(fmtDate(l.createdAt))}</td>
+      <td><b>${esc(l.action || '')}</b></td>
+      <td><div>${esc(l.targetEmail || '')}</div><div class="mono">${esc(l.targetUid || '')}</div></td>
+      <td>${esc(l.planName || l.planId || '')}<br><span class="muted">${esc(l.days || '')} ngày</span></td>
+      <td>${esc(l.reason || '')}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="muted">Chưa có log.</td></tr>';
+    setStatus('Đã tải admin logs.', 'ok');
+  }catch(e){ setStatus('Lỗi tải logs: '+esc(e.message), 'err'); }
+}
+
+qs('adminSecret').value = localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || '';
+syncDaysFromPlan();
+if(qs('adminSecret').value) loadUsers();
+</script>
+</body>
+</html>

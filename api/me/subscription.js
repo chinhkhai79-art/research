@@ -57,12 +57,84 @@ function buildResponse(userId, data) {
   };
 }
 
+function isPremiumData(data) {
+  const exp = toDate(data?.premiumExpiresAt) || toDate(data?.expired_at);
+  return Boolean(data?.premium || data?.account_type === "premium") && exp && exp.getTime() > Date.now();
+}
+
+async function findPendingEmailActivation(email, userId) {
+  if (!email) return null;
+
+  const snap = await db.collection("users").where("email", "==", email).limit(10).get();
+  if (snap.empty) return null;
+
+  const docs = snap.docs
+    .filter(doc => doc.id !== userId)
+    .map(doc => ({ id: doc.id, ref: doc.ref, data: doc.data() }))
+    .filter(item => item.data?.manualActivation || isPremiumData(item.data));
+
+  docs.sort((a, b) => {
+    const ae = toDate(a.data.premiumExpiresAt || a.data.expired_at)?.getTime() || 0;
+    const be = toDate(b.data.premiumExpiresAt || b.data.expired_at)?.getTime() || 0;
+    return be - ae;
+  });
+
+  return docs[0] || null;
+}
+
+async function mergePendingEmailActivation({ email, userId, name, photoUrl }) {
+  const pending = await findPendingEmailActivation(email, userId);
+  if (!pending) return null;
+
+  const uidRef = db.collection("users").doc(userId);
+  const uidSnap = await uidRef.get();
+  const current = uidSnap.exists ? uidSnap.data() : {};
+  const pendingData = pending.data || {};
+
+  const currentExp = toDate(current.premiumExpiresAt || current.expired_at);
+  const pendingExp = toDate(pendingData.premiumExpiresAt || pendingData.expired_at);
+  const usePendingPremium = pendingExp && (!currentExp || pendingExp.getTime() > currentExp.getTime());
+
+  const merged = {
+    ...current,
+    userId,
+    email: email || current.email || pendingData.email || "",
+    name: name || current.name || pendingData.name || pendingData.displayName || "",
+    photoUrl: photoUrl || current.photoUrl || pendingData.photoUrl || "",
+    updated_at: FieldValue.serverTimestamp(),
+    migratedFrom: pending.id
+  };
+
+  if (usePendingPremium) {
+    merged.account_type = "premium";
+    merged.premium = true;
+    merged.active = true;
+    merged.planId = pendingData.planId || current.planId || "manual";
+    merged.planName = pendingData.planName || current.planName || "GÓI PRO";
+    merged.premiumStartedAt = pendingData.premiumStartedAt || current.premiumStartedAt || FieldValue.serverTimestamp();
+    merged.premiumExpiresAt = pendingData.premiumExpiresAt || pendingData.expired_at;
+    merged.expired_at = pendingData.expired_at || pendingData.premiumExpiresAt;
+    merged.lastAdminAction = pendingData.lastAdminAction || current.lastAdminAction || "email_activation_migrated";
+  }
+
+  if (!uidSnap.exists) merged.created_at = FieldValue.serverTimestamp();
+
+  await uidRef.set(merged, { merge: true });
+  await pending.ref.set({
+    migratedTo: userId,
+    migratedAt: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  return merged;
+}
+
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
 
   try {
     const userId = String(req.query.userId || req.query.uid || "").trim();
-    const email = String(req.query.email || "").trim();
+    const email = String(req.query.email || "").trim().toLowerCase();
     const name = String(req.query.name || "").trim();
     const photoUrl = String(req.query.photoUrl || "").trim();
     const initTrial = String(req.query.initTrial || "0") === "1";
@@ -76,6 +148,13 @@ export default async function handler(req, res) {
 
     const ref = db.collection("users").doc(userId);
     const snap = await ref.get();
+
+    // Quan trọng: nếu admin đã kích hoạt thủ công bằng email trước khi khách đăng nhập,
+    // lần đăng nhập Google đầu tiên sẽ tự gộp quyền PRO từ bản ghi manual_EMAIL sang UID thật.
+    const migrated = await mergePendingEmailActivation({ email, userId, name, photoUrl });
+    if (migrated) {
+      return res.status(200).json(buildResponse(userId, migrated));
+    }
 
     if (!snap.exists) {
       if (!initTrial) {
