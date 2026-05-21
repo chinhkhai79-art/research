@@ -4091,3 +4091,103 @@
     cursor: pointer !important;
   }
 }
+
+/* Step 31: Deep Drill toggle + Spy report polish */
+.vtw-deep-drill-toggle {
+  min-height: 44px;
+}
+.vtw-deep-drill-toggle input {
+  flex: 0 0 auto;
+}
+.vtw-spy-result {
+  font-family: Inter, Arial, Helvetica, sans-serif !important;
+}
+.vtw-spy-result-grid {
+  align-items: stretch;
+}
+.vtw-spy-profile {
+  border-radius: 14px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.08) !important;
+}
+.vtw-spy-profile img {
+  object-fit: cover !important;
+}
+.vtw-spy-report {
+  border-radius: 14px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-family: Inter, Arial, Helvetica, sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.08) !important;
+}
+.vtw-spy-report .font-bold,
+.vtw-spy-report b,
+.vtw-spy-report strong {
+  color: #1d4ed8 !important;
+  font-weight: 900 !important;
+}
+.vtw-spy-report a {
+  color: #2563eb !important;
+  font-weight: 700 !important;
+}
+.vtw-spy-report .text-red-600,
+.vtw-spy-report [class*="text-red"] {
+  color: #ea580c !important;
+  font-weight: 900 !important;
+}
+.vtw-spy-report .text-black {
+  color: #0f172a !important;
+}
+.vtw-spy-report .bg-gray-50,
+.vtw-spy-report .bg-white {
+  border-radius: 10px !important;
+}
+
+@media (max-width: 900px) {
+  .vtw-bottom-actions .flex.items-center.gap-4 {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .vtw-deep-drill-toggle {
+    width: 100% !important;
+    padding: 10px 12px !important;
+  }
+  .vtw-spy-result-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .vtw-spy-profile {
+    display: grid !important;
+    grid-template-columns: 64px 1fr !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-width: 0 !important;
+    padding: 14px !important;
+  }
+  .vtw-spy-profile img {
+    width: 64px !important;
+    height: 64px !important;
+    margin: 0 !important;
+  }
+  .vtw-spy-profile .vtw-spy-mobile-action-btn {
+    grid-column: 1 / -1 !important;
+    margin-top: 8px !important;
+  }
+  .vtw-spy-report {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    padding: 14px !important;
+    overflow: visible !important;
+  }
+  .vtw-spy-report .flex.justify-between {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}

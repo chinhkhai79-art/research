@@ -77,6 +77,7 @@ interface YouTubeConfig {
   maxVideo: number;
   minViews: number;
   autoNiche: boolean;
+  deepDrillSmallTrend: boolean;
 }
 
 interface ChannelResult {
@@ -189,6 +190,7 @@ const DEFAULT_CONFIG: YouTubeConfig = {
   maxVideo: 0,
   minViews: 10000,
   autoNiche: true,
+  deepDrillSmallTrend: false,
 };
 
 const REGIONS = [
@@ -600,6 +602,7 @@ export default function App() {
       }
       setConfig(prev => {
         const next = { ...prev, ...parsed };
+        if (typeof next.deepDrillSmallTrend !== 'boolean') next.deepDrillSmallTrend = false;
         // Ensure API keys are not overwritten by empty array in config if we have keys from savedKeys
         if (prev.apiKeys.length > 0 && (!parsed.apiKeys || parsed.apiKeys.length === 0)) {
           next.apiKeys = prev.apiKeys;
@@ -2152,6 +2155,26 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     };
   };
 
+
+  const normalizeDeepDrillText = (value: string) =>
+    (value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/đ/g, 'd');
+
+  const isBroadHighSubExcludedTopic = (video: any, channel: any, seed: string) => {
+    const text = normalizeDeepDrillText([
+      seed,
+      video?.snippet?.title,
+      video?.snippet?.description,
+      channel?.snippet?.title,
+      channel?.snippet?.description
+    ].join(' '));
+
+    return /(giai tri|entertainment|am thuc|food|cooking|nau an|mukbang|suc khoe|health|fitness|lam dep|beauty)/i.test(text);
+  };
+
   const startHunter = async () => {
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
@@ -2166,7 +2189,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     setIsHunting(true);
     isHuntingRef.current = true;
     setLastError(null);
-    setStatus(isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...');
+    setStatus(config.deepDrillSmallTrend ? 'Đang bật Deep Drill: săn kênh nhỏ/mới trend trong 30 ngày...' : (isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...'));
     setProgress(5);
     if (typeof AbortController !== 'undefined') {
       try {
@@ -2190,7 +2213,8 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         : config.regions;
       const currentRegion = cycles.length > 0 ? cycles[0] : (config.region || 'VN');
       const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
-      const publishedAfter = getPublishedAfterDate(config.publishedAfter);
+      const effectivePublishedAfter = config.deepDrillSmallTrend ? 'month' : config.publishedAfter;
+      const publishedAfter = getPublishedAfterDate(effectivePublishedAfter);
 
       let scanKeywords: string[] = [];
       if (isAutoHunt) {
@@ -2223,7 +2247,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
           type: 'video',
           q: searchKeyword,
           regionCode: currentRegion,
-          maxResults: Math.min(Math.max(config.maxVideos, 20), 50),
+          maxResults: config.deepDrillSmallTrend ? 50 : Math.min(Math.max(config.maxVideos, 20), 50),
           order: 'viewCount',
           publishedAfter
         });
@@ -2265,17 +2289,24 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
             const bestVideoViews = parseInt(video.statistics?.viewCount) || 0;
             const metrics = calculateHunterCandidateScore(video, channel, searchKeyword);
 
+            const deepDrillActive = !!config.deepDrillSmallTrend;
+            const deepDrillMaxSub = 50000;
+            const hardExcludedByTopic = deepDrillActive && subs > 500000 && isBroadHighSubExcludedTopic(video, channel, searchKeyword);
+            const effectiveMinSub = deepDrillActive ? 0 : config.minSub;
+            const effectiveMaxSub = deepDrillActive ? Math.min(config.maxSub || deepDrillMaxSub, deepDrillMaxSub) : config.maxSub;
+            const effectiveMinViews = deepDrillActive ? Math.max(500, Math.floor(config.minViews / 4)) : config.minViews;
+
             const passed =
-              subs >= config.minSub &&
-              subs <= config.maxSub &&
+              !hardExcludedByTopic &&
+              subs >= effectiveMinSub &&
+              subs <= effectiveMaxSub &&
               videoCount >= config.minVideo &&
               (config.maxVideo ? videoCount <= config.maxVideo : true) &&
-              views >= config.minViews;
+              views >= effectiveMinViews;
 
-            // Khi ô từ khóa trống, ưu tiên video mới hiệu suất tốt hơn tổng view toàn kênh.
-            const autoPassed = isAutoHunt
-              ? passed && (metrics.vph >= 1 || metrics.viewSubRatio >= 1 || metrics.outlierScore >= 1.5 || bestVideoViews >= Math.max(5000, config.minViews / 2))
-              : passed;
+            // Khi ô từ khóa trống hoặc Deep Drill, ưu tiên video mới có hiệu suất vượt trội hơn tổng view toàn kênh.
+            const trendPassed = metrics.vph >= 1 || metrics.viewSubRatio >= 1 || metrics.outlierScore >= 1.5 || bestVideoViews >= Math.max(1000, effectiveMinViews / 2);
+            const autoPassed = (isAutoHunt || deepDrillActive) ? passed && trendPassed : passed;
 
             if (!autoPassed) return null;
 
@@ -3454,6 +3485,19 @@ ${topKeywordsStr}`;
                     />
                     <label htmlFor="autoHunt" className="vtw-auto-hunt-text font-bold text-[12px] text-[#d35400] cursor-pointer flex flex-col">
                       <span>Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</span>
+                    </label>
+                  </div>
+                  <div className="vtw-deep-drill-toggle flex items-center gap-2 bg-white border border-orange-200 rounded-lg px-3 py-2 shadow-sm">
+                    <input
+                      type="checkbox"
+                      id="deepDrillSmallTrend"
+                      className="w-5 h-5 cursor-pointer accent-[#0ea5e9]"
+                      checked={!!config.deepDrillSmallTrend}
+                      onChange={(e) => setConfig({ ...config, deepDrillSmallTrend: e.target.checked })}
+                    />
+                    <label htmlFor="deepDrillSmallTrend" className="cursor-pointer flex flex-col leading-tight">
+                      <span className="font-black text-[12px] text-[#0f766e]">Săn kênh nhỏ / Mới Trend</span>
+                      <span className="text-[10px] text-slate-500">Deep Drill: dưới 50.000 sub, 30 ngày</span>
                     </label>
                   </div>
                 </div>
