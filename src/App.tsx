@@ -505,11 +505,29 @@ export default function App() {
     };
   }, [menuPos.visible]);
 
+  // Chỉ bản mobile: hiện nút lên đầu trang khi đã lướt xuống.
+  useEffect(() => {
+    const handleScrollTopVisibility = () => {
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      setShowScrollTop(window.innerWidth <= 900 && y > 420);
+    };
+    handleScrollTopVisibility();
+    window.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
+    window.addEventListener('resize', handleScrollTopVisibility);
+    window.addEventListener('orientationchange', handleScrollTopVisibility);
+    return () => {
+      window.removeEventListener('scroll', handleScrollTopVisibility);
+      window.removeEventListener('resize', handleScrollTopVisibility);
+      window.removeEventListener('orientationchange', handleScrollTopVisibility);
+    };
+  }, []);
+
   const [status, setStatus] = useState('Sẵn sàng.');
   const [progress, setProgress] = useState(0);
   const [isHunting, setIsHunting] = useState(false);
   const [quotaUsed, setQuotaUsed] = useState(0);
   const [totalQuotaToday, setTotalQuotaToday] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [results, setResults] = useState<ChannelResult[]>([]);
   const isHuntingRef = useRef(false);
@@ -4335,10 +4353,13 @@ ${topKeywordsStr}`;
                       step={10}
                       value={nicheVideoCount}
                       onChange={(e) => setNicheVideoCount(parseInt(e.target.value, 10))}
-                      className="w-full accent-blue-500"
+                      className="vtw-niche-slider w-full accent-blue-500"
                     />
-                    <div className="flex justify-between text-[8px] text-[#95a5a6] font-bold px-1">
-                      <span>10</span><span>30</span><span>50</span><span>100</span>
+                    <div className="vtw-niche-range-scale vtw-count-scale text-[8px] text-[#95a5a6] font-bold">
+                      <span style={{ left: '0%' }}>10</span>
+                      <span style={{ left: '22.22%' }}>30</span>
+                      <span style={{ left: '44.44%' }}>50</span>
+                      <span style={{ left: '100%' }}>100</span>
                     </div>
                   </div>
 
@@ -4353,10 +4374,13 @@ ${topKeywordsStr}`;
                       step={1000}
                       value={nicheMaxSub}
                       onChange={(e) => setNicheMaxSub(parseInt(e.target.value, 10) || 0)}
-                      className="w-full accent-blue-500"
+                      className="vtw-niche-slider w-full accent-blue-500"
                     />
-                    <div className="flex justify-between text-[8px] text-[#95a5a6] font-bold px-1">
-                      <span>0</span><span>1M</span><span>5M</span><span>10M</span>
+                    <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
+                      <span style={{ left: '0%' }}>0</span>
+                      <span style={{ left: '10%' }}>1M</span>
+                      <span style={{ left: '50%' }}>5M</span>
+                      <span style={{ left: '100%' }}>10M</span>
                     </div>
                   </div>
 
@@ -6124,6 +6148,19 @@ ${topKeywordsStr}`;
           </div>
         )}
       </AnimatePresence>
+
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="vtw-scroll-top-mobile"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Lên đầu trang"
+          title="Lên đầu trang"
+        >
+          ↑
+        </button>
+      )}
 
       <AnimatePresence>
         {showAccountModal && user && (
