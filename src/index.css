@@ -4753,3 +4753,65 @@
     margin-left: 0 !important;
   }
 }
+
+/* STEP 49: tracking table columns + unified tab style */
+.vtw-tab-btn {
+  text-transform: uppercase !important;
+  justify-content: center !important;
+  text-align: center !important;
+  min-height: 42px !important;
+}
+.vtw-tab-btn span {
+  text-transform: uppercase !important;
+}
+.vtw-tracking-table th,
+.vtw-tracking-table td {
+  text-align: left !important;
+  vertical-align: middle !important;
+}
+.vtw-tracking-table td:nth-child(7) > div,
+.vtw-tracking-table td:nth-child(9) > div {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+.vtw-tracking-table td:nth-child(11),
+.vtw-tracking-table th:nth-child(11) {
+  text-align: center !important;
+}
+@media (max-width: 900px) {
+  .vtw-tracking-table tr {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+  }
+  .vtw-tracking-table td {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+  }
+  .vtw-tracking-table td::before {
+    display: block !important;
+    margin-bottom: 4px !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+  }
+  .vtw-tracking-table td:nth-child(1)::before { content: 'STT' !important; }
+  .vtw-tracking-table td:nth-child(2)::before { content: 'Tên kênh' !important; }
+  .vtw-tracking-table td:nth-child(3)::before { content: 'Mã kênh' !important; }
+  .vtw-tracking-table td:nth-child(4)::before { content: 'Ngách/Kênh' !important; }
+  .vtw-tracking-table td:nth-child(5)::before { content: 'Chủ đề' !important; }
+  .vtw-tracking-table td:nth-child(6)::before { content: 'Thu nhập ($)' !important; }
+  .vtw-tracking-table td:nth-child(7)::before { content: 'Lịch sử sub' !important; }
+  .vtw-tracking-table td:nth-child(8)::before { content: 'Tăng sub/ngày' !important; }
+  .vtw-tracking-table td:nth-child(9)::before { content: 'Lịch sử view' !important; }
+  .vtw-tracking-table td:nth-child(10)::before { content: 'Tăng view/ngày' !important; }
+  .vtw-tracking-table td:nth-child(11)::before { content: 'Xóa' !important; }
+  .vtw-tracking-table td:nth-child(7) > div,
+  .vtw-tracking-table td:nth-child(9) > div {
+    justify-content: flex-start !important;
+  }
+  .vtw-tracking-table td:nth-child(11) {
+    text-align: left !important;
+  }
+}

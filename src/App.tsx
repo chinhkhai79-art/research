@@ -107,6 +107,10 @@ interface TrackingChannel {
   id: string;
   name: string;
   icon?: string;
+  keywordTitle?: string;
+  topic?: string;
+  income?: string;
+  country?: string;
   history: Array<{
     date: string;
     subs: number;
@@ -827,6 +831,31 @@ export default function App() {
     const highUsd = Math.round((views / 1000) * high);
     if (views <= 0) return 'Đang cập nhật';
     return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
+  };
+
+
+  const estimateIncomeFromTracking = (views: number, country?: string) => {
+    const fakeChannel = {
+      views: Number(views || 0),
+      country: country || 'VN'
+    } as ChannelResult;
+    return estimateIncomeFromApiViews(fakeChannel);
+  };
+
+  const getTrackingKeywordFromApiItem = (item: any, fallbackName?: string) => {
+    const title = String(item?.snippet?.title || fallbackName || '').trim();
+    const desc = normalizeHunterKeyword(item?.snippet?.description || '');
+    const topicUrls = Array.isArray(item?.topicDetails?.topicCategories) ? item.topicDetails.topicCategories.join(' ') : '';
+    const text = normalizeHunterKeyword(`${title} ${desc} ${topicUrls}`);
+    const candidates = [
+      'ai tools','chatgpt','youtube automation','tech news','travel vlog','gaming highlights','review điện thoại','make money online',
+      'tin tức','ẩm thực','nấu ăn','du lịch','sức khỏe','làm đẹp','bóng đá','thể thao','giáo dục','tiếng anh','nhạc','lofi','thú cưng','mẹo vặt',
+      'công nghệ','review xe','đầu tư','tài chính','vlog','shorts'
+    ];
+    const found = candidates.find(k => text.includes(normalizeHunterKeyword(k)));
+    if (found) return found;
+    const words = normalizeHunterKeyword(title).split(' ').filter(w => w.length > 2).slice(0, 4).join(' ');
+    return words || 'tự động tracking';
   };
 
   const formatChannelUrlShort = (url?: string, id?: string) => {
@@ -2657,7 +2686,7 @@ ${topKeywordsStr}`;
       let allItems: any[] = [];
       for (const ids of chunkedIds) {
         const res = await youtubeFetch('channels', {
-          part: 'snippet,statistics',
+          part: 'snippet,statistics,topicDetails',
           id: ids.join(',')
         });
         if (res.items) {
@@ -2678,8 +2707,12 @@ ${topKeywordsStr}`;
             videos: parseInt(item.statistics.videoCount) || 0
           };
 
-          // Update icon if missing or updated
+          // Update metadata from real YouTube Data API v3 response
           const updatedIcon = item.snippet?.thumbnails?.default?.url || c.icon;
+          const updatedCountry = item.snippet?.country || c.country || 'VN';
+          const updatedKeyword = getTrackingKeywordFromApiItem(item, c.name || item.snippet?.title);
+          const updatedTopic = getTopicFromKeyword(updatedKeyword);
+          const updatedIncome = estimateIncomeFromTracking(newSnapshot.views, updatedCountry);
 
           const history = [...c.history];
           const last = history[history.length - 1];
@@ -2695,7 +2728,16 @@ ${topKeywordsStr}`;
             history[history.length - 1] = newSnapshot;
           }
 
-          return { ...c, history, icon: updatedIcon };
+          return {
+            ...c,
+            name: item.snippet?.title || c.name,
+            history,
+            icon: updatedIcon,
+            country: updatedCountry,
+            keywordTitle: updatedKeyword,
+            topic: updatedTopic,
+            income: updatedIncome
+          };
         });
         localStorage.setItem('youtube_tracking_channels', JSON.stringify(next));
         return next;
@@ -2838,6 +2880,10 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
+        country: channel.country,
+        keywordTitle: getChannelTrendKeyword(channel),
+        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
+        income: estimateIncomeFromApiViews(channel),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -2872,6 +2918,10 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
+        country: channel.country,
+        keywordTitle: getChannelTrendKeyword(channel),
+        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
+        income: estimateIncomeFromApiViews(channel),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -3201,19 +3251,19 @@ ${topKeywordsStr}`;
             <div className="absolute inset-0 p-4 pt-2 blur-[2.5px] opacity-55 pointer-events-none select-none">
               <div className="vtw-tabs flex justify-center gap-1 mb-0 relative z-10">
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#3498db] text-white border-t border-x border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)] font-bold flex items-center gap-2">
-                  <Search size={16} /> <span className="vtw-tab-full">Tìm kênh & Đánh giá Từ khóa</span><span className="vtw-tab-short">Tìm kênh</span>
+                  <Search size={16} /> <span className="vtw-tab-full">TÌM KÊNH & ĐÁNH GIÁ TỪ KHÓA</span><span className="vtw-tab-short">Tìm kênh</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <BarChart2 size={16} /> <span className="vtw-tab-full">Phân tích đối thủ (Spy)</span><span className="vtw-tab-short">Spy</span>
+                  <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <UserRoundSearch size={16} /> <span className="vtw-tab-full">Theo dõi Đối thủ (Tracking)</span><span className="vtw-tab-short">Tracking</span>
+                  <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <Video size={16} /> <span className="vtw-tab-full">Kiểm tra Link Video</span><span className="vtw-tab-short">Video</span>
+                  <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 Tìm ngách Youtube</span><span className="vtw-tab-short">Ngách</span>
+                  <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 TÌM NGÁCH YOUTUBE</span><span className="vtw-tab-short">Ngách</span>
                 </div>
               </div>
 
@@ -3326,31 +3376,31 @@ ${topKeywordsStr}`;
             onClick={() => setActiveTab(1)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 1 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <Search size={16} /> <span className="vtw-tab-full">Tìm kênh & Đánh giá Từ khóa</span><span className="vtw-tab-short">Tìm kênh</span>
+            <Search size={16} /> <span className="vtw-tab-full">TÌM KÊNH & ĐÁNH GIÁ TỪ KHÓA</span><span className="vtw-tab-short">Tìm kênh</span>
           </button>
           <button 
             onClick={() => setActiveTab(2)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <BarChart2 size={16} /> <span className="vtw-tab-full">Phân tích đối thủ (Spy)</span><span className="vtw-tab-short">Spy</span>
+            <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
           </button>
           <button 
             onClick={() => setActiveTab(3)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <UserRoundSearch size={16} /> <span className="vtw-tab-full">Theo dõi Đối thủ (Tracking)</span><span className="vtw-tab-short">Tracking</span>
+            <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
           </button>
           <button 
             onClick={() => setActiveTab(4)}
-            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <Video size={16} /> <span className="vtw-tab-full">Kiểm tra Link Video</span><span className="vtw-tab-short">Video</span>
+            <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
           </button>
           <button 
             onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 Tìm ngách Youtube</span><span className="vtw-tab-short">Ngách</span>
+            <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 TÌM NGÁCH YOUTUBE</span><span className="vtw-tab-short">Ngách</span>
           </button>
         </div>
 
@@ -4243,11 +4293,13 @@ ${topKeywordsStr}`;
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] w-10 text-center">STT</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tên Kênh</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Mã Kênh</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Ngách/Kênh</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Chủ đề</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Thu nhập ($)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử Sub (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng Sub/Ngày</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử View (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng View/Ngày</th>
-                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] bg-blue-50/50 !text-black">Đánh giá</th>
                       <th className="px-2 py-1 font-normal text-[11px] text-center w-12">XÓA</th>
                     </tr>
                   </thead>
@@ -4304,6 +4356,15 @@ ${topKeywordsStr}`;
                             <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </td>
+                        <td className="px-2 py-1 text-left text-blue-700 font-bold bg-blue-50/40">
+                          {c.keywordTitle || getTrackingKeywordFromApiItem({ snippet: { title: c.name } }, c.name)}
+                        </td>
+                        <td className="px-2 py-1 text-left font-bold text-purple-700 bg-purple-50/30">
+                          {c.topic || getTopicFromKeyword(c.keywordTitle || c.name)}
+                        </td>
+                        <td className="px-2 py-1 text-left font-bold text-emerald-700 bg-emerald-50/40 whitespace-nowrap">
+                          {c.income || estimateIncomeFromTracking(c.history[c.history.length - 1]?.views || 0, c.country)}
+                        </td>
                         <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-left">
                           <div className="flex flex-wrap gap-1 items-center justify-start">
                             {c.history.length > 1 ? (
@@ -4344,19 +4405,6 @@ ${topKeywordsStr}`;
                           </div>
                         </td>
                         <td className="px-2 py-1 text-left font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
-                        <td className="px-2 py-1 text-[10px] text-left">
-                          {(() => {
-                            const viewsGrowthStr = getGrowth(c.history, 'views').replace('+', '');
-                            const viewsGrowthNum = parseInt(viewsGrowthStr.replace(/,/g, '')) || 0;
-                            return (
-                              <div className="flex flex-col items-start">
-                                <span className={`px-2 py-0.5 rounded text-white font-bold whitespace-nowrap text-[9px] shadow-sm ${viewsGrowthNum > 10000 ? 'bg-red-600' : viewsGrowthNum > 1000 ? 'bg-orange-600' : 'bg-emerald-600'}`}>
-                                  {viewsGrowthNum > 10000 ? '🔥 TĂNG TRƯỞNG MẠNH' : viewsGrowthNum > 1000 ? '⚡ TĂNG TRƯỞNG TỐT' : '📈 DỮ LIỆU ỔN ĐỊNH'}
-                                </span>
-                              </div>
-                            );
-                          })()}
-                        </td>
                         <td className="px-2 py-1 text-left">
                              <button 
                                type="button"
