@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Cấu hình thanh toán & SMTP - Văn Thế Web</title>
   <style>
+<<<<<<< HEAD
     :root{--bg:#eef4ff;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#dbe5f3;--blue:#2563eb;--teal:#0f766e;--orange:#f97316;--red:#dc2626;--shadow:0 10px 30px rgba(15,23,42,.08)}
     *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#edf5ff,#f7faff);font-family:Arial,"Helvetica Neue",sans-serif;color:var(--text)}
     .wrap{max-width:1360px;margin:0 auto;padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
@@ -32,10 +33,77 @@
     <div class="login-grid">
       <div><label>Mật khẩu quản trị</label><div class="row-pass"><input id="adminPassword" type="password" placeholder="Nhập ADMIN_SETTINGS_PASSWORD trên Vercel"><button class="eye" type="button" data-eye="adminPassword">👁</button></div><div class="hint">Trình duyệt chỉ giữ tạm bằng localStorage để tiện thao tác.</div></div>
       <div class="actions" style="margin:0"><button id="btnLoad" class="blue" type="button" onclick="loadSettings()">Tải cấu hình</button><button class="ghost" type="button" onclick="copyWebhookUrl()">Copy Webhook URL</button></div>
+=======
+    :root{--bg:#f3f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--line:#e2e8f0;--blue:#2563eb;--teal:#0f766e;--orange:#f97316}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,"Helvetica Neue",sans-serif;color:var(--text)}
+    .wrap{max-width:1160px;margin:0 auto;padding:24px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
+    h1{font-size:28px;margin:0;font-weight:900}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 30px rgba(15,23,42,.06);overflow:hidden;margin-bottom:18px}
+    .card h2{font-size:22px;margin:0;padding:18px 22px;border-bottom:1px solid var(--line);font-weight:900;display:flex;gap:10px;align-items:center}
+    .body{padding:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.full{grid-column:1/-1}
+    label{font-weight:800;font-size:14px;display:block;margin-bottom:7px}
+    input,select,textarea{width:100%;border:1px solid #d7dde8;border-radius:12px;padding:13px 14px;font-size:15px;background:#fff;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    textarea{min-height:90px;resize:vertical}.row-pass{display:flex}.row-pass input{border-radius:12px 0 0 12px}
+    .eye{width:58px;border:1px solid #d7dde8;border-left:0;border-radius:0 12px 12px 0;background:#fff;cursor:pointer;font-size:18px}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45}
+    .example{font-family:Consolas,monospace;background:#f8fafc;border:1px solid var(--line);padding:9px 10px;border-radius:10px;color:#334155;margin-top:6px;font-size:12px;overflow:auto}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+    button,.btn{border:0;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .primary{background:var(--teal);color:#fff}.blue{background:var(--blue);color:#fff}.orange{background:var(--orange);color:#fff}.ghost{background:#eef2ff;color:#1e40af;border:1px solid #bfdbfe}
+    .status{margin-top:14px;padding:12px 14px;border-radius:12px;font-weight:800;display:none}.ok{display:block;background:#ecfdf5;color:#047857;border:1px solid #86efac}.err{display:block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+    .warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:13px 14px;border-radius:14px;font-size:13px;font-weight:700;line-height:1.5;margin-bottom:18px}
+    .help{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;line-height:1.6}.help h3{margin:0 0 8px;font-size:18px}.help ol{margin:8px 0 0 20px;padding:0}
+    .pill{font-size:12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:6px 10px;border-radius:999px;font-weight:900}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.wrap{padding:14px}h1{font-size:22px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div><h1>⚙️ Cấu hình thanh toán & SMTP</h1><div class="sub">Quản lý SePay, thông tin ngân hàng, webhook và email gửi thông báo thanh toán thành công.</div></div>
+      <span class="pill">/admin-settings.html</span>
+>>>>>>> parent of ec7ddce (smtp)
     </div>
-    <div id="topStatus" class="inline-status"></div>
+    <div class="warn">Bảo mật: không dán Webhook Secret, App Password Gmail vào code công khai. Trang này lưu cấu hình vào Firestore qua serverless API. Đặt biến môi trường <b>ADMIN_SETTINGS_PASSWORD</b> trên Vercel để bảo vệ trang.</div>
+
+    <div class="card"><h2>🔐 Đăng nhập quản trị</h2><div class="body"><div class="grid">
+      <div><label>Mật khẩu quản trị</label><div class="row-pass"><input id="adminPassword" type="password" placeholder="Nhập ADMIN_SETTINGS_PASSWORD trên Vercel" /><button class="eye" type="button" data-eye="adminPassword">👁</button></div><div class="hint">Trình duyệt chỉ giữ tạm bằng localStorage để tiện thao tác.</div></div>
+      <div style="display:flex;align-items:end;gap:10px"><button class="blue" type="button" onclick="loadSettings()">Tải cấu hình</button><button class="ghost" type="button" onclick="copyWebhookUrl()">Copy Webhook URL</button></div>
+    </div><div id="topStatus" class="status"></div></div></div>
+
+    <form id="settingsForm">
+      <div class="card"><h2>▣ SePay Thanh toán</h2><div class="body grid">
+        <div class="full"><label>API Key / Webhook Secret SePay</label><div class="row-pass"><input id="sepayWebhookSecret" type="password" autocomplete="new-password" placeholder="Để trống nếu không đổi secret đã lưu" /><button class="eye" type="button" data-eye="sepayWebhookSecret">👁</button></div><div class="hint">Vào SePay → Tích hợp Webhook → Bảo mật → chọn API Key → nhập key tùy ý → copy vào đây.</div><div class="example">Ví dụ: sep_live_xxxxxxxxx hoặc chuỗi bí mật anh tự đặt trong SePay</div></div>
+        <div><label>Tên chủ tài khoản</label><input id="bankOwner" placeholder="Ví dụ: LE VAN KHAI" /></div>
+        <div><label>Tên ngân hàng</label><input id="bankName" placeholder="Ví dụ: ACB" /></div>
+        <div><label>Số tài khoản</label><input id="bankAccount" placeholder="Ví dụ: 13131447" /></div>
+        <div><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH" /><div class="hint">Nội dung thanh toán sẽ có dạng: RESEARCH + mã đơn.</div></div>
+        <div><label>Webhook URL copy vào SePay</label><input id="webhookUrl" readonly /><div class="hint">Copy URL này dán vào SePay để nhận thông báo giao dịch tự động.</div></div>
+        <div><label>Base URL công cụ</label><input id="appBaseUrl" placeholder="https://research.vanthemmo.com" /></div>
+        <div class="full"><label>Gói Premium / Pro</label><textarea id="plansJson" spellcheck="false"></textarea><div class="hint">Dạng JSON. Có thể đổi giá và số ngày ở đây.</div><div class="example">Ví dụ: [{"id":"3m","name":"Gói 3 tháng","amount":180000,"days":90},{"id":"6m","name":"Gói 6 tháng","amount":300000,"days":180},{"id":"1y","name":"Gói 1 năm","amount":500000,"days":365}]</div></div>
+        <div class="full actions"><button class="ghost" type="button" onclick="testWebhook()">Kiểm tra webhook</button></div>
+      </div></div>
+
+      <div class="card"><h2>✉️ Cấu hình Email SMTP</h2><div class="body grid">
+        <div><label>Email Gmail gửi mặc định</label><input id="smtpUser" placeholder="Ví dụ: vantheweb@gmail.com" /></div>
+        <div><label>App Password Gmail</label><div class="row-pass"><input id="smtpPass" type="password" autocomplete="new-password" placeholder="Để trống nếu không đổi App Password đã lưu" /><button class="eye" type="button" data-eye="smtpPass">👁</button></div><div class="hint">Dùng App Password 16 ký tự của Gmail, không dùng mật khẩu đăng nhập Gmail thường.</div></div>
+        <div><label>SMTP Host</label><input id="smtpHost" placeholder="smtp.gmail.com" /></div>
+        <div><label>SMTP Port</label><input id="smtpPort" type="number" placeholder="465" /></div>
+        <div><label>Bảo mật</label><select id="smtpSecure"><option value="ssl">SSL - Port 465</option><option value="tls">TLS - Port 587</option></select></div>
+        <div><label>Tên người gửi</label><input id="smtpFromName" placeholder="Văn Thế Web" /></div>
+        <div><label>Base URL website để mở mail</label><input id="emailBaseUrl" placeholder="https://research.vanthemmo.com" /></div>
+        <div><label>Email nhận test</label><input id="testEmail" placeholder="Nhập email để gửi thử" /></div>
+        <div class="full actions"><button class="primary" type="submit">Lưu cấu hình</button><button class="orange" type="button" onclick="sendTestEmail()">Gửi email test</button></div>
+      </div></div>
+    </form>
+
+    <div class="help"><h3>Hướng dẫn lấy App Password Gmail</h3><ol><li>Vào tài khoản Google → Bảo mật.</li><li>Bật xác minh 2 bước.</li><li>Vào App passwords / Mật khẩu ứng dụng.</li><li>Tạo mật khẩu cho ứng dụng Mail.</li><li>Copy chuỗi 16 ký tự dán vào ô App Password Gmail.</li></ol></div>
   </div>
 
+<<<<<<< HEAD
   <form id="settingsForm">
     <div class="columns">
       <div class="card">
@@ -257,6 +325,26 @@ sepayAutoFields.forEach(id => { const el = $(id); if (el) el.addEventListener('i
 smtpAutoFields.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => scheduleAutoSave('smtp')); if (el && el.tagName === 'SELECT') el.addEventListener('change', () => scheduleAutoSave('smtp')); });
 document.querySelectorAll('[data-eye]').forEach(btn => btn.addEventListener('click', () => { const el = $(btn.dataset.eye); el.type = el.type === 'password' ? 'text' : 'password'; }));
 $('settingsForm').addEventListener('submit', async (e) => { e.preventDefault(); await saveSettings('all'); });
+=======
+<script>
+const $ = (id) => document.getElementById(id);
+const origin = window.location.origin;
+$("webhookUrl").value = origin + "/api/sepay-webhook";
+document.querySelectorAll("[data-eye]").forEach(btn => btn.addEventListener("click", () => { const el = $(btn.dataset.eye); el.type = el.type === "password" ? "text" : "password"; }));
+function password(){ const p=$("adminPassword").value.trim(); if(p) localStorage.setItem("ADMIN_SETTINGS_PASSWORD_CACHE",p); return p || localStorage.getItem("ADMIN_SETTINGS_PASSWORD_CACHE") || ""; }
+$("adminPassword").value = localStorage.getItem("ADMIN_SETTINGS_PASSWORD_CACHE") || "";
+function show(id,msg,type="ok"){ const el=$(id); el.className="status "+(type==="err"?"err":"ok"); el.textContent=msg; }
+function safeParsePlans(){ try{ const plans=JSON.parse($("plansJson").value||"[]"); if(!Array.isArray(plans)) throw new Error("Plans phải là mảng JSON"); return plans; }catch(e){ throw new Error("JSON gói Pro không hợp lệ: "+e.message); } }
+async function api(path,options={}){ const res=await fetch(path,{...options,headers:{"Content-Type":"application/json",...(options.headers||{})}}); const data=await res.json().catch(()=>({})); if(!res.ok||data.success===false) throw new Error(data.message||"Lỗi API"); return data; }
+async function loadSettings(){ try{ const data=await api("/api/admin-settings?password="+encodeURIComponent(password())); const s=data.settings||{}, sepay=s.sepay||{}, smtp=s.smtp||{};
+$("bankOwner").value=sepay.bankOwner||"";$("bankName").value=sepay.bankName||"ACB";$("bankAccount").value=sepay.bankAccount||"";$("paymentPrefix").value=sepay.paymentPrefix||"RESEARCH";$("appBaseUrl").value=sepay.appBaseUrl||origin;$("webhookUrl").value=sepay.webhookUrl||(origin+"/api/sepay-webhook");
+$("plansJson").value=JSON.stringify(sepay.plans||[{id:"3m",name:"Gói 3 tháng",amount:180000,days:90},{id:"6m",name:"Gói 6 tháng",amount:300000,days:180},{id:"1y",name:"Gói 1 năm",amount:500000,days:365}],null,2);
+$("smtpUser").value=smtp.user||"";$("smtpHost").value=smtp.host||"smtp.gmail.com";$("smtpPort").value=smtp.port||465;$("smtpSecure").value=smtp.secure===false?"tls":"ssl";$("smtpFromName").value=smtp.fromName||"Văn Thế Web";$("emailBaseUrl").value=smtp.baseUrl||origin; show("topStatus","Đã tải cấu hình."); }catch(e){ show("topStatus",e.message,"err"); } }
+$("settingsForm").addEventListener("submit",async(e)=>{ e.preventDefault(); try{ const payload={password:password(),sepay:{webhookSecret:$("sepayWebhookSecret").value.trim(),bankOwner:$("bankOwner").value.trim(),bankName:$("bankName").value.trim(),bankAccount:$("bankAccount").value.trim(),paymentPrefix:$("paymentPrefix").value.trim()||"RESEARCH",webhookUrl:$("webhookUrl").value.trim(),appBaseUrl:$("appBaseUrl").value.trim()||origin,plans:safeParsePlans()},smtp:{user:$("smtpUser").value.trim(),pass:$("smtpPass").value.trim(),host:$("smtpHost").value.trim()||"smtp.gmail.com",port:Number($("smtpPort").value||465),secure:$("smtpSecure").value==="ssl",fromName:$("smtpFromName").value.trim()||"Văn Thế Web",baseUrl:$("emailBaseUrl").value.trim()||origin}}; await api("/api/admin-settings",{method:"POST",body:JSON.stringify(payload)}); $("sepayWebhookSecret").value=""; $("smtpPass").value=""; show("topStatus","Đã lưu cấu hình thành công."); }catch(e){ show("topStatus",e.message,"err"); } });
+async function sendTestEmail(){ try{ await api("/api/test-email",{method:"POST",body:JSON.stringify({password:password(),to:$("testEmail").value.trim()||$("smtpUser").value.trim()})}); show("topStatus","Đã gửi email test."); }catch(e){ show("topStatus",e.message,"err"); } }
+async function testWebhook(){ try{ const data=await api("/api/admin-settings?password="+encodeURIComponent(password())); show("topStatus",data.settings?.sepay?.webhookUrl?"Webhook URL đã sẵn sàng: "+data.settings.sepay.webhookUrl:"Chưa có Webhook URL."); }catch(e){ show("topStatus",e.message,"err"); } }
+function copyWebhookUrl(){ navigator.clipboard.writeText($("webhookUrl").value||(origin+"/api/sepay-webhook")); show("topStatus","Đã copy Webhook URL."); }
+>>>>>>> parent of ec7ddce (smtp)
 loadSettings();
 </script>
 </body>
