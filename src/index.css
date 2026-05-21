@@ -3544,3 +3544,108 @@
     max-height: calc(100svh - 88px) !important;
   }
 }
+
+/* STEP 23 - Web/mobile result columns: keyword/topic/income + country full name + short URL */
+.vtw-results-table td:nth-child(5),
+.vtw-results-table td:nth-child(6),
+.vtw-results-table td:nth-child(7) {
+  white-space: normal !important;
+  line-height: 1.25 !important;
+}
+
+.vtw-results-table td:nth-child(8) a {
+  font-size: 9px !important;
+  display: inline-block !important;
+  max-width: 105px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.vtw-results-table td:nth-child(9) {
+  white-space: normal !important;
+  word-break: keep-all !important;
+  line-height: 1.25 !important;
+}
+
+@media (max-width: 900px) {
+  .vtw-results-table td:nth-child(1)::before { content: 'STT' !important; }
+  .vtw-results-table td:nth-child(2)::before { content: 'Icon' !important; }
+  .vtw-results-table td:nth-child(3)::before { content: 'Tên kênh' !important; }
+  .vtw-results-table td:nth-child(4)::before { content: 'Mã kênh' !important; }
+  .vtw-results-table td:nth-child(5)::before { content: 'Từ khóa/ngách' !important; }
+  .vtw-results-table td:nth-child(6)::before { content: 'Chủ đề' !important; }
+  .vtw-results-table td:nth-child(7)::before { content: 'Thu nhập ước tính' !important; }
+  .vtw-results-table td:nth-child(8)::before { content: 'URL' !important; }
+  .vtw-results-table td:nth-child(9)::before { content: 'Quốc gia' !important; }
+  .vtw-results-table td:nth-child(10)::before { content: 'Ngày tạo' !important; }
+  .vtw-results-table td:nth-child(11)::before { content: 'Tuổi kênh' !important; }
+  .vtw-results-table td:nth-child(12)::before { content: 'Sub' !important; }
+  .vtw-results-table td:nth-child(13)::before { content: 'Views' !important; }
+  .vtw-results-table td:nth-child(14)::before { content: 'Videos' !important; }
+  .vtw-results-table td:nth-child(15)::before { content: 'Điểm' !important; }
+  .vtw-results-table td:nth-child(16)::before { content: 'Thao tác' !important; }
+
+  .vtw-results-table td:nth-child(5),
+  .vtw-results-table td:nth-child(6),
+  .vtw-results-table td:nth-child(7),
+  .vtw-results-table td:nth-child(8),
+  .vtw-results-table td:nth-child(9) {
+    display: grid !important;
+    grid-template-columns: 120px minmax(0, 1fr) !important;
+    gap: 10px !important;
+    align-items: center !important;
+    min-height: 42px !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .vtw-results-table td:nth-child(8) a {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    font-size: 12px !important;
+  }
+
+  .vtw-results-table td:nth-child(16),
+  .vtw-results-table td:last-child {
+    display: block !important;
+  }
+
+  .vtw-results-table td:nth-child(16)::before,
+  .vtw-results-table td:last-child::before {
+    display: block !important;
+    margin-bottom: 8px !important;
+  }
+
+  .vtw-results-table td:nth-child(16) > .vtw-channel-actions,
+  .vtw-results-table td:last-child > .vtw-channel-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .vtw-results-table td:nth-child(16) button,
+  .vtw-results-table td:last-child button {
+    min-height: 42px !important;
+    width: 100% !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .vtw-results-table td:nth-child(16) > .vtw-channel-actions,
+  .vtw-results-table td:last-child > .vtw-channel-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .vtw-results-table td:nth-child(16) button,
+  .vtw-results-table td:last-child button {
+    font-size: 9px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+}

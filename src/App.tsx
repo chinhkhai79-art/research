@@ -722,6 +722,65 @@ export default function App() {
     return new Intl.NumberFormat('vi-VN').format(n);
   };
 
+
+  const REGION_NAME_MAP: Record<string, string> = REGIONS.reduce((acc, item) => {
+    if (item.code) acc[item.code] = item.name.replace(/\s*\([^)]*\)/g, '').trim();
+    return acc;
+  }, {} as Record<string, string>);
+
+  const getCountryFullName = (code?: string) => {
+    const normalized = String(code || '').trim().toUpperCase();
+    if (!normalized || normalized === 'N/A') return 'Không rõ';
+    return REGION_NAME_MAP[normalized] || normalized;
+  };
+
+  const cleanTrendKeyword = (value?: string) => {
+    const raw = String(value || '').trim();
+    if (!raw) return 'Tự động theo khu vực';
+    const autoMatch = raw.match(/Auto\s+[^·]+·\s*([^·]+)(?:·|$)/i);
+    const keyword = (autoMatch ? autoMatch[1] : raw)
+      .replace(/^tự động:\s*/i, '')
+      .replace(/\s*·\s*VPH.*$/i, '')
+      .trim();
+    return keyword || 'Tự động theo khu vực';
+  };
+
+  const getChannelTrendKeyword = (channel: ChannelResult) => cleanTrendKeyword(channel.keywordTitle);
+
+  const getTopicFromKeyword = (keyword: string) => {
+    const normalized = normalizeHunterKeyword(keyword);
+    const found = SUGGESTED_NICHES.find(group =>
+      group.items.some(item => normalized.includes(normalizeHunterKeyword(item)) || normalizeHunterKeyword(item).includes(normalized))
+    );
+    if (found) return found.category.replace(/&/g, 'và');
+    if (/ai|chatgpt|gemini|video|tool|cong cu|công cụ|automation|youtube|seo/i.test(normalized)) return 'Công nghệ và AI';
+    if (/tien|tiền|dau tu|đầu tư|crypto|chung khoan|chứng khoán|tai chinh|tài chính/i.test(normalized)) return 'Tài chính và đầu tư';
+    if (/game|gaming|lol|lien minh|liên minh|tiktok|short/i.test(normalized)) return 'Gaming và giải trí';
+    return 'Chủ đề theo ngách hot';
+  };
+
+  const estimateIncomeFromApiViews = (channel: ChannelResult) => {
+    // YouTube Data API v3 không trả thu nhập thật. Mục này ước tính dựa trên view thật từ API × RPM tham khảo theo quốc gia.
+    const views = Number(channel.views || 0);
+    const country = String(channel.country || '').toUpperCase();
+    const rpmByCountry: Record<string, [number, number]> = {
+      US: [1.5, 5], GB: [1.2, 4], CA: [1.2, 4], AU: [1.2, 4], DE: [0.9, 3], FR: [0.7, 2.5],
+      JP: [0.6, 2], KR: [0.5, 1.8], VN: [0.08, 0.45], TH: [0.08, 0.45], ID: [0.05, 0.35], PH: [0.05, 0.35], IN: [0.04, 0.3]
+    };
+    const [low, high] = rpmByCountry[country] || [0.08, 0.8];
+    const lowUsd = Math.round((views / 1000) * low);
+    const highUsd = Math.round((views / 1000) * high);
+    if (views <= 0) return 'Đang cập nhật';
+    return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
+  };
+
+  const formatChannelUrlShort = (url?: string, id?: string) => {
+    const channelId = String(id || '').trim();
+    if (channelId) return `.../${channelId.slice(-10)}`;
+    const raw = String(url || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+    return raw.length > 28 ? raw.slice(0, 25) + '...' : raw;
+  };
+
   const dedupeChannelResults = (items: ChannelResult[]) => {
     const seen = new Set<string>();
     const next: ChannelResult[] = [];
@@ -2376,6 +2435,9 @@ ${topKeywordsStr}`;
         content += `   Đường dẫn: ${r.url}\n`;
         content += `   Thông tin: ${r.country || 'N/A'} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
         content += `   Chỉ số: ${formatVNNumber(r.subs)} Subs | ${formatVNNumber(r.views)} Views | ${formatVNNumber(r.videos)} Videos\n`;
+        content += `   Từ khóa/ngách: ${getChannelTrendKeyword(r)}\n`;
+        content += `   Chủ đề: ${getTopicFromKeyword(getChannelTrendKeyword(r))}\n`;
+        content += `   Thu nhập ước tính: ${estimateIncomeFromApiViews(r)}\n`;
         content += `   Đánh giá: ĐIỂM SEO [${r.score}]\n`;
         content += '--------------------------------------------------\n';
       });
@@ -3350,27 +3412,30 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
                   <div className="vtw-results-table-wrap flex-1 overflow-auto bg-white">
-                    <table className="vtw-results-table w-full text-left border-collapse min-w-[1300px]">
+                    <table className="vtw-results-table w-full text-left border-collapse min-w-[1580px]">
                       <thead className="bg-[#ecf0f1] border-b border-[#bdc3c7] sticky top-0 z-20 shadow-sm text-black">
                         <tr>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] w-10 text-center">STT</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] w-12 text-center">ICON</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[180px]">TÊN KÊNH</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px]">MÃ KÊNH</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[150px]">URL</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-16">QG</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[150px] text-blue-800">TỪ KHÓA/NGÁCH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[135px] text-purple-800">CHỦ ĐỀ</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px] text-emerald-700">THU NHẬP ƯỚC TÍNH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[110px]">URL</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center min-w-[88px]">QUỐC GIA</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-28">NGÀY TẠO</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-24">TUỔI KÊNH (NGÀY)</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-24">SUB</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-28">VIEWS</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-20">VIDEOS</th>
                           <th className="px-2 py-2 font-bold text-[11px] text-center w-24 text-orange-600">★ ĐIỂM NGÁCH</th>
-                          <th className="px-2 py-2 font-bold text-[11px] text-center w-16">XÓA</th>
+                          <th className="px-2 py-2 font-bold text-[11px] text-center min-w-[150px]">THAO TÁC</th>
                         </tr>
                       </thead>
                       <tbody>
                         {results.length === 0 && (
-                          <tr><td colSpan={13} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu săn kênh" để bắt đầu...</td></tr>
+                          <tr><td colSpan={16} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu săn kênh" để bắt đầu...</td></tr>
                         )}
                         {results.map((r, i) => (
                           <tr 
@@ -3382,9 +3447,12 @@ ${topKeywordsStr}`;
                             <td className="px-2 py-1 text-center font-mono text-gray-400 border-r border-[#ddd] w-10">{i + 1}</td>
                             <td className="px-2 py-1 text-center"><img src={r.icon} className="w-7 h-7 rounded-full border border-[#ccc] mx-auto shadow-sm" /></td>
                             <td className="px-2 py-1 font-bold whitespace-nowrap overflow-hidden text-ellipsis text-black">{r.name}</td>
-                            <td className="px-2 py-1 text-[10px] font-mono text-[#7f8c8d]">{r.id}</td>
-                            <td className="px-2 py-1 text-[10px] text-blue-600 underline truncate hover:text-blue-800"><a href={r.url} target="_blank" rel="noreferrer">{r.url}</a></td>
-                            <td className="px-2 py-1 text-center font-bold text-gray-600">{r.country}</td>
+                            <td className="px-2 py-1 text-[10px] font-mono text-[#7f8c8d] break-all">{r.id}</td>
+                            <td className="px-2 py-1 text-[10px] font-bold text-blue-800 bg-blue-50 max-w-[160px] whitespace-normal">{getChannelTrendKeyword(r)}</td>
+                            <td className="px-2 py-1 text-[10px] font-bold text-purple-800 bg-purple-50 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
+                            <td className="px-2 py-1 text-[10px] font-black text-emerald-700 bg-emerald-50 whitespace-nowrap" title="Ước tính từ views thật của YouTube Data API v3 × RPM tham khảo, không phải doanh thu thật YouTube trả.">{estimateIncomeFromApiViews(r)}</td>
+                            <td className="px-2 py-1 text-[9px] text-blue-600 underline hover:text-blue-800 max-w-[110px]"><a href={r.url} target="_blank" rel="noreferrer" title={r.url}>{formatChannelUrlShort(r.url, r.id)}</a></td>
+                            <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryFullName(r.country)}</td>
                             <td className="px-2 py-1 text-center text-gray-500 whitespace-nowrap">{r.publishedAt}</td>
                             <td className="px-2 py-1 text-right text-green-700 font-medium">{formatVNNumber(r.age)}</td>
                             <td className="px-2 py-1 text-right text-black font-bold">{formatVNNumber(r.subs)}</td>
