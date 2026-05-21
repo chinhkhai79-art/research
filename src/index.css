@@ -3842,3 +3842,100 @@
     font-size: 13px !important;
   }
 }
+
+
+/* STEP 26 - đồng bộ giao diện nhập số, sửa thumbnail web và chống kẹt khi để trống ngách */
+.vtw-range-box,
+.vtw-sub-range {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  padding: 10px 12px !important;
+}
+.vtw-range-box .text-gray-200,
+.vtw-range-box span,
+.vtw-sub-range span,
+.vtw-sub-range label,
+.vtw-range-box label {
+  color: #0f172a !important;
+}
+.vtw-range-box .text-blue-400,
+.vtw-sub-range .text-blue-700 {
+  color: #2563eb !important;
+}
+.vtw-range-manual-note,
+.vtw-range-manual-note-light {
+  background: #eaf2ff !important;
+  color: #1d4ed8 !important;
+  border: 1px dashed #93c5fd !important;
+  border-radius: 8px !important;
+  padding: 7px 10px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+}
+.vtw-range-number,
+.vtw-range-number-light,
+.vtw-range-number-niche {
+  background: #fff !important;
+  color: #111827 !important;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 8px !important;
+  min-height: 34px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 7px 9px !important;
+}
+/* Desktop: thumbnail trong tab Ngách phải đều và lớn lại */
+@media (min-width: 901px) {
+  .vtw-niche-video-card .relative.aspect-video {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 168px !important;
+    border-radius: 14px 14px 0 0 !important;
+    overflow: hidden !important;
+  }
+  .vtw-niche-video-card .relative.aspect-video img,
+  .vtw-niche-video-card img[src*="ytimg"] {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .vtw-niche-top-video > div:first-child {
+    width: 180px !important;
+    min-width: 180px !important;
+    height: 102px !important;
+  }
+}
+/* Đồng bộ cột mới trên bảng web */
+.vtw-results-table th,
+.vtw-results-table td {
+  color: #111827 !important;
+}
+.vtw-results-table td:nth-child(5),
+.vtw-results-table td:nth-child(6),
+.vtw-results-table td:nth-child(7) {
+  background: transparent !important;
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+.vtw-results-table th:nth-child(5),
+.vtw-results-table th:nth-child(6),
+.vtw-results-table th:nth-child(7) {
+  background: #ecf0f1 !important;
+  color: #111827 !important;
+}
+/* Mobile vẫn giữ card, nhưng các ô nhập số đồng bộ */
+@media (max-width: 900px) {
+  .vtw-range-box,
+  .vtw-sub-range {
+    background: #ffffff !important;
+  }
+  .vtw-range-number,
+  .vtw-range-number-light,
+  .vtw-range-number-niche {
+    min-height: 42px !important;
+    font-size: 15px !important;
+  }
+}

@@ -1447,10 +1447,11 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
   };
 
     const runNicheResearch = async (customKeyword?: string) => {
-    const kw = customKeyword || nicheInput;
-    if (!kw.trim()) {
-      alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
-      return;
+    let kw = (customKeyword || nicheInput || '').trim();
+    if (!kw) {
+      const autoSeeds = diversifySeedsByTopic(shuffleList(getAutoHuntSeeds(nicheRegion || config.region || 'VN')));
+      kw = autoSeeds[0] || 'ai tools';
+      setNicheInput(kw);
     }
 
     if (config.apiKeys.length === 0) {
@@ -1459,7 +1460,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     }
 
     setIsNicheSearching(true);
-    setStatus(`Đang nghiên cứu ngách: ${kw}...`);
+    setStatus(`${(customKeyword || nicheInput || '').trim() ? 'Đang nghiên cứu ngách' : 'Tự động chọn ngách theo khu vực/thời gian'}: ${kw}...`);
     
     try {
       // 1. Search videos
@@ -2242,7 +2243,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
           addedChannelIds.add(candidateChannelId);
 
           const channel = candidate.channel;
-          const autoSeedKey = getTopicFromKeyword(searchKeyword).toLowerCase();
+          const autoSeedKey = normalizeHunterKeyword(searchKeyword).slice(0, 48);
           if (isAutoHunt && usedAutoSeedTopics.has(autoSeedKey)) continue;
           const scoreText = isAutoHunt
             ? (candidate.rankScore / 10).toFixed(1)
@@ -4273,21 +4274,21 @@ ${topKeywordsStr}`;
                     <label className="text-[9px] uppercase font-bold text-[#95a5a6] flex justify-between">
                       Số lượng phân tích <span>{nicheVideoCount} items</span>
                     </label>
-                    <input 
-                      type="range"
-                      min="10"
-                      max="100"
-                      step="10"
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={10}
+                      max={100}
+                      step={10}
                       value={nicheVideoCount}
-                      onChange={(e) => setNicheVideoCount(parseInt(e.target.value))}
-                      className="w-full accent-blue-500 cursor-pointer"
+                      onChange={(e) => {
+                        const value = Math.max(10, Math.min(100, parseRangeNumber(e.target.value, 20)));
+                        setNicheVideoCount(value);
+                      }}
+                      className="vtw-range-number vtw-range-number-niche"
+                      placeholder="10 - 100"
                     />
-                    <div className="flex justify-between text-[8px] text-[#7f8c8d] px-1 font-bold">
-                       <span>10</span>
-                       <span>30</span>
-                       <span>50</span>
-                       <span>100</span>
-                    </div>
+                    <div className="text-[8px] text-[#7f8c8d] px-1 font-bold">Nhập số thủ công từ 10 đến 100 items</div>
                   </div>
 
                   <div className="space-y-2 mt-2">
