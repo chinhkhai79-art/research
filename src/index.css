@@ -4238,281 +4238,97 @@
   margin-top: 8px !important;
 }
 
-/* STEP_34_FINAL: range thật, kéo giữ được và chỉ nhảy theo bội số 10 từ App.tsx */
-.vtw-real-range,
-.vtw-single-range-input,
-.vtw-compact-range-input,
-.vtw-niche-slider,
-.vtw-range-box input[type="range"],
-.vtw-single-range-box input[type="range"],
-.vtw-compact-filter-box input[type="range"] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  height: 34px !important;
-  padding: 0 !important;
-  margin: 8px 0 0 !important;
-  border: 0 !important;
-  outline: none !important;
-  opacity: 1 !important;
-  background: transparent !important;
-  cursor: grab !important;
-  pointer-events: auto !important;
-  touch-action: none !important;
-  position: relative !important;
-  z-index: 30 !important;
+/* STEP 37 - Drag thật cho bộ lọc: không dùng input range, không click-jump cứng đầu */
+.vtw-drag-range-box {
+  background: #ffffff !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 18px !important;
+  padding: 18px 20px 20px !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06) !important;
+  min-height: 128px !important;
 }
-.vtw-real-range:active,
-.vtw-single-range-input:active,
-.vtw-compact-range-input:active,
-.vtw-niche-slider:active,
-.vtw-range-box input[type="range"]:active {
+.vtw-drag-range-box .vtw-compact-filter-title {
+  color: #0f172a !important;
+  font-size: 18px !important;
+  font-weight: 900 !important;
+}
+.vtw-drag-range-box .vtw-compact-filter-value {
+  color: #2563eb !important;
+  font-size: 22px !important;
+  font-weight: 950 !important;
+}
+.vtw-drag-slider {
+  position: relative !important;
+  width: 100% !important;
+  height: 38px !important;
+  margin-top: 18px !important;
+  cursor: grab !important;
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  outline: none !important;
+}
+.vtw-drag-slider:active {
   cursor: grabbing !important;
 }
-.vtw-real-range::-webkit-slider-runnable-track,
-.vtw-single-range-input::-webkit-slider-runnable-track,
-.vtw-compact-range-input::-webkit-slider-runnable-track,
-.vtw-niche-slider::-webkit-slider-runnable-track,
-.vtw-range-box input[type="range"]::-webkit-slider-runnable-track {
-  height: 8px !important;
+.vtw-drag-slider-track,
+.vtw-drag-slider-fill {
+  position: absolute !important;
+  left: 0 !important;
+  top: 50% !important;
+  height: 10px !important;
+  transform: translateY(-50%) !important;
   border-radius: 999px !important;
-  background: #dbeafe !important;
-  border: 0 !important;
+  pointer-events: none !important;
 }
-.vtw-real-range::-webkit-slider-thumb,
-.vtw-single-range-input::-webkit-slider-thumb,
-.vtw-compact-range-input::-webkit-slider-thumb,
-.vtw-niche-slider::-webkit-slider-thumb,
-.vtw-range-box input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  width: 24px !important;
-  height: 24px !important;
-  margin-top: -8px !important;
-  border-radius: 999px !important;
-  background: #2f86ff !important;
-  border: 3px solid #ffffff !important;
-  box-shadow: 0 2px 10px rgba(47, 134, 255, .45) !important;
-  cursor: grab !important;
-  pointer-events: auto !important;
-}
-.vtw-real-range::-moz-range-track,
-.vtw-single-range-input::-moz-range-track,
-.vtw-compact-range-input::-moz-range-track,
-.vtw-niche-slider::-moz-range-track,
-.vtw-range-box input[type="range"]::-moz-range-track {
-  height: 8px !important;
-  border-radius: 999px !important;
-  background: #dbeafe !important;
-  border: 0 !important;
-}
-.vtw-real-range::-moz-range-thumb,
-.vtw-single-range-input::-moz-range-thumb,
-.vtw-compact-range-input::-moz-range-thumb,
-.vtw-niche-slider::-moz-range-thumb,
-.vtw-range-box input[type="range"]::-moz-range-thumb {
-  width: 24px !important;
-  height: 24px !important;
-  border-radius: 999px !important;
-  background: #2f86ff !important;
-  border: 3px solid #ffffff !important;
-  box-shadow: 0 2px 10px rgba(47, 134, 255, .45) !important;
-  cursor: grab !important;
-}
-.vtw-compact-filter-box,
-.vtw-single-range-box {
-  overflow: visible !important;
-}
-.vtw-channel-actions .vtw-delete-action span,
-.vtw-results-table .vtw-delete-action span {
-  display: none !important;
-}
-
-
-/* STEP_35_LIGHT_FILTERS_20260521
-   Xóa thanh trượt cứng đầu trong bộ lọc video/đối thủ; đổi sang giao diện sáng nhập số Min/Max. */
-.vtw-filter-panel-light {
-  background: #ffffff !important;
-  color: #0f172a !important;
-}
-.vtw-filter-panel-light .text-white { color: #0f172a !important; }
-.vtw-filter-panel-light .text-gray-300 { color: #2563eb !important; }
-.vtw-filter-card-light {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
-  border: 1px solid #dbeafe !important;
-  border-radius: 16px !important;
-  padding: 14px !important;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06) !important;
-}
-.vtw-filter-card-head-light {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: flex-start !important;
-  gap: 12px !important;
-  margin-bottom: 12px !important;
-}
-.vtw-filter-card-title-light {
-  font-size: 13px !important;
-  font-weight: 900 !important;
-  color: #0f172a !important;
-  line-height: 1.2 !important;
-}
-.vtw-filter-card-sub-light {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  color: #64748b !important;
-  margin-top: 2px !important;
-}
-.vtw-filter-card-value-light {
-  font-size: 13px !important;
-  font-weight: 900 !important;
-  color: #2563eb !important;
-  white-space: nowrap !important;
-  font-variant-numeric: tabular-nums !important;
-}
-.vtw-filter-card-inputs-light {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 10px !important;
-}
-.vtw-filter-card-inputs-light label {
-  display: grid !important;
-  gap: 5px !important;
-  min-width: 0 !important;
-}
-.vtw-filter-card-inputs-light span {
-  font-size: 10px !important;
-  font-weight: 900 !important;
-  color: #64748b !important;
-  text-transform: uppercase !important;
-}
-.vtw-filter-card-inputs-light input {
+.vtw-drag-slider-track {
   width: 100% !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  border: 1px solid #bfdbfe !important;
-  border-radius: 10px !important;
-  background: #ffffff !important;
-  color: #0f172a !important;
-  font-size: 13px !important;
-  font-weight: 900 !important;
-  padding: 0 10px !important;
-  outline: none !important;
+  background: #dbeafe !important;
 }
-.vtw-filter-card-inputs-light input:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59,130,246,.12) !important;
+.vtw-drag-slider-fill {
+  background: linear-gradient(90deg, #2563eb, #38bdf8) !important;
 }
-.vtw-delete-action {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+.vtw-drag-slider-thumb {
+  position: absolute !important;
+  top: 50% !important;
   width: 30px !important;
-  min-width: 30px !important;
   height: 30px !important;
-  font-size: 0 !important;
-}
-.vtw-delete-action svg {
-  width: 16px !important;
-  height: 16px !important;
-}
-@media (max-width: 768px) {
-  .vtw-filter-panel-light {
-    padding: 12px !important;
-  }
-  .vtw-filter-card-light {
-    padding: 12px !important;
-  }
-  .vtw-filter-card-head-light {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 4px !important;
-  }
-  .vtw-filter-card-value-light {
-    font-size: 12px !important;
-  }
-}
-
-/* STEP_36_SINGLE_SLIDER_FILTERS_20260521
-   Bỏ ô nhập Min/Max trong bộ lọc; dùng 1 thanh trượt thật, kéo trái/phải tiện hơn. */
-.vtw-filter-card-slider-only {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
-  border: 1px solid #dbeafe !important;
-  border-radius: 18px !important;
-  padding: 16px 18px !important;
-  overflow: visible !important;
-}
-.vtw-filter-card-slider-only .vtw-filter-card-head-light {
-  margin-bottom: 14px !important;
-}
-.vtw-filter-single-range {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  display: block !important;
-  width: 100% !important;
-  height: 34px !important;
-  padding: 0 !important;
-  margin: 4px 0 0 !important;
-  border: 0 !important;
-  outline: none !important;
-  opacity: 1 !important;
-  background: transparent !important;
-  cursor: grab !important;
-  pointer-events: auto !important;
-  touch-action: pan-y !important;
-  position: relative !important;
-  z-index: 20 !important;
-}
-.vtw-filter-single-range:active { cursor: grabbing !important; }
-.vtw-filter-single-range::-webkit-slider-runnable-track {
-  height: 8px !important;
-  border-radius: 999px !important;
-  background: #dbeafe !important;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, .08) !important;
-}
-.vtw-filter-single-range::-webkit-slider-thumb {
-  -webkit-appearance: none !important;
-  width: 24px !important;
-  height: 24px !important;
-  margin-top: -8px !important;
+  transform: translate(-50%, -50%) !important;
   border-radius: 999px !important;
   background: #2f86ff !important;
-  border: 3px solid #ffffff !important;
-  box-shadow: 0 2px 10px rgba(47, 134, 255, .45) !important;
+  border: 4px solid #ffffff !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35), 0 0 0 1px rgba(37, 99, 235, 0.25) !important;
+  pointer-events: none !important;
 }
-.vtw-filter-single-range::-moz-range-track {
-  height: 8px !important;
-  border-radius: 999px !important;
-  background: #dbeafe !important;
+.vtw-drag-slider:focus .vtw-drag-slider-thumb {
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35), 0 0 0 5px rgba(37, 99, 235, 0.16) !important;
 }
-.vtw-filter-single-range::-moz-range-thumb {
-  width: 24px !important;
-  height: 24px !important;
-  border-radius: 999px !important;
-  background: #2f86ff !important;
-  border: 3px solid #ffffff !important;
-  box-shadow: 0 2px 10px rgba(47, 134, 255, .45) !important;
-}
-.vtw-filter-range-scale-light {
-  display: flex !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  margin-top: 6px !important;
+.vtw-drag-range-box .vtw-compact-range-scale {
   color: #64748b !important;
-  font-size: 11px !important;
-  font-weight: 900 !important;
-  font-variant-numeric: tabular-nums !important;
+  font-size: 13px !important;
+  margin-top: 10px !important;
 }
-.vtw-filter-card-slider-only .vtw-filter-card-inputs-light {
-  display: none !important;
+.vtw-drag-range-box .vtw-compact-range-scale span {
+  color: #64748b !important;
 }
-@media (max-width: 768px) {
-  .vtw-filter-card-slider-only {
-    padding: 14px !important;
+.vtw-delete-action span { display: none !important; }
+
+@media (max-width: 900px) {
+  .vtw-drag-range-box {
+    min-height: 118px !important;
+    padding: 16px !important;
   }
-  .vtw-filter-single-range {
-    height: 40px !important;
+  .vtw-drag-range-box .vtw-compact-filter-title {
+    font-size: 15px !important;
+  }
+  .vtw-drag-range-box .vtw-compact-filter-value {
+    font-size: 17px !important;
+  }
+  .vtw-drag-slider {
+    height: 42px !important;
+  }
+  .vtw-drag-slider-thumb {
+    width: 34px !important;
+    height: 34px !important;
   }
 }

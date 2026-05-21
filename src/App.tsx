@@ -109,7 +109,7 @@ interface TrackingChannel {
   icon?: string;
   topic?: string;
   nicheKeyword?: string;
-  estimatedIncomeText?: string;
+  estimatedIncome?: string;
   history: Array<{
     date: string;
     subs: number;
@@ -810,30 +810,6 @@ export default function App() {
     return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
   };
 
-  const getTrackingNiche = (channel: TrackingChannel) => channel.nicheKeyword || 'Chưa cập nhật';
-
-  const getTrackingTopic = (channel: TrackingChannel) => channel.topic || getTopicFromKeyword(getTrackingNiche(channel));
-
-  const getTrackingIncome = (channel: TrackingChannel) => {
-    if (channel.estimatedIncomeText) return channel.estimatedIncomeText;
-    const latest = channel.history?.[channel.history.length - 1];
-    if (!latest) return 'Đang cập nhật';
-    return estimateIncomeFromApiViews({
-      icon: channel.icon || '',
-      name: channel.name,
-      id: channel.id,
-      url: `https://youtube.com/channel/${channel.id}`,
-      country: 'VN',
-      publishedAt: '',
-      age: 0,
-      subs: latest.subs || 0,
-      views: latest.views || 0,
-      videos: latest.videos || 0,
-      score: '',
-      keywordTitle: channel.nicheKeyword || '',
-    });
-  };
-
   const formatChannelUrlShort = (url?: string, id?: string) => {
     const channelId = String(id || '').trim();
     if (channelId) return `.../${channelId.slice(-10)}`;
@@ -872,42 +848,86 @@ export default function App() {
     step: number;
     onChange: (min: number, max: number) => void;
   }) => {
-    // STEP_36: bỏ ô nhập Min/Max trong bộ lọc cứng đầu, dùng 1 thanh kéo thật.
-    // Bộ lọc luôn chạy từ absoluteMin đến giá trị đang kéo; không dùng số lẻ.
-    const normalizedStep = Math.max(10, Number(step || 10));
-    const snapToStep = (value: number) => {
-      const raw = Math.round(Number(value || 0) / normalizedStep) * normalizedStep;
-      return Math.max(absoluteMin, Math.min(raw, absoluteMax));
+    const sliderRef = useRef<HTMLDivElement>(null);
+    const safeStep = Math.max(10, Math.round((absoluteMax - absoluteMin) / 10));
+    const safeMax = Math.max(absoluteMin, Math.min(Number(max || 0), absoluteMax));
+    const percent = absoluteMax === absoluteMin ? 0 : ((safeMax - absoluteMin) / (absoluteMax - absoluteMin)) * 100;
+
+    const snapValue = (value: number) => {
+      const clamped = Math.max(absoluteMin, Math.min(value, absoluteMax));
+      const snapped = Math.round(clamped / safeStep) * safeStep;
+      return Math.max(absoluteMin, Math.min(snapped, absoluteMax));
     };
-    const safeMax = snapToStep(Number(max ?? absoluteMax));
-    const safeMin = absoluteMin;
-    const updateMax = (value: number) => {
-      const nextMax = snapToStep(value);
-      onChange(safeMin, nextMax);
+
+    const updateMaxOnly = (value: number) => {
+      onChange(absoluteMin, snapValue(value));
+    };
+
+    const updateFromPointer = (clientX: number) => {
+      const el = sliderRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      updateMaxOnly(absoluteMin + ratio * (absoluteMax - absoluteMin));
+    };
+
+    const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      updateFromPointer(event.clientX);
+    };
+
+    const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.buttons !== 1) return;
+      event.preventDefault();
+      updateFromPointer(event.clientX);
+    };
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        updateMaxOnly(safeMax - safeStep);
+      }
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        updateMaxOnly(safeMax + safeStep);
+      }
+      if (event.key === 'Home') {
+        event.preventDefault();
+        updateMaxOnly(absoluteMin);
+      }
+      if (event.key === 'End') {
+        event.preventDefault();
+        updateMaxOnly(absoluteMax);
+      }
     };
 
     return (
-      <div className="vtw-filter-card-light vtw-filter-card-slider-only">
-        <div className="vtw-filter-card-head-light">
-          <div>
-            <div className="vtw-filter-card-title-light">{title}</div>
-            <div className="vtw-filter-card-sub-light">{subtitle}</div>
-          </div>
-          <div className="vtw-filter-card-value-light">{formatVNNumber(safeMin)} → {formatVNNumber(safeMax)}</div>
+      <div className="vtw-range-box vtw-single-range-box vtw-compact-filter-box vtw-drag-range-box">
+        <div className="vtw-compact-filter-head">
+          <span className="vtw-compact-filter-title">{title}</span>
+          <span className="vtw-compact-filter-value">0 → {formatVNNumber(safeMax)}</span>
         </div>
-        <input
-          className="vtw-filter-single-range"
-          type="range"
-          min={absoluteMin}
-          max={absoluteMax}
-          step={normalizedStep}
-          value={safeMax}
-          onInput={(e) => updateMax(Number(e.currentTarget.value))}
-          onChange={(e) => updateMax(Number(e.currentTarget.value))}
-        />
-        <div className="vtw-filter-range-scale-light">
-          <span>{formatVNNumber(absoluteMin)}</span>
-          <span>{formatVNNumber(Math.round((absoluteMin + absoluteMax) / 2 / normalizedStep) * normalizedStep)}</span>
+        <div
+          ref={sliderRef}
+          className="vtw-drag-slider"
+          role="slider"
+          tabIndex={0}
+          aria-label={title}
+          aria-valuemin={absoluteMin}
+          aria-valuemax={absoluteMax}
+          aria-valuenow={safeMax}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onKeyDown={handleKeyDown}
+        >
+          <div className="vtw-drag-slider-track" />
+          <div className="vtw-drag-slider-fill" style={{ width: `${percent}%` }} />
+          <div className="vtw-drag-slider-thumb" style={{ left: `${percent}%` }} />
+        </div>
+        <div className="vtw-single-range-scale vtw-compact-range-scale">
+          <span>0</span>
+          <span>{formatVNNumber(Math.round(absoluteMax / 2))}</span>
           <span>{formatVNNumber(absoluteMax)}</span>
         </div>
       </div>
@@ -2813,9 +2833,9 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
-        nicheKeyword: getChannelTrendKeyword(channel),
         topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
-        estimatedIncomeText: estimateIncomeFromApiViews(channel),
+        nicheKeyword: getChannelTrendKeyword(channel),
+        estimatedIncome: estimateChannelIncome(channel.views, channel.country),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -2850,9 +2870,9 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
-        nicheKeyword: getChannelTrendKeyword(channel),
         topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
-        estimatedIncomeText: estimateIncomeFromApiViews(channel),
+        nicheKeyword: getChannelTrendKeyword(channel),
+        estimatedIncome: estimateChannelIncome(channel.views, channel.country),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -4288,9 +4308,9 @@ ${topKeywordsStr}`;
                             <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-[10px] font-bold text-gray-700 border-r border-[#eee]">{getTrackingTopic(c)}</td>
-                        <td className="px-2 py-1 text-[10px] font-bold text-gray-700 border-r border-[#eee]">{getTrackingNiche(c)}</td>
-                        <td className="px-2 py-1 text-[10px] font-black text-gray-800 border-r border-[#eee] whitespace-nowrap">{getTrackingIncome(c)}</td>
+                        <td className="px-2 py-1 text-[10px] font-bold text-slate-700 bg-slate-50/60">{c.topic || 'Chưa cập nhật'}</td>
+                        <td className="px-2 py-1 text-[10px] font-bold text-blue-700 bg-blue-50/40">{c.nicheKeyword || 'Chưa cập nhật'}</td>
+                        <td className="px-2 py-1 text-[10px] font-black text-emerald-700 bg-emerald-50/40 whitespace-nowrap">{c.estimatedIncome || 'Đang cập nhật'}</td>
                         <td className="px-2 py-1 text-[10px] bg-gray-50/50">
                           <div className="flex flex-wrap gap-1 items-center justify-center">
                             {c.history.length > 1 ? (
@@ -4434,9 +4454,8 @@ ${topKeywordsStr}`;
                       max={100}
                       step={10}
                       value={nicheVideoCount}
-                      onInput={(e) => setNicheVideoCount(parseInt(e.currentTarget.value, 10))}
                       onChange={(e) => setNicheVideoCount(parseInt(e.target.value, 10))}
-                      className="vtw-real-range vtw-niche-slider w-full accent-blue-500"
+                      className="vtw-niche-slider w-full accent-blue-500"
                     />
                     <div className="vtw-niche-range-scale vtw-count-scale text-[8px] text-[#95a5a6] font-bold">
                       <span style={{ left: '0%' }}>10</span>
@@ -4454,11 +4473,10 @@ ${topKeywordsStr}`;
                       type="range"
                       min={0}
                       max={10000000}
-                      step={10}
+                      step={1000}
                       value={nicheMaxSub}
-                      onInput={(e) => setNicheMaxSub(parseInt(e.currentTarget.value, 10) || 0)}
                       onChange={(e) => setNicheMaxSub(parseInt(e.target.value, 10) || 0)}
-                      className="vtw-real-range vtw-niche-slider w-full accent-blue-500"
+                      className="vtw-niche-slider w-full accent-blue-500"
                     />
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
                       <span style={{ left: '0%' }}>0</span>
@@ -4778,10 +4796,10 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
                     <div className="mb-6">
-                      <div className="vtw-filter-panel-light bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
                         <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-[#0f172a] font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
-                           <button onClick={() => setVideoFilters({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 })} className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
+                           <button onClick={() => setVideoFilters({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <RangeFilterBox
@@ -4791,7 +4809,7 @@ ${topKeywordsStr}`;
                             max={videoFilters.trendScoreMax}
                             absoluteMin={0}
                             absoluteMax={100}
-                            step={10}
+                            step={1}
                             onChange={(min, max) => setVideoFilters({ ...videoFilters, trendScoreMin: min, trendScoreMax: max })}
                           />
                           <RangeFilterBox
@@ -4801,7 +4819,7 @@ ${topKeywordsStr}`;
                             max={videoFilters.viewsMax}
                             absoluteMin={0}
                             absoluteMax={10000000}
-                            step={10}
+                            step={50000}
                             onChange={(min, max) => setVideoFilters({ ...videoFilters, viewsMin: min, viewsMax: max })}
                           />
                           <RangeFilterBox
@@ -4811,7 +4829,7 @@ ${topKeywordsStr}`;
                             max={videoFilters.vphMax}
                             absoluteMin={0}
                             absoluteMax={10000}
-                            step={10}
+                            step={50}
                             onChange={(min, max) => setVideoFilters({ ...videoFilters, vphMin: min, vphMax: max })}
                           />
                         </div>
@@ -4915,10 +4933,10 @@ ${topKeywordsStr}`;
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
                     <div className="mb-6">
-                      <div className="vtw-filter-panel-light bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
+                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
                         <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-[#0f172a] font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
-                           <button onClick={() => setChannelFilters({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 })} className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
+                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
+                           <button onClick={() => setChannelFilters({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <RangeFilterBox
@@ -4928,7 +4946,7 @@ ${topKeywordsStr}`;
                             max={channelFilters.subscribersMax}
                             absoluteMin={0}
                             absoluteMax={10000000}
-                            step={10}
+                            step={50000}
                             onChange={(min, max) => setChannelFilters({ ...channelFilters, subscribersMin: min, subscribersMax: max })}
                           />
                           <RangeFilterBox
@@ -4938,7 +4956,7 @@ ${topKeywordsStr}`;
                             max={channelFilters.viewsMax}
                             absoluteMin={0}
                             absoluteMax={10000000}
-                            step={10}
+                            step={50000}
                             onChange={(min, max) => setChannelFilters({ ...channelFilters, viewsMin: min, viewsMax: max })}
                           />
                           <RangeFilterBox
@@ -4948,7 +4966,7 @@ ${topKeywordsStr}`;
                             max={channelFilters.videosMax}
                             absoluteMin={0}
                             absoluteMax={10000}
-                            step={10}
+                            step={100}
                             onChange={(min, max) => setChannelFilters({ ...channelFilters, videosMin: min, videosMax: max })}
                           />
                         </div>
