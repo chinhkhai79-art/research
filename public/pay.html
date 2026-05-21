@@ -445,7 +445,7 @@
       document.getElementById("emailText").textContent = currentEmail || "---";
 
       document.getElementById("checkingBox").innerHTML =
-        "🔄 Đang tự động chờ SePay xác nhận...<br />Không cần bấm nút. Mã đang chờ: <b>" + currentContent + "</b>";
+        "🔄 Đang tự động chờ SePay xác nhận...<br />Vui lòng đợi màn hình thông báo xác nhận thành công.<br />Không cần bấm nút. Mã đang chờ: <b>" + currentContent + "</b>";
     }
 
     function copyContent() {
@@ -496,7 +496,7 @@
           activatePro(data);
         } else {
           document.getElementById("checkingBox").innerHTML =
-            "🔄 Đang tự động chờ SePay xác nhận...<br />Vui lòng đợi màn hình thông báo xác nhận thành công. Mã đang chờ: <b>" + currentContent + "</b>";
+            "🔄 Đang tự động chờ SePay xác nhận...<br />Vui lòng đợi màn hình thông báo xác nhận thành công.<br />Không cần bấm nút. Mã đang chờ: <b>" + currentContent + "</b>";
         }
       } catch (err) {
         document.getElementById("checkingBox").innerHTML =

@@ -4382,10 +4382,10 @@ ${topKeywordsStr}`;
                   <nav className="space-y-0.5">
                     {[
                       { id: 'summary', label: 'Dashboard Tổng quan', icon: Home },
-                      { id: 'keywords', label: 'Bản đồ Từ khóa', icon: LayoutGrid },
+                      { id: 'channels', label: 'Kênh/Ngách Trending', icon: Users },
                       { id: 'videos', label: 'Top Videos Trending', icon: BarChart3 },
                       { id: 'shorts', label: 'Khám phá Shorts', icon: Smartphone },
-                      { id: 'channels', label: 'Phân tích Đối thủ', icon: Users },
+                      { id: 'keywords', label: 'Bản đồ Từ khóa', icon: LayoutGrid },
                       { id: 'thumbnails', label: 'Mẫu Thumbnail', icon: Image },
                       { id: 'history', label: 'Lịch sử Nghiên cứu', icon: FolderClock },
                     ].map((item) => (
