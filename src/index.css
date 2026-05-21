@@ -4441,3 +4441,74 @@
   .vtw-tracking-table td:nth-child(10)::before { content: 'Tăng view/ngày' !important; }
   .vtw-tracking-table td:nth-child(11)::before { content: 'Xóa' !important; }
 }
+
+
+/* STEP_39_20260521
+   Tìm ngách mặc định Top Videos, đồng bộ tab, sửa ô tìm nhanh Tracking. */
+.vtw-tab-btn {
+  text-transform: uppercase !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Ép tab đang chọn dùng cùng màu xanh, kể cả tab Kiểm tra Link Video. */
+.vtw-tab-btn[class*="bg-[#e67e22]"],
+.vtw-tab-btn[class*="bg-[#3498db]"] {
+  background: #3498db !important;
+  color: #ffffff !important;
+  border-color: #2980b9 !important;
+}
+
+.vtw-tracking-toolbar {
+  align-items: stretch !important;
+}
+
+.vtw-tracking-toolbar > div:first-child {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.vtw-tracking-search-box {
+  width: 320px !important;
+  min-width: 260px !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  border-radius: 14px !important;
+  padding: 0 14px !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.10), inset 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+.vtw-tracking-search-box input {
+  height: 44px !important;
+  min-height: 44px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+.vtw-tracking-search-box input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+.vtw-tracking-toolbar button {
+  border-radius: 14px !important;
+}
+
+@media (max-width: 768px) {
+  .vtw-tab-btn {
+    text-transform: uppercase !important;
+  }
+  .vtw-tracking-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .vtw-tracking-toolbar > div:first-child {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -568,7 +568,7 @@ export default function App() {
     channels: any[];
     thumbnails: any[];
   } | null>(null);
-  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
+  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('videos');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
   const [videoFilters, setVideoFilters] = useState({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000 });
   const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
@@ -808,6 +808,56 @@ export default function App() {
     const highUsd = Math.round((views / 1000) * high);
     if (views <= 0) return 'Đang cập nhật';
     return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
+  };
+
+
+  const estimateChannelIncome = (views: number, country?: string) => {
+    const pseudoChannel = { views: Number(views || 0), country: String(country || '').toUpperCase() } as ChannelResult;
+    return estimateIncomeFromApiViews(pseudoChannel);
+  };
+
+  const cleanApiKeyword = (raw?: string) => {
+    const value = String(raw || '')
+      .replace(/["“”']/g, ' ')
+      .replace(/https?:\/\/\S+/g, ' ')
+      .replace(/[|•#,_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!value) return 'Đang cập nhật';
+    const parts = value.split(/\s{2,}|;|\||,/).map(s => s.trim()).filter(Boolean);
+    const first = (parts[0] || value).split(/\s+/).slice(0, 5).join(' ');
+    return first || 'Đang cập nhật';
+  };
+
+  const topicCategoryNameFromUrl = (url?: string) => {
+    const raw = String(url || '').toLowerCase();
+    if (!raw) return '';
+    if (raw.includes('technology')) return 'Công nghệ và AI';
+    if (raw.includes('health')) return 'Sức khỏe và làm đẹp';
+    if (raw.includes('food')) return 'Ẩm thực và nấu ăn';
+    if (raw.includes('travel')) return 'Du lịch và khám phá';
+    if (raw.includes('sports')) return 'Thể thao';
+    if (raw.includes('music')) return 'Nhạc và âm thanh';
+    if (raw.includes('gaming')) return 'Gaming và giải trí';
+    if (raw.includes('education')) return 'Giáo dục và học tập';
+    if (raw.includes('news')) return 'Tin tức và thời sự';
+    if (raw.includes('film') || raw.includes('entertainment')) return 'Gaming và giải trí';
+    return '';
+  };
+
+  const getApiKeywordFromChannelItem = (item: any, fallback?: TrackingChannel) => {
+    const apiKeywords = item?.brandingSettings?.channel?.keywords;
+    if (apiKeywords) return cleanApiKeyword(apiKeywords);
+    const description = item?.snippet?.description;
+    if (description) return cleanApiKeyword(description);
+    const title = item?.snippet?.title || fallback?.name;
+    return cleanApiKeyword(title || fallback?.nicheKeyword || fallback?.topic || 'Đang cập nhật');
+  };
+
+  const getApiTopicFromChannelItem = (item: any, keyword: string, fallback?: TrackingChannel) => {
+    const apiTopic = topicCategoryNameFromUrl(item?.topicDetails?.topicCategories?.[0]);
+    if (apiTopic) return apiTopic;
+    return getTopicFromKeyword(keyword || fallback?.nicheKeyword || fallback?.topic || fallback?.name || '');
   };
 
   const formatChannelUrlShort = (url?: string, id?: string) => {
@@ -2323,7 +2373,7 @@ ${topKeywordsStr}`;
       let allItems: any[] = [];
       for (const ids of chunkedIds) {
         const res = await youtubeFetch('channels', {
-          part: 'snippet,statistics',
+          part: 'snippet,statistics,topicDetails,brandingSettings',
           id: ids.join(',')
         });
         if (res.items) {
@@ -2361,7 +2411,19 @@ ${topKeywordsStr}`;
             history[history.length - 1] = newSnapshot;
           }
 
-          return { ...c, history, icon: updatedIcon };
+          const apiKeyword = getApiKeywordFromChannelItem(item, c);
+          const apiTopic = getApiTopicFromChannelItem(item, apiKeyword, c);
+          const apiIncome = estimateChannelIncome(newSnapshot.views, item.snippet?.country || '');
+
+          return {
+            ...c,
+            name: item.snippet?.title || c.name,
+            history,
+            icon: updatedIcon,
+            topic: apiTopic,
+            nicheKeyword: apiKeyword,
+            estimatedIncome: apiIncome
+          };
         });
         localStorage.setItem('youtube_tracking_channels', JSON.stringify(next));
         return next;
@@ -3014,12 +3076,12 @@ ${topKeywordsStr}`;
           </button>
           <button 
             onClick={() => setActiveTab(4)}
-            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <Video size={16} /> <span className="vtw-tab-full">Kiểm tra Link Video</span><span className="vtw-tab-short">Video</span>
           </button>
           <button 
-            onClick={() => setActiveTab(5)}
+            onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
             <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 Tìm ngách Youtube</span><span className="vtw-tab-short">Ngách</span>
@@ -3884,7 +3946,7 @@ ${topKeywordsStr}`;
                   </div>
                   
                   {/* Search box for tracking list */}
-                  <div className="ml-2 flex items-center bg-white border border-blue-200 rounded h-10 px-3 min-w-[250px] shadow-sm">
+                  <div className="vtw-tracking-search-box ml-2 flex items-center bg-white border border-blue-200 rounded h-10 px-3 min-w-[250px] shadow-sm">
                     <Search size={14} className="text-blue-400 mr-2" />
                     <input 
                       type="text"
