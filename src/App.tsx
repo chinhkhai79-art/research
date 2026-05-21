@@ -529,8 +529,9 @@ export default function App() {
   // --- Niche Research State ---
   const [nicheInput, setNicheInput] = useState('');
   const [nicheRegion, setNicheRegion] = useState('VN');
-  const [nicheTime, setNicheTime] = useState('day');
+  const [nicheTime, setNicheTime] = useState('month');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
+  const [nicheMaxSub, setNicheMaxSub] = useState(250000);
   const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
@@ -823,24 +824,30 @@ export default function App() {
     step: number;
     onChange: (min: number, max: number) => void;
   }) => {
-    const updateMin = (value: number) => {
-      const [nextMin, nextMax] = clampRangePair(value, max, absoluteMin, absoluteMax);
-      onChange(nextMin, nextMax);
-    };
-    const updateMax = (value: number) => {
-      const [nextMin, nextMax] = clampRangePair(min, value, absoluteMin, absoluteMax);
-      onChange(nextMin, nextMax);
+    const safeMax = Math.max(absoluteMin, Math.min(Number(max || 0), absoluteMax));
+    const updateMaxOnly = (value: number) => {
+      const nextMax = Math.max(absoluteMin, Math.min(value, absoluteMax));
+      onChange(absoluteMin, nextMax);
     };
     return (
-      <div className="vtw-range-box bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
+      <div className="vtw-range-box vtw-single-range-box bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
         <div className="flex justify-between gap-3 text-gray-200 font-bold text-[13px] mb-3">
           <span>{title}<span className="text-[10px] text-gray-400 font-normal block">{subtitle}</span></span>
-          <span className="text-blue-400 text-lg tabular-nums whitespace-nowrap">{formatVNNumber(min)} → {formatVNNumber(max)}</span>
+          <span className="text-blue-400 text-lg tabular-nums whitespace-nowrap">0 → {formatVNNumber(safeMax)}</span>
         </div>
-        <div className="vtw-range-manual-note mb-3">Nhập số Min / Max thủ công</div>
-        <div className="grid grid-cols-2 gap-2">
-          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} className="vtw-range-number" />
-          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} className="vtw-range-number" />
+        <input
+          type="range"
+          min={absoluteMin}
+          max={absoluteMax}
+          step={step}
+          value={safeMax}
+          onChange={(e) => updateMaxOnly(parseRangeNumber(e.target.value, absoluteMax))}
+          className="vtw-single-range-input w-full accent-blue-500"
+        />
+        <div className="vtw-single-range-scale flex justify-between text-[9px] text-gray-400 font-bold mt-2">
+          <span>0</span>
+          <span>{formatVNNumber(Math.round(absoluteMax / 2))}</span>
+          <span>{formatVNNumber(absoluteMax)}</span>
         </div>
       </div>
     );
@@ -1534,7 +1541,14 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       allChannels.forEach((c: any) => channelsMap.set(c.id, c));
 
       // 4. Process data
-      const processedVideos = allDetailedVideos.map((v: any) => {
+      const subLimitedChannelIds = new Set(
+        allChannels
+          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub)
+          .map((c: any) => c.id)
+      );
+      const videosForProcessing = allDetailedVideos.filter((v: any) => subLimitedChannelIds.has(v.snippet.channelId));
+      const sourceVideosForProcessing = videosForProcessing.length > 0 ? videosForProcessing : allDetailedVideos;
+      const processedVideos = sourceVideosForProcessing.map((v: any) => {
         const chan = channelsMap.get(v.snippet.channelId);
         const stats = v.statistics || {};
         const views = parseInt(stats.viewCount) || 0;
@@ -1629,7 +1643,9 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         keywords: topKeywords,
         videos: processedVideos,
         shorts,
-        channels: allChannels.map((c: any) => {
+        channels: allChannels
+          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub || videosForProcessing.length === 0)
+          .map((c: any) => {
           const chanVideos = processedVideos.filter(v => v.snippet.channelId === c.id);
           return {
             ...c,
@@ -3088,7 +3104,7 @@ ${topKeywordsStr}`;
               </div>
 
               <div className="vtw-main-panel bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
-                <div className="vtw-filter-grid grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                <div className="vtw-filter-grid vtw-main-search-card grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
                   <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI</div></div>
@@ -3096,14 +3112,14 @@ ${topKeywordsStr}`;
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Quét tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Views:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Lượt xem tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
                     </div>
                   </div>
 
@@ -3227,7 +3243,7 @@ ${topKeywordsStr}`;
         <div className="vtw-main-panel bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
           {activeTab === 1 ? (
             <div className="space-y-4">
-              <div className="vtw-filter-grid grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+              <div className="vtw-filter-grid vtw-main-search-card grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
                 <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                   {/* Group 1 */}
                   <div className="space-y-2">
@@ -3235,7 +3251,7 @@ ${topKeywordsStr}`;
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</label>
                       <input 
                         type="text" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
                         value={config.keyword}
                         onChange={(e) => setConfig({ ...config, keyword: e.target.value })}
                         placeholder="Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI"
@@ -3246,7 +3262,7 @@ ${topKeywordsStr}`;
                       <div className="w-2/3 relative" ref={regionRef}>
                         <button 
                           onClick={() => setShowRegionList(!showRegionList)}
-                          className="w-full border border-[#999] bg-white h-7 px-2 text-left truncate flex justify-between items-center text-[10px]"
+                          className="vtw-main-input w-full border border-[#999] bg-white h-7 px-2 text-left truncate flex justify-between items-center text-[10px]"
                         >
                           {config.regions.includes('ALL') 
                             ? 'Tất cả khu vực' 
@@ -3278,7 +3294,7 @@ ${topKeywordsStr}`;
                     <div className="flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</label>
                       <select 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-1 outline-none font-medium"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-1 outline-none font-medium"
                         value={config.publishedAfter}
                         onChange={(e) => setConfig({ ...config, publishedAfter: e.target.value })}
                       >
@@ -3294,30 +3310,30 @@ ${topKeywordsStr}`;
                   {/* Group 2 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
                     <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Quét tối đa:</label>
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideos}
                         onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</label>
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</label>
                       <input
                         type="number"
                         inputMode="numeric"
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minSub}
                         onChange={(e) => setConfig({ ...config, minSub: parseRangeNumber(e.target.value, 0) })}
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</label>
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</label>
                       <input
                         type="number"
                         inputMode="numeric"
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxSub}
                         onChange={(e) => setConfig({ ...config, maxSub: parseRangeNumber(e.target.value, 10000000) })}
                       />
@@ -3327,28 +3343,28 @@ ${topKeywordsStr}`;
                   {/* Group 3 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
                     <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Video:</label>
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minVideo}
                         onChange={(e) => setConfig({ ...config, minVideo: parseInt(e.target.value) })}
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Video:</label>
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideo}
                         onChange={(e) => setConfig({ ...config, maxVideo: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Views:</label>
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Lượt xem tối thiểu:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minViews}
                         onChange={(e) => setConfig({ ...config, minViews: parseInt(e.target.value) })}
                       />
@@ -4328,15 +4344,15 @@ ${topKeywordsStr}`;
 
                   <div className="space-y-2 mt-2">
                     <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
-                      Phạm vi Sub <span>0 → {formatVNNumber(config.maxSub)}</span>
+                      Phạm vi Sub <span>0 → {formatVNNumber(nicheMaxSub)}</span>
                     </label>
                     <input
                       type="range"
                       min={0}
                       max={10000000}
                       step={1000}
-                      value={config.maxSub}
-                      onChange={(e) => setConfig({ ...config, minSub: 0, maxSub: parseInt(e.target.value, 10) || 0 })}
+                      value={nicheMaxSub}
+                      onChange={(e) => setNicheMaxSub(parseInt(e.target.value, 10) || 0)}
                       className="w-full accent-blue-500"
                     />
                     <div className="flex justify-between text-[8px] text-[#95a5a6] font-bold px-1">
