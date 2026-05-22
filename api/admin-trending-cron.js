@@ -91,9 +91,40 @@ const REGIONAL_SEED_BANK = {
     'CÔNG NGHỆ & AI': ['tools AI','cara pakai ChatGPT','tips iPhone']
   }
 };
+const REGION_GENERIC_SEEDS = {
+  JP: ['トレンド','人気 動画','最新 話題','ランキング','おすすめ'],
+  KR: ['트렌드','인기 영상','최신 화제','랭킹','추천'],
+  TH: ['กำลังมาแรง','วิดีโอยอดนิยม','เทรนด์ล่าสุด','แนะนำ','ยอดวิวสูง'],
+  ID: ['trending','video populer','viral terbaru','rekomendasi','views tinggi'],
+  BR: ['tendências','vídeos populares','viral hoje','dicas','alta visualização'],
+  FR: ['tendance','vidéos populaires','viral aujourd hui','astuces','fortes vues'],
+  DE: ['trends','beliebte videos','viral heute','tipps','hohe aufrufe']
+};
 function pickSeeds(def, region, categoryName) {
   const regional = REGIONAL_SEED_BANK[region]?.[categoryName];
-  return def[region] || regional || def.US || def.VN || [];
+  if (Array.isArray(regional) && regional.length) return regional;
+  if (Array.isArray(def[region]) && def[region].length) return def[region];
+  const generic = REGION_GENERIC_SEEDS[region];
+  if (Array.isArray(generic) && generic.length) {
+    const base = String(categoryName || '').toLowerCase();
+    const suffix = generic.slice(0, 3);
+    if (region === 'JP') {
+      if (base.includes('công nghệ') || base.includes('ai')) return ['AI ツール トレンド','ChatGPT 最新','テクノロジー 人気'];
+      if (base.includes('ẩm thực')) return ['簡単 レシピ 人気','料理 トレンド','グルメ 人気'];
+      if (base.includes('du lịch')) return ['旅行 vlog 人気','観光 トレンド','穴場スポット'];
+      if (base.includes('giải trí')) return ['面白い動画 人気','コメディ トレンド','映画レビュー'];
+      if (base.includes('thể thao')) return ['スポーツ 人気','筋トレ トレンド','サッカー ハイライト'];
+      if (base.includes('tài chính')) return ['投資 初心者','副業 人気','お金の勉強'];
+    }
+    if (region === 'KR') {
+      if (base.includes('công nghệ') || base.includes('ai')) return ['AI 도구 트렌드','ChatGPT 최신','테크 뉴스'];
+      if (base.includes('ẩm thực')) return ['간단 요리 인기','요리 트렌드','맛집 추천'];
+      if (base.includes('du lịch')) return ['여행 브이로그 인기','국내 여행','숨은 명소'];
+      if (base.includes('giải trí')) return ['웃긴 영상 인기','영화 리뷰','예능 클립'];
+    }
+    return suffix;
+  }
+  return def.US || def.VN || [];
 }
 function scoreVideo(video, channel) {
   const views = Number(video?.statistics?.viewCount || 0);
@@ -102,9 +133,9 @@ function scoreVideo(video, channel) {
   const vph = views / ageHours;
   const subs = Number(channel?.statistics?.subscriberCount || 0);
   const viewSubRatio = subs > 0 ? views / subs : views;
-  let score = vph * 3 + viewSubRatio * 12 + views / 1000;
-  if (subs > 0 && subs <= 50000) score *= 2.2;
-  if (subs > 0 && subs <= 30000) score *= 1.35;
+  // Bước 68: không giới hạn kênh nhỏ/lớn. Chấm theo video trend 30 ngày:
+  // VPH cao + Views cao + View/Sub ratio tốt, nhưng không loại kênh lớn.
+  let score = vph * 4 + viewSubRatio * 6 + views / 800;
   return { views, vph, subs, viewSubRatio, score };
 }
 async function youtubeFetch(path, keys, used) {
@@ -127,7 +158,7 @@ async function scanCategory(categoryName, seedsDef, region, keys, used) {
   const seeds = pickSeeds(seedsDef, region, categoryName).slice(0, 3);
   for (const seed of seeds) {
     const regionParam = region ? `&regionCode=${encodeURIComponent(region)}` : '';
-    const search = await youtubeFetch(`search?part=snippet&type=video&order=viewCount&maxResults=15${regionParam}&publishedAfter=${encodeURIComponent(publishedAfter30d())}&q=${encodeURIComponent(seed)}`, keys, used);
+    const search = await youtubeFetch(`search?part=snippet&type=video&order=viewCount&maxResults=25${regionParam}&publishedAfter=${encodeURIComponent(publishedAfter30d())}&q=${encodeURIComponent(seed)}`, keys, used);
     const videos = (search.items || []).filter(x => x.id?.videoId);
     if (!videos.length) continue;
     const videoIds = videos.map(x => x.id.videoId).join(',');
@@ -139,7 +170,6 @@ async function scanCategory(categoryName, seedsDef, region, keys, used) {
     for (const v of detail.items || []) {
       const ch = channelMap.get(v.snippet?.channelId);
       const metric = scoreVideo(v, ch);
-      if (metric.subs > 1000000) continue;
       const tagKeyword = Array.isArray(v.snippet?.tags) ? v.snippet.tags.map(compactKeyword).find(Boolean) : '';
       const keyword = compactKeyword(tagKeyword || seed || v.snippet?.title || categoryName);
       if (!keyword) continue;
@@ -147,11 +177,7 @@ async function scanCategory(categoryName, seedsDef, region, keys, used) {
     }
   }
   const seen = new Set();
-  const sorted = candidates.sort((a, b) => {
-    const smallA = a.subs > 0 && a.subs <= 50000 ? 100000000 : 0;
-    const smallB = b.subs > 0 && b.subs <= 50000 ? 100000000 : 0;
-    return (smallB + b.score) - (smallA + a.score);
-  });
+  const sorted = candidates.sort((a, b) => b.score - a.score);
   return sorted.filter(x => !seen.has(x.keyword) && seen.add(x.keyword)).slice(0, 5);
 }
 

@@ -7041,12 +7041,12 @@ Quy tắc:
                 <div className="mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Dữ liệu do hệ thống tự quét định kỳ bằng YouTube API V3; người dùng chỉ xem/copy/tải key để tiết kiệm quota.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Chọn khu vực rồi bấm Admin quét để lấy key/cụm key từ video đang trend 30 ngày: ưu tiên VPH cao, views cao, có thể gồm cả kênh lớn.</span>
                         {trendingCacheMeta?.updatedAt && (
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
                      </h3>
-                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full md:w-auto md:min-w-[760px]">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-auto md:min-w-[560px]">
                          <div className="relative h-12">
                            <select
                               value={trendingRegion}
@@ -7067,31 +7067,11 @@ Quy tắc:
                             {isFetchingDailyTrending ? <><RefreshCw size={15} className="animate-spin"/> Đang tải</> : <><Search size={15}/> Tải dữ liệu</>}
                          </button>
                          <button
-                            onClick={() => downloadTrendingKeysTxt()}
-                            disabled={isFetchingDailyTrending}
-                            className="h-12 w-full bg-green-600 hover:bg-green-700 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black uppercase shadow border border-green-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-center leading-tight"
-                         >
-                            <Download size={14}/> Tải TXT
-                         </button>
-                         {user?.email === 'chinhkhai79@gmail.com' && (
-                           <input
-                              type="datetime-local"
-                              value={adminTrendingScheduleAt}
-                              onChange={(e) => {
-                                setAdminTrendingScheduleAt(e.target.value);
-                                if (e.target.value) localStorage.setItem('research_admin_trending_schedule_at', e.target.value);
-                                else localStorage.removeItem('research_admin_trending_schedule_at');
-                              }}
-                              title="Chọn ngày giờ tự động chạy Admin quét"
-                              className="h-12 w-full bg-white border border-blue-200 text-gray-800 font-black text-[10px] px-2 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm"
-                           />
-                         )}
-                         <button
                             onClick={user?.email === 'chinhkhai79@gmail.com' ? runAdminTrendingCron : () => downloadTrendingKeysTxt()}
                             disabled={isFetchingDailyTrending}
                             className="h-12 w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-center leading-tight"
                          >
-                            {user?.email === 'chinhkhai79@gmail.com' ? <><RefreshCw size={14}/> Admin quét</> : <><Download size={14}/> Tải TXT</>}
+                            {user?.email === 'chinhkhai79@gmail.com' ? <><RefreshCw size={14}/> Admin quét</> : <><Download size={14}/> Tải toàn bộ</>}
                          </button>
                      </div>
                 </div>
