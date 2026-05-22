@@ -390,11 +390,119 @@ const REGION_KEYWORD_TEMPLATES: Record<string, string[][]> = {
   ]
 };
 
+const REGION_LOCAL_KEYWORDS: Record<string, string[][]> = {
+  TH: [
+    ['เทคนิคจัดเวลา', 'พัฒนาตัวเอง', 'สร้างวินัย', 'เพิ่มความมั่นใจ', 'เพิ่มประสิทธิภาพ', 'แรงบันดาลใจ'],
+    ['ออกกำลังกายที่บ้าน', 'สกินแคร์มือใหม่', 'ลดน้ำหนัก', 'อาหารสุขภาพ', 'โยคะที่บ้าน', 'ดูแลผม'],
+    ['เครื่องมือ AI', 'สอนใช้ ChatGPT', 'ทริค iPhone', 'รีวิวมือถือคุ้มค่า', 'เครื่องมืออัตโนมัติ', 'สร้างภาพ AI'],
+    ['เทคนิคเรียน', 'เรียนอังกฤษ', 'เริ่มเขียนโค้ด', 'เตรียมสอบ', 'จำเร็ว', 'เรียนออนไลน์'],
+    ['สูตรอาหารง่าย', 'เตรียมอาหาร', 'อาหารทำเอง', 'ของว่างสุขภาพ', 'อาหารประหยัด', 'มื้อเย็นเร็ว'],
+    ['เที่ยวแบบประหยัด', 'vlog ท่องเที่ยว', 'ที่เที่ยวลับ', 'เที่ยวคนเดียว', 'แคมป์ปิ้งมือใหม่', 'อาหารท้องถิ่น'],
+    ['คลิปตลกสั้น', 'สรุปหนัง', 'รีแอคชั่น', 'มีมตลก', 'ละครสั้น', 'เรื่องแปลก'],
+    ['ออกกำลังกายที่บ้าน', 'ไฮไลท์ฟุตบอล', 'รูทีนฟิตเนส', 'เทคนิควิ่ง', 'เพิ่มกล้าม', 'อาหารนักกีฬา'],
+    ['ฝึกสุนัข', 'เลี้ยงแมว', 'สัตว์เลี้ยงน่ารัก', 'ตัดขนสัตว์', 'ช่วยสัตว์', 'รีวิวอาหารสัตว์'],
+    ['ทริคทำความสะอาด', 'เลี้ยงลูก', 'จัดบ้าน', 'ชีวิตมินิมอล', 'แต่งบ้านเล็ก', 'งบครอบครัว'],
+    ['ออกแบบ Canva', 'ตัดต่อ CapCut', 'วาดรูปง่าย', 'ถ่ายรูปมือถือ', 'กีตาร์มือใหม่', 'ไอเดียสร้างสรรค์'],
+    ['รีวิวรถ', 'ข่าวรถไฟฟ้า', 'รีวิวมอเตอร์ไซค์', 'อุปกรณ์รถยนต์', 'ดูแลรถ', 'ประหยัดน้ำมัน'],
+    ['หาเงินออนไลน์', 'งานเสริม', 'การเงินส่วนตัว', 'เริ่มลงทุน', 'affiliate marketing', 'เก็บเงินเร็ว'],
+    ['รีวิวสินค้า', 'แกะกล่องแกดเจ็ต', 'รีวิวสกินแคร์', 'สมาร์ทโฮม', 'สินค้าฮิต', 'ของน่าใช้'],
+    ['คอนเทนต์มาร์เก็ตติ้ง', 'เพิ่มยอด YouTube', 'เทคนิค SEO', 'กลยุทธ์โซเชียล', 'โตบน TikTok', 'สร้างแบรนด์']
+  ],
+  DE: [
+    ['Zeitmanagement Tipps', 'Kommunikation verbessern', 'Gewohnheiten aufbauen', 'Selbstvertrauen stärken', 'Produktivität Tricks', 'Motivation Alltag'],
+    ['Workout zuhause', 'Hautpflege Routine', 'Abnehmen Tipps', 'gesunde Mahlzeiten', 'Yoga zuhause', 'Haarpflege Tipps'],
+    ['KI Tools', 'ChatGPT Anleitung', 'iPhone Tipps', 'Handy Review günstig', 'Automatisierung Tools', 'KI Bilder erstellen'],
+    ['Lerntipps', 'Englisch lernen', 'Programmieren Anfänger', 'Prüfung vorbereiten', 'Gedächtnis Tricks', 'Online Lernen'],
+    ['einfache Rezepte', 'Meal Prep', 'Kochen zuhause', 'gesunde Snacks', 'günstig kochen', 'schnelles Abendessen'],
+    ['Reise Vlog', 'günstig reisen', 'Geheimtipps Orte', 'alleine reisen', 'Camping Anfänger', 'lokales Essen'],
+    ['lustige Kurzvideos', 'Film Zusammenfassung', 'Reaction Video', 'virale Memes', 'Comedy Sketch', 'seltsame Geschichten'],
+    ['Workout zuhause', 'Fußball Highlights', 'Fitness Routine', 'Laufen Tipps', 'Muskelaufbau', 'Fitness Ernährung'],
+    ['Hund trainieren', 'Katzenpflege Tipps', 'süße Haustiere', 'Tierpflege', 'Tierrettung', 'Tierfutter Review'],
+    ['Putzen Tricks', 'Erziehung Tipps', 'Wohnung organisieren', 'minimalistisch leben', 'kleine Wohnung einrichten', 'Familienbudget'],
+    ['Canva Design', 'CapCut Tutorial', 'einfach zeichnen', 'Handy Fotografie', 'Gitarre Anfänger', 'kreative Ideen'],
+    ['Auto Review', 'Elektroauto News', 'Motorrad Review', 'Auto Zubehör', 'Auto Wartung', 'Sprit sparen'],
+    ['online Geld verdienen', 'Nebenjob Ideen', 'Finanzen Anfänger', 'Investieren Anfänger', 'Affiliate Marketing', 'Geld sparen'],
+    ['Produkt Review', 'Tech Unboxing', 'Kosmetik Review', 'Smart Home Gadgets', 'virale Produkte', 'Amazon Favoriten'],
+    ['Content Marketing', 'YouTube wachsen', 'SEO Tipps', 'Social Media Strategie', 'TikTok Wachstum', 'Branding Tipps']
+  ],
+  FR: [
+    ['gestion du temps', 'communication efficace', 'habitudes productives', 'confiance en soi', 'astuces productivité', 'motivation quotidienne'],
+    ['sport à la maison', 'routine skincare', 'perte de poids', 'repas healthy', 'yoga maison', 'soin cheveux'],
+    ['outils IA', 'tutoriel ChatGPT', 'astuces iPhone', 'smartphone pas cher', 'outils automatisation', 'générer image IA'],
+    ['méthode étude', 'apprendre anglais', 'coder débutant', 'préparer examen', 'mémorisation rapide', 'cours en ligne'],
+    ['recettes faciles', 'meal prep', 'cuisine maison', 'snacks sains', 'repas pas cher', 'dîner rapide'],
+    ['vlog voyage', 'voyage pas cher', 'lieux secrets', 'voyager seul', 'camping débutant', 'street food locale'],
+    ['vidéos drôles', 'résumé film', 'réaction vidéo', 'mèmes viraux', 'sketch humour', 'histoires étranges'],
+    ['sport maison', 'highlights football', 'routine fitness', 'conseils course', 'prise de muscle', 'nutrition sportive'],
+    ['dresser chien', 'conseils chat', 'animaux mignons', 'toilettage animaux', 'sauvetage animal', 'avis nourriture chat'],
+    ['astuces ménage', 'conseils parents', 'rangement maison', 'vie minimaliste', 'déco petit espace', 'budget familial'],
+    ['design Canva', 'montage CapCut', 'dessin facile', 'photo smartphone', 'guitare débutant', 'idées créatives'],
+    ['avis voiture', 'actualité voiture électrique', 'avis moto', 'accessoires auto', 'entretien voiture', 'économiser carburant'],
+    ['gagner argent en ligne', 'idées revenu', 'finance personnelle', 'investir débutant', 'marketing affilié', 'économiser vite'],
+    ['avis produit', 'unboxing tech', 'avis skincare', 'objets maison connectée', 'produits viraux', 'trouvailles Amazon'],
+    ['marketing contenu', 'croissance YouTube', 'astuces SEO', 'stratégie réseaux sociaux', 'croissance TikTok', 'branding']
+  ],
+  RU: [
+    ['тайм менеджмент', 'навыки общения', 'полезные привычки', 'уверенность в себе', 'продуктивность советы', 'мотивация каждый день'],
+    ['тренировка дома', 'уход за кожей', 'похудение советы', 'здоровое питание', 'йога дома', 'уход за волосами'],
+    ['ИИ инструменты', 'как пользоваться ChatGPT', 'советы iPhone', 'обзор бюджетного телефона', 'автоматизация', 'генерация изображений ИИ'],
+    ['советы учебы', 'учить английский', 'программирование новичкам', 'подготовка к экзамену', 'быстро запоминать', 'онлайн обучение'],
+    ['простые рецепты', 'заготовки еды', 'домашняя кухня', 'полезные перекусы', 'дешевые блюда', 'быстрый ужин'],
+    ['влог путешествие', 'бюджетное путешествие', 'секретные места', 'путешествие одному', 'кемпинг новичкам', 'местная еда'],
+    ['смешные шорты', 'краткий пересказ фильма', 'реакция видео', 'вирусные мемы', 'комедийный скетч', 'странные истории'],
+    ['тренировка дома', 'футбол лучшие моменты', 'фитнес рутина', 'советы бег', 'набор мышц', 'питание фитнес'],
+    ['дрессировка собаки', 'уход за кошкой', 'милые питомцы', 'груминг питомцев', 'спасение животных', 'обзор корма'],
+    ['лайфхаки уборка', 'советы родителям', 'организация дома', 'минимализм', 'маленькая квартира декор', 'семейный бюджет'],
+    ['дизайн Canva', 'монтаж CapCut', 'легкий рисунок', 'фото на телефон', 'гитара новичкам', 'творческие идеи'],
+    ['обзор авто', 'электромобиль новости', 'обзор мотоцикла', 'аксессуары авто', 'обслуживание авто', 'экономия топлива'],
+    ['заработок онлайн', 'подработка идеи', 'личные финансы', 'инвестиции новичкам', 'партнерский маркетинг', 'как копить деньги'],
+    ['обзор товара', 'распаковка техники', 'обзор косметики', 'умный дом', 'вирусные товары', 'находки маркетплейс'],
+    ['контент маркетинг', 'рост YouTube', 'SEO советы', 'стратегия соцсети', 'рост TikTok', 'брендинг']
+  ],
+  BR: [
+    ['gestão do tempo', 'habilidades comunicação', 'criar hábitos', 'aumentar confiança', 'dicas produtividade', 'motivação diária'],
+    ['treino em casa', 'rotina skincare', 'dicas emagrecer', 'marmita saudável', 'yoga em casa', 'cuidados cabelo'],
+    ['ferramentas IA', 'tutorial ChatGPT', 'dicas iPhone', 'celular barato review', 'ferramentas automação', 'criar imagem IA'],
+    ['dicas estudo', 'aprender inglês', 'programação iniciantes', 'preparar prova', 'memorização rápida', 'curso online'],
+    ['receitas fáceis', 'meal prep', 'comida caseira', 'lanches saudáveis', 'comida barata', 'jantar rápido'],
+    ['vlog viagem', 'viagem barata', 'lugares escondidos', 'viajar sozinho', 'camping iniciantes', 'comida local'],
+    ['vídeos engraçados', 'resumo filme', 'vídeo reação', 'memes virais', 'esquete comédia', 'histórias estranhas'],
+    ['treino em casa', 'melhores momentos futebol', 'rotina academia', 'dicas corrida', 'ganhar massa', 'dieta fitness'],
+    ['adestrar cachorro', 'cuidar de gato', 'pets fofos', 'banho e tosa', 'resgate animal', 'review ração'],
+    ['truques limpeza', 'dicas maternidade', 'organização casa', 'vida minimalista', 'decoração casa pequena', 'orçamento família'],
+    ['design Canva', 'edição CapCut', 'desenho fácil', 'fotografia celular', 'violão iniciante', 'ideias criativas'],
+    ['review carro', 'carro elétrico notícias', 'review moto', 'acessórios carro', 'manutenção carro', 'economizar combustível'],
+    ['ganhar dinheiro online', 'renda extra', 'finanças pessoais', 'investir iniciante', 'marketing afiliado', 'economizar dinheiro'],
+    ['review produto', 'unboxing tecnologia', 'review skincare', 'casa inteligente', 'produtos virais', 'achadinhos'],
+    ['marketing conteúdo', 'crescer YouTube', 'dicas SEO', 'estratégia redes sociais', 'crescer TikTok', 'branding']
+  ],
+  MX: [], ES: [], ID: [], MY: []
+};
+REGION_LOCAL_KEYWORDS.MX = REGION_LOCAL_KEYWORDS.ES = [
+  ['gestión del tiempo', 'habilidades comunicación', 'crear hábitos', 'confianza personal', 'trucos productividad', 'motivación diaria'],
+  ['ejercicio en casa', 'rutina skincare', 'bajar de peso', 'comida saludable', 'yoga en casa', 'cuidado cabello'],
+  ['herramientas IA', 'tutorial ChatGPT', 'trucos iPhone', 'celular barato review', 'automatización herramientas', 'crear imágenes IA'],
+  ['consejos estudio', 'aprender inglés', 'programar principiantes', 'preparar examen', 'memorizar rápido', 'clases online'],
+  ['recetas fáciles', 'meal prep', 'comida casera', 'snacks saludables', 'comida económica', 'cena rápida'],
+  ['vlog viaje', 'viajar barato', 'lugares escondidos', 'viajar solo', 'camping principiantes', 'comida local'],
+  ['videos graciosos', 'resumen película', 'video reacción', 'memes virales', 'sketch comedia', 'historias extrañas'],
+  ['entrenamiento casa', 'highlights fútbol', 'rutina gimnasio', 'consejos correr', 'ganar músculo', 'dieta fitness'],
+  ['entrenar perro', 'cuidar gato', 'mascotas lindas', 'peluquería mascotas', 'rescate animal', 'review alimento mascotas'],
+  ['trucos limpieza', 'consejos padres', 'organizar casa', 'vida minimalista', 'decorar casa pequeña', 'presupuesto familiar'],
+  ['diseño Canva', 'editar CapCut', 'dibujar fácil', 'fotografía celular', 'guitarra principiantes', 'ideas creativas'],
+  ['review autos', 'noticias auto eléctrico', 'review moto', 'accesorios auto', 'mantenimiento auto', 'ahorrar gasolina'],
+  ['ganar dinero online', 'ingresos extra', 'finanzas personales', 'invertir principiantes', 'marketing afiliados', 'ahorrar dinero'],
+  ['review producto', 'unboxing tecnología', 'review skincare', 'hogar inteligente', 'productos virales', 'compras recomendadas'],
+  ['marketing contenidos', 'crecer YouTube', 'consejos SEO', 'estrategia redes sociales', 'crecer TikTok', 'marca personal']
+];
+REGION_LOCAL_KEYWORDS.ID = REGION_LOCAL_KEYWORDS.MY = REGION_KEYWORD_TEMPLATES.EN;
+
 function getKeywordTemplateForRegion(regionCode: string) {
-  if (regionCode === 'VN') return REGION_KEYWORD_TEMPLATES.VN;
-  if (regionCode === 'JP') return REGION_KEYWORD_TEMPLATES.JP;
-  if (regionCode === 'KR') return REGION_KEYWORD_TEMPLATES.KR;
-  return REGION_KEYWORD_TEMPLATES.EN;
+  const code = String(regionCode || 'VN').toUpperCase();
+  if (code === 'VN') return REGION_KEYWORD_TEMPLATES.VN;
+  if (code === 'JP') return REGION_KEYWORD_TEMPLATES.JP;
+  if (code === 'KR') return REGION_KEYWORD_TEMPLATES.KR;
+  return REGION_LOCAL_KEYWORDS[code] || REGION_KEYWORD_TEMPLATES.EN;
 }
 
 function getLocalizedNicheTemplate(regionCode?: string) {
@@ -867,21 +975,14 @@ export default function App() {
     const savedLastNicheKeyword = localStorage.getItem('youtube_last_niche_keyword');
     if (savedLastNicheKeyword) setNicheInput(savedLastNicheKeyword);
 
-    const savedSuggestedNiches = localStorage.getItem(`youtube_suggested_niches_trending_v4_${trendingRegion || 'GLOBAL'}`)
-      || localStorage.getItem(`youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`);
-    if (savedSuggestedNiches) {
-      try {
-        const parsedSuggestedNiches = JSON.parse(savedSuggestedNiches);
-        if (Array.isArray(parsedSuggestedNiches) && parsedSuggestedNiches.length > 0) {
-          setSuggestedNiches(parsedSuggestedNiches.map((niche: any) => ({
-            ...niche,
-            items: Array.isArray(niche.items) ? niche.items.slice(0, 6) : []
-          })));
-        }
-      } catch (error) {
-        console.warn('Không đọc được danh sách ngách đã lưu:', error);
+    // Bước 76: không nạp lại dữ liệu ngách cũ trong popup gợi ý.
+    // Mỗi lần mở app dùng bộ chủ đề mới theo khu vực hiện tại để tránh sai ngôn ngữ/khu vực.
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('youtube_suggested_niches_trending_v3_') || key.startsWith('youtube_suggested_niches_trending_v4_') || key.startsWith('youtube_suggested_niches_gemini_manual_') || key.startsWith('youtube_suggested_niches_youtube_manual_')) {
+        localStorage.removeItem(key);
       }
-    }
+    });
+    setSuggestedNiches(getLocalizedNicheTemplate(trendingRegion || config.region || 'VN'));
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) {
@@ -1937,8 +2038,6 @@ JSON mẫu:
       region: selectedRegion,
       source: 'gemini_region_suggestion'
     };
-    localStorage.setItem(getTrendingStorageKey(selectedRegion, 'gemini'), JSON.stringify(payload));
-    localStorage.setItem(`youtube_suggested_niches_trending_v4_${selectedRegion}`, JSON.stringify(categories));
     return payload;
   };
 
@@ -1946,34 +2045,14 @@ JSON mẫu:
     const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
     setTrendingRegion(selectedRegion);
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật danh sách chủ đề theo khu vực...');
+    setStatus('Đang tạo danh sách chủ đề theo khu vực...');
 
     try {
-      // Ưu tiên Gemini trước để người dùng thấy key nhanh, không gọi YouTube API ở bước tải này.
       const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
       setSuggestedNiches(data.categories);
       setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
-      setStatus(`Đã cập nhật danh sách chủ đề cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để quét key thật bằng YouTube API V3.`);
+      setStatus(`Đã tạo danh sách chủ đề cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để tìm key thật theo khu vực.`);
     } catch (err: any) {
-      const savedGemini = localStorage.getItem(getTrendingStorageKey(selectedRegion, 'gemini'));
-      const savedYoutube = localStorage.getItem(getTrendingStorageKey(selectedRegion, 'youtube'));
-      const savedLegacy = localStorage.getItem(`youtube_suggested_niches_trending_v4_${selectedRegion}`);
-      const saved = savedGemini || savedYoutube || savedLegacy;
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const categories = Array.isArray(parsed) ? parsed : parsed.categories;
-          if (Array.isArray(categories) && categories.length > 0) {
-            setSuggestedNiches(categories.map((niche: any) => ({
-              category: String(niche.category || niche.title || '').trim(),
-              items: Array.isArray(niche.items) ? niche.items.slice(0, 6) : Array.isArray(niche.keywords) ? niche.keywords.slice(0, 6) : []
-            })).filter((x: any) => x.category && x.items.length));
-            setTrendingCacheMeta({ updatedAt: parsed.updatedAt, region: selectedRegion, source: parsed.source || 'local-cache' });
-            setStatus('Đang hiển thị dữ liệu đã lưu gần nhất của khu vực này.');
-            return;
-          }
-        } catch {}
-      }
       setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
       setTrendingCacheMeta(null);
       setStatus('Chưa tạo được danh sách mới. Đang dùng danh sách mặc định theo khu vực.');
@@ -2058,7 +2137,7 @@ JSON mẫu:
     try {
       setScanningNicheCategory(scanningKey);
       setIsFetchingDailyTrending(true);
-      setStatus(`Đang quét YouTube API V3: ${category} tại ${regionName}...`);
+      setStatus(`Đang tìm key cho ${category} tại ${regionName}...`);
 
       const localSeed = currentItems.filter(languageLooksOk).slice(0, 3).join(' ');
       const cleanCategoryForQuery = String((suggestedNiches[index] as any)?.localCategory || category).replace(/\(.+\)/g, '').trim();
@@ -2127,13 +2206,10 @@ JSON mẫu:
 
       setSuggestedNiches(prev => {
         const next = prev.map((item, i) => i === index ? { ...item, items: nextItems } : item).slice(0, 15);
-        const payload = { categories: next, updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_manual_category' };
-        localStorage.setItem(getTrendingStorageKey(selectedRegion, 'youtube'), JSON.stringify(payload));
-        localStorage.setItem(`youtube_suggested_niches_trending_v4_${selectedRegion}`, JSON.stringify(next));
         return next;
       });
-      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_manual_category' });
-      setStatus(`Đã quét xong ${category}: lấy ${nextItems.length} key thật từ YouTube API V3 cho ${regionName}.`);
+      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
+      setStatus(`Đã tìm xong ${category}: lấy ${nextItems.length} key đúng khu vực ${regionName}.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
@@ -7339,7 +7415,7 @@ Quy tắc:
                      <div className="flex flex-col gap-1 min-w-0">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH THEO KHU VỰC</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Chọn khu vực để đổi ngôn ngữ chủ đề/key. Bấm kính lúp ở từng chủ đề để quét key thật bằng YouTube API V3: ưu tiên 30 ngày, nếu thiếu dữ liệu sẽ mở rộng toàn thời gian.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Chọn khu vực để đổi ngôn ngữ chủ đề/key. Bấm kính lúp từng chủ đề để tìm key đúng khu vực; ưu tiên 30 ngày, nếu thiếu dữ liệu sẽ mở rộng toàn thời gian.</span>
                         {trendingCacheMeta?.updatedAt && (
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
@@ -7349,7 +7425,7 @@ Quy tắc:
                          <div className="relative">
                            <select
                               value={trendingRegion}
-                              onChange={(e) => { const nextRegion = e.target.value; setTrendingRegion(nextRegion); const saved = localStorage.getItem(getTrendingStorageKey(nextRegion, 'gemini')) || localStorage.getItem(getTrendingStorageKey(nextRegion, 'youtube')); if (saved) { try { const parsed = JSON.parse(saved); const categories = Array.isArray(parsed) ? parsed : parsed.categories; if (Array.isArray(categories) && categories.length) { setSuggestedNiches(categories.slice(0, 15)); return; } } catch {} } setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); }}
+                              onChange={(e) => { const nextRegion = e.target.value; setTrendingRegion(nextRegion); setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
                               className="appearance-none w-full h-12 bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[12px] px-4 pr-9 rounded-xl outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.filter(r => r.code).map(r => (
@@ -7363,7 +7439,7 @@ Quy tắc:
                             disabled={isFetchingDailyTrending}
                             className="h-12 w-full justify-center bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-4 rounded-xl text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật...</> : <><Bot size={16}/> Tạo/Cập nhật 15 chủ đề</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo...</> : <><Bot size={16}/> Tạo 15 chủ đề</>}
                          </button>
                          <button
                             onClick={() => { const nextRegion = trendingRegion || config.region || 'VN'; setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
@@ -7381,7 +7457,7 @@ Quy tắc:
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight leading-tight">{renderBilingualCategoryLabel(category.category)}</h4>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
-                            title="Quét ngách thật bằng YouTube API V3 cho chủ đề này"
+                            title="Tìm key thật theo khu vực cho chủ đề này"
                             onClick={() => fetchTrendingKeysForCategory(category.category, idx)}
                             disabled={isFetchingDailyTrending}
                             className="w-8 h-8 rounded-lg bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-100 flex items-center justify-center transition-all disabled:opacity-50"
@@ -7421,7 +7497,7 @@ Quy tắc:
               </div>
 
               <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
-                Mẹo: chọn khu vực trước, bấm icon kính lúp ở từng chủ đề để quét key thật bằng YouTube API V3. Bấm key để dùng trực tiếp, hoặc bấm icon copy để copy từng key.
+                Mẹo: chọn khu vực trước, bấm icon kính lúp ở từng chủ đề để tìm key đúng khu vực. Bấm key để dùng trực tiếp, hoặc bấm icon copy để copy từng key.
               </div>
             </motion.div>
           </div>
