@@ -252,36 +252,21 @@ const GEMINI_MODELS = [
 ];
 
 const SUGGESTED_NICHES = [
-  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog năng suất'] },
-  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm'] },
-  { category: 'CÔNG NGHỆ & AI', items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI'] },
-  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập'] },
-  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè'] },
-  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng'] },
-  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme'] },
-  { category: 'THỂ THAO & THỂ HÌNH', items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym'] },
-  { category: 'PETS & ĐỘNG VẬT', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng'] },
-  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa'] },
-  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình'] },
-  { category: 'CÔNG NGHỆ Ô TÔ & XE MÁY', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'bảo dưỡng xe tay ga', 'độ xe kiểng', 'phượt bằng mô tô', 'học lái xe ô tô B2', 'phụ kiện ô tô cần thiết', 'luật giao thông đường bộ', 'so sánh các dòng xe'] },
-  { category: 'TÂM LÝ HỌC & MỐI QUAN HỆ', items: ['tâm lý học thú vị', 'chữa lành tổn thương', 'vượt qua chia tay', 'nghệ thuật quyến rũ', 'nhận biết người độc hại', 'bài test tính cách MBTI', 'cách hiểu tâm lý nam giới', 'giữ lửa hôn nhân', 'kỹ năng lắng nghe thấu cảm', 'tâm lý tội phạm'] },
-  { category: 'ESPORTS & GAMING', items: ['highlight liên quân', 'build đồ tft mùa mới', 'review game mobile hay', 'giáo trình valorant', 'mẹo leo rank csgo', 'phân tích meta lol', 'game kinh dị việt nam', 'streamer tiktok', 'thi đấu pubg mobile', 'genshin impact hướng dẫn'] },
-  { category: 'HUYỀN BÍ & TÂM LINH', items: ['giải mã những giấc mơ', 'luật nhân quả', 'bí ẩn vũ trụ', 'chuyện rùng rợn có thật', 'bói bài tarot tình yêu', 'phong thủy nhà ở', 'năng lượng luân xa', 'kỳ quan thế giới', 'hiện tượng siêu nhiên', 'câu chuyện tâm linh tuổi thơ'] },
-  { category: 'MẸO VẶT CUỘC SỐNG', items: ['mẹo vặt nhà bếp', 'tái chế đồ nhựa', 'sửa chữa đồ điện gia dụng', 'gấp quần áo nhanh', 'làm sạch vết bẩn cứng đầu', 'mẹo bảo quản thực phẩm', 'ứng dụng hữu ích trên điện thoại', 'mẹo chống muỗi tự nhiên', 'sử dụng lò vi sóng', 'mẹo vặt cho sinh viên'] },
-  { category: 'VĂN HÓA & LỊCH SỬ', items: ['lịch sử việt nam tóm tắt', 'khám phá các triều đại', 'sự kiện lịch sử thế giới', 'văn hóa người á đông', 'trang phục truyền thống', 'nhân vật lịch sử nổi tiếng', 'chiến tranh thế giới thứ 2', 'văn hóa nhật bản', 'phong tục tập quán việt nam', 'di tích lịch sử hà nội'] },
-  { category: 'THỜI TRANG & PHONG CÁCH', items: ['phối đồ cho nam gầy', 'thời trang mùa đông nữ', 'review local brand việt nam', 'cách chọn kính cận phù hợp', 'phong cách vintage', 'mẹo chọn giày sneaker', 'phối đồ đi học đại học', 'xu hướng thời trang 2024', 'thời trang công sở nữ', 'phối đồ với quần ống rộng'] },
-  { category: 'NÔNG NGHIỆP CÔNG NGHỆ CAO', items: ['trồng rau thủy canh', 'mô hình nuôi tôm thẻ', 'kỹ thuật trồng sầu riêng', 'nông nghiệp tuần hoàn', 'trồng hoa lan hồ điệp', 'review máy nông nghiệp', 'chăm sóc cây cảnh', 'nông nghiệp hữu cơ', 'nuôi cá bống tượng', 'kỹ thuật ghép cây'] },
-  { category: 'REVIEW SẢN PHẨM & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'trải nghiệm tai nghe bluetooth', 'review bàn phím cơ dưới 1 triệu', 'đồ decor phòng giá rẻ', 'review sách hay nên đọc', 'đánh giá smartwatch', 'unboxing đồ công nghệ độc lạ', 'review máy chiếu mini'] },
-  { category: 'NHẠC & COVER', items: ['nhạc lofi chill', 'acoustic cover', 'hướng dẫn hát karaoke', 'beat rap free', 'nhạc tiktok remix', 'cover nhạc trẻ', 'nhạc thiền tịnh tâm', 'học thanh nhạc cơ bản', 'nhạc nền không bản quyền', 'nhạc edm sôi động'] },
-  { category: 'BẤT ĐỘNG SẢN & NHÀ CỬA', items: ['kinh nghiệm mua căn hộ', 'review nhà phố', 'thiết kế nội thất chung cư', 'phong thủy phòng khách', 'tin tức bất động sản', 'mẫu nhà cấp 4 đẹp', 'hướng dẫn xin giấy phép xây dựng', 'cách định giá nhà đất', 'hợp đồng thuê nhà', 'review đồ nội thất thông minh'] },
-  { category: 'CÂU CHUYỆN KHỞI NGHIỆP', items: ['kinh nghiệm mở quán cafe', 'bài học kinh doanh', 'khởi nghiệp ít vốn', 'câu chuyện startup việt', 'chiến lược marketing 0 đồng', 'nghệ thuật bán hàng', 'mở shop quần áo', 'kỹ năng đàm phán', 'quản lý nhân sự', 'ý tưởng kinh doanh 2024'] },
-  { category: 'CHUYỆN LẠ BỐN PHƯƠNG', items: ['video thỏa mãn thị giác', 'kỷ lục guinness', 'sinh vật biển kỳ lạ', 'hiện tượng thiên nhiên hiếm gặp', 'người có siêu năng lực', 'khám phá đáy đại dương', 'review ẩm thực độc lạ', 'clip hài hước động vật', 'công trình kiến trúc độc đáo', 'những nơi nguy hiểm nhất'] },
-  { category: 'ASMR & MUKBANG', items: ['asmr ăn uống', 'mukbang gà rán', 'asmr gõ phím', 'asmr nấu ăn', 'mukbang hải sản', 'asmr thư giãn giấc ngủ', 'mukbang đồ ăn cay', 'asmr trang điểm', 'asmr âm thanh tự nhiên', 'mukbang ăn vặt trung quốc'] },
-  { category: 'XÂY DỰNG & KIẾN TRÚC', items: ['tiến độ thi công', 'kiến trúc cổ đại', 'kỹ thuật chống thấm nhà', 'quá trình xây dựng tòa nhà', 'review xi măng', 'kiến trúc hiện đại việt nam', 'máy xúc đất', 'thi công nội thất', 'xây nhà tiết kiệm', 'trải nghiệm thợ xây'] },
-  { category: 'MARKETING & TRUYỀN THÔNG', items: ['cách làm affiliate tiktok', 'kiến thức seo website', 'chạy ads facebook', 'kinh nghiệm shopee', 'chia sẻ marketing thực chiến', 'đánh giá case study', 'chiến lược giá', 'câu nói viral', 'chất lượng content', 'tin tức marketing'] },
-  { category: 'TRỊ LIỆU ÂM THANH', items: ['tần số chữa lành 432hz', 'tiếng mưa rơi dễ ngủ', 'âm thanh rừng tự nhiên', 'tiếng sóng biển 8 tiếng', 'tiếng ồn trắng cho em bé', 'nhạc thiền om', 'tiếng nhạc không lời', 'bowl singing tây tạng', 'tần số tập trung', 'tiếng suối chảy chim hót'] },
-  { category: 'ĐAN LEN & THÊU THÙA', items: ['học móc len cơ bản', 'đan áo len nam', 'thêu hoa nổi', 'cách đọc chart móc', 'review kim móc crochet', 'móc gấu bông tỏi', 'thêu chỉ mế', 'đan len mũi hạt gạo', 'móc túi xách len', 'cách khâu mũi chữ thập'] },
-  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024'] }
+  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua trì hoãn', 'thói quen kỷ luật', 'kỹ năng tự tin', 'quản lý thời gian', 'tư duy tích cực', 'chữa lành bản thân'] },
+  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tại nhà', 'skincare cho da mụn', 'yoga giảm stress', 'ăn sạch mỗi ngày', 'chăm sóc tóc rụng', 'bài tập giữ dáng'] },
+  { category: 'CÔNG NGHỆ & AI', items: ['công cụ AI mới', 'hướng dẫn ChatGPT', 'AI tạo video', 'review điện thoại', 'tự động hóa công việc', 'ứng dụng AI học tập'] },
+  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'mẹo học nhanh', 'tự học lập trình', 'ôn thi hiệu quả', 'IELTS vocabulary', 'kỹ năng thuyết trình'] },
+  { category: 'ẨM THỰC & NẤU ĂN', items: ['món ăn gia đình', 'nấu ăn sinh viên', 'món ngon dễ làm', 'meal prep healthy', 'công thức nồi chiên', 'ẩm thực đường phố'] },
+  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch tự túc', 'travel vlog', 'review homestay', 'địa điểm cuối tuần', 'kinh nghiệm xin visa', 'mẹo săn vé rẻ'] },
+  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'reaction trending', 'meme compilation', 'thử thách vui', 'tóm tắt phim', 'clip giải trí'] },
+  { category: 'THỂ THAO & THỂ HÌNH', items: ['home workout', 'giảm mỡ bụng', 'tập gym cơ bản', 'bóng đá hôm nay', 'bài tập tăng cơ', 'dinh dưỡng thể hình'] },
+  { category: 'PETS & ĐỘNG VẬT', items: ['huấn luyện chó con', 'chăm sóc mèo', 'pet grooming', 'đồ chơi thú cưng', 'vlog chó mèo', 'thức ăn thú cưng'] },
+  { category: 'GAMING & ESPORTS', items: ['gameplay highlights', 'mobile game mới', 'mẹo leo rank', 'review game hot', 'esports moments', 'streamer reaction'] },
+  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['kiếm tiền online', 'đầu tư cho người mới', 'crypto news', 'quản lý tài chính', 'affiliate marketing', 'stock market tips'] },
+  { category: 'MARKETING & KINH DOANH', items: ['content marketing', 'tăng trưởng kênh', 'bán hàng online', 'affiliate tiktok', 'SEO cơ bản', 'chiến lược thương hiệu'] },
+  { category: 'Ô TÔ & XE MÁY', items: ['review xe mới', 'phụ kiện ô tô', 'kinh nghiệm mua xe', 'bảo dưỡng xe máy', 'ô tô điện', 'độ xe đẹp'] },
+  { category: 'NHẠC & ÂM THANH', items: ['nhạc lofi chill', 'acoustic cover', 'nhạc ngủ sâu', 'beat free', 'music production', 'nhạc thiền'] },
+  { category: 'MẸO VẶT & ĐỜI SỐNG', items: ['mẹo dọn nhà', 'life hacks', 'tái chế đồ cũ', 'mẹo tiết kiệm tiền', 'trang trí phòng nhỏ', 'ứng dụng hữu ích'] },
 ];
 
 const STOP_LIMIT = 10;
@@ -737,7 +722,7 @@ export default function App() {
         if (Array.isArray(parsedSuggestedNiches) && parsedSuggestedNiches.length > 0) {
           setSuggestedNiches(parsedSuggestedNiches.map((niche: any) => ({
             ...niche,
-            items: Array.isArray(niche.items) ? niche.items.slice(0, 5) : []
+            items: Array.isArray(niche.items) ? niche.items.slice(0, 6) : []
           })));
         }
       } catch (error) {
@@ -1534,10 +1519,10 @@ export default function App() {
           seen.add(key);
           return true;
         })
-        .slice(0, 5);
+        .slice(0, 6);
     };
 
-    const generateGeminiNicheKeywords = async (category: string, count = 5) => {
+    const generateGeminiNicheKeywords = async (category: string, count = 6) => {
       if (!geminiApiKey) return [] as string[];
       try {
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
@@ -1589,8 +1574,8 @@ Rules:
 
         const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
         if (videoIds.length === 0) {
-          const aiItems = await generateGeminiNicheKeywords(category, 5);
-          updated.push({ category, items: aiItems.length ? aiItems : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk) });
+          const aiItems = await generateGeminiNicheKeywords(category, 6);
+          updated.push({ category, items: aiItems.length ? aiItems.slice(0, 6) : SUGGESTED_NICHES[idx].items.slice(0, 6).filter(languageOk) });
           continue;
         }
 
@@ -1638,7 +1623,7 @@ Rules:
             const key = removeVietnameseTone(phrase);
             return arr.findIndex(item => removeVietnameseTone(item) === key) === index;
           })
-          .slice(0, 5);
+          .slice(0, 6);
 
         const looseRanked = [...loosePhraseScores.entries()]
           .sort((a, b) => b[1] - a[1])
@@ -1648,20 +1633,20 @@ Rules:
         let items = [
           ...ranked,
           ...looseRanked
-        ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 5);
+        ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 6);
 
         // Nếu YouTube API không đủ dữ liệu đúng chủ đề/khu vực thì dùng Gemini để bù từ khóa,
         // nhưng vẫn khóa ngôn ngữ theo khu vực đã chọn để tránh sai vùng.
-        if (items.length < 5) {
-          const aiItems = await generateGeminiNicheKeywords(category, 5 - items.length);
+        if (items.length < 6) {
+          const aiItems = await generateGeminiNicheKeywords(category, 6 - items.length);
           items = [...items, ...aiItems]
             .filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i)
-            .slice(0, 5);
+            .slice(0, 6);
         }
 
         updated.push({
           category,
-          items: items.length ? items : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk)
+          items: items.length ? items : SUGGESTED_NICHES[idx].items.slice(0, 6).filter(languageOk)
         });
       }
 
@@ -1709,18 +1694,18 @@ Rules:
         items: (Array.isArray(cat?.items) ? cat.items : Array.isArray(cat?.keywords) ? cat.keywords : [])
           .map((item: any) => String(item || '').replace(/^#/, '').replace(/["“”']/g, '').replace(/\s+/g, ' ').trim())
           .filter(Boolean)
-          .slice(0, 5),
+          .slice(0, 6),
       }))
       .filter((cat: any) => cat.category && cat.items.length > 0)
-      .slice(0, 30);
+      .slice(0, 15);
 
-    // Nếu Gemini trả thiếu chủ đề, giữ đủ khung 30 chủ đề và bù bằng key cũ theo đúng category.
+    // Nếu Gemini trả thiếu chủ đề, giữ đủ khung 15 chủ đề và bù bằng key cũ theo đúng category.
     const used = new Set(fixed.map((x: any) => x.category));
     for (const fallback of SUGGESTED_NICHES) {
-      if (fixed.length >= 30) break;
+      if (fixed.length >= 15) break;
       const title = fallback.category.toUpperCase();
       if (!used.has(title)) {
-        fixed.push({ category: title, items: fallback.items.slice(0, 5) });
+        fixed.push({ category: title, items: fallback.items.slice(0, 6) });
         used.add(title);
       }
     }
@@ -1737,16 +1722,16 @@ Rules:
     const ai = new GoogleGenAI({ apiKey: geminiApiKey.trim() });
     const categoryList = SUGGESTED_NICHES.map((x, i) => `${i + 1}. ${x.category}`).join('\n');
     const prompt = `Bạn là chuyên gia nghiên cứu ngách YouTube.
-Tạo danh sách đúng 30 chủ đề ngách YouTube cho khu vực: ${regionName} (${selectedRegion}).
+Tạo danh sách đúng 15 chủ đề ngách YouTube cho khu vực: ${regionName} (${selectedRegion}).
 Ngôn ngữ bắt buộc của tất cả keyword: ${regionCfg.language}.
 Ghi chú ngôn ngữ: ${regionCfg.note}.
 Tuyệt đối không dùng tiếng Việt nếu khu vực không phải Việt Nam.
 Tuyệt đối không trộn ngôn ngữ/khu vực.
-Mỗi chủ đề phải có đúng 5 keyword/cụm keyword, logic sát đúng với tên chủ đề.
+Mỗi chủ đề phải có đúng 6 keyword/cụm keyword, logic sát đúng với tên chủ đề.
 Các keyword phải là cụm mà người dùng thật có thể tìm trên YouTube, ưu tiên xu hướng 30 ngày gần đây, view/VPH cao.
 Không giải thích. Chỉ trả về JSON hợp lệ.
 
-Danh sách 30 chủ đề bắt buộc giữ đúng thứ tự:
+Danh sách 15 chủ đề bắt buộc giữ đúng thứ tự:
 ${categoryList}
 
 JSON mẫu:
@@ -1755,7 +1740,7 @@ JSON mẫu:
   "regionName": "${regionName}",
   "source": "gemini_region_suggestion",
   "categories": [
-    { "category": "PHÁT TRIỂN BẢN THÂN", "items": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5"] }
+    { "category": "PHÁT TRIỂN BẢN THÂN", "items": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5", "keyword 6"] }
   ]
 }`;
 
@@ -1788,7 +1773,7 @@ JSON mẫu:
       const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
       setSuggestedNiches(data.categories);
       setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
-      setStatus(`Đã tạo key gợi ý bằng Gemini cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm "Quét dữ liệu thật" nếu muốn lấy key từ YouTube API V3.`);
+      setStatus(`Đã tạo key gợi ý bằng Gemini cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Mỗi chủ đề có nút icon để quét dữ liệu thật bằng YouTube API V3.`);
     } catch (err: any) {
       const savedGemini = localStorage.getItem(getTrendingStorageKey(selectedRegion, 'gemini'));
       const savedYoutube = localStorage.getItem(getTrendingStorageKey(selectedRegion, 'youtube'));
@@ -1801,7 +1786,7 @@ JSON mẫu:
           if (Array.isArray(categories) && categories.length > 0) {
             setSuggestedNiches(categories.map((niche: any) => ({
               category: String(niche.category || niche.title || '').toUpperCase(),
-              items: Array.isArray(niche.items) ? niche.items.slice(0, 5) : Array.isArray(niche.keywords) ? niche.keywords.slice(0, 5) : []
+              items: Array.isArray(niche.items) ? niche.items.slice(0, 6) : Array.isArray(niche.keywords) ? niche.keywords.slice(0, 6) : []
             })).filter((x: any) => x.category && x.items.length));
             setTrendingCacheMeta({ updatedAt: parsed.updatedAt, region: selectedRegion, source: parsed.source || 'local-cache' });
             setStatus('Gemini lỗi hoặc thiếu key. Đang hiển thị dữ liệu đã lưu gần nhất của khu vực này.');
@@ -1812,6 +1797,193 @@ JSON mẫu:
       setSuggestedNiches(SUGGESTED_NICHES);
       setTrendingCacheMeta(null);
       setStatus(err?.message || 'Không tạo được key Gemini theo khu vực.');
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
+
+  const getRegionLanguageForYouTube = (regionCode: string) => {
+    const mapping: Record<string, string> = {
+      VN: 'vi', US: 'en', GB: 'en', CA: 'en', AU: 'en', SG: 'en', IN: 'en',
+      JP: 'ja', KR: 'ko', RU: 'ru', BR: 'pt', MX: 'es', ES: 'es', FR: 'fr', DE: 'de',
+      TH: 'th', ID: 'id', MY: 'ms', PH: 'en', IT: 'it'
+    };
+    return mapping[regionCode] || undefined;
+  };
+
+  const getYouTubeCategorySeed = (category: string, regionCode: string) => {
+    const seeds: Record<string, string> = {
+      'PHÁT TRIỂN BẢN THÂN': 'self improvement habits productivity motivation',
+      'SỨC KHỎE & LÀM ĐẸP': 'health beauty skincare weight loss fitness',
+      'CÔNG NGHỆ & AI': 'ai tools chatgpt technology tutorial',
+      'GIÁO DỤC & HỌC TẬP': 'study tips learning english education',
+      'ẨM THỰC & NẤU ĂN': 'food cooking recipes easy meals',
+      'DU LỊCH & KHÁM PHÁ': 'travel vlog destination guide adventure',
+      'GIẢI TRÍ & HÀI HƯỚC': 'funny entertainment reaction meme',
+      'THỂ THAO & THỂ HÌNH': 'fitness workout sports football gym',
+      'PETS & ĐỘNG VẬT': 'pets animals dog cat care',
+      'GAMING & ESPORTS': 'gaming gameplay highlights esports',
+      'TÀI CHÍNH & ĐẦU TƯ': 'finance investing crypto money tips',
+      'MARKETING & KINH DOANH': 'marketing business online sales growth',
+      'Ô TÔ & XE MÁY': 'car motorcycle review auto tips',
+      'NHẠC & ÂM THANH': 'music cover lofi relaxing songs',
+      'MẸO VẶT & ĐỜI SỐNG': 'life hacks home tips cleaning'
+    };
+
+    const vietnameseSeeds: Record<string, string> = {
+      'PHÁT TRIỂN BẢN THÂN': 'phát triển bản thân thói quen năng suất',
+      'SỨC KHỎE & LÀM ĐẸP': 'sức khỏe làm đẹp giảm cân skincare',
+      'CÔNG NGHỆ & AI': 'công nghệ AI ChatGPT công cụ AI',
+      'GIÁO DỤC & HỌC TẬP': 'học tập tiếng anh tự học hiệu quả',
+      'ẨM THỰC & NẤU ĂN': 'ẩm thực nấu ăn món ngon công thức',
+      'DU LỊCH & KHÁM PHÁ': 'du lịch khám phá travel vlog',
+      'GIẢI TRÍ & HÀI HƯỚC': 'giải trí hài hước reaction phim ngắn',
+      'THỂ THAO & THỂ HÌNH': 'thể thao gym bóng đá workout',
+      'PETS & ĐỘNG VẬT': 'thú cưng chó mèo động vật',
+      'GAMING & ESPORTS': 'game esports highlight liên quân',
+      'TÀI CHÍNH & ĐẦU TƯ': 'tài chính đầu tư kiếm tiền online',
+      'MARKETING & KINH DOANH': 'marketing kinh doanh bán hàng online',
+      'Ô TÔ & XE MÁY': 'ô tô xe máy review xe',
+      'NHẠC & ÂM THANH': 'nhạc lofi cover thư giãn',
+      'MẸO VẶT & ĐỜI SỐNG': 'mẹo vặt cuộc sống dọn nhà'
+    };
+
+    if (regionCode === 'VN') return vietnameseSeeds[category] || category.toLowerCase();
+    return seeds[category] || category.toLowerCase().replace(/&/g, '');
+  };
+
+  const scanCategoryTrendingFromYouTube = async (categoryIndex: number) => {
+    if (config.apiKeys.length === 0) {
+      setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách bằng dữ liệu thật.');
+      return;
+    }
+
+    const selectedRegion = normalizeRegionCode(trendingRegion || config.region || 'VN');
+    const category = suggestedNiches[categoryIndex]?.category || SUGGESTED_NICHES[categoryIndex]?.category;
+    if (!category) return;
+
+    setIsFetchingDailyTrending(true);
+    setStatus(`Đang quét YouTube API V3 cho chủ đề ${category} tại khu vực ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}...`);
+
+    const cleanPhrase = (value: string) => String(value || '')
+      .replace(/#[\w\p{L}\p{N}_-]+/gu, ' ')
+      .replace(/https?:\/\/\S+/gi, ' ')
+      .replace(/[|•·,_;:!?()[\]{}"“”'’]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const removeTone = (value: string) => String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .trim();
+
+    const stopWords = /\b(official|video|shorts|viral|full|new|update|2024|2025|2026|part|episode|channel|youtube|subscribe|like|comment|follow|today|latest|this|that|with|from|the|and|for|you|your)\b/i;
+
+    const addCandidates = (text: string, output: string[]) => {
+      const words = cleanPhrase(text).split(/\s+/).filter(Boolean);
+      if (words.length < 2) return;
+      for (let n = 2; n <= Math.min(5, words.length); n++) {
+        for (let i = 0; i <= words.length - n; i++) {
+          const phrase = words.slice(i, i + n).join(' ').replace(/^#/, '').trim().toLowerCase();
+          if (phrase.length >= 4 && phrase.length <= 46 && !stopWords.test(phrase)) output.push(phrase);
+        }
+      }
+    };
+
+    try {
+      const query = getYouTubeCategorySeed(category, selectedRegion);
+      const publishedAfter = getPublishedAfterDate('month');
+      const relevanceLanguage = getRegionLanguageForYouTube(selectedRegion);
+
+      const searchRes = await youtubeFetch('search', {
+        part: 'snippet',
+        q: query,
+        type: 'video',
+        regionCode: selectedRegion,
+        publishedAfter,
+        order: 'viewCount',
+        maxResults: 35,
+        relevanceLanguage
+      });
+
+      const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
+      if (videoIds.length === 0) throw new Error('Không tìm thấy video trend trong 30 ngày cho chủ đề này.');
+
+      const videoDetail = await youtubeFetch('videos', {
+        part: 'snippet,statistics',
+        id: videoIds.join(',')
+      });
+
+      const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
+      const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
+      const channelDetail = channelIds.length ? await youtubeFetch('channels', {
+        part: 'snippet,statistics',
+        id: channelIds.join(',')
+      }) : { items: [] };
+      const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
+
+      const scoredVideos = videos.map((video: any) => {
+        const channel: any = channelMap.get(video?.snippet?.channelId) || {};
+        const views = Number(video?.statistics?.viewCount || 0);
+        const subs = Number(channel?.statistics?.subscriberCount || 0);
+        const vph = calculateVPH(views, video?.snippet?.publishedAt);
+        const subNear30k = subs > 0 ? Math.max(0, 1 - Math.abs(subs - 30000) / 70000) : 0;
+        const score = (vph * 2.5) + (Math.log10(views + 10) * 35) + (subNear30k * 140) + (subs > 0 && subs <= 80000 ? 90 : 0);
+        return { video, channel, views, subs, vph, score };
+      }).filter((x: any) => x.views > 0 && x.vph > 0)
+        .sort((a: any, b: any) => b.score - a.score);
+
+      const preferred = scoredVideos.filter((x: any) => x.subs > 0 && x.subs <= 80000).slice(0, 18);
+      const pool = (preferred.length >= 6 ? preferred : scoredVideos.slice(0, 18));
+
+      const phraseScores = new Map<string, number>();
+      for (const item of pool) {
+        const candidates: string[] = [];
+        addCandidates(item.video?.snippet?.title || '', candidates);
+        if (Array.isArray(item.video?.snippet?.tags)) {
+          item.video.snippet.tags.slice(0, 12).forEach((tag: string) => addCandidates(tag, candidates));
+        }
+        candidates.forEach((phrase) => {
+          const key = removeTone(phrase);
+          if (!key || key.length < 4) return;
+          const prev = phraseScores.get(phrase) || 0;
+          phraseScores.set(phrase, prev + item.score);
+        });
+      }
+
+      const seen = new Set<string>();
+      let keys = [...phraseScores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([phrase]) => phrase)
+        .filter((phrase) => {
+          const key = removeTone(phrase);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 6);
+
+      if (keys.length < 6) {
+        const fallback = SUGGESTED_NICHES.find(x => x.category === category)?.items || [];
+        keys = [...keys, ...fallback].filter((item, idx, arr) => arr.findIndex(x => removeTone(x) === removeTone(item)) === idx).slice(0, 6);
+      }
+
+      setSuggestedNiches(prev => {
+        const next = prev.map((item, idx) => idx === categoryIndex ? { ...item, items: keys } : item);
+        const payload = { categories: next, updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_category_manual' };
+        localStorage.setItem(getTrendingStorageKey(selectedRegion, 'youtube'), JSON.stringify(payload));
+        localStorage.setItem(`youtube_suggested_niches_trending_v4_${selectedRegion}`, JSON.stringify(next));
+        setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
+        return next;
+      });
+
+      setStatus(`Đã quét xong chủ đề ${category}: lấy ${keys.length} key từ video trend 30 ngày, ưu tiên VPH/View cao và kênh quanh 30k sub.`);
+    } catch (error: any) {
+      console.error(error);
+      setStatus(`Lỗi quét chủ đề ${category}: ${error?.message || 'Không xác định'}`);
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -7015,7 +7187,7 @@ Quy tắc:
                     <LayoutGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
+                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH 15 CHỦ ĐỀ NGÁCH GỢI Ý</h3>
                   </div>
                 </div>
                 <button 
@@ -7031,7 +7203,7 @@ Quy tắc:
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Gemini hiển thị key nhanh theo đúng khu vực. Bấm Quét dữ liệu thật để lấy key từ YouTube API V3 trong 30 ngày gần nhất.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Mỗi chủ đề có nút quét riêng bằng YouTube API V3 theo khu vực: ưu tiên video 30 ngày, VPH/View cao và kênh quanh 30k sub.</span>
                         {trendingCacheMeta?.updatedAt && (
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
@@ -7054,15 +7226,9 @@ Quy tắc:
                             disabled={isFetchingDailyTrending}
                             className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo...</> : <><Bot size={16}/> Tạo key Gemini</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo...</> : <><Bot size={16}/> Tạo 15 chủ đề Gemini</>}
                          </button>
-                         <button
-                            onClick={fetchDailyTrendingFromYouTube}
-                            disabled={isFetchingDailyTrending}
-                            className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2.5 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center gap-2"
-                         >
-                            <RefreshCw size={14}/> Quét dữ liệu thật
-                         </button>
+
                      </div>
                 </div>
 
@@ -7071,10 +7237,21 @@ Quy tắc:
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
                       <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => scanCategoryTrendingFromYouTube(idx)}
+                            disabled={isFetchingDailyTrending}
+                            title="Quét ngách thật bằng YouTube API V3 cho chủ đề này"
+                            className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-500 hover:text-white disabled:opacity-50 flex items-center justify-center transition-all active:scale-95"
+                          >
+                            {isFetchingDailyTrending ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                          </button>
+                          <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(6, category.items.length)} KEY</span>
+                        </div>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.slice(0, 5).map((item, itemIdx) => (
+                        {category.items.slice(0, 6).map((item, itemIdx) => (
                           <button
                             key={itemIdx}
                             onClick={() => {
