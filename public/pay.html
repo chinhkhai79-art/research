@@ -297,7 +297,7 @@
       .sub{font-size:12.5px;margin-top:4px}
       .plan{min-height:74px;padding:10px 14px;border-radius:16px}
       .plan-name{font-size:18px;margin-bottom:5px}
-      .plan-price{font-size:25px}
+      .plan-price{font-size:20px}
       .card{padding:14px;border-radius:18px}
       .section-title{font-size:24px}
       .note{font-size:12px;margin-bottom:8px}
@@ -399,9 +399,9 @@ function bankId(v){
   if (/^\d{6}$/.test(v)) return v;
   return BANK_CODE_MAP[v.toUpperCase().replace(/\s+/g,'')] || v || '970416';
 }
-function formatShort(n){
+function formatVnd(n){
   n = Number(n || 0);
-  return n >= 1000 ? Math.round(n / 1000) + 'K' : String(n);
+  return n.toLocaleString('vi-VN') + ' VND';
 }
 function toast(text){
   const el = document.getElementById('toast');
@@ -484,7 +484,7 @@ function renderPlans(){
     div.className = 'plan';
     div.dataset.plan = p.id;
     div.onclick = ()=>selectPlan(p.id);
-    div.innerHTML = `<div class="plan-label">GÓI</div><div class="plan-name">${p.name}</div><div class="plan-price">${formatShort(p.amount)}</div>`;
+    div.innerHTML = `<div class="plan-label">GÓI</div><div class="plan-name">${p.name}</div><div class="plan-price">${formatVnd(p.amount)}</div>`;
     box.appendChild(div);
   });
   if (!plans[currentPlan]) currentPlan = Object.keys(plans)[0] || '3m';
@@ -503,7 +503,7 @@ function renderPayment(apiQr){
     setMsg('<span class="err">⚠️ QR chưa tải được. Kiểm tra bankId/accountNo hoặc mạng tới VietQR.</span>');
   };
 
-  document.getElementById('amountText').textContent = amount.toLocaleString('vi-VN') + ' đ';
+  document.getElementById('amountText').textContent = amount.toLocaleString('vi-VN') + ' VND';
   document.getElementById('planName').textContent = String(plan.name || '').replace(/premium/gi,'PRO').toUpperCase();
   document.getElementById('contentText').textContent = currentContent || '---';
   document.getElementById('emailText').textContent = currentEmail || '---';
