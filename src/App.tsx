@@ -419,6 +419,7 @@ export default function App() {
   const [suggestedNiches, setSuggestedNiches] = useState<{ category: string, items: string[] }[]>(SUGGESTED_NICHES);
   const [trendingRegion, setTrendingRegion] = useState(config.region);
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
+  const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [showModelOptions, setShowModelOptions] = useState(false);
@@ -1655,6 +1656,94 @@ Rules:
     } catch (error: any) {
       console.error(error);
       setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
+
+  // Bước 62: Người dùng chỉ đọc dữ liệu ngách đã được admin quét sẵn.
+  // Không cho người dùng tự quét YouTube API ở popup gợi ý ngách để tiết kiệm quota.
+  const loadTrendingNicheCache = async (regionCode?: string) => {
+    const selectedRegion = regionCode || trendingRegion || config.region || 'VN';
+    const localKey = `youtube_suggested_niches_trending_cache_${selectedRegion || 'GLOBAL'}`;
+    setIsFetchingDailyTrending(true);
+    setStatus('Đang tải danh sách ngách đã được hệ thống cập nhật...');
+
+    try {
+      const res = await fetch(`/api/trending-cache?region=${encodeURIComponent(selectedRegion)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) throw new Error(data?.error || 'Không lấy được dữ liệu cache');
+
+      const categories = Array.isArray(data?.categories) ? data.categories : [];
+      if (categories.length > 0) {
+        const normalized = categories.map((niche: any) => ({
+          category: String(niche.category || '').toUpperCase(),
+          items: Array.isArray(niche.items) ? niche.items.slice(0, 5).map((x: any) => String(x?.keyword || x || '').trim()).filter(Boolean) : []
+        })).filter((niche: any) => niche.category && niche.items.length > 0);
+
+        if (normalized.length > 0) {
+          setSuggestedNiches(normalized);
+          setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source || 'system-cache' });
+          localStorage.setItem(localKey, JSON.stringify(normalized));
+          localStorage.setItem(`youtube_suggested_niches_trending_v4_${selectedRegion || 'GLOBAL'}`, JSON.stringify(normalized));
+          setStatus(`Đã tải ${normalized.length} chủ đề ngách đã cập nhật từ hệ thống.`);
+          return;
+        }
+      }
+
+      throw new Error('Cache chưa có dữ liệu cho khu vực này');
+    } catch (err: any) {
+      const saved = localStorage.getItem(localKey)
+        || localStorage.getItem(`youtube_suggested_niches_trending_v4_${selectedRegion || 'GLOBAL'}`)
+        || localStorage.getItem(`youtube_suggested_niches_trending_v3_${selectedRegion || 'GLOBAL'}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSuggestedNiches(parsed.map((niche: any) => ({
+              ...niche,
+              items: Array.isArray(niche.items) ? niche.items.slice(0, 5) : []
+            })));
+            setStatus('Đang hiển thị dữ liệu ngách đã lưu gần nhất trên trình duyệt.');
+            return;
+          }
+        } catch {}
+      }
+      setSuggestedNiches(SUGGESTED_NICHES);
+      setStatus(err?.message || 'Chưa có dữ liệu ngách hệ thống cho khu vực này.');
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
+  // Chỉ admin chạy quét ngầm/định kỳ. Người dùng thường không gọi API YouTube tại popup này.
+  const runAdminTrendingCron = async () => {
+    if (user?.email !== 'chinhkhai79@gmail.com') return;
+    setIsFetchingDailyTrending(true);
+    setStatus('Admin: đang kích hoạt quét ngách hệ thống...');
+    try {
+      const secret = window.prompt('Nhập ADMIN_CRON_SECRET để chạy quét ngách:') || '';
+      if (!secret.trim()) return;
+      const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(trendingRegion || config.region || 'VN')}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': secret.trim()
+        },
+        body: JSON.stringify({ region: trendingRegion || config.region || 'VN' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Admin cron lỗi');
+      setStatus(`Admin: đã cập nhật cache ${data.region || ''}.`);
+      await loadTrendingNicheCache(data.region || trendingRegion || config.region || 'VN');
+    } catch (err: any) {
+      setStatus(err?.message || 'Không chạy được admin cron.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -3371,28 +3460,40 @@ Quy tắc:
           console.warn("Could not fetch comments", e);
         }
 
-        setStatus('Đã lấy dữ liệu YouTube API V3. Đang phân tích bằng Gemini AI...');
-        const aiVideoAudit = await analyzeVideoWithGemini(v);
-        v._aiVideoAudit = aiVideoAudit;
+        // BƯỚC 61: Ưu tiên hiển thị dữ liệu thật từ YouTube API V3 trước.
+        // Gemini chỉ chạy phân tích bổ sung ở nền sau đó, không chặn kết quả YouTube.
         v._estimatedRpmRange = getVideoRpmRange(v.snippet?.categoryId, v._channelInfo?.snippet?.country);
         v._vph = calculateVideoVph(parseInt(v.statistics?.viewCount || '0') || 0, v.snippet?.publishedAt);
+        v._aiVideoAudit = buildFallbackVideoAudit(v); // report nhanh dựa 100% dữ liệu YouTube API
 
-        setVideoResult(v);
-        setStatus('Đã kiểm tra video: YouTube API V3 + Gemini AI đã phân tích xong.');
+        const youtubeFirstResult = { ...v };
+        setVideoResult(youtubeFirstResult);
+        setStatus('Đã hiển thị dữ liệu YouTube API V3 trước. Gemini AI đang phân tích bổ sung...');
+        setIsAnalyzingVideo(false);
 
-        // Save to project history
+        // Lưu bản YouTube trước để người dùng thấy ngay và lịch sử có dữ liệu ngay.
         setVideoProjects(prev => {
-          const exists = prev.find(p => p.id === v.id);
-          let next;
-          if (exists) {
-            next = [v, ...prev.filter(p => p.id !== v.id)];
-          } else {
-            next = [v, ...prev];
-          }
-          const limited = next.slice(0, 20); // Keep last 20
-          localStorage.setItem('youtube_video_projects', JSON.stringify(limited));
-          return limited;
+          const next = [youtubeFirstResult, ...prev.filter(p => p.id !== youtubeFirstResult.id)].slice(0, 20);
+          localStorage.setItem('youtube_video_projects', JSON.stringify(next));
+          return next;
         });
+
+        // Chạy Gemini sau khi dữ liệu YouTube đã lên giao diện.
+        analyzeVideoWithGemini(youtubeFirstResult)
+          .then((aiVideoAudit) => {
+            const geminiEnhancedResult = { ...youtubeFirstResult, _aiVideoAudit: aiVideoAudit };
+            setVideoResult((current: any) => current?.id === geminiEnhancedResult.id ? geminiEnhancedResult : current);
+            setVideoProjects(prev => {
+              const next = [geminiEnhancedResult, ...prev.filter(p => p.id !== geminiEnhancedResult.id)].slice(0, 20);
+              localStorage.setItem('youtube_video_projects', JSON.stringify(next));
+              return next;
+            });
+            setStatus('YouTube API đã hiển thị trước; Gemini AI đã phân tích bổ sung xong.');
+          })
+          .catch((err) => {
+            console.warn('Gemini background video audit failed:', err);
+            setStatus('Đã hiển thị dữ liệu YouTube API V3. Gemini AI chưa phân tích được, vẫn giữ kết quả YouTube.');
+          });
       } else {
         setStatus('Không tìm thấy video. Vui lòng kiểm tra lại ID/URL.');
         setStatus('Không tìm thấy video.');
@@ -5036,7 +5137,7 @@ Quy tắc:
                     <div className="flex items-center justify-between">
                       <label className="text-[10px] uppercase font-bold text-[#95a5a6] block">TỪ KHÓA / NGÁCH RESEARCH</label>
                       <button 
-                        onClick={() => setShowNicheModal(true)}
+                        onClick={() => { setShowNicheModal(true); loadTrendingNicheCache(trendingRegion || config.region || 'VN'); }}
                         className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-400/20 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 font-bold shadow-sm"
                       >
                         <LayoutGrid size={10} /> XEM GỢI Ý NGÁCH
@@ -6801,13 +6902,16 @@ Quy tắc:
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Tự tìm ngách hot trend trong 30 ngày theo khu vực.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Dữ liệu do hệ thống tự quét định kỳ bằng YouTube API V3; người dùng chỉ xem/copy/tải key để tiết kiệm quota.</span>
+                        {trendingCacheMeta?.updatedAt && (
+                          <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
+                        )}
                      </h3>
                      <div className="flex items-center gap-3">
                          <div className="relative">
                            <select
                               value={trendingRegion}
-                              onChange={(e) => setTrendingRegion(e.target.value)}
+                              onChange={(e) => { setTrendingRegion(e.target.value); loadTrendingNicheCache(e.target.value); }}
                               className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.map(r => (
@@ -6817,12 +6921,21 @@ Quy tắc:
                            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                          </div>
                          <button
-                            onClick={fetchDailyTrendingFromYouTube}
+                            onClick={() => loadTrendingNicheCache(trendingRegion || config.region || 'VN')}
                             disabled={isFetchingDailyTrending}
                             className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang lấy dữ liệu...</> : <><Search size={16}/> Cập nhật Trending</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tải...</> : <><Search size={16}/> Tải dữ liệu mới nhất</>}
                          </button>
+                         {user?.email === 'chinhkhai79@gmail.com' && (
+                           <button
+                              onClick={runAdminTrendingCron}
+                              disabled={isFetchingDailyTrending}
+                              className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2.5 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                           >
+                              <RefreshCw size={14}/> Admin quét
+                           </button>
+                         )}
                      </div>
                 </div>
 
