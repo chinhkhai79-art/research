@@ -574,6 +574,7 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [isHunting, setIsHunting] = useState(false);
   const [quotaUsed, setQuotaUsed] = useState(0);
+  const quotaUsedRef = useRef(0);
   const [totalQuotaToday, setTotalQuotaToday] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -761,6 +762,23 @@ export default function App() {
     } else {
       const today = new Date().toISOString().split('T')[0];
       localStorage.setItem('youtube_quota_today', JSON.stringify({ value: 0, date: today }));
+    }
+
+    // Load session quota so every API call keeps adding during the current browser tab/session.
+    try {
+      const savedSessionQuota = JSON.parse(sessionStorage.getItem('youtube_quota_session') || '{}');
+      const sessionId = sessionStorage.getItem('youtube_quota_session_id') || (() => {
+        const id = String(Date.now());
+        sessionStorage.setItem('youtube_quota_session_id', id);
+        return id;
+      })();
+      if (savedSessionQuota?.sessionId === sessionId) {
+        const restored = Number(savedSessionQuota.value || 0);
+        quotaUsedRef.current = Number.isFinite(restored) ? restored : 0;
+        setQuotaUsed(quotaUsedRef.current);
+      }
+    } catch (error) {
+      console.warn('Không đọc được quota phiên đã lưu:', error);
     }
 
     // Load exhausted keys and clear if it's a new day
@@ -1086,7 +1104,24 @@ export default function App() {
     const safeAmount = Number(amount || 0);
     if (!Number.isFinite(safeAmount) || safeAmount <= 0) return;
 
-    setQuotaUsed(prev => prev + safeAmount);
+    // Không dùng riêng setState cộng dồn vì khi nhiều request chạy liên tục React có thể render trễ.
+    // Dùng ref làm nguồn sự thật để quota phiên luôn cộng dồn từng API call ngay lập tức.
+    const nextSessionQuota = quotaUsedRef.current + safeAmount;
+    quotaUsedRef.current = nextSessionQuota;
+    setQuotaUsed(nextSessionQuota);
+
+    try {
+      const sessionId = sessionStorage.getItem('youtube_quota_session_id') || String(Date.now());
+      sessionStorage.setItem('youtube_quota_session_id', sessionId);
+      sessionStorage.setItem('youtube_quota_session', JSON.stringify({
+        value: nextSessionQuota,
+        sessionId,
+        updatedAt: new Date().toISOString(),
+      }));
+    } catch (error) {
+      console.warn('Không lưu được quota phiên:', error);
+    }
+
     setTotalQuotaToday(() => {
       const today = new Date().toISOString().split('T')[0];
       let current = 0;
@@ -3606,28 +3641,44 @@ Quy tắc:
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowAccountModal(true);
-                }}
-                className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
-                title="Tài khoản & hạn sử dụng"
-              >
-                <img
-                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                  alt="avatar"
-                  className="w-6 h-6 rounded-full shadow-sm"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="leading-tight max-w-[115px] text-left">
-                  <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
-                  <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
-                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAccountModal(true);
+                  }}
+                  className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
+                  title="Tài khoản & hạn sử dụng"
+                >
+                  <img
+                    src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                    alt="avatar"
+                    className="w-6 h-6 rounded-full shadow-sm"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="leading-tight text-left">
+                    <div className="vtw-user-email text-[10px] font-black text-gray-800 whitespace-nowrap">{user.email || user.displayName || 'Tài khoản'}</div>
+                    <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                      {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await logoutUser();
+                    } catch (err) {
+                      console.error('Lỗi đăng xuất:', err);
+                    }
+                  }}
+                  className="vtw-header-logout px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
+                >
+                  Đăng xuất
+                </button>
+              </div>
             ) : (
               <button
                 onClick={async () => {
@@ -5968,7 +6019,7 @@ Quy tắc:
       {/* Modal Lịch sử Key */}
       <AnimatePresence>
         {showKeyHistory && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -6130,7 +6181,7 @@ Quy tắc:
 
 
         {showGeminiKeyHistory && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -6649,7 +6700,7 @@ Quy tắc:
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Ghi chú: Tự tìm kênh/ngách VPH hot trend trong 30 ngày theo khu vực; nếu YouTube chưa đủ dữ liệu, Gemini sẽ gợi ý đúng ngôn ngữ khu vực.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Tự tìm ngách hot trend trong 30 ngày theo khu vực.</span>
                      </h3>
                      <div className="flex items-center gap-3">
                          <div className="relative">
