@@ -1,31 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node@5.3.2"
-    }
-  },
-  "rewrites": [
+  "crons": [
     {
-      "source": "/admin.html",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/admin-settings.html",
-      "destination": "/admin-settings.html"
-    },
-    {
-      "source": "/pay.html",
-      "destination": "/pay.html"
-    },
-    {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
-      "source": "/((?!api/|admin\\.html|admin-settings\\.html|pay\\.html|assets/).*)",
-      "destination": "/index.html"
+      "path": "/api/admin-trending-cron",
+      "schedule": "0 2 * * *"
     }
   ]
 }

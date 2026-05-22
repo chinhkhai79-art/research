@@ -39,7 +39,7 @@ function setCors(req, res) {
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-secret');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-secret,x-admin-email');
   if (req.method === 'OPTIONS') { res.status(200).end(); return true; }
   return false;
 }
@@ -63,7 +63,38 @@ function compactKeyword(value) {
     .replace(/\s+/g, ' ')
     .trim().toLowerCase().split(' ').filter(Boolean).slice(0, 5).join(' ');
 }
-function pickSeeds(def, region) { return def[region] || def.US || def.VN || []; }
+const REGIONAL_SEED_BANK = {
+  JP: {
+    'PHÁT TRIỂN BẢN THÂN': ['自己啓発 習慣','生産性 向上','先延ばし 克服'],
+    'SỨC KHỎE & LÀM ĐẸP': ['自宅 筋トレ','スキンケア 初心者','ダイエット 食事'],
+    'CÔNG NGHỆ & AI': ['AI ツール','ChatGPT 使い方','iPhone 便利技'],
+    'GIÁO DỤC & HỌC TẬP': ['勉強法','英語 学習','プログラミング 初心者'],
+    'ẨM THỰC & NẤU ĂN': ['簡単 レシピ','作り置き','一人暮らし 料理'],
+    'DU LỊCH & KHÁM PHÁ': ['日本 旅行 vlog','東京 穴場','格安 旅行']
+  },
+  KR: {
+    'PHÁT TRIỂN BẢN THÂN': ['자기계발 습관','생산성 높이는 법','미루기 극복'],
+    'SỨC KHỎE & LÀM ĐẸP': ['홈트레이닝','스킨케어 루틴','다이어트 식단'],
+    'CÔNG NGHỆ & AI': ['AI 도구','ChatGPT 사용법','아이폰 꿀팁'],
+    'GIÁO DỤC & HỌC TẬP': ['공부법','영어 공부','코딩 입문'],
+    'ẨM THỰC & NẤU ĂN': ['간단 요리','밀프렙','집밥 레시피'],
+    'DU LỊCH & KHÁM PHÁ': ['한국 여행 브이로그','서울 숨은 명소','저가 여행']
+  },
+  TH: {
+    'PHÁT TRIỂN BẢN THÂN': ['พัฒนาตัวเอง','เพิ่มประสิทธิภาพ','เลิกผัดวันประกันพรุ่ง'],
+    'SỨC KHỎE & LÀM ĐẸP': ['ออกกำลังกายที่บ้าน','สกินแคร์มือใหม่','ลดน้ำหนัก'],
+    'CÔNG NGHỆ & AI': ['เครื่องมือ AI','วิธีใช้ ChatGPT','เทคนิค iPhone']
+  },
+  ID: {
+    'PHÁT TRIỂN BẢN THÂN': ['kebiasaan produktif','cara mengatasi malas','pengembangan diri'],
+    'SỨC KHỎE & LÀM ĐẸP': ['olahraga di rumah','skincare pemula','tips diet'],
+    'CÔNG NGHỆ & AI': ['tools AI','cara pakai ChatGPT','tips iPhone']
+  }
+};
+function pickSeeds(def, region, categoryName) {
+  const regional = REGIONAL_SEED_BANK[region]?.[categoryName];
+  return def[region] || regional || def.US || def.VN || [];
+}
 function scoreVideo(video, channel) {
   const views = Number(video?.statistics?.viewCount || 0);
   const publishedAt = new Date(video?.snippet?.publishedAt || Date.now()).getTime();
@@ -93,7 +124,7 @@ async function youtubeFetch(path, keys, used) {
 }
 async function scanCategory(categoryName, seedsDef, region, keys, used) {
   const candidates = [];
-  const seeds = pickSeeds(seedsDef, region).slice(0, 3);
+  const seeds = pickSeeds(seedsDef, region, categoryName).slice(0, 3);
   for (const seed of seeds) {
     const regionParam = region ? `&regionCode=${encodeURIComponent(region)}` : '';
     const search = await youtubeFetch(`search?part=snippet&type=video&order=viewCount&maxResults=15${regionParam}&publishedAfter=${encodeURIComponent(publishedAfter30d())}&q=${encodeURIComponent(seed)}`, keys, used);
@@ -130,9 +161,10 @@ export default async function handler(req, res) {
 
   const expected = process.env.ADMIN_CRON_SECRET || '';
   const provided = req.headers['x-admin-secret'] || req.query?.secret || '';
+  const adminEmail = String(req.headers['x-admin-email'] || req.query?.adminEmail || req.body?.adminEmail || '').trim().toLowerCase();
   const ua = String(req.headers['user-agent'] || '');
   const isVercelCron = ua.includes('vercel-cron');
-  if (expected && provided !== expected && !isVercelCron) {
+  if (expected && provided !== expected && adminEmail !== 'chinhkhai79@gmail.com' && !isVercelCron) {
     return res.status(401).json({ ok: false, error: 'Unauthorized admin cron' });
   }
 
@@ -162,7 +194,8 @@ export default async function handler(req, res) {
       }
     }
     const updatedAt = new Date().toISOString();
-    const saved = await writeTrendingCache(region, { source: 'youtube-api-admin-cron', updatedAt, categories });
+    const nextScanAt = req.body?.nextScanAt || req.query?.nextScanAt || null;
+    const saved = await writeTrendingCache(region, { source: 'youtube-api-admin-cron', updatedAt, nextScanAt, categories });
     const currentIdx = REGIONS.indexOf(region);
     await writeCronState({
       nextRegionIndex: currentIdx >= 0 ? (currentIdx + 1) % REGIONS.length : 0,

@@ -420,6 +420,7 @@ export default function App() {
   const [trendingRegion, setTrendingRegion] = useState(config.region);
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
+  const [adminTrendingScheduleAt, setAdminTrendingScheduleAt] = useState(() => localStorage.getItem('research_admin_trending_schedule_at') || '');
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [showModelOptions, setShowModelOptions] = useState(false);
@@ -1662,6 +1663,47 @@ Rules:
   };
 
 
+  const buildRegionSafeFallbackNiches = (regionCode?: string) => {
+    const code = regionCode || trendingRegion || config.region || 'VN';
+    const en = [
+      ['self improvement habits','productivity tips','discipline motivation','confidence building','stop procrastination'],
+      ['home workout','skincare routine','weight loss tips','yoga at home','healthy meal prep'],
+      ['ai tools','chatgpt tutorial','iphone tips','budget phone review','automation tools'],
+      ['study tips','learn english','coding for beginners','ielts vocabulary','exam preparation'],
+      ['easy recipes','meal prep','home cooking','healthy snacks','budget meals'],
+      ['travel vlog','budget travel','hidden places','solo travel tips','camping guide']
+    ];
+    const map: Record<string, string[][]> = {
+      VN: SUGGESTED_NICHES.slice(0, 6).map(x => x.items.slice(0, 5)),
+      JP: [
+        ['自己啓発 習慣','生産性 向上','先延ばし 克服','朝活 ルーティン','メンタル 強化'],
+        ['自宅 筋トレ','スキンケア 初心者','ダイエット 食事','ヨガ 自宅','薄毛 対策'],
+        ['AI ツール','ChatGPT 使い方','iPhone 便利技','格安スマホ レビュー','自動化 ツール'],
+        ['勉強法','英語 学習','プログラミング 初心者','資格 勉強','受験 対策'],
+        ['簡単 レシピ','作り置き','一人暮らし 料理','節約 ごはん','弁当 レシピ'],
+        ['日本 旅行 vlog','東京 穴場','格安 旅行','一人旅 コツ','キャンプ 初心者']
+      ],
+      KR: [
+        ['자기계발 습관','생산성 높이는 법','미루기 극복','아침 루틴','멘탈 관리'],
+        ['홈트레이닝','스킨케어 루틴','다이어트 식단','요가 홈트','탈모 관리'],
+        ['AI 도구','ChatGPT 사용법','아이폰 꿀팁','가성비 스마트폰','업무 자동화'],
+        ['공부법','영어 공부','코딩 입문','자격증 공부','시험 준비'],
+        ['간단 요리','밀프렙','집밥 레시피','건강 간식','절약 요리'],
+        ['한국 여행 브이로그','서울 숨은 명소','저가 여행','혼자 여행 팁','캠핑 가이드']
+      ],
+      TH: [
+        ['พัฒนาตัวเอง','เพิ่มประสิทธิภาพ','เลิกผัดวันประกันพรุ่ง','กิจวัตรตอนเช้า','สร้างวินัย'],
+        ['ออกกำลังกายที่บ้าน','สกินแคร์มือใหม่','ลดน้ำหนัก','โยคะที่บ้าน','ดูแลผม'],
+        ['เครื่องมือ AI','วิธีใช้ ChatGPT','เทคนิค iPhone','รีวิวมือถือราคาประหยัด','ระบบอัตโนมัติ'],
+        ['เทคนิคการเรียน','เรียนภาษาอังกฤษ','เริ่มเขียนโค้ด','เตรียมสอบ','อ่านหนังสือ'],
+        ['เมนูง่ายๆ','ทำอาหารที่บ้าน','อาหารคลีน','เมนูประหยัด','ขนมง่ายๆ'],
+        ['เที่ยวไทย','ที่เที่ยวลับ','เที่ยวประหยัด','เดินทางคนเดียว','แคมป์ปิ้ง']
+      ]
+    };
+    const pool = map[code] || en;
+    return SUGGESTED_NICHES.map((group, idx) => ({ category: group.category, items: (pool[idx % pool.length] || en[idx % en.length]).slice(0, 5) }));
+  };
+
   // Bước 62: Người dùng chỉ đọc dữ liệu ngách đã được admin quét sẵn.
   // Không cho người dùng tự quét YouTube API ở popup gợi ý ngách để tiết kiệm quota.
   const loadTrendingNicheCache = async (regionCode?: string) => {
@@ -1715,8 +1757,8 @@ Rules:
           }
         } catch {}
       }
-      setSuggestedNiches(SUGGESTED_NICHES);
-      setStatus(err?.message || 'Chưa có dữ liệu ngách hệ thống cho khu vực này.');
+      setSuggestedNiches(buildRegionSafeFallbackNiches(selectedRegion));
+      setStatus(err?.message || 'Chưa có dữ liệu ngách hệ thống cho khu vực này. Đang hiển thị bộ key dự phòng đúng ngôn ngữ khu vực.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -1782,35 +1824,55 @@ Rules:
   };
 
   // Chỉ admin chạy quét ngầm/định kỳ. Người dùng thường không gọi API YouTube tại popup này.
-  const runAdminTrendingCron = async () => {
+  const runAdminTrendingCron = async (autoRun = false) => {
     if (user?.email !== 'chinhkhai79@gmail.com') return;
     setIsFetchingDailyTrending(true);
-    setStatus('Admin: đang kích hoạt quét ngách hệ thống...');
+    setStatus(autoRun ? 'Admin: đến lịch tự động, đang quét ngách hệ thống...' : 'Admin: đang kích hoạt quét ngách hệ thống...');
     try {
-      const secret = window.prompt('Nhập ADMIN_CRON_SECRET để chạy quét ngách:') || '';
-      if (!secret.trim()) return;
       const activeYoutubeKeys = (config.apiKeys || []).map(k => String(k || '').trim()).filter(Boolean);
-      const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(trendingRegion || config.region || 'VN')}`, {
+      const selectedRegion = trendingRegion || config.region || 'VN';
+      const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(selectedRegion)}&adminEmail=${encodeURIComponent(user.email)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': secret.trim()
+          'x-admin-email': user.email
         },
         body: JSON.stringify({
-          region: trendingRegion || config.region || 'VN',
-          apiKeys: activeYoutubeKeys
+          region: selectedRegion,
+          apiKeys: activeYoutubeKeys,
+          adminEmail: user.email,
+          nextScanAt: adminTrendingScheduleAt || null
         })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Admin cron lỗi');
-      setStatus(`Admin: đã cập nhật cache ${data.region || ''}.`);
-      await loadTrendingNicheCache(data.region || trendingRegion || config.region || 'VN');
+      setStatus(`Admin: đã cập nhật cache ${data.region || selectedRegion}.`);
+      localStorage.setItem('research_admin_trending_last_run_at', new Date().toISOString());
+      if (autoRun) {
+        localStorage.removeItem('research_admin_trending_schedule_at');
+        setAdminTrendingScheduleAt('');
+      }
+      await loadTrendingNicheCache(data.region || selectedRegion);
     } catch (err: any) {
       setStatus(err?.message || 'Không chạy được admin cron.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.email !== 'chinhkhai79@gmail.com' || !adminTrendingScheduleAt) return;
+    localStorage.setItem('research_admin_trending_schedule_at', adminTrendingScheduleAt);
+    const tick = () => {
+      const due = new Date(adminTrendingScheduleAt).getTime();
+      if (Number.isFinite(due) && Date.now() >= due && !isFetchingDailyTrending) {
+        runAdminTrendingCron(true);
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 30000);
+    return () => window.clearInterval(timer);
+  }, [user?.email, adminTrendingScheduleAt, isFetchingDailyTrending, trendingRegion, config.region, config.apiKeys]);
 
     const runNicheResearch = async (customKeyword?: string) => {
     let kw = (customKeyword || nicheInput || '').trim();
@@ -6965,7 +7027,7 @@ Quy tắc:
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
                      </h3>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto md:min-w-[620px]">
+                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full md:w-auto md:min-w-[760px]">
                          <div className="relative h-12">
                            <select
                               value={trendingRegion}
@@ -6992,6 +7054,19 @@ Quy tắc:
                          >
                             <Download size={14}/> Tải TXT
                          </button>
+                         {user?.email === 'chinhkhai79@gmail.com' && (
+                           <input
+                              type="datetime-local"
+                              value={adminTrendingScheduleAt}
+                              onChange={(e) => {
+                                setAdminTrendingScheduleAt(e.target.value);
+                                if (e.target.value) localStorage.setItem('research_admin_trending_schedule_at', e.target.value);
+                                else localStorage.removeItem('research_admin_trending_schedule_at');
+                              }}
+                              title="Chọn ngày giờ tự động chạy Admin quét"
+                              className="h-12 w-full bg-white border border-blue-200 text-gray-800 font-black text-[10px] px-2 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm"
+                           />
+                         )}
                          <button
                             onClick={user?.email === 'chinhkhai79@gmail.com' ? runAdminTrendingCron : () => downloadTrendingKeysTxt()}
                             disabled={isFetchingDailyTrending}
