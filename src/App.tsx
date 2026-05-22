@@ -3031,6 +3031,225 @@ ${topKeywordsStr}`;
     return cats[id] || 'Unknown';
   };
 
+
+
+  const stripCodeFence = (text: string) => String(text || '').replace(/```json|```/g, '').trim();
+
+  const parseGeminiJsonObject = (text: string) => {
+    const cleaned = stripCodeFence(text);
+    try {
+      return JSON.parse(cleaned);
+    } catch (_) {
+      const first = cleaned.indexOf('{');
+      const last = cleaned.lastIndexOf('}');
+      if (first >= 0 && last > first) {
+        try { return JSON.parse(cleaned.slice(first, last + 1)); } catch (__) {}
+      }
+    }
+    return null;
+  };
+
+  const asArrayText = (value: any, fallback: string[] = []) => {
+    if (Array.isArray(value)) {
+      return value.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8);
+    }
+    if (typeof value === 'string' && value.trim()) return [value.trim()];
+    return fallback;
+  };
+
+  const calculateVideoVph = (viewCount: number, publishedAt?: string) => {
+    if (!publishedAt) return 0;
+    const published = new Date(publishedAt).getTime();
+    if (!Number.isFinite(published)) return 0;
+    const hours = Math.max(1, (Date.now() - published) / 36e5);
+    return Math.round(Number(viewCount || 0) / hours);
+  };
+
+  const getVideoRpmRange = (categoryId?: string, country?: string) => {
+    const highValueCategories = ['27', '28', '26', '25'];
+    const midValueCategories = ['22', '24', '19', '2', '17'];
+    const normalizedCountry = String(country || '').toUpperCase();
+    let base: [number, number] = highValueCategories.includes(String(categoryId || '')) ? [0.8, 4.5] : midValueCategories.includes(String(categoryId || '')) ? [0.5, 2.5] : [0.25, 1.5];
+    if (['US', 'GB', 'CA', 'AU'].includes(normalizedCountry)) base = [base[0] * 2.5, base[1] * 2.8];
+    if (['VN', 'TH', 'ID', 'PH', 'IN'].includes(normalizedCountry)) base = [base[0] * 0.45, base[1] * 0.55];
+    return `$${base[0].toFixed(2)} - $${base[1].toFixed(2)}`;
+  };
+
+  const buildFallbackVideoAudit = (video: any) => {
+    const title = String(video?.snippet?.title || '');
+    const description = String(video?.snippet?.description || '');
+    const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
+    const views = parseInt(video?.statistics?.viewCount || '0') || 0;
+    const likes = parseInt(video?.statistics?.likeCount || '0') || 0;
+    const comments = parseInt(video?.statistics?.commentCount || '0') || 0;
+    const vph = calculateVideoVph(views, video?.snippet?.publishedAt);
+    const hasLink = /https?:\/\//i.test(description);
+    const hasHashtag = /#/i.test(`${title} ${description}`) || tags.length > 0;
+    const titleTooLong = title.length > 72;
+    const engagementRate = views ? ((likes + comments) / views) * 100 : 0;
+
+    return {
+      source: 'fallback',
+      overview: [
+        {
+          key: 'title',
+          title: 'TIÊU ĐỀ (TITLE)',
+          icon: 'T',
+          current: titleTooLong ? 'Tiêu đề có nhiều từ khóa nhưng hơi dài, dễ bị cắt trên mobile.' : 'Tiêu đề rõ chủ đề chính và có khả năng thu hút đúng tệp người xem.',
+          strengths: [hasHashtag ? 'Có nhắc tới từ khóa/hashtag liên quan.' : 'Tiêu đề thể hiện được nội dung chính của video.'],
+          improvements: [titleTooLong ? 'Rút gọn phần sau, đưa từ khóa mạnh nhất lên đầu.' : 'Có thể thêm lợi ích cụ thể hoặc yếu tố tò mò để tăng CTR.'],
+          suggestions: [
+            `"${title.slice(0, 52)}${title.length > 52 ? '...' : ''} | Điểm Khác Biệt Cần Biết"`,
+            `"Sự Thật Đằng Sau: ${title.slice(0, 45)}${title.length > 45 ? '...' : ''}"`
+          ]
+        },
+        {
+          key: 'description',
+          title: 'MÔ TẢ (DESCRIPTION)',
+          icon: '▤',
+          current: description.length > 120 ? 'Mô tả đã có dữ liệu để YouTube hiểu nội dung video.' : 'Mô tả còn mỏng, chưa tận dụng tốt để bổ sung ngữ cảnh SEO.',
+          strengths: [hasLink ? 'Có link trong mô tả giúp điều hướng người xem.' : 'Mô tả có thể mở rộng thêm CTA/link liên quan.'],
+          improvements: ['Đưa 2 dòng đầu thật rõ lợi ích, thêm từ khóa phụ và lời kêu gọi hành động.'],
+          suggestions: ['Thêm tóm tắt 2 dòng đầu, link liên quan, hashtag chính và CTA rõ ràng.']
+        },
+        {
+          key: 'thumbnail',
+          title: 'THUMBNAIL',
+          icon: '▧',
+          current: 'Thumbnail lấy từ YouTube API. AI đánh giá dựa trên tiêu đề, chủ đề và hiệu suất hiện tại.',
+          strengths: ['Có thumbnail để người xem nhận diện nội dung.'],
+          improvements: ['Đảm bảo chữ lớn, tương phản mạnh, ít chi tiết và có điểm nhấn thị giác.'],
+          suggestions: ['Dùng 3–5 từ khóa lớn trên ảnh, tránh nhồi quá nhiều chữ.']
+        },
+        {
+          key: 'tags',
+          title: 'TAGS & HASHTAGS',
+          icon: '#',
+          current: tags.length ? `Video có ${tags.length} tags từ dữ liệu YouTube API.` : 'Video chưa có tags công khai trong dữ liệu YouTube API.',
+          strengths: [tags.length ? 'Có bộ tag hỗ trợ YouTube hiểu chủ đề.' : 'Có thể bổ sung tags sát ngách hơn.'],
+          improvements: ['Ưu tiên tag dài 2–5 từ, đúng ngách, tránh tag quá rộng.'],
+          suggestions: tags.slice(0, 5).length ? tags.slice(0, 5) : ['thêm từ khóa chính', 'từ khóa phụ', 'chủ đề video']
+        },
+        {
+          key: 'trend',
+          title: 'CHỦ ĐỀ & XU HƯỚNG',
+          icon: '↗',
+          current: `Video hiện có ${formatVNNumber(views)} lượt xem, khoảng ${formatVNNumber(vph)} VPH.`,
+          strengths: [vph > 100 ? 'Tốc độ xem/giờ đang tốt.' : 'Có dữ liệu thật để đánh giá hiệu suất ban đầu.'],
+          improvements: ['So sánh thêm với video cùng chủ đề để quyết định nhân bản format hay đổi hướng.'],
+          suggestions: ['Làm tiếp video cùng cụm từ khóa nếu VPH cao hơn trung bình kênh.']
+        },
+        {
+          key: 'pinned',
+          title: 'BÌNH LUẬN GHIM',
+          icon: '◆',
+          current: video?._comments?.length ? 'Đã lấy được bình luận nổi bật từ YouTube API để tham khảo phản hồi.' : 'Chưa có dữ liệu bình luận hoặc video tắt bình luận.',
+          strengths: ['Có thể dùng bình luận ghim để tăng chuyển đổi.'],
+          improvements: ['Ghim bình luận chứa CTA/link/tóm tắt lợi ích rõ ràng.'],
+          suggestions: ['“Anh chị muốn nhận tài liệu/checklist thì xem link trong mô tả hoặc bình luận này.”']
+        }
+      ],
+      contentStyle: {
+        contentBullets: [
+          'Nội dung cần bám sát lời hứa trong tiêu đề để giữ chân người xem.',
+          `Hiệu suất hiện tại: ${formatVNNumber(views)} views, ${formatVNNumber(likes)} likes, ${formatVNNumber(comments)} comments.`,
+          engagementRate > 1 ? 'Tỷ lệ tương tác đang có tín hiệu tốt.' : 'Tỷ lệ tương tác còn thấp, nên tăng câu hỏi/CTA trong video.',
+          'Nên đưa lợi ích chính trong 5–10 giây đầu.'
+        ],
+        styleBullets: [
+          'Phong cách nên rõ ràng, vào thẳng vấn đề và có nhịp dựng nhanh hơn ở đoạn mở đầu.',
+          'Cần thêm pattern interrupt, chữ nhấn mạnh hoặc B-roll nếu phần trình bày dài.',
+          'Âm thanh, ánh sáng và bố cục thumbnail nên đồng bộ với tệp người xem mục tiêu.'
+        ],
+        strengths: ['Có dữ liệu thật từ YouTube API để đối chiếu hiệu suất.', hasHashtag ? 'Có dùng từ khóa/hashtag.' : 'Có thể tối ưu thêm từ khóa.'],
+        warnings: [titleTooLong ? 'Tiêu đề dài dễ bị cắt.' : 'Cần kiểm tra CTR thực tế trong YouTube Studio.', vph < 20 ? 'VPH chưa cao, cần cải thiện hook và thumbnail.' : 'Nên nhân bản chủ đề nếu retention tốt.']
+      },
+      conclusion: {
+        headline: vph > 100 ? 'Video có tín hiệu tốt, nên nhân bản chủ đề và tối ưu thêm để tăng chuyển đổi.' : 'Video có nền tảng dữ liệu nhưng cần tối ưu lại hook, thumbnail và CTA để tăng hiệu suất.',
+        badges: [
+          vph > 100 ? 'VPH tốt' : 'Cần tăng VPH',
+          hasLink ? 'Có CTA/link' : 'Thiếu CTA/link',
+          tags.length ? 'Có tags' : 'Thiếu tags'
+        ]
+      }
+    };
+  };
+
+  const analyzeVideoWithGemini = async (video: any) => {
+    const fallback = buildFallbackVideoAudit(video);
+    if (!geminiApiKey) return fallback;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+      const stats = video?.statistics || {};
+      const channelStats = video?._channelInfo?.statistics || {};
+      const dataForAi = {
+        videoId: video?.id,
+        title: video?.snippet?.title,
+        description: video?.snippet?.description,
+        tags: video?.snippet?.tags || [],
+        categoryId: video?.snippet?.categoryId,
+        categoryName: getCategoryName(video?.snippet?.categoryId),
+        publishedAt: video?.snippet?.publishedAt,
+        duration: formatDuration(video?.contentDetails?.duration),
+        viewCount: parseInt(stats.viewCount || '0') || 0,
+        likeCount: parseInt(stats.likeCount || '0') || 0,
+        commentCount: parseInt(stats.commentCount || '0') || 0,
+        vph: calculateVideoVph(parseInt(stats.viewCount || '0') || 0, video?.snippet?.publishedAt),
+        channelTitle: video?.snippet?.channelTitle,
+        channelCountry: video?._channelInfo?.snippet?.country || 'N/A',
+        channelSubscribers: parseInt(channelStats.subscriberCount || '0') || 0,
+        channelViews: parseInt(channelStats.viewCount || '0') || 0,
+        comments: (video?._comments || []).slice(0, 6).map((c: any) => ({ author: c.authorDisplayName, text: String(c.textDisplay || '').replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, '') }))
+      };
+
+      const prompt = `Bạn là chuyên gia tối ưu YouTube. Hãy phân tích video bằng tiếng Việt, nhưng PHẢI dựa trên dữ liệu thật từ YouTube API V3 dưới đây, không bịa số liệu mới.
+
+DỮ LIỆU YOUTUBE API V3:
+${JSON.stringify(dataForAi, null, 2)}
+
+Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, đúng schema:
+{
+  "overview": [
+    {"key":"title","title":"TIÊU ĐỀ (TITLE)","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"description","title":"MÔ TẢ (DESCRIPTION)","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"thumbnail","title":"THUMBNAIL","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"tags","title":"TAGS & HASHTAGS","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"trend","title":"CHỦ ĐỀ & XU HƯỚNG","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"pinned","title":"BÌNH LUẬN GHIM","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]}
+  ],
+  "contentStyle": {
+    "contentBullets":["..."],
+    "styleBullets":["..."],
+    "strengths":["..."],
+    "warnings":["..."]
+  },
+  "conclusion": {"headline":"...", "badges":["...", "..."]}
+}
+
+Quy tắc:
+- Không bịa view/sub/like/comment; nếu nhắc số phải lấy đúng từ JSON dữ liệu.
+- Phân tích thumbnail dựa theo tiêu đề, chủ đề và thumbnail URL, không khẳng định chi tiết hình ảnh nếu không chắc.
+- Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.`;
+
+      const response = await ai.models.generateContent({
+        model: geminiModel,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      });
+      const parsed = parseGeminiJsonObject(response.text || '');
+      if (!parsed) return fallback;
+      return {
+        source: 'gemini_youtube_v3',
+        overview: Array.isArray(parsed.overview) ? parsed.overview : fallback.overview,
+        contentStyle: parsed.contentStyle || fallback.contentStyle,
+        conclusion: parsed.conclusion || fallback.conclusion,
+      };
+    } catch (err) {
+      console.warn('Gemini video audit failed, using fallback:', err);
+      return fallback;
+    }
+  };
+
   const analyzeVideo = async (targetId?: string | any) => {
     // If targetId is a React event, ignore it and use videoInput state
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
@@ -3115,8 +3334,14 @@ ${topKeywordsStr}`;
           console.warn("Could not fetch comments", e);
         }
 
+        setStatus('Đã lấy dữ liệu YouTube API V3. Đang phân tích bằng Gemini AI...');
+        const aiVideoAudit = await analyzeVideoWithGemini(v);
+        v._aiVideoAudit = aiVideoAudit;
+        v._estimatedRpmRange = getVideoRpmRange(v.snippet?.categoryId, v._channelInfo?.snippet?.country);
+        v._vph = calculateVideoVph(parseInt(v.statistics?.viewCount || '0') || 0, v.snippet?.publishedAt);
+
         setVideoResult(v);
-        setStatus('Đã lấy thông tin video.');
+        setStatus('Đã kiểm tra video: YouTube API V3 + Gemini AI đã phân tích xong.');
 
         // Save to project history
         setVideoProjects(prev => {
@@ -3213,6 +3438,151 @@ ${topKeywordsStr}`;
     const diff = last[type] - prev[type];
     
     return (diff >= 0 ? '+' : '') + diff.toLocaleString();
+  };
+
+
+
+  const renderVideoAiAuditSection = () => {
+    const audit = videoResult?._aiVideoAudit;
+    if (!audit) return null;
+
+    const overview = Array.isArray(audit.overview) ? audit.overview : [];
+    const contentStyle = audit.contentStyle || {};
+    const conclusion = audit.conclusion || {};
+    const iconMap: Record<string, any> = {
+      title: FileText,
+      description: AlignLeft,
+      thumbnail: Image,
+      tags: Tag,
+      trend: TrendingUp,
+      pinned: Pin,
+    };
+
+    const exportAuditText = () => {
+      const lines: string[] = [];
+      lines.push('ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO');
+      lines.push(`Video: ${videoResult?.snippet?.title || ''}`);
+      lines.push(`Link: https://www.youtube.com/watch?v=${videoResult?.id || ''}`);
+      lines.push(`Nguồn: YouTube API V3 + Gemini AI`);
+      lines.push('');
+      overview.forEach((item: any) => {
+        lines.push(`## ${item.title || item.key}`);
+        lines.push(`Hiện tại: ${item.current || ''}`);
+        lines.push(`Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`);
+        lines.push(`Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`);
+        lines.push(`Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`);
+        lines.push('');
+      });
+      lines.push('PHÂN TÍCH NỘI DUNG');
+      asArrayText(contentStyle.contentBullets).forEach(x => lines.push(`- ${x}`));
+      lines.push('PHÂN TÍCH PHONG CÁCH');
+      asArrayText(contentStyle.styleBullets).forEach(x => lines.push(`- ${x}`));
+      lines.push('KẾT LUẬN');
+      lines.push(conclusion.headline || '');
+      downloadAsTxt(lines.join('\n'), `Gemini_YouTube_Audit_${videoResult?.id || 'video'}`);
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Star size={18} />
+            </div>
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase">ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO</h2>
+          </div>
+          <button onClick={exportAuditText} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm">
+            <Download size={14} /> TẢI TXT
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {overview.map((item: any, idx: number) => {
+            const IconComp = iconMap[item.key] || FileText;
+            return (
+              <div key={`${item.key || idx}`} className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 text-left relative overflow-hidden">
+                <div className="absolute right-4 top-4 text-gray-100"><IconComp size={64} /></div>
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <IconComp size={16} />
+                    </div>
+                    <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900">{item.title || 'PHÂN TÍCH'}</h3>
+                  </div>
+
+                  <p className="text-[13px] italic text-gray-700 leading-relaxed min-h-[48px]">{item.current}</p>
+
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-green-600 tracking-widest mb-2">ĐIỂM MẠNH:</div>
+                    <ul className="space-y-1.5">
+                      {asArrayText(item.strengths).slice(0, 3).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">✓ {x}</li>)}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-2">CẦN CẢI THIỆN:</div>
+                    <ul className="space-y-1.5">
+                      {asArrayText(item.improvements).slice(0, 3).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">• {x}</li>)}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-blue-600 tracking-widest mb-2">GỢI Ý:</div>
+                    <div className="space-y-2">
+                      {asArrayText(item.suggestions).slice(0, 3).map((x, i) => (
+                        <div key={i} className="bg-gray-50 border border-gray-100 rounded-lg p-2 text-[12px] font-bold italic text-gray-800 leading-snug">“{x}”</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden text-left">
+          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-xl font-black text-gray-900 uppercase flex items-center gap-3"><AlignLeft size={20} className="text-blue-600" /> PHÂN TÍCH NỘI DUNG & PHONG CÁCH VIDEO</h2>
+            <div className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">YOUTUBE API V3 + GEMINI</div>
+          </div>
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2"><Bot size={16} className="text-indigo-500" /> PHÂN TÍCH NỘI DUNG</h3>
+              <ul className="space-y-3">
+                {asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).map((x, i) => <li key={i} className="flex gap-3 text-[13px] text-gray-700 leading-relaxed"><span className="text-blue-500 font-black">•</span><span>{x}</span></li>)}
+              </ul>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2"><Star size={16} className="text-purple-500" /> PHÂN TÍCH PHONG CÁCH</h3>
+              <ul className="space-y-3">
+                {asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).map((x, i) => <li key={i} className="flex gap-3 text-[13px] text-gray-700 leading-relaxed"><span className="text-purple-500 font-black">•</span><span>{x}</span></li>)}
+              </ul>
+            </div>
+          </div>
+          <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div className="text-[11px] font-black uppercase text-green-600 tracking-widest mb-3">ĐIỂM MẠNH NỔI BẬT</div>
+              <div className="space-y-2">{asArrayText(contentStyle.strengths).map((x, i) => <div key={i} className="bg-green-50 border border-green-100 text-green-800 px-4 py-2 rounded-xl text-[12px] font-bold">✓ {x}</div>)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-black uppercase text-orange-500 tracking-widest mb-3">VẤN ĐỀ CẦN LƯU Ý</div>
+              <div className="space-y-2">{asArrayText(contentStyle.warnings).map((x, i) => <div key={i} className="bg-orange-50 border border-orange-100 text-orange-800 px-4 py-2 rounded-xl text-[12px] font-bold">⚠ {x}</div>)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
+          <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
+          <div className="relative z-10">
+            <div className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
+            <div className="flex flex-wrap gap-2 mt-5">
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[11px] font-black">{badge}</span>)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -5583,6 +5953,9 @@ ${topKeywordsStr}`;
                       </div>
                     </div>
                   </div>
+
+                  {/* Gemini + YouTube API V3 audit sections */}
+                  {renderVideoAiAuditSection()}
                 </div>
               )}
             </div>
