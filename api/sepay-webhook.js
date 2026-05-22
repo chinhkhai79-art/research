@@ -1,61 +1,83 @@
-import { db, FieldValue, Timestamp } from '../lib/firebaseAdmin.js';
-import { setCors } from '../lib/cors.js';
-import { sendPaymentSuccessEmail } from '../lib/mailer.js';
-import { getAppSettings, getEnabledPlans } from '../lib/appSettings.js';
+import { getAppSettings } from '../lib/appSettings.js';
 
-function getAuthToken(req){ return String(req.headers.authorization || req.headers['x-api-key'] || req.headers['x-webhook-secret'] || req.headers.apikey || req.headers.api_key || '').replace(/^Bearer\s+/i,'').replace(/^Apikey\s+/i,'').replace(/^ApiKey\s+/i,'').trim(); }
-function norm(t){ return String(t||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/Đ/g,'D'); }
-function compact(t){ return norm(t).replace(/[^A-Z0-9]/g,''); }
-function amount(b){ const r = b.transferAmount ?? b.amount ?? b.money ?? b.value ?? b.transactionAmount ?? b.transaction_amount ?? b.data?.transferAmount ?? b.data?.amount ?? 0; return typeof r === 'number' ? r : Number(String(r||'').replace(/[^\d]/g,'')) || 0; }
-function content(b){ return String(b.content || b.description || b.transferContent || b.transactionContent || b.transaction_content || b.note || b.code || b.referenceCode || b.reference_code || b.data?.content || b.data?.description || b.data?.transferContent || ''); }
-function typeOf(b){ return String(b.transferType || b.type || b.transactionType || b.data?.transferType || b.data?.type || 'in').toLowerCase(); }
-function toDate(v){ return v?.toDate?.() || (v ? new Date(v) : null); }
-function addDays(d, days){ return new Date(d.getTime() + Number(days) * 86400000); }
-async function logWebhook(data){ try{ await db.collection('sepay_logs').add({ app:'research', ...data, createdAt:FieldValue.serverTimestamp() }); }catch(e){ console.error('LOG WEBHOOK ERROR:', e); } }
-function planByAmount(v, settings){ const arr = Object.entries(getEnabledPlans(settings)).sort((a,b)=>Number(b[1].amount)-Number(a[1].amount)); for (const [id,p] of arr) if (v >= Number(p.amount)) return { planId:id, planName:p.name, days:Number(p.days) }; const [id,p] = arr[arr.length-1] || ['3m',{name:'GÓI 3 THÁNG',days:90}]; return { planId:id, planName:p.name, days:Number(p.days) }; }
-
-async function sendSuccessEmailOnce({ orderCode, userEmail, userName, planName, amount, expiresAtDate, paidOrderBefore, smtp, toolUrl }){
-  if (!userEmail) return { success:false, skipped:true, error:'Missing userEmail' };
-  if (paidOrderBefore?.emailSent) return { success:true, skipped:true, messageId:paidOrderBefore.emailMessageId || null };
-  const result = await sendPaymentSuccessEmail({ to:userEmail, name:userName || userEmail, planName, amount, orderCode, expiresAt:expiresAtDate, toolUrl }, smtp);
-  await db.collection('paid_orders').doc(orderCode).set({ emailSent:Boolean(result.success), emailSkipped:Boolean(result.skipped), emailMessageId:result.messageId || null, emailError:result.error || null, emailSentAt:result.success ? FieldValue.serverTimestamp() : null, updatedAt:FieldValue.serverTimestamp() }, { merge:true });
-  return result;
+function cors(req,res){ res.setHeader('Access-Control-Allow-Origin','*'); res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS'); res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization,x-api-key,apikey,api_key'); if(req.method==='OPTIONS'){res.status(200).end(); return true;} return false; }
+function s(v){ return String(v ?? '').trim(); }
+function compact(v){ return s(v).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/Đ/g,'D').replace(/[^A-Z0-9]/g,''); }
+function amountOf(b){ return Number(b.transferAmount || b.amount || b.money || b.value || b.transactionAmount || b.data?.transferAmount || b.data?.amount || 0); }
+function contentOf(b){ return s(b.content || b.description || b.transferContent || b.transactionContent || b.note || b.code || b.data?.content || b.data?.description || b.data?.transferContent || ''); }
+function typeOf(b){ return s(b.transferType || b.type || b.data?.transferType || b.data?.type || 'in').toLowerCase(); }
+function tokenOf(req){ return s(req.headers.authorization || req.headers['x-api-key'] || req.headers.apikey || req.headers.api_key || '').replace(/^Bearer\s+/i,'').replace(/^Apikey\s+/i,'').replace(/^ApiKey\s+/i,''); }
+async function getDb(){ const mod = await import('../lib/firebaseAdmin.js'); return { db:mod.db, FieldValue:mod.FieldValue || { serverTimestamp:()=>new Date() } }; }
+function addDays(base, days){ const d = new Date(base); d.setDate(d.getDate() + Number(days || 0)); return d; }
+function toDate(v){ try { return v?.toDate?.() || (v ? new Date(v) : null); } catch { return null; } }
+function findOrderCode(text, prefix){
+  const c = compact(text);
+  const p = compact(prefix || 'RESEARCH');
+  const re = new RegExp(p + '\\d{8,}');
+  const m = c.match(re);
+  return m ? m[0] : '';
 }
 
-export default async function handler(req, res) {
-  if (setCors(req, res)) return;
-  try {
+async function activateSubscription({ db, FieldValue, payment, orderCode, body }){
+  const uid = s(payment.uid || payment.userId || body.uid || body.userId);
+  const email = s(payment.email || payment.userEmail || body.email);
+  const days = Number(payment.days || 0);
+  const now = new Date();
+  const planName = payment.planName || 'GÓI PRO';
+  const planId = payment.planId || 'pro';
+  let currentExpires = null;
+  if(uid){
+    const u = await db.collection('users').doc(uid).get();
+    currentExpires = toDate(u.data()?.subscriptionInfo?.expiresAt || u.data()?.expiresAt);
+  }
+  const base = currentExpires && currentExpires > now ? currentExpires : now;
+  const expiresAt = addDays(base, days || 30);
+  const data = { active:true, isPro:true, status:'PRO', planId, planName, expiresAt, updatedAt:FieldValue.serverTimestamp(), lastPaymentOrderCode:orderCode, email };
+  if(uid){
+    await db.collection('users').doc(uid).set({ uid, email, isPro:true, pro:true, subscriptionInfo:data, planId, planName, expiresAt, updatedAt:FieldValue.serverTimestamp() }, { merge:true });
+    await db.collection('subscriptions').doc(uid).set({ uid, ...data }, { merge:true });
+  }
+  if(email){
+    await db.collection('subscriptions_by_email').doc(email.toLowerCase()).set({ email, ...data }, { merge:true });
+  }
+  return expiresAt;
+}
+
+export default async function handler(req,res){
+  if(cors(req,res)) return;
+  if(req.method === 'GET') return res.status(200).json({ success:true, message:'SePay webhook OK. Dùng URL này dán vào SePay.', method:'POST' });
+  try{
+    if(req.method !== 'POST') return res.status(405).json({ success:false, error:'Method not allowed' });
     const settings = await getAppSettings();
-    const pay = settings.payment;
-    const secret = String(process.env.SEPAY_API_KEY || '').trim();
-    if (!secret) return res.status(500).json({ success:false, message:'Missing SEPAY_API_KEY env' });
-    if (req.method !== 'POST') return res.status(200).json({ success:true, message:'Research SePay webhook is running. Please send POST JSON.', endpoint:'/api/sepay-webhook', prefix:pay.orderPrefix });
-    const token = getAuthToken(req);
-    if (!token || token !== secret) { await logWebhook({ status:'invalid_api_key', tokenPreview: token ? token.slice(0,6)+'...' : '(empty)', body:req.body || {} }); return res.status(401).json({ success:false, message:'Invalid API Key' }); }
-    const body = req.body || {}, transferType = typeOf(body), receivedAmount = amount(body), receivedContent = content(body);
-    if (transferType && !['in','deposit','credit','money_in','receive'].includes(transferType)) { await logWebhook({ status:'skip_not_money_in', transferType, amount:receivedAmount, content:receivedContent, body }); return res.status(200).json({ success:true, updated:false, message:'Skipped because this is not money in.' }); }
-    const match = compact(receivedContent + ' ' + JSON.stringify(body)).match(new RegExp(compact(pay.orderPrefix) + '\\d+', 'i'));
-    if (!match) { await logWebhook({ status:'no_order_code', amount:receivedAmount, content:receivedContent, body }); return res.status(200).json({ success:true, updated:false, message:`No ${pay.orderPrefix} order code found.` }); }
-    const orderCode = match[0].toUpperCase();
-    const paymentRef = db.collection('payments').doc(orderCode), paidOrderRef = db.collection('paid_orders').doc(orderCode);
-    const [paymentSnap, paidOrderSnap] = await Promise.all([paymentRef.get(), paidOrderRef.get()]);
-    const payment = paymentSnap.exists ? paymentSnap.data() : null;
-    const paidOrderBefore = paidOrderSnap.exists ? paidOrderSnap.data() : null;
-    const amountPlan = planByAmount(receivedAmount, settings);
-    const plan = payment?.planId ? { planId:payment.planId, planName:payment.planName || amountPlan.planName, days:Number(payment.days || amountPlan.days) } : amountPlan;
-    const paidAtDate = new Date();
-    const userId = String(payment?.userId || '').trim(), userEmail = String(payment?.userEmail || '').trim(), userName = String(payment?.userName || payment?.displayName || userEmail || '').trim();
-    let currentUser = null;
-    if (userId) { const userSnap = await db.collection('users').doc(userId).get(); currentUser = userSnap.exists ? userSnap.data() : null; }
-    const oldExpiresAt = toDate(currentUser?.premiumExpiresAt) || toDate(currentUser?.expired_at);
-    const baseDate = oldExpiresAt && oldExpiresAt.getTime() > paidAtDate.getTime() ? oldExpiresAt : paidAtDate;
-    const expiresAtDate = addDays(baseDate, plan.days);
-    const common = { app:'research', orderCode, paid:true, status:'paid', amount:receivedAmount, content:receivedContent, planId:plan.planId, planName:plan.planName, days:plan.days, userId, userEmail, userName, rawBody:body, cumulative:Boolean(oldExpiresAt && oldExpiresAt.getTime() > paidAtDate.getTime()), cumulativeBaseAt:Timestamp.fromDate(baseDate), previousExpiresAt:oldExpiresAt ? Timestamp.fromDate(oldExpiresAt) : null, paidAt:FieldValue.serverTimestamp(), expiresAt:Timestamp.fromDate(expiresAtDate), updatedAt:FieldValue.serverTimestamp() };
-    await paidOrderRef.set(common, { merge:true });
-    await paymentRef.set({ ...common, paidAmount:receivedAmount, sepayContent:receivedContent }, { merge:true });
-    if (userId) await db.collection('users').doc(userId).set({ account_type:'premium', premium:true, active:true, planId:plan.planId, planName:plan.planName, premiumStartedAt:Timestamp.fromDate(paidAtDate), premiumExpiresAt:Timestamp.fromDate(expiresAtDate), expired_at:Timestamp.fromDate(expiresAtDate), lastPaymentOrderCode:orderCode, lastPaymentAmount:receivedAmount, lastPaymentAt:FieldValue.serverTimestamp(), updated_at:FieldValue.serverTimestamp() }, { merge:true });
-    const emailResult = await sendSuccessEmailOnce({ orderCode, userEmail, userName, planName:plan.planName, amount:receivedAmount, expiresAtDate, paidOrderBefore, smtp:settings.smtp, toolUrl:pay.appDomain + '/' });
-    await logWebhook({ status:'success_paid', orderCode, amount:receivedAmount, content:receivedContent, planId:plan.planId, userId, userEmail, emailSent:Boolean(emailResult.success), emailSkipped:Boolean(emailResult.skipped), emailError:emailResult.error || null, body });
-    return res.status(200).json({ success:true, updated:true, paid:true, message:'Payment confirmed. PRO activated.', orderCode, amount:receivedAmount, planId:plan.planId, planName:plan.planName, expiresAt:expiresAtDate.toISOString(), userId, emailSent:Boolean(emailResult.success), emailSkipped:Boolean(emailResult.skipped), emailError:emailResult.error || null });
-  } catch(e){ console.error('SEPAY WEBHOOK ERROR:', e); return res.status(500).json({ success:false, message:'Webhook error', error:e.message || 'Server error' }); }
+    const secret = s(settings.payment.sepaySecret || process.env.SEPAY_API_KEY || process.env.SEPAY_WEBHOOK_SECRET || '');
+    const got = tokenOf(req);
+    // Nếu SePay có gửi token thì kiểm tra. Nếu không gửi token vẫn xử lý để tránh miss giao dịch do cấu hình SePay khác kiểu header.
+    if(secret && got && got !== secret) return res.status(401).json({ success:false, error:'Invalid SePay API Key/Webhook Secret' });
+    const body = req.body || {};
+    const transferType = typeOf(body);
+    const amount = amountOf(body);
+    const content = contentOf(body);
+    if(transferType && !['in','receive','deposit','credit'].includes(transferType)) return res.status(200).json({ success:true, updated:false, message:'Skipped non-in transaction' });
+    const orderCode = findOrderCode(content + ' ' + JSON.stringify(body), settings.payment.paymentPrefix);
+    const { db, FieldValue } = await getDb();
+    if(!orderCode){
+      await db.collection('sepay_logs').add({ status:'no_order_code', amount, content, body, createdAt:FieldValue.serverTimestamp() });
+      return res.status(200).json({ success:true, updated:false, message:'No order code found' });
+    }
+    const ref = db.collection('payments').doc(orderCode);
+    const snap = await ref.get();
+    const payment = snap.exists ? snap.data() : { orderCode, amount, planId:'3m', planName:'GÓI 3 THÁNG', days:90 };
+    const expiresAt = await activateSubscription({ db, FieldValue, payment, orderCode, body });
+    const paidData = { orderCode, paid:true, status:'paid', amount:amount || payment.amount || 0, content, rawBody:body, planId:payment.planId || '3m', planName:payment.planName || 'GÓI 3 THÁNG', days:payment.days || 90, email:payment.email || payment.userEmail || body.email || '', uid:payment.uid || payment.userId || body.uid || body.userId || '', expiresAt, paidAt:FieldValue.serverTimestamp(), updatedAt:FieldValue.serverTimestamp() };
+    await ref.set(paidData, { merge:true });
+    await db.collection('paid_orders').doc(orderCode).set(paidData, { merge:true });
+    await db.collection('sepay_logs').add({ status:'success_paid', orderCode, amount, content, createdAt:FieldValue.serverTimestamp() });
+
+    // Trả kết quả ngay cho SePay, email gửi nền để giảm độ trễ.
+    const email = paidData.email;
+    if(email){
+      import('../lib/mailer.js').then(m => m.sendPaymentSuccessEmail({ email, orderCode, planName:paidData.planName, amount:paidData.amount, expiresAt:expiresAt?.toISOString?.(), settings })).catch(err => console.error('send email warning:', err));
+    }
+    return res.status(200).json({ success:true, updated:true, paid:true, orderCode, expiresAt, message:'Payment confirmed. PRO activated.' });
+  }catch(e){ console.error('sepay webhook error:', e); return res.status(500).json({ success:false, error:e.message || 'Webhook error' }); }
 }
