@@ -2034,18 +2034,20 @@ JSON mẫu:
   const loadTrendingNicheCache = async (regionCode?: string) => {
     const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
     setTrendingRegion(selectedRegion);
+    quotaUsedRef.current = 0;
+    setQuotaUsed(0);
     setIsFetchingDailyTrending(true);
-    setStatus('Đang tạo danh sách chủ đề theo khu vực...');
+    setStatus('Đang cập nhật toàn bộ trend hot theo khu vực...');
 
     try {
       const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
       setSuggestedNiches(data.categories);
       setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
-      setStatus(`Đã tạo danh sách chủ đề cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để tìm key thật theo khu vực.`);
+      setStatus(`Đã cập nhật toàn bộ trend hot cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để quét key thật theo khu vực.`);
     } catch (err: any) {
       setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
       setTrendingCacheMeta(null);
-      setStatus('Chưa tạo được danh sách mới. Đang dùng danh sách mặc định theo khu vực.');
+      setStatus('Chưa cập nhật được trend mới. Đang dùng danh sách chủ đề theo khu vực.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -2110,6 +2112,8 @@ JSON mẫu:
   };
 
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
+    quotaUsedRef.current = 0;
+    setQuotaUsed(0);
     if (config.apiKeys.length === 0) {
       setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
       return;
@@ -2276,7 +2280,7 @@ JSON mẫu:
       });
 
       setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
-      setStatus(`Đã quét xong ${category} tại ${regionName}: lấy ${finalItems.length} key theo chủ đề, sắp xếp ưu tiên trend/VPH/View.${totalVideos ? ` Đã đọc ${totalVideos} video.` : ''}`);
+      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
@@ -2329,6 +2333,8 @@ JSON mẫu:
       return;
     }
 
+    quotaUsedRef.current = 0;
+    setQuotaUsed(0);
     setIsNicheSearching(true);
     setStatus(`${(customKeyword || nicheInput || '').trim() ? 'Đang nghiên cứu ngách' : 'Tự động chọn ngách theo khu vực/thời gian'}: ${kw}...`);
     
@@ -2663,7 +2669,8 @@ JSON mẫu:
       if (!activeKey || failedThisCall.has(activeKey)) continue;
       const keyNo = keyIndex + 1;
       setApiKeyIndex(keyIndex);
-      setStatus(`Đang dùng YouTube API Key #${keyNo}/${keys.length}: ${activeKey.slice(0, 10)}... để gọi ${endpoint}.`);
+      const visibleKey = `${activeKey.slice(0, 12)}...${activeKey.slice(-6)}`;
+      setStatus(`Đang dùng YouTube API Key #${keyNo}/${keys.length}: ${visibleKey} để gọi ${endpoint}.`);
 
       const baseUrl = `https://www.googleapis.com/youtube/v3/${endpoint}`;
       const urlParams = new URLSearchParams();
@@ -3053,6 +3060,8 @@ JSON mẫu:
     const rawKeyword = (config.keyword || '').trim();
     const isAutoHunt = !rawKeyword;
 
+    quotaUsedRef.current = 0;
+    setQuotaUsed(0);
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
     setIsHunting(true);
@@ -3302,6 +3311,8 @@ JSON mẫu:
     const input = query.trim();
     if (!input) return;
 
+    quotaUsedRef.current = 0;
+    setQuotaUsed(0);
     setStatus('Đang phân tích đối thủ...');
     setSpyResult(null);
 
@@ -3971,6 +3982,8 @@ Quy tắc:
       setActiveTab(4); // Switch to Video Analysis tab
     }
     
+    quotaUsedRef.current = 0;
+    setQuotaUsed(0);
     setIsAnalyzingVideo(true);
     setStatus('Đang kiểm tra thông tin video...');
     setVideoResult(null);
@@ -7458,7 +7471,7 @@ Quy tắc:
                         )}
                      </h3>
                      </div>
-                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
+                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
                          <div className="relative">
                            <select
                               value={trendingRegion}
@@ -7476,13 +7489,7 @@ Quy tắc:
                             disabled={isFetchingDailyTrending}
                             className="h-12 w-full justify-center bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-4 rounded-xl text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo...</> : <><Bot size={16}/> Tạo 15 chủ đề</>}
-                         </button>
-                         <button
-                            onClick={() => { const nextRegion = trendingRegion || config.region || 'VN'; setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
-                            className="h-12 w-full justify-center bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 rounded-xl text-[12px] font-black tracking-tight uppercase shadow border border-blue-700 transition-all flex items-center gap-2"
-                         >
-                            <RefreshCw size={16}/> Chủ đề mặc định
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật...</> : <><RefreshCw size={16}/> Cập nhật toàn bộ trend hot</>}
                          </button>
                      </div>
                 </div>
@@ -7501,7 +7508,6 @@ Quy tắc:
                           >
                             {scanningNicheCategory === `${category.category}-${idx}` ? <RefreshCw size={15} className="animate-spin" /> : <Search size={15} />}
                           </button>
-                          <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(6, category.items.length)} KEY</span>
                         </div>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
