@@ -4607,14 +4607,14 @@ Quy tắc:
                       onClick={startHunter}
                       className="vtw-start-button min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
                     >
-                      <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH
+                      <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : ""}
                     </button>
                   ) : (
                     <button 
                       onClick={stopHunter}
                       className="vtw-start-button min-w-[200px] bg-red-600 text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 shadow-[0_4px_0_#900] transition-all animate-pulse"
                     >
-                      <StopCircle size={20} fill="white" /> DỪNG QUÉT
+                      <StopCircle size={20} fill="white" /> DỪNG QUÉT ({Math.round(progress)}%)
                     </button>
                   )}
                 </div>
@@ -5547,7 +5547,7 @@ Quy tắc:
                   >
                     {isNicheSearching ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" /> ĐANG PHÂN TÍCH...
+                        <Loader2 size={16} className="animate-spin" /> ĐANG PHÂN TÍCH {Math.round(progress)}%
                       </>
                     ) : (
                       <>
@@ -6115,7 +6115,7 @@ Quy tắc:
                     className="bg-[#e67e22] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-3 hover:brightness-110 active:scale-95 shadow-md disabled:opacity-50 flex-1 md:flex-none justify-center transition-all shadow-sm active:shadow-inner"
                   >
                     {isAnalyzingVideo ? <Loader2 className="animate-spin" size={20} /> : <Video size={20} />}
-                    KIỂM TRA VIDEO
+                    {isAnalyzingVideo ? `ĐANG KIỂM TRA ${Math.round(progress)}%` : 'KIỂM TRA VIDEO'}
                   </button>
                   <button 
                     onClick={() => setShowVideoProjects(!showVideoProjects)}
@@ -7014,26 +7014,17 @@ Quy tắc:
       </AnimatePresence>
 
       {/* Footer Info */}
-      <div className="vtw-footer-status fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-4 py-1.5 flex justify-between items-center text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
-        <div className="flex gap-4 items-center">
-          <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
-          <div className="flex items-center gap-3">
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{formatVNNumber(quotaUsed)}</b> units</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {formatVNNumber(totalQuotaToday)} units</span>
+      <div className="vtw-footer-status fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-3 py-1.5 flex items-center gap-3 text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
+        <div className="flex-1 min-w-0 pr-2">
+          <div className="vtw-status-log flex items-start gap-1.5 bg-blue-50 px-2 py-1 rounded border border-blue-100 max-w-full">
+            <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
+            <span className="font-medium text-blue-700 whitespace-normal break-words leading-snug">{status}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-gray-500">{Math.round(progress)}%</span>
-          <div className="w-[300px] bg-[#eee] border border-[#ccc] h-4 rounded-full overflow-hidden flex relative shadow-inner">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500 flex items-center justify-center" 
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[progress-bar-stripes_1s_linear_infinite]"></div>
-            </div>
-          </div>
+        <div className="vtw-quota-box ml-auto shrink-0 flex items-center gap-2 justify-end">
+          <span className="text-gray-600 whitespace-nowrap">Quota phiên này: <b className="text-gray-900">{formatVNNumber(quotaUsed)}</b> units</span>
+          <span className="text-gray-400">|</span>
+          <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold whitespace-nowrap">Tổng Quota hôm nay đã dùng: {formatVNNumber(totalQuotaToday)} units</span>
         </div>
       </div>
 
