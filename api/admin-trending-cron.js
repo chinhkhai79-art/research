@@ -44,9 +44,16 @@ function setCors(req, res) {
   return false;
 }
 
-function getKeys() {
-  return String(process.env.YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEY || '')
-    .split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+function parseKeyList(value) {
+  if (Array.isArray(value)) return value.map(x => String(x || '').trim()).filter(Boolean);
+  return String(value || '').split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+}
+
+function getKeys(req) {
+  const envKeys = parseKeyList(process.env.YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEY || '');
+  const bodyKeys = parseKeyList(req.body?.apiKeys || req.body?.youtubeApiKeys || req.body?.keys || '');
+  const headerKeys = parseKeyList(req.headers['x-youtube-api-keys'] || '');
+  return [...new Set([...envKeys, ...bodyKeys, ...headerKeys])];
 }
 function publishedAfter30d() { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString(); }
 function compactKeyword(value) {
@@ -130,8 +137,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const keys = getKeys();
-    if (!keys.length) return res.status(400).json({ ok: false, error: 'Thiếu env YOUTUBE_API_KEYS hoặc YOUTUBE_API_KEY trên Vercel' });
+    const keys = getKeys(req);
+    if (!keys.length) {
+      return res.status(200).json({
+        ok: false,
+        needKeys: true,
+        region: normalizeRegion(req.query?.region || req.body?.region || 'VN'),
+        error: 'Chưa có YouTube API Key. Hãy nhập key trong Cài đặt API hoặc thêm env YOUTUBE_API_KEYS trên Vercel.'
+      });
+    }
     const state = await readCronState();
     let region = normalizeRegion(req.query?.region || req.body?.region || '');
     if (!region || region === 'GLOBAL') region = REGIONS[Number(state.nextRegionIndex || 0) % REGIONS.length];

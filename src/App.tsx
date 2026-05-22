@@ -1789,16 +1789,20 @@ Rules:
     try {
       const secret = window.prompt('Nhập ADMIN_CRON_SECRET để chạy quét ngách:') || '';
       if (!secret.trim()) return;
+      const activeYoutubeKeys = (config.apiKeys || []).map(k => String(k || '').trim()).filter(Boolean);
       const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(trendingRegion || config.region || 'VN')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-secret': secret.trim()
         },
-        body: JSON.stringify({ region: trendingRegion || config.region || 'VN' })
+        body: JSON.stringify({
+          region: trendingRegion || config.region || 'VN',
+          apiKeys: activeYoutubeKeys
+        })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Admin cron lỗi');
+      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Admin cron lỗi');
       setStatus(`Admin: đã cập nhật cache ${data.region || ''}.`);
       await loadTrendingNicheCache(data.region || trendingRegion || config.region || 'VN');
     } catch (err: any) {
@@ -6409,12 +6413,7 @@ Quy tắc:
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerConfirm(
-                              "Xóa Key",
-                              "Bạn có chắc chắn muốn xóa Key này khỏi lịch sử không?",
-                              () => removeFromHistory(key),
-                              "XÁC NHẬN XÓA"
-                            );
+                            removeFromHistory(key);
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -6528,7 +6527,7 @@ Quy tắc:
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerConfirm('Xóa Gemini Key', 'Bạn có chắc chắn muốn xóa Gemini Key này khỏi lịch sử không?', () => removeFromGeminiHistory(key), 'XÁC NHẬN XÓA');
+                            removeFromGeminiHistory(key);
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -6882,7 +6881,7 @@ Quy tắc:
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.isOpen && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <motion.div 
               className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden border border-gray-200"
               initial={{ scale: 0.9, opacity: 0 }}
@@ -6966,7 +6965,7 @@ Quy tắc:
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
                      </h3>
-                     <div className="grid grid-cols-3 gap-3 w-full md:w-auto md:min-w-[470px]">
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto md:min-w-[620px]">
                          <div className="relative h-12">
                            <select
                               value={trendingRegion}
@@ -6985,6 +6984,13 @@ Quy tắc:
                             className="h-12 w-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center justify-center gap-2 text-center leading-tight"
                          >
                             {isFetchingDailyTrending ? <><RefreshCw size={15} className="animate-spin"/> Đang tải</> : <><Search size={15}/> Tải dữ liệu</>}
+                         </button>
+                         <button
+                            onClick={() => downloadTrendingKeysTxt()}
+                            disabled={isFetchingDailyTrending}
+                            className="h-12 w-full bg-green-600 hover:bg-green-700 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black uppercase shadow border border-green-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-center leading-tight"
+                         >
+                            <Download size={14}/> Tải TXT
                          </button>
                          <button
                             onClick={user?.email === 'chinhkhai79@gmail.com' ? runAdminTrendingCron : () => downloadTrendingKeysTxt()}
