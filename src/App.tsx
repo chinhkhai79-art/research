@@ -293,7 +293,7 @@ const SUGGESTED_NICHES = [
   { category: 'ẨM THỰC & NẤU ĂN', items: ['món ngon dễ làm', 'nấu ăn gia đình', 'công thức món chay', 'bữa sáng nhanh', 'meal prep', 'món ăn healthy'] },
   { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch tự túc', 'travel vlog', 'địa điểm đẹp', 'du lịch tiết kiệm', 'ẩm thực địa phương', 'cắm trại cuối tuần'] },
   { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'reaction video', 'tóm tắt phim', 'meme hài hước', 'thử thách vui', 'câu chuyện lạ'] },
-  { category: 'THỂ THAO & THỂ HÌNH', items: ['home workout', 'tăng cơ giảm mỡ', 'bài tập gym', 'bóng đá hôm nay', 'chạy bộ cho người mới', 'dinh dưỡng thể hình'] },
+  { category: 'THỂ THAO & BÓNG ĐÁ', items: ['bóng đá hôm nay', 'highlight bóng đá', 'lịch thi đấu bóng đá', 'v league', 'tin thể thao', 'bài tập thể lực'] },
   { category: 'PETS & ĐỘNG VẬT', items: ['huấn luyện chó', 'chăm sóc mèo', 'thú cưng đáng yêu', 'pet grooming', 'thức ăn cho mèo', 'vlog chó mèo'] },
   { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['mẹo dọn nhà', 'nuôi dạy con', 'tài chính gia đình', 'trang trí nhà nhỏ', 'mẹo nhà bếp', 'đời sống tối giản'] },
   { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh dễ', 'thiết kế Canva', 'edit video CapCut', 'chụp ảnh điện thoại', 'guitar cơ bản', 'ý tưởng sáng tạo'] },
@@ -309,7 +309,7 @@ const CATEGORY_VI_TITLES = SUGGESTED_NICHES.slice(0, 15).map(item => item.catego
 
 const EN_CATEGORY_TITLES = [
   'Self Improvement', 'Health & Beauty', 'Technology & AI', 'Education & Learning', 'Food & Cooking',
-  'Travel & Discovery', 'Entertainment & Comedy', 'Sports & Fitness', 'Pets & Animals', 'Family & Lifestyle',
+  'Travel & Discovery', 'Entertainment & Comedy', 'Sports & Football', 'Pets & Animals', 'Family & Lifestyle',
   'Art & Creativity', 'Cars & Auto Tech', 'Finance & Make Money', 'Product Reviews', 'Marketing & Media'
 ];
 
@@ -1577,7 +1577,7 @@ export default function App() {
         en: 'funny entertainment meme reaction short film',
         must: /(funny|meme|reaction|entertainment|comedy|movie|film|drama|giải trí|hài|phim|thử thách|meme)/i
       },
-      'THỂ THAO & THỂ HÌNH': {
+      'THỂ THAO & BÓNG ĐÁ': {
         vn: 'thể thao gym bóng đá workout fitness',
         en: 'sports fitness gym football workout',
         must: /(sport|fitness|gym|football|workout|tennis|basketball|soccer|thể thao|bóng đá|tập|gym|cầu lông)/i
@@ -2053,25 +2053,60 @@ JSON mẫu:
 
 
   const categoryTitleToSearchSeed = (category: string) => {
-    const map: Record<string, string> = {
-      'PHÁT TRIỂN BẢN THÂN': 'self improvement productivity motivation habits',
-      'SỨC KHỎE & LÀM ĐẸP': 'health beauty skincare weight loss workout',
-      'CÔNG NGHỆ & AI': 'ai tools technology chatgpt apps',
-      'GIÁO DỤC & HỌC TẬP': 'study tips education learning english',
-      'ẨM THỰC & NẤU ĂN': 'food cooking recipes meals',
-      'DU LỊCH & KHÁM PHÁ': 'travel vlog destination guide',
-      'GIẢI TRÍ & HÀI HƯỚC': 'entertainment funny reaction meme',
-      'THỂ THAO & THỂ HÌNH': 'sports fitness workout football',
-      'PETS & ĐỘNG VẬT': 'pets animals dogs cats',
-      'GIA ĐÌNH & ĐỜI SỐNG': 'family life home tips parenting',
-      'NGHỆ THUẬT & SÁNG TẠO': 'creative art design editing',
-      'XE & CÔNG NGHỆ Ô TÔ': 'car motorcycle auto review',
-      'TÀI CHÍNH & KIẾM TIỀN': 'make money personal finance side hustle',
-      'REVIEW SẢN PHẨM': 'product review unboxing gadgets',
-      'MARKETING & TRUYỀN THÔNG': 'marketing content creation youtube growth',
+    const normalized = String(category || '').toUpperCase();
+    const map: Array<[RegExp, string]> = [
+      [/PHÁT TRIỂN|SELF|自己|자기|พัฒนา|Selbst|Développement|Само|Desenvolvimento|Desarrollo/i, 'self improvement productivity habits motivation time management'],
+      [/SỨC KHỎE|HEALTH|健康|건강|สุขภาพ|Gesundheit|Santé|Здоров|Saúde|Salud/i, 'health beauty skincare workout weight loss'],
+      [/CÔNG NGHỆ|TECH|AI|KI|IA|ИИ|เทคโนโลยี|기술|テクノロジー/i, 'ai tools technology chatgpt apps gadget review'],
+      [/GIÁO DỤC|EDUCATION|学習|교육|การศึกษา|Bildung|Éducation|Образование|Educação|Educación/i, 'study tips learning english education exam'],
+      [/ẨM THỰC|FOOD|COOK|料理|요리|อาหาร|Essen|Cuisine|Еда|Comida|Cocina/i, 'food cooking recipes meal prep easy dinner'],
+      [/DU LỊCH|TRAVEL|旅行|여행|ท่องเที่ยว|Reisen|Voyage|Путешествия|Viagem|Viajes/i, 'travel vlog destination guide places'],
+      [/GIẢI TRÍ|ENTERTAIN|COMEDY|エンタメ|엔터|บันเทิง|Unterhaltung|Divertissement|Развлечения|Entretenimento/i, 'entertainment comedy funny reaction meme viral'],
+      [/THỂ THAO|BÓNG ĐÁ|SPORT|FOOTBALL|FITNESS|サッカー|スポーツ|축구|스포츠|กีฬา|Fußball|Sport|fútbol|futebol|футбол/i, 'football soccer sports highlights match news workout'],
+      [/PETS|ĐỘNG VẬT|PET|ANIMAL|動物|반려동물|สัตว์|Haustiere|Animaux|Питомцы|Animais|Mascotas/i, 'pets animals dogs cats cute grooming'],
+      [/GIA ĐÌNH|ĐỜI SỐNG|FAMILY|LIFESTYLE|ライフ|가족|ครอบครัว|Familie|Famille|Семья|Família|Familia/i, 'family lifestyle home tips parenting cleaning'],
+      [/NGHỆ THUẬT|SÁNG TẠO|ART|CREATIVE|創作|예술|ศิลปะ|Kunst|Art|Искусство|Arte/i, 'art creative design editing canva capcut'],
+      [/XE|Ô TÔ|AUTO|CAR|車|자동차|รถ|Auto|Coche|Carro|авто/i, 'car auto motorcycle review electric vehicle maintenance'],
+      [/TÀI CHÍNH|KIẾM TIỀN|FINANCE|MONEY|お金|재테크|การเงิน|Finanzen|Finance|Финансы|Finanças/i, 'finance make money investing side hustle affiliate'],
+      [/REVIEW|SẢN PHẨM|PRODUCT|商品|제품|สินค้า|Produkt|Produit|товар|Produto|Producto/i, 'product review unboxing gadgets skincare amazon'],
+      [/MARKETING|TRUYỀN THÔNG|MEDIA|マーケ|마케팅|การตลาด|Medien|Médias|Маркетинг|Mídia|Medios/i, 'marketing content creation youtube growth social media'],
+    ];
+    return (map.find(([rx]) => rx.test(normalized))?.[1] || category.replace(/\(.+\)/g, '').toLowerCase()).trim();
+  };
+
+  const getCategoryFallbackItems = (index: number, regionCode: string) => {
+    const templates = getKeywordTemplateForRegion(regionCode);
+    const fallback = templates[index] || REGION_KEYWORD_TEMPLATES.VN[index] || SUGGESTED_NICHES[index]?.items || [];
+    return fallback.map(k => String(k || '').trim()).filter(Boolean).slice(0, 6);
+  };
+
+  const getCategorySeedQueries = (category: string, index: number, regionCode: string, currentItems: string[]) => {
+    const regionCfg = REGION_YT_CONFIG[regionCode] || REGION_YT_CONFIG.VN;
+    const localCategory = String((suggestedNiches[index] as any)?.localCategory || category).replace(/\(.+\)/g, '').trim();
+    const viCategory = String((suggestedNiches[index] as any)?.viCategory || CATEGORY_VI_TITLES[index] || category).trim();
+    const fallbackItems = getCategoryFallbackItems(index, regionCode);
+    const seedItems = [...currentItems, ...fallbackItems].map(k => String(k || '').trim()).filter(Boolean);
+    const categorySeed = categoryTitleToSearchSeed(category);
+
+    const vnSpecialSeeds: Record<number, string[]> = {
+      7: ['bóng đá hôm nay', 'highlight bóng đá', 'tin thể thao việt nam', 'v league', 'lịch thi đấu bóng đá', 'thể thao mới nhất'],
+      11: ['review ô tô', 'xe máy mới', 'ô tô điện', 'kinh nghiệm mua xe', 'phụ kiện ô tô', 'bảo dưỡng xe'],
+      12: ['kiếm tiền online', 'tài chính cá nhân', 'đầu tư cho người mới', 'side hustle', 'tiết kiệm tiền', 'affiliate marketing'],
     };
-    const viHit = Object.keys(map).find(key => category.toUpperCase().includes(key));
-    return viHit ? map[viHit] : category.replace(/\(.+\)/g, '').toLowerCase();
+
+    const firstTwo = seedItems.slice(0, 2).join(' ');
+    const firstFour = seedItems.slice(0, 4);
+
+    const queries = [
+      `${firstTwo} ${localCategory}`.trim(),
+      `${firstFour.join(' ')}`.trim(),
+      `${regionCfg.seed} ${localCategory}`.trim(),
+      `${categorySeed} ${regionCfg.seed}`.trim(),
+      `${viCategory} ${regionCfg.seed}`.trim(),
+      ...(regionCode === 'VN' && vnSpecialSeeds[index] ? vnSpecialSeeds[index] : []),
+    ].filter(Boolean);
+
+    return [...new Set(queries)].slice(0, 8);
   };
 
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
@@ -2088,7 +2123,7 @@ JSON mẫu:
     const scanningKey = `${category}-${index}`;
 
     const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
-      || /\b(của|cho|với|không|cách|hướng dẫn|việt nam|người|làm|món|ngách)\b/i.test(value);
+      || /\b(của|cho|với|không|cách|hướng dẫn|việt nam|người|làm|món|ngách|bóng đá|thể thao)\b/i.test(value);
 
     const languageLooksOk = (value: string) => {
       const v = String(value || '').trim();
@@ -2114,12 +2149,27 @@ JSON mẫu:
       .trim()
       .toLowerCase();
 
-    const addCandidates = (text: string, output: string[]) => {
-      const cleaned = cleanKeyword(text);
+    const stopWords = new Set([
+      'official','video','shorts','full','subscribe','comment','channel','youtube','youtube shorts','tiktok',
+      '2024','2025','2026','mới ngày','mỗi ngày','3 phút','kiến thức','giải trí','thú vị','viral','trend',
+      'official video','full video','đăng ký','xem ngay','phần 1','part 1'
+    ]);
+
+    const isBadKeyword = (keyword: string) => {
+      const k = cleanKeyword(keyword);
+      if (!k || stopWords.has(k)) return true;
+      if (/^\d+$/.test(k)) return true;
+      if (/\b(official|subscribe|comment|channel|youtube|shorts|full|part|episode|reaction)\b/i.test(k)) return true;
+      if (/(^|\s)(2024|2025|2026)(\s|$)/.test(k)) return true;
+      return false;
+    };
+
+    const addCandidates = (rawText: string, output: string[]) => {
+      const cleaned = cleanKeyword(rawText);
       if (!cleaned) return;
       const words = cleaned.split(/\s+/).filter(Boolean);
       if (words.length >= 2 && words.length <= 6) output.push(cleaned);
-      for (let n = 2; n <= Math.min(4, words.length); n++) {
+      for (let n = 2; n <= Math.min(5, words.length); n++) {
         for (let i = 0; i <= words.length - n; i++) output.push(words.slice(i, i + n).join(' '));
       }
     };
@@ -2127,63 +2177,89 @@ JSON mẫu:
     try {
       setScanningNicheCategory(scanningKey);
       setIsFetchingDailyTrending(true);
-      setStatus(`Đang tìm key cho ${category} tại ${regionName}...`);
+      setStatus(`Đang quét ${category} tại ${regionName}: ưu tiên video 30 ngày, VPH/View cao...`);
 
-      const localSeed = currentItems.filter(languageLooksOk).slice(0, 3).join(' ');
-      const cleanCategoryForQuery = String((suggestedNiches[index] as any)?.localCategory || category).replace(/\(.+\)/g, '').trim();
-      const query = `${localSeed || regionCfg.seed} ${cleanCategoryForQuery} ${categoryTitleToSearchSeed(category)}`.trim();
-      const searchRes = await youtubeFetch('search', {
-        part: 'snippet',
-        q: query,
-        type: 'video',
-        regionCode: regionCfg.regionCode,
-        relevanceLanguage: regionCfg.relevanceLanguage,
-        publishedAfter,
-        order: 'viewCount',
-        maxResults: 30,
-      });
+      const seedQueries = getCategorySeedQueries(category, index, selectedRegion, currentItems);
+      const scores = new Map<string, number>();
+      let totalVideos = 0;
 
-      const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
-      let effectiveVideoIds = videoIds;
-      if (effectiveVideoIds.length === 0) {
-        const fallbackSearchRes = await youtubeFetch('search', {
+      const runSearch = async (query: string, usePublishedAfter: boolean) => {
+        const searchRes = await youtubeFetch('search', {
           part: 'snippet',
           q: query,
           type: 'video',
           regionCode: regionCfg.regionCode,
           relevanceLanguage: regionCfg.relevanceLanguage,
+          ...(usePublishedAfter ? { publishedAfter } : {}),
           order: 'viewCount',
           maxResults: 30,
         });
-        effectiveVideoIds = (fallbackSearchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
+        return (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
+      };
+
+      let effectiveVideoIds: string[] = [];
+      for (const query of seedQueries) {
+        if (effectiveVideoIds.length >= 45) break;
+        const ids = await runSearch(query, true).catch(() => []);
+        effectiveVideoIds.push(...ids);
       }
-      if (effectiveVideoIds.length === 0) throw new Error(`Không tìm thấy video phù hợp cho ${category} tại ${regionName}.`);
 
-      const videoDetail = await youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') });
-      const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
-      const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
-      const channelDetail = channelIds.length ? await youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.join(',') }) : { items: [] };
-      const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
-      const scores = new Map<string, number>();
+      // Nếu 30 ngày không đủ dữ liệu, mở rộng toàn thời gian nhưng vẫn giữ regionCode + relevanceLanguage.
+      if (effectiveVideoIds.length < 8) {
+        for (const query of seedQueries.slice(0, 5)) {
+          if (effectiveVideoIds.length >= 45) break;
+          const ids = await runSearch(query, false).catch(() => []);
+          effectiveVideoIds.push(...ids);
+        }
+      }
 
-      videos.forEach((video: any) => {
-        const channel: any = channelMap.get(video?.snippet?.channelId);
-        const country = String(channel?.snippet?.country || '').toUpperCase();
-        if (country && country !== regionCfg.regionCode) return;
-        const views = Number(video?.statistics?.viewCount || 0);
-        const subs = Number(channel?.statistics?.subscriberCount || 0);
-        const vph = calculateVPH(views, video?.snippet?.publishedAt);
-        const baseScore = Math.log10(views + 10) * 35 + Math.min(vph, 5000) / 20 + Math.min(views / Math.max(subs, 1), 500) * 1.5;
-        const candidates: string[] = [];
-        addCandidates(video?.snippet?.title || '', candidates);
-        (video?.snippet?.tags || []).forEach((tag: string) => candidates.push(cleanKeyword(tag)));
-        String(video?.snippet?.description || '').split('\n').slice(0, 4).forEach(line => addCandidates(line, candidates));
-        candidates
-          .map(cleanKeyword)
-          .filter(k => k.length >= 3 && k.length <= 48)
-          .filter(languageLooksOk)
-          .filter(k => !/\b(official|video|shorts|full|subscribe|comment|channel|youtube|2024|2025|2026)\b/i.test(k))
-          .forEach(k => scores.set(k, (scores.get(k) || 0) + baseScore));
+      effectiveVideoIds = [...new Set(effectiveVideoIds)].slice(0, 50);
+
+      if (effectiveVideoIds.length > 0) {
+        const videoDetail = await youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') });
+        const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
+        totalVideos = videos.length;
+
+        const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
+        const channelDetail = channelIds.length ? await youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.join(',') }) : { items: [] };
+        const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
+
+        videos.forEach((video: any) => {
+          const channel: any = channelMap.get(video?.snippet?.channelId);
+          const country = String(channel?.snippet?.country || '').toUpperCase();
+
+          // Lọc đúng khu vực nếu kênh có khai báo country. Nếu không khai báo thì vẫn giữ vì YouTube API nhiều kênh không public country.
+          if (country && country !== regionCfg.regionCode) return;
+
+          const views = Number(video?.statistics?.viewCount || 0);
+          const subs = Number(channel?.statistics?.subscriberCount || 0);
+          const vph = calculateVPH(views, video?.snippet?.publishedAt);
+          const publishedScore = new Date(video?.snippet?.publishedAt || 0).getTime() >= new Date(publishedAfter).getTime() ? 1.25 : 0.75;
+          const baseScore = (
+            Math.log10(views + 10) * 35 +
+            Math.min(vph, 8000) / 16 +
+            Math.min(views / Math.max(subs, 1), 600) * 1.2
+          ) * publishedScore;
+
+          const candidates: string[] = [];
+          addCandidates(video?.snippet?.title || '', candidates);
+          (video?.snippet?.tags || []).forEach((tag: string) => candidates.push(cleanKeyword(tag)));
+          String(video?.snippet?.description || '').split('\n').slice(0, 5).forEach(line => addCandidates(line, candidates));
+
+          candidates
+            .map(cleanKeyword)
+            .filter(k => k.length >= 3 && k.length <= 52)
+            .filter(languageLooksOk)
+            .filter(k => !isBadKeyword(k))
+            .forEach(k => scores.set(k, (scores.get(k) || 0) + baseScore));
+        });
+      }
+
+      // Bơm thêm seed đúng chủ đề/khu vực để luôn có key liên quan nếu YouTube trả ít tag/title tách được.
+      getCategoryFallbackItems(index, selectedRegion).forEach((keyword, idx) => {
+        if (languageLooksOk(keyword) && !isBadKeyword(keyword)) {
+          scores.set(cleanKeyword(keyword), (scores.get(cleanKeyword(keyword)) || 0) + 25 - idx);
+        }
       });
 
       const nextItems = [...scores.entries()]
@@ -2192,14 +2268,15 @@ JSON mẫu:
         .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
         .slice(0, 6);
 
-      if (nextItems.length === 0) throw new Error(`Có video nhưng chưa tách được key đúng ngôn ngữ cho ${regionName}. Hãy đổi seed/chủ đề rồi quét lại.`);
+      const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
 
       setSuggestedNiches(prev => {
-        const next = prev.map((item, i) => i === index ? { ...item, items: nextItems } : item).slice(0, 15);
+        const next = prev.map((item, i) => i === index ? { ...item, items: finalItems } : item).slice(0, 15);
         return next;
       });
+
       setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
-      setStatus(`Đã tìm xong ${category}: lấy ${nextItems.length} key đúng khu vực ${regionName}.`);
+      setStatus(`Đã quét xong ${category} tại ${regionName}: lấy ${finalItems.length} key theo chủ đề, sắp xếp ưu tiên trend/VPH/View.${totalVideos ? ` Đã đọc ${totalVideos} video.` : ''}`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));

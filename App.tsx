@@ -77,6 +77,7 @@ interface YouTubeConfig {
   maxVideo: number;
   minViews: number;
   autoNiche: boolean;
+  deepDrillSmallTrend: boolean;
 }
 
 interface ChannelResult {
@@ -106,6 +107,10 @@ interface TrackingChannel {
   id: string;
   name: string;
   icon?: string;
+  keywordTitle?: string;
+  topic?: string;
+  income?: string;
+  country?: string;
   history: Array<{
     date: string;
     subs: number;
@@ -189,10 +194,10 @@ const DEFAULT_CONFIG: YouTubeConfig = {
   maxVideo: 0,
   minViews: 10000,
   autoNiche: true,
+  deepDrillSmallTrend: false,
 };
 
 const REGIONS = [
-  { code: '', name: 'Toàn cầu (Global)' },
   { code: 'VN', name: 'Việt Nam' },
   { code: 'US', name: 'Hoa Kỳ (Mỹ)' },
   { code: 'GB', name: 'Vương quốc Anh' },
@@ -212,8 +217,63 @@ const REGIONS = [
   { code: 'AU', name: 'Úc' },
   { code: 'CA', name: 'Canada' },
   { code: 'ES', name: 'Tây Ban Nha' },
-  { code: 'IT', name: 'Ý (Italia)' },
 ];
+
+const REGION_AI_CONFIG: Record<string, { language: string; note: string; seed: string }> = {
+  VN: { language: 'tiếng Việt', note: 'chỉ dùng từ khóa tiếng Việt tự nhiên tại Việt Nam', seed: 'ngách hot Việt Nam' },
+  US: { language: 'English', note: 'US English only, no Vietnamese', seed: 'US trending niches' },
+  GB: { language: 'British English', note: 'UK English only, no Vietnamese', seed: 'UK trending niches' },
+  IN: { language: 'Hindi or Indian English', note: 'natural language used in India, no Vietnamese', seed: 'India trending niches' },
+  JP: { language: '日本語', note: 'Japanese only, use Japanese search phrases', seed: '日本のトレンドニッチ' },
+  KR: { language: '한국어', note: 'Korean only, use Hangul search phrases', seed: '한국 트렌드 니치' },
+  TH: { language: 'ภาษาไทย', note: 'Thai only, use Thai search phrases', seed: 'เทรนด์ไทย' },
+  ID: { language: 'Bahasa Indonesia', note: 'Indonesian only, no Vietnamese', seed: 'tren Indonesia' },
+  PH: { language: 'English or Tagalog', note: 'Philippines natural language only, no Vietnamese', seed: 'Philippines trending niches' },
+  MY: { language: 'Bahasa Melayu or Malaysian English', note: 'Malaysia natural language only, no Vietnamese', seed: 'Malaysia trending niches' },
+  SG: { language: 'English', note: 'Singapore English only, no Vietnamese', seed: 'Singapore trending niches' },
+  DE: { language: 'Deutsch', note: 'German only, no Vietnamese', seed: 'deutsche Trend-Nischen' },
+  FR: { language: 'français', note: 'French only, no Vietnamese', seed: 'niches tendance France' },
+  RU: { language: 'русский язык', note: 'Russian only, no Vietnamese', seed: 'трендовые ниши Россия' },
+  BR: { language: 'português brasileiro', note: 'Brazilian Portuguese only, no Vietnamese', seed: 'nichos em alta Brasil' },
+  MX: { language: 'español mexicano', note: 'Mexican Spanish only, no Vietnamese', seed: 'nichos en tendencia México' },
+  AU: { language: 'Australian English', note: 'Australian English only, no Vietnamese', seed: 'Australia trending niches' },
+  CA: { language: 'Canadian English or Canadian French', note: 'Canada natural language only, no Vietnamese', seed: 'Canada trending niches' },
+  ES: { language: 'español de España', note: 'Spain Spanish only, no Vietnamese', seed: 'nichos en tendencia España' },
+};
+
+const REGION_YT_CONFIG: Record<string, { regionCode: string; relevanceLanguage: string; seed: string; language: string }> = {
+  VN: { regionCode: 'VN', relevanceLanguage: 'vi', seed: 'xu hướng youtube việt nam', language: 'Vietnamese' },
+  US: { regionCode: 'US', relevanceLanguage: 'en', seed: 'youtube trending niches united states', language: 'English' },
+  GB: { regionCode: 'GB', relevanceLanguage: 'en', seed: 'youtube trending niches united kingdom', language: 'English' },
+  IN: { regionCode: 'IN', relevanceLanguage: 'hi', seed: 'india youtube trending niches', language: 'Hindi or Indian English' },
+  JP: { regionCode: 'JP', relevanceLanguage: 'ja', seed: '日本 youtube トレンド ニッチ', language: 'Japanese' },
+  KR: { regionCode: 'KR', relevanceLanguage: 'ko', seed: '한국 유튜브 트렌드 니치', language: 'Korean' },
+  TH: { regionCode: 'TH', relevanceLanguage: 'th', seed: 'เทรนด์ youtube ไทย', language: 'Thai' },
+  ID: { regionCode: 'ID', relevanceLanguage: 'id', seed: 'tren youtube indonesia', language: 'Indonesian' },
+  PH: { regionCode: 'PH', relevanceLanguage: 'en', seed: 'philippines youtube trending niches', language: 'English or Tagalog' },
+  MY: { regionCode: 'MY', relevanceLanguage: 'ms', seed: 'trend youtube malaysia', language: 'Malay' },
+  SG: { regionCode: 'SG', relevanceLanguage: 'en', seed: 'singapore youtube trending niches', language: 'English' },
+  DE: { regionCode: 'DE', relevanceLanguage: 'de', seed: 'youtube trend nischen deutschland', language: 'German' },
+  FR: { regionCode: 'FR', relevanceLanguage: 'fr', seed: 'niches tendance youtube france', language: 'French' },
+  RU: { regionCode: 'RU', relevanceLanguage: 'ru', seed: 'трендовые ниши youtube россия', language: 'Russian' },
+  BR: { regionCode: 'BR', relevanceLanguage: 'pt', seed: 'nichos em alta youtube brasil', language: 'Portuguese' },
+  MX: { regionCode: 'MX', relevanceLanguage: 'es', seed: 'nichos tendencia youtube méxico', language: 'Spanish' },
+  AU: { regionCode: 'AU', relevanceLanguage: 'en', seed: 'australia youtube trending niches', language: 'English' },
+  CA: { regionCode: 'CA', relevanceLanguage: 'en', seed: 'canada youtube trending niches', language: 'English' },
+  ES: { regionCode: 'ES', relevanceLanguage: 'es', seed: 'nichos tendencia youtube españa', language: 'Spanish' },
+};
+
+function getFriendlyApiError(error: any): string {
+  const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
+  const text = String(raw).toLowerCase();
+  if (text.includes('api key expired') || text.includes('api_key_invalid') || text.includes('key expired')) return 'API key đã hết hạn hoặc không còn hợp lệ. Vui lòng thay API key mới trong phần Cài đặt API.';
+  if (text.includes('api key not valid') || text.includes('invalid api key') || text.includes('keyinvalid')) return 'API key không hợp lệ. Vui lòng kiểm tra lại key hoặc nhập key mới.';
+  if (text.includes('quota') || text.includes('daily') || text.includes('limit') || text.includes('exceeded')) return 'API key đã hết quota hoặc bị giới hạn. Hệ thống sẽ tự bỏ qua key lỗi và thử key tiếp theo nếu có.';
+  if (text.includes('403')) return 'API bị từ chối truy cập. Vui lòng kiểm tra quyền API key hoặc bật đúng dịch vụ trong Google Cloud.';
+  if (text.includes('400')) return 'Yêu cầu API chưa hợp lệ. Vui lòng kiểm tra lại key, model hoặc dữ liệu đầu vào.';
+  if (text.includes('failed to fetch') || text.includes('network')) return 'Không kết nối được tới API. Vui lòng kiểm tra mạng hoặc thử lại sau.';
+  return raw && raw.length < 220 ? raw : 'Có lỗi khi gọi API. Vui lòng kiểm tra lại key hoặc thử lại sau.';
+}
 
 const GEMINI_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash — Khuyên dùng: ổn định, mạnh, phù hợp phân tích video/kênh.' },
@@ -226,37 +286,247 @@ const GEMINI_MODELS = [
 ];
 
 const SUGGESTED_NICHES = [
-  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua sự trì hoãn', 'cách rèn luyện thói quen tốt', 'xây dựng sự tự tin', 'luật hấp dẫn trong thực tế', 'cách đọc sách hiệu quả', 'thiền định cho người mới', 'tìm kiếm đam mê bản thân', 'đối phó với áp lực công việc', 'kỹ năng giao tiếp ứng xử', 'vlog năng suất'] },
-  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tự nhiên', 'yoga tại nhà', 'skincare cho người mới', 'chăm sóc tóc hói', 'bài tập mông tại nhà', 'thực đơn eat clean', 'mẹo trang điểm đi tiệc', 'điều trị mụn lưng', 'massage mặt chống lão hóa', 'chăm sóc da nhạy cảm'] },
-  { category: 'CÔNG NGHỆ & AI', items: ['review điện thoại giá rẻ', 'hướng dẫn dùng ChatGPT', 'cách tạo ảnh bằng Midjourney', 'mẹo dùng iPhone', 'build PC giá rẻ', 'review tai nghe không dây', 'ứng dụng AI trong học tập', 'so sánh phần mềm edit video', 'cách làm website cơ bản', 'tự động hóa công việc bằng AI'] },
-  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'phương pháp tự học hiệu quả', 'từ vựng IELTS theo chủ đề', 'mẹo ôn thi đại học', 'học lập trình python', 'cải thiện kỹ năng thuyết trình', 'review sách self-help', 'học tiếng Trung cơ bản', 'cách ghi chép thông minh', 'quản lý thời gian học tập'] },
-  { category: 'ẨM THỰC & NẤU ĂN', items: ['nấu ăn sinh viên', 'chế biến món chay', 'công thức làm bánh không lò', 'decor hộp cơm bento', 'các món ăn sáng nhanh', 'review quán ăn vỉa hè', 'cách ướp thịt nướng', 'làm nước ép tại nhà', 'nấu món ăn kiêng', 'pha chế đồ uống mùa hè'] },
-  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch phượt xe máy', 'review homestay Đà Lạt', 'cẩm nang du lịch Phú Quốc', 'kinh nghiệm xin visa du lịch', 'du lịch nước ngoài giá rẻ', 'khám phá ẩm thực địa phương', 'review dụng cụ cắm trại', 'du lịch một mình cho nữ', 'mẹo săn vé máy bay giá rẻ', 'vlog cắm trại trong rừng'] },
-  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'review phim rạp mới', 'tóm tắt phim anime', 'trò chơi khăm bạn bè (prank)', 'reaction video tiktoker', 'thử thách sinh tồn', 'giải mã bí ẩn thú vị', 'ảo thuật đường phố', 'kể chuyện ma có thật', 'tổng hợp video meme'] },
-  { category: 'THỂ THAO & THỂ HÌNH', items: ['bài tập tăng chiều cao', 'cách tăng cơ giảm mỡ', 'kỹ thuật bơi lội cơ bản', 'hướng dẫn chơi cầu lông', 'luật chơi tennis cho người mới', 'home workout không dụng cụ', 'review giày chạy bộ', 'bài tập phục hồi chấn thương', 'phân tích chiến thuật bóng đá', 'dinh dưỡng cho người tập gym'] },
-  { category: 'PETS & ĐỘNG VẬT', items: ['cách huấn luyện chó con', 'chế độ ăn cho mèo', 'làm nhà cho thú cưng', 'chữa bệnh thường gặp ở chó', 'review thức ăn hạt cho mèo', 'vlog về chó mèo', 'cách setup hồ thủy sinh', 'chăm sóc bò sát cảnh', 'làm đồ chơi cho mèo', 'bí quyết chọn mua cún cưng'] },
-  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['cách nuôi dạy con ngoan', 'mẹo dọn nhà nhanh', 'trang trí phòng ngủ nhỏ', 'vào bếp cùng con', 'sắp xếp tủ quần áo gọn gàng', 'trồng rau ban công', 'tài chính gia đình trẻ', 'làm đồ handmade trang trí', 'review máy hút bụi lau nhà', 'vlog bà mẹ bỉm sữa'] },
-  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh phong cảnh', 'cách chụp ảnh bằng điện thoại', 'chơi guitar nhạc trẻ', 'học đệm hát cơ bản', 'làm gốm thủ công tại nhà', 'thiết kế logo bằng canva', 'edit video tiktok bằng capcut', 'luyện viết calligraphy', 'nghệ thuật cắm hoa', 'makeup trang biến hình'] },
-  { category: 'CÔNG NGHỆ Ô TÔ & XE MÁY', items: ['review xe máy giá rẻ', 'đánh giá ô tô điện', 'kinh nghiệm mua xe cũ', 'bảo dưỡng xe tay ga', 'độ xe kiểng', 'phượt bằng mô tô', 'học lái xe ô tô B2', 'phụ kiện ô tô cần thiết', 'luật giao thông đường bộ', 'so sánh các dòng xe'] },
-  { category: 'TÂM LÝ HỌC & MỐI QUAN HỆ', items: ['tâm lý học thú vị', 'chữa lành tổn thương', 'vượt qua chia tay', 'nghệ thuật quyến rũ', 'nhận biết người độc hại', 'bài test tính cách MBTI', 'cách hiểu tâm lý nam giới', 'giữ lửa hôn nhân', 'kỹ năng lắng nghe thấu cảm', 'tâm lý tội phạm'] },
-  { category: 'ESPORTS & GAMING', items: ['highlight liên quân', 'build đồ tft mùa mới', 'review game mobile hay', 'giáo trình valorant', 'mẹo leo rank csgo', 'phân tích meta lol', 'game kinh dị việt nam', 'streamer tiktok', 'thi đấu pubg mobile', 'genshin impact hướng dẫn'] },
-  { category: 'HUYỀN BÍ & TÂM LINH', items: ['giải mã những giấc mơ', 'luật nhân quả', 'bí ẩn vũ trụ', 'chuyện rùng rợn có thật', 'bói bài tarot tình yêu', 'phong thủy nhà ở', 'năng lượng luân xa', 'kỳ quan thế giới', 'hiện tượng siêu nhiên', 'câu chuyện tâm linh tuổi thơ'] },
-  { category: 'MẸO VẶT CUỘC SỐNG', items: ['mẹo vặt nhà bếp', 'tái chế đồ nhựa', 'sửa chữa đồ điện gia dụng', 'gấp quần áo nhanh', 'làm sạch vết bẩn cứng đầu', 'mẹo bảo quản thực phẩm', 'ứng dụng hữu ích trên điện thoại', 'mẹo chống muỗi tự nhiên', 'sử dụng lò vi sóng', 'mẹo vặt cho sinh viên'] },
-  { category: 'VĂN HÓA & LỊCH SỬ', items: ['lịch sử việt nam tóm tắt', 'khám phá các triều đại', 'sự kiện lịch sử thế giới', 'văn hóa người á đông', 'trang phục truyền thống', 'nhân vật lịch sử nổi tiếng', 'chiến tranh thế giới thứ 2', 'văn hóa nhật bản', 'phong tục tập quán việt nam', 'di tích lịch sử hà nội'] },
-  { category: 'THỜI TRANG & PHONG CÁCH', items: ['phối đồ cho nam gầy', 'thời trang mùa đông nữ', 'review local brand việt nam', 'cách chọn kính cận phù hợp', 'phong cách vintage', 'mẹo chọn giày sneaker', 'phối đồ đi học đại học', 'xu hướng thời trang 2024', 'thời trang công sở nữ', 'phối đồ với quần ống rộng'] },
-  { category: 'NÔNG NGHIỆP CÔNG NGHỆ CAO', items: ['trồng rau thủy canh', 'mô hình nuôi tôm thẻ', 'kỹ thuật trồng sầu riêng', 'nông nghiệp tuần hoàn', 'trồng hoa lan hồ điệp', 'review máy nông nghiệp', 'chăm sóc cây cảnh', 'nông nghiệp hữu cơ', 'nuôi cá bống tượng', 'kỹ thuật ghép cây'] },
-  { category: 'REVIEW SẢN PHẨM & UNBOXING', items: ['unboxing đồ shopee', 'review mỹ phẩm thái lan', 'đánh giá đồ ăn vặt trung quốc', 'trải nghiệm tai nghe bluetooth', 'review bàn phím cơ dưới 1 triệu', 'đồ decor phòng giá rẻ', 'review sách hay nên đọc', 'đánh giá smartwatch', 'unboxing đồ công nghệ độc lạ', 'review máy chiếu mini'] },
-  { category: 'NHẠC & COVER', items: ['nhạc lofi chill', 'acoustic cover', 'hướng dẫn hát karaoke', 'beat rap free', 'nhạc tiktok remix', 'cover nhạc trẻ', 'nhạc thiền tịnh tâm', 'học thanh nhạc cơ bản', 'nhạc nền không bản quyền', 'nhạc edm sôi động'] },
-  { category: 'BẤT ĐỘNG SẢN & NHÀ CỬA', items: ['kinh nghiệm mua căn hộ', 'review nhà phố', 'thiết kế nội thất chung cư', 'phong thủy phòng khách', 'tin tức bất động sản', 'mẫu nhà cấp 4 đẹp', 'hướng dẫn xin giấy phép xây dựng', 'cách định giá nhà đất', 'hợp đồng thuê nhà', 'review đồ nội thất thông minh'] },
-  { category: 'CÂU CHUYỆN KHỞI NGHIỆP', items: ['kinh nghiệm mở quán cafe', 'bài học kinh doanh', 'khởi nghiệp ít vốn', 'câu chuyện startup việt', 'chiến lược marketing 0 đồng', 'nghệ thuật bán hàng', 'mở shop quần áo', 'kỹ năng đàm phán', 'quản lý nhân sự', 'ý tưởng kinh doanh 2024'] },
-  { category: 'CHUYỆN LẠ BỐN PHƯƠNG', items: ['video thỏa mãn thị giác', 'kỷ lục guinness', 'sinh vật biển kỳ lạ', 'hiện tượng thiên nhiên hiếm gặp', 'người có siêu năng lực', 'khám phá đáy đại dương', 'review ẩm thực độc lạ', 'clip hài hước động vật', 'công trình kiến trúc độc đáo', 'những nơi nguy hiểm nhất'] },
-  { category: 'ASMR & MUKBANG', items: ['asmr ăn uống', 'mukbang gà rán', 'asmr gõ phím', 'asmr nấu ăn', 'mukbang hải sản', 'asmr thư giãn giấc ngủ', 'mukbang đồ ăn cay', 'asmr trang điểm', 'asmr âm thanh tự nhiên', 'mukbang ăn vặt trung quốc'] },
-  { category: 'XÂY DỰNG & KIẾN TRÚC', items: ['tiến độ thi công', 'kiến trúc cổ đại', 'kỹ thuật chống thấm nhà', 'quá trình xây dựng tòa nhà', 'review xi măng', 'kiến trúc hiện đại việt nam', 'máy xúc đất', 'thi công nội thất', 'xây nhà tiết kiệm', 'trải nghiệm thợ xây'] },
-  { category: 'MARKETING & TRUYỀN THÔNG', items: ['cách làm affiliate tiktok', 'kiến thức seo website', 'chạy ads facebook', 'kinh nghiệm shopee', 'chia sẻ marketing thực chiến', 'đánh giá case study', 'chiến lược giá', 'câu nói viral', 'chất lượng content', 'tin tức marketing'] },
-  { category: 'TRỊ LIỆU ÂM THANH', items: ['tần số chữa lành 432hz', 'tiếng mưa rơi dễ ngủ', 'âm thanh rừng tự nhiên', 'tiếng sóng biển 8 tiếng', 'tiếng ồn trắng cho em bé', 'nhạc thiền om', 'tiếng nhạc không lời', 'bowl singing tây tạng', 'tần số tập trung', 'tiếng suối chảy chim hót'] },
-  { category: 'ĐAN LEN & THÊU THÙA', items: ['học móc len cơ bản', 'đan áo len nam', 'thêu hoa nổi', 'cách đọc chart móc', 'review kim móc crochet', 'móc gấu bông tỏi', 'thêu chỉ mế', 'đan len mũi hạt gạo', 'móc túi xách len', 'cách khâu mũi chữ thập'] },
-  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['đầu tư chứng khoán cho người mới', 'quản lý tài chính cá nhân', 'kiếm tiền online tại nhà', 'đầu tư crypto cơ bản', 'tiết kiệm tiền hiệu quả', 'review thẻ tín dụng', 'bất động sản dòng tiền', 'cách lập ngân sách gia đình', 'affiliate marketing shopee', 'dropshipping 2024'] }
+  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua trì hoãn', 'kỷ luật bản thân', 'thói quen thành công', 'quản lý thời gian', 'tư duy tích cực', 'năng suất cá nhân'] },
+  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tại nhà', 'yoga tại nhà', 'skincare cơ bản', 'ăn sạch sống khỏe', 'bài tập giảm mỡ', 'chăm sóc tóc'] },
+  { category: 'CÔNG NGHỆ & AI', items: ['công cụ AI mới', 'hướng dẫn ChatGPT', 'ứng dụng AI', 'review điện thoại', 'mẹo iPhone', 'tự động hóa AI'] },
+  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh', 'mẹo học nhanh', 'từ vựng IELTS', 'tự học lập trình', 'ôn thi hiệu quả', 'kỹ năng ghi nhớ'] },
+  { category: 'ẨM THỰC & NẤU ĂN', items: ['món ngon dễ làm', 'nấu ăn gia đình', 'công thức món chay', 'bữa sáng nhanh', 'meal prep', 'món ăn healthy'] },
+  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch tự túc', 'travel vlog', 'địa điểm đẹp', 'du lịch tiết kiệm', 'ẩm thực địa phương', 'cắm trại cuối tuần'] },
+  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'reaction video', 'tóm tắt phim', 'meme hài hước', 'thử thách vui', 'câu chuyện lạ'] },
+  { category: 'THỂ THAO & BÓNG ĐÁ', items: ['bóng đá hôm nay', 'highlight bóng đá', 'lịch thi đấu bóng đá', 'v league', 'tin thể thao', 'bài tập thể lực'] },
+  { category: 'PETS & ĐỘNG VẬT', items: ['huấn luyện chó', 'chăm sóc mèo', 'thú cưng đáng yêu', 'pet grooming', 'thức ăn cho mèo', 'vlog chó mèo'] },
+  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['mẹo dọn nhà', 'nuôi dạy con', 'tài chính gia đình', 'trang trí nhà nhỏ', 'mẹo nhà bếp', 'đời sống tối giản'] },
+  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh dễ', 'thiết kế Canva', 'edit video CapCut', 'chụp ảnh điện thoại', 'guitar cơ bản', 'ý tưởng sáng tạo'] },
+  { category: 'XE & CÔNG NGHỆ Ô TÔ', items: ['review xe máy', 'ô tô điện', 'kinh nghiệm mua xe', 'phụ kiện ô tô', 'bảo dưỡng xe', 'xe tiết kiệm xăng'] },
+  { category: 'TÀI CHÍNH & KIẾM TIỀN', items: ['kiếm tiền online', 'quản lý tài chính', 'đầu tư cho người mới', 'side hustle', 'affiliate marketing', 'tiết kiệm tiền'] },
+  { category: 'REVIEW SẢN PHẨM', items: ['unboxing sản phẩm', 'review đồ công nghệ', 'review mỹ phẩm', 'đồ gia dụng thông minh', 'sản phẩm viral', 'mua gì đáng tiền'] },
+  { category: 'MARKETING & TRUYỀN THÔNG', items: ['content marketing', 'xây kênh YouTube', 'SEO cơ bản', 'chạy quảng cáo', 'tăng trưởng TikTok', 'chiến lược nội dung'] }
 ];
+
+
+
+const CATEGORY_VI_TITLES = SUGGESTED_NICHES.slice(0, 15).map(item => item.category);
+
+const EN_CATEGORY_TITLES = [
+  'Self Improvement', 'Health & Beauty', 'Technology & AI', 'Education & Learning', 'Food & Cooking',
+  'Travel & Discovery', 'Entertainment & Comedy', 'Sports & Football', 'Pets & Animals', 'Family & Lifestyle',
+  'Art & Creativity', 'Cars & Auto Tech', 'Finance & Make Money', 'Product Reviews', 'Marketing & Media'
+];
+
+const REGION_CATEGORY_TITLES: Record<string, string[]> = {
+  VN: CATEGORY_VI_TITLES,
+  US: EN_CATEGORY_TITLES,
+  GB: EN_CATEGORY_TITLES,
+  AU: EN_CATEGORY_TITLES,
+  CA: EN_CATEGORY_TITLES,
+  SG: EN_CATEGORY_TITLES,
+  PH: EN_CATEGORY_TITLES,
+  IN: EN_CATEGORY_TITLES,
+  JP: ['自己啓発', '健康と美容', 'テクノロジーとAI', '教育と学習', '料理とグルメ', '旅行と発見', 'エンタメとコメディ', 'スポーツとフィットネス', 'ペットと動物', '家族とライフスタイル', 'アートと創作', '車と自動車技術', 'お金と副業', '商品レビュー', 'マーケティングとメディア'],
+  KR: ['자기계발', '건강과 뷰티', '기술과 AI', '교육과 학습', '요리와 음식', '여행과 탐험', '엔터테인먼트와 코미디', '스포츠와 피트니스', '반려동물과 동물', '가족과 라이프스타일', '예술과 창작', '자동차와 기술', '재테크와 부업', '제품 리뷰', '마케팅과 미디어'],
+  TH: ['พัฒนาตัวเอง', 'สุขภาพและความงาม', 'เทคโนโลยีและ AI', 'การศึกษาและการเรียนรู้', 'อาหารและการทำอาหาร', 'ท่องเที่ยวและสำรวจ', 'บันเทิงและตลก', 'กีฬาและฟิตเนส', 'สัตว์เลี้ยงและสัตว์', 'ครอบครัวและไลฟ์สไตล์', 'ศิลปะและความคิดสร้างสรรค์', 'รถยนต์และเทคโนโลยีรถ', 'การเงินและหารายได้', 'รีวิวสินค้า', 'การตลาดและสื่อ'],
+  ID: ['Pengembangan Diri', 'Kesehatan & Kecantikan', 'Teknologi & AI', 'Pendidikan & Belajar', 'Makanan & Memasak', 'Travel & Eksplorasi', 'Hiburan & Komedi', 'Olahraga & Fitness', 'Hewan Peliharaan', 'Keluarga & Gaya Hidup', 'Seni & Kreativitas', 'Otomotif & Teknologi', 'Keuangan & Cuan', 'Review Produk', 'Marketing & Media'],
+  MY: ['Pembangunan Diri', 'Kesihatan & Kecantikan', 'Teknologi & AI', 'Pendidikan & Pembelajaran', 'Makanan & Masakan', 'Travel & Eksplorasi', 'Hiburan & Komedi', 'Sukan & Kecergasan', 'Haiwan Peliharaan', 'Keluarga & Gaya Hidup', 'Seni & Kreativiti', 'Auto & Teknologi Kereta', 'Kewangan & Duit', 'Review Produk', 'Marketing & Media'],
+  DE: ['Selbstentwicklung', 'Gesundheit & Schönheit', 'Technologie & KI', 'Bildung & Lernen', 'Essen & Kochen', 'Reisen & Entdecken', 'Unterhaltung & Comedy', 'Sport & Fitness', 'Haustiere & Tiere', 'Familie & Lifestyle', 'Kunst & Kreativität', 'Autos & Autotechnik', 'Finanzen & Geld verdienen', 'Produktbewertungen', 'Marketing & Medien'],
+  FR: ['Développement personnel', 'Santé & Beauté', 'Technologie & IA', 'Éducation & Apprentissage', 'Cuisine & Recettes', 'Voyage & Découverte', 'Divertissement & Humour', 'Sport & Fitness', 'Animaux & Compagnie', 'Famille & Lifestyle', 'Art & Créativité', 'Auto & Technologie', 'Finance & Revenus', 'Avis produits', 'Marketing & Médias'],
+  RU: ['Саморазвитие', 'Здоровье и красота', 'Технологии и ИИ', 'Образование и обучение', 'Еда и готовка', 'Путешествия и открытия', 'Развлечения и юмор', 'Спорт и фитнес', 'Питомцы и животные', 'Семья и лайфстайл', 'Искусство и творчество', 'Авто и технологии', 'Финансы и заработок', 'Обзоры товаров', 'Маркетинг и медиа'],
+  BR: ['Desenvolvimento pessoal', 'Saúde e beleza', 'Tecnologia e IA', 'Educação e estudos', 'Comida e culinária', 'Viagem e descoberta', 'Entretenimento e humor', 'Esportes e fitness', 'Pets e animais', 'Família e estilo de vida', 'Arte e criatividade', 'Carros e tecnologia automotiva', 'Finanças e renda', 'Review de produtos', 'Marketing e mídia'],
+  MX: ['Desarrollo personal', 'Salud y belleza', 'Tecnología e IA', 'Educación y aprendizaje', 'Comida y cocina', 'Viajes y exploración', 'Entretenimiento y comedia', 'Deportes y fitness', 'Mascotas y animales', 'Familia y estilo de vida', 'Arte y creatividad', 'Autos y tecnología', 'Finanzas y ganar dinero', 'Reseñas de productos', 'Marketing y medios'],
+  ES: ['Desarrollo personal', 'Salud y belleza', 'Tecnología e IA', 'Educación y aprendizaje', 'Comida y cocina', 'Viajes y exploración', 'Entretenimiento y comedia', 'Deportes y fitness', 'Mascotas y animales', 'Familia y estilo de vida', 'Arte y creatividad', 'Coches y tecnología', 'Finanzas y ganar dinero', 'Reseñas de productos', 'Marketing y medios'],
+};
+
+const REGION_KEYWORD_TEMPLATES: Record<string, string[][]> = {
+  VN: SUGGESTED_NICHES.slice(0, 15).map(item => item.items.slice(0, 6)),
+  EN: [
+    ['time management tips', 'communication skills', 'habit building', 'confidence building', 'productivity hacks', 'discipline motivation'],
+    ['home workout', 'skincare routine', 'weight loss tips', 'healthy meal prep', 'yoga at home', 'hair care tips'],
+    ['ai tools', 'chatgpt tutorial', 'iphone tips', 'budget phone review', 'automation tools', 'ai image generator'],
+    ['study tips', 'learn english', 'coding for beginners', 'exam preparation', 'memory techniques', 'online learning tools'],
+    ['easy recipes', 'meal prep', 'home cooking', 'healthy snacks', 'budget meals', 'quick dinner ideas'],
+    ['travel vlog', 'budget travel', 'hidden places', 'solo travel tips', 'camping guide', 'local food tour'],
+    ['funny short films', 'movie recap', 'reaction video', 'viral memes', 'comedy skit', 'strange stories'],
+    ['home workout', 'football highlights', 'gym routine', 'running tips', 'muscle gain', 'fitness diet'],
+    ['dog training', 'cat care tips', 'cute pets', 'pet grooming', 'animal rescue', 'pet food review'],
+    ['cleaning hacks', 'parenting tips', 'home organization', 'minimalist living', 'small home decor', 'family budgeting'],
+    ['canva design', 'capcut editing', 'easy drawing', 'mobile photography', 'guitar beginner', 'creative ideas'],
+    ['car review', 'electric car news', 'motorcycle review', 'car accessories', 'auto maintenance', 'fuel saving tips'],
+    ['make money online', 'side hustle', 'personal finance', 'investing for beginners', 'affiliate marketing', 'save money fast'],
+    ['product review', 'tech unboxing', 'skincare review', 'smart home gadgets', 'viral products', 'amazon finds'],
+    ['content marketing', 'youtube growth', 'seo tips', 'social media strategy', 'tiktok growth', 'branding tips']
+  ],
+  JP: [
+    ['時間管理 コツ', 'コミュニケーション スキル', '習慣化 方法', '自信をつける方法', '集中力アップ', '自己管理'],
+    ['自宅 筋トレ', 'スキンケア ルーティン', 'ダイエット 食事', '健康 レシピ', '家ヨガ', 'ヘアケア'],
+    ['AIツール', 'ChatGPT 使い方', 'iPhone 裏技', '格安スマホ レビュー', '自動化 ツール', 'AI画像生成'],
+    ['勉強法', '英語学習', 'プログラミング 初心者', '試験対策', '暗記術', 'オンライン学習'],
+    ['簡単 レシピ', '作り置き', '家庭料理', '健康おやつ', '節約ごはん', '時短料理'],
+    ['旅行 vlog', '格安旅行', '穴場スポット', '一人旅', 'キャンプ 初心者', 'ご当地グルメ'],
+    ['ショート コメディ', '映画 解説', 'リアクション動画', '面白い ミーム', '寸劇', '不思議な話'],
+    ['自宅トレーニング', 'サッカー ハイライト', 'ジム ルーティン', 'ランニング コツ', '筋肥大', 'フィットネス 食事'],
+    ['犬 しつけ', '猫 育て方', 'かわいいペット', 'ペット トリミング', '動物 保護', 'ペットフード レビュー'],
+    ['掃除 裏技', '子育て コツ', '収納術', 'ミニマリスト生活', '小さい家 インテリア', '家計管理'],
+    ['Canva デザイン', 'CapCut 編集', '簡単 イラスト', 'スマホ 写真', 'ギター 初心者', '創作 アイデア'],
+    ['車 レビュー', '電気自動車 ニュース', 'バイク レビュー', 'カー用品', '車 メンテナンス', '燃費 向上'],
+    ['副業', 'ネットで稼ぐ', '家計管理', '投資 初心者', 'アフィリエイト', '節約術'],
+    ['商品レビュー', 'ガジェット 開封', 'コスメ レビュー', 'スマート家電', 'バズ商品', 'おすすめ商品'],
+    ['コンテンツ マーケティング', 'YouTube 伸ばし方', 'SEO 対策', 'SNS 戦略', 'TikTok 伸ばし方', 'ブランディング']
+  ],
+  KR: [
+    ['시간 관리 방법', '소통 능력 향상', '습관 만들기', '자신감 키우기', '생산성 팁', '동기부여'],
+    ['홈트레이닝', '스킨케어 루틴', '다이어트 식단', '건강 도시락', '집에서 요가', '헤어 관리법'],
+    ['AI 도구', 'ChatGPT 사용법', '아이폰 꿀팁', '가성비폰 리뷰', '자동화 도구', 'AI 그림 만들기'],
+    ['공부법', '영어 공부', '코딩 입문', '시험 준비', '암기법', '온라인 강의'],
+    ['간단 레시피', '밀프렙', '집밥 요리', '건강 간식', '절약 요리', '빠른 저녁 메뉴'],
+    ['여행 브이로그', '저가 여행', '숨은 명소', '혼자 여행', '캠핑 초보', '로컬 맛집'],
+    ['웃긴 쇼츠', '영화 요약', '리액션 영상', '밈 영상', '코미디 스케치', '신기한 이야기'],
+    ['홈트 루틴', '축구 하이라이트', '헬스 루틴', '러닝 팁', '근육 키우기', '운동 식단'],
+    ['강아지 훈련', '고양이 돌보기', '귀여운 반려동물', '펫 미용', '동물 구조', '사료 리뷰'],
+    ['청소 꿀팁', '육아 팁', '집 정리', '미니멀 라이프', '작은집 인테리어', '가계부 관리'],
+    ['캔바 디자인', '캡컷 편집', '쉬운 그림', '스마트폰 사진', '기타 입문', '창작 아이디어'],
+    ['자동차 리뷰', '전기차 뉴스', '오토바이 리뷰', '차량 용품', '자동차 관리', '연비 절약'],
+    ['부업', '온라인 수익', '재테크 초보', '투자 입문', '제휴 마케팅', '돈 모으는 법'],
+    ['제품 리뷰', 'IT 언박싱', '화장품 리뷰', '스마트홈 기기', '인기 상품', '가성비 추천'],
+    ['콘텐츠 마케팅', '유튜브 성장', 'SEO 팁', 'SNS 전략', '틱톡 성장법', '브랜딩']
+  ]
+};
+
+const REGION_LOCAL_KEYWORDS: Record<string, string[][]> = {
+  TH: [
+    ['เทคนิคจัดเวลา', 'พัฒนาตัวเอง', 'สร้างวินัย', 'เพิ่มความมั่นใจ', 'เพิ่มประสิทธิภาพ', 'แรงบันดาลใจ'],
+    ['ออกกำลังกายที่บ้าน', 'สกินแคร์มือใหม่', 'ลดน้ำหนัก', 'อาหารสุขภาพ', 'โยคะที่บ้าน', 'ดูแลผม'],
+    ['เครื่องมือ AI', 'สอนใช้ ChatGPT', 'ทริค iPhone', 'รีวิวมือถือคุ้มค่า', 'เครื่องมืออัตโนมัติ', 'สร้างภาพ AI'],
+    ['เทคนิคเรียน', 'เรียนอังกฤษ', 'เริ่มเขียนโค้ด', 'เตรียมสอบ', 'จำเร็ว', 'เรียนออนไลน์'],
+    ['สูตรอาหารง่าย', 'เตรียมอาหาร', 'อาหารทำเอง', 'ของว่างสุขภาพ', 'อาหารประหยัด', 'มื้อเย็นเร็ว'],
+    ['เที่ยวแบบประหยัด', 'vlog ท่องเที่ยว', 'ที่เที่ยวลับ', 'เที่ยวคนเดียว', 'แคมป์ปิ้งมือใหม่', 'อาหารท้องถิ่น'],
+    ['คลิปตลกสั้น', 'สรุปหนัง', 'รีแอคชั่น', 'มีมตลก', 'ละครสั้น', 'เรื่องแปลก'],
+    ['ออกกำลังกายที่บ้าน', 'ไฮไลท์ฟุตบอล', 'รูทีนฟิตเนส', 'เทคนิควิ่ง', 'เพิ่มกล้าม', 'อาหารนักกีฬา'],
+    ['ฝึกสุนัข', 'เลี้ยงแมว', 'สัตว์เลี้ยงน่ารัก', 'ตัดขนสัตว์', 'ช่วยสัตว์', 'รีวิวอาหารสัตว์'],
+    ['ทริคทำความสะอาด', 'เลี้ยงลูก', 'จัดบ้าน', 'ชีวิตมินิมอล', 'แต่งบ้านเล็ก', 'งบครอบครัว'],
+    ['ออกแบบ Canva', 'ตัดต่อ CapCut', 'วาดรูปง่าย', 'ถ่ายรูปมือถือ', 'กีตาร์มือใหม่', 'ไอเดียสร้างสรรค์'],
+    ['รีวิวรถ', 'ข่าวรถไฟฟ้า', 'รีวิวมอเตอร์ไซค์', 'อุปกรณ์รถยนต์', 'ดูแลรถ', 'ประหยัดน้ำมัน'],
+    ['หาเงินออนไลน์', 'งานเสริม', 'การเงินส่วนตัว', 'เริ่มลงทุน', 'affiliate marketing', 'เก็บเงินเร็ว'],
+    ['รีวิวสินค้า', 'แกะกล่องแกดเจ็ต', 'รีวิวสกินแคร์', 'สมาร์ทโฮม', 'สินค้าฮิต', 'ของน่าใช้'],
+    ['คอนเทนต์มาร์เก็ตติ้ง', 'เพิ่มยอด YouTube', 'เทคนิค SEO', 'กลยุทธ์โซเชียล', 'โตบน TikTok', 'สร้างแบรนด์']
+  ],
+  DE: [
+    ['Zeitmanagement Tipps', 'Kommunikation verbessern', 'Gewohnheiten aufbauen', 'Selbstvertrauen stärken', 'Produktivität Tricks', 'Motivation Alltag'],
+    ['Workout zuhause', 'Hautpflege Routine', 'Abnehmen Tipps', 'gesunde Mahlzeiten', 'Yoga zuhause', 'Haarpflege Tipps'],
+    ['KI Tools', 'ChatGPT Anleitung', 'iPhone Tipps', 'Handy Review günstig', 'Automatisierung Tools', 'KI Bilder erstellen'],
+    ['Lerntipps', 'Englisch lernen', 'Programmieren Anfänger', 'Prüfung vorbereiten', 'Gedächtnis Tricks', 'Online Lernen'],
+    ['einfache Rezepte', 'Meal Prep', 'Kochen zuhause', 'gesunde Snacks', 'günstig kochen', 'schnelles Abendessen'],
+    ['Reise Vlog', 'günstig reisen', 'Geheimtipps Orte', 'alleine reisen', 'Camping Anfänger', 'lokales Essen'],
+    ['lustige Kurzvideos', 'Film Zusammenfassung', 'Reaction Video', 'virale Memes', 'Comedy Sketch', 'seltsame Geschichten'],
+    ['Workout zuhause', 'Fußball Highlights', 'Fitness Routine', 'Laufen Tipps', 'Muskelaufbau', 'Fitness Ernährung'],
+    ['Hund trainieren', 'Katzenpflege Tipps', 'süße Haustiere', 'Tierpflege', 'Tierrettung', 'Tierfutter Review'],
+    ['Putzen Tricks', 'Erziehung Tipps', 'Wohnung organisieren', 'minimalistisch leben', 'kleine Wohnung einrichten', 'Familienbudget'],
+    ['Canva Design', 'CapCut Tutorial', 'einfach zeichnen', 'Handy Fotografie', 'Gitarre Anfänger', 'kreative Ideen'],
+    ['Auto Review', 'Elektroauto News', 'Motorrad Review', 'Auto Zubehör', 'Auto Wartung', 'Sprit sparen'],
+    ['online Geld verdienen', 'Nebenjob Ideen', 'Finanzen Anfänger', 'Investieren Anfänger', 'Affiliate Marketing', 'Geld sparen'],
+    ['Produkt Review', 'Tech Unboxing', 'Kosmetik Review', 'Smart Home Gadgets', 'virale Produkte', 'Amazon Favoriten'],
+    ['Content Marketing', 'YouTube wachsen', 'SEO Tipps', 'Social Media Strategie', 'TikTok Wachstum', 'Branding Tipps']
+  ],
+  FR: [
+    ['gestion du temps', 'communication efficace', 'habitudes productives', 'confiance en soi', 'astuces productivité', 'motivation quotidienne'],
+    ['sport à la maison', 'routine skincare', 'perte de poids', 'repas healthy', 'yoga maison', 'soin cheveux'],
+    ['outils IA', 'tutoriel ChatGPT', 'astuces iPhone', 'smartphone pas cher', 'outils automatisation', 'générer image IA'],
+    ['méthode étude', 'apprendre anglais', 'coder débutant', 'préparer examen', 'mémorisation rapide', 'cours en ligne'],
+    ['recettes faciles', 'meal prep', 'cuisine maison', 'snacks sains', 'repas pas cher', 'dîner rapide'],
+    ['vlog voyage', 'voyage pas cher', 'lieux secrets', 'voyager seul', 'camping débutant', 'street food locale'],
+    ['vidéos drôles', 'résumé film', 'réaction vidéo', 'mèmes viraux', 'sketch humour', 'histoires étranges'],
+    ['sport maison', 'highlights football', 'routine fitness', 'conseils course', 'prise de muscle', 'nutrition sportive'],
+    ['dresser chien', 'conseils chat', 'animaux mignons', 'toilettage animaux', 'sauvetage animal', 'avis nourriture chat'],
+    ['astuces ménage', 'conseils parents', 'rangement maison', 'vie minimaliste', 'déco petit espace', 'budget familial'],
+    ['design Canva', 'montage CapCut', 'dessin facile', 'photo smartphone', 'guitare débutant', 'idées créatives'],
+    ['avis voiture', 'actualité voiture électrique', 'avis moto', 'accessoires auto', 'entretien voiture', 'économiser carburant'],
+    ['gagner argent en ligne', 'idées revenu', 'finance personnelle', 'investir débutant', 'marketing affilié', 'économiser vite'],
+    ['avis produit', 'unboxing tech', 'avis skincare', 'objets maison connectée', 'produits viraux', 'trouvailles Amazon'],
+    ['marketing contenu', 'croissance YouTube', 'astuces SEO', 'stratégie réseaux sociaux', 'croissance TikTok', 'branding']
+  ],
+  RU: [
+    ['тайм менеджмент', 'навыки общения', 'полезные привычки', 'уверенность в себе', 'продуктивность советы', 'мотивация каждый день'],
+    ['тренировка дома', 'уход за кожей', 'похудение советы', 'здоровое питание', 'йога дома', 'уход за волосами'],
+    ['ИИ инструменты', 'как пользоваться ChatGPT', 'советы iPhone', 'обзор бюджетного телефона', 'автоматизация', 'генерация изображений ИИ'],
+    ['советы учебы', 'учить английский', 'программирование новичкам', 'подготовка к экзамену', 'быстро запоминать', 'онлайн обучение'],
+    ['простые рецепты', 'заготовки еды', 'домашняя кухня', 'полезные перекусы', 'дешевые блюда', 'быстрый ужин'],
+    ['влог путешествие', 'бюджетное путешествие', 'секретные места', 'путешествие одному', 'кемпинг новичкам', 'местная еда'],
+    ['смешные шорты', 'краткий пересказ фильма', 'реакция видео', 'вирусные мемы', 'комедийный скетч', 'странные истории'],
+    ['тренировка дома', 'футбол лучшие моменты', 'фитнес рутина', 'советы бег', 'набор мышц', 'питание фитнес'],
+    ['дрессировка собаки', 'уход за кошкой', 'милые питомцы', 'груминг питомцев', 'спасение животных', 'обзор корма'],
+    ['лайфхаки уборка', 'советы родителям', 'организация дома', 'минимализм', 'маленькая квартира декор', 'семейный бюджет'],
+    ['дизайн Canva', 'монтаж CapCut', 'легкий рисунок', 'фото на телефон', 'гитара новичкам', 'творческие идеи'],
+    ['обзор авто', 'электромобиль новости', 'обзор мотоцикла', 'аксессуары авто', 'обслуживание авто', 'экономия топлива'],
+    ['заработок онлайн', 'подработка идеи', 'личные финансы', 'инвестиции новичкам', 'партнерский маркетинг', 'как копить деньги'],
+    ['обзор товара', 'распаковка техники', 'обзор косметики', 'умный дом', 'вирусные товары', 'находки маркетплейс'],
+    ['контент маркетинг', 'рост YouTube', 'SEO советы', 'стратегия соцсети', 'рост TikTok', 'брендинг']
+  ],
+  BR: [
+    ['gestão do tempo', 'habilidades comunicação', 'criar hábitos', 'aumentar confiança', 'dicas produtividade', 'motivação diária'],
+    ['treino em casa', 'rotina skincare', 'dicas emagrecer', 'marmita saudável', 'yoga em casa', 'cuidados cabelo'],
+    ['ferramentas IA', 'tutorial ChatGPT', 'dicas iPhone', 'celular barato review', 'ferramentas automação', 'criar imagem IA'],
+    ['dicas estudo', 'aprender inglês', 'programação iniciantes', 'preparar prova', 'memorização rápida', 'curso online'],
+    ['receitas fáceis', 'meal prep', 'comida caseira', 'lanches saudáveis', 'comida barata', 'jantar rápido'],
+    ['vlog viagem', 'viagem barata', 'lugares escondidos', 'viajar sozinho', 'camping iniciantes', 'comida local'],
+    ['vídeos engraçados', 'resumo filme', 'vídeo reação', 'memes virais', 'esquete comédia', 'histórias estranhas'],
+    ['treino em casa', 'melhores momentos futebol', 'rotina academia', 'dicas corrida', 'ganhar massa', 'dieta fitness'],
+    ['adestrar cachorro', 'cuidar de gato', 'pets fofos', 'banho e tosa', 'resgate animal', 'review ração'],
+    ['truques limpeza', 'dicas maternidade', 'organização casa', 'vida minimalista', 'decoração casa pequena', 'orçamento família'],
+    ['design Canva', 'edição CapCut', 'desenho fácil', 'fotografia celular', 'violão iniciante', 'ideias criativas'],
+    ['review carro', 'carro elétrico notícias', 'review moto', 'acessórios carro', 'manutenção carro', 'economizar combustível'],
+    ['ganhar dinheiro online', 'renda extra', 'finanças pessoais', 'investir iniciante', 'marketing afiliado', 'economizar dinheiro'],
+    ['review produto', 'unboxing tecnologia', 'review skincare', 'casa inteligente', 'produtos virais', 'achadinhos'],
+    ['marketing conteúdo', 'crescer YouTube', 'dicas SEO', 'estratégia redes sociais', 'crescer TikTok', 'branding']
+  ],
+  MX: [], ES: [], ID: [], MY: []
+};
+REGION_LOCAL_KEYWORDS.MX = REGION_LOCAL_KEYWORDS.ES = [
+  ['gestión del tiempo', 'habilidades comunicación', 'crear hábitos', 'confianza personal', 'trucos productividad', 'motivación diaria'],
+  ['ejercicio en casa', 'rutina skincare', 'bajar de peso', 'comida saludable', 'yoga en casa', 'cuidado cabello'],
+  ['herramientas IA', 'tutorial ChatGPT', 'trucos iPhone', 'celular barato review', 'automatización herramientas', 'crear imágenes IA'],
+  ['consejos estudio', 'aprender inglés', 'programar principiantes', 'preparar examen', 'memorizar rápido', 'clases online'],
+  ['recetas fáciles', 'meal prep', 'comida casera', 'snacks saludables', 'comida económica', 'cena rápida'],
+  ['vlog viaje', 'viajar barato', 'lugares escondidos', 'viajar solo', 'camping principiantes', 'comida local'],
+  ['videos graciosos', 'resumen película', 'video reacción', 'memes virales', 'sketch comedia', 'historias extrañas'],
+  ['entrenamiento casa', 'highlights fútbol', 'rutina gimnasio', 'consejos correr', 'ganar músculo', 'dieta fitness'],
+  ['entrenar perro', 'cuidar gato', 'mascotas lindas', 'peluquería mascotas', 'rescate animal', 'review alimento mascotas'],
+  ['trucos limpieza', 'consejos padres', 'organizar casa', 'vida minimalista', 'decorar casa pequeña', 'presupuesto familiar'],
+  ['diseño Canva', 'editar CapCut', 'dibujar fácil', 'fotografía celular', 'guitarra principiantes', 'ideas creativas'],
+  ['review autos', 'noticias auto eléctrico', 'review moto', 'accesorios auto', 'mantenimiento auto', 'ahorrar gasolina'],
+  ['ganar dinero online', 'ingresos extra', 'finanzas personales', 'invertir principiantes', 'marketing afiliados', 'ahorrar dinero'],
+  ['review producto', 'unboxing tecnología', 'review skincare', 'hogar inteligente', 'productos virales', 'compras recomendadas'],
+  ['marketing contenidos', 'crecer YouTube', 'consejos SEO', 'estrategia redes sociales', 'crecer TikTok', 'marca personal']
+];
+REGION_LOCAL_KEYWORDS.ID = REGION_LOCAL_KEYWORDS.MY = REGION_KEYWORD_TEMPLATES.EN;
+
+function getKeywordTemplateForRegion(regionCode: string) {
+  const code = String(regionCode || 'VN').toUpperCase();
+  if (code === 'VN') return REGION_KEYWORD_TEMPLATES.VN;
+  if (code === 'JP') return REGION_KEYWORD_TEMPLATES.JP;
+  if (code === 'KR') return REGION_KEYWORD_TEMPLATES.KR;
+  return REGION_LOCAL_KEYWORDS[code] || REGION_KEYWORD_TEMPLATES.EN;
+}
+
+function getLocalizedNicheTemplate(regionCode?: string) {
+  const code = String(regionCode || 'VN').toUpperCase();
+  const localTitles = REGION_CATEGORY_TITLES[code] || EN_CATEGORY_TITLES;
+  const keywordTemplate = getKeywordTemplateForRegion(code);
+  return CATEGORY_VI_TITLES.map((viTitle, idx) => {
+    const localTitle = localTitles[idx] || EN_CATEGORY_TITLES[idx] || viTitle;
+    const category = code === 'VN' ? viTitle : `${localTitle} (${viTitle.toLowerCase()})`;
+    return {
+      category,
+      localCategory: localTitle,
+      viCategory: viTitle,
+      items: (keywordTemplate[idx] || REGION_KEYWORD_TEMPLATES.EN[idx] || SUGGESTED_NICHES[idx].items).slice(0, 6),
+    };
+  });
+}
+
+function renderBilingualCategoryLabel(title: string) {
+  const text = String(title || '');
+  const match = text.match(/^(.+?)\s*\((.+)\)$/);
+  if (!match) return <>{text}</>;
+  return <>{match[1]} <span className="block normal-case text-[10px] text-gray-400 font-bold mt-0.5">({match[2]})</span></>;
+}
 
 const STOP_LIMIT = 10;
 
@@ -266,6 +536,23 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const updateViewportFlag = () => {
+      setIsMobileViewport(window.innerWidth <= 768);
+    };
+
+    updateViewportFlag();
+    window.addEventListener('resize', updateViewportFlag);
+    window.addEventListener('orientationchange', updateViewportFlag);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportFlag);
+      window.removeEventListener('orientationchange', updateViewportFlag);
+    };
+  }, []);
 
   const buildPaymentUrl = (targetUser = user) => {
     if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
@@ -323,6 +610,7 @@ export default function App() {
         await refreshSubscription(currentUser, true);
       } else {
         setSubscriptionInfo(null);
+        setShowAccountModal(false);
       }
     });
 
@@ -346,234 +634,11 @@ export default function App() {
     };
   }, [user]);
 
-  // UI_PROOF_20260519: Inject trực tiếp vào document.body để không bị khung tool / overflow / CSS che.
+  // STEP_11: Loại bỏ hoàn toàn chip trạng thái/PRO nổi để không che giao diện web/mobile.
+  // Vẫn giữ logic kiểm tra gói ở header/tài khoản, chỉ xóa DOM cũ nếu còn tồn tại sau deploy.
   useEffect(() => {
-    const rootId = 'vtw-account-status-root-20260519';
-    let root = document.getElementById(rootId);
-
-    if (!root) {
-      root = document.createElement('div');
-      root.id = rootId;
-      document.body.appendChild(root);
-    }
-
-    const accountLabel = !user
-      ? 'CHƯA ĐĂNG NHẬP'
-      : subscriptionLoading && !subscriptionInfo
-        ? 'ĐANG KIỂM TRA'
-        : isPremiumAccount
-          ? 'PRO'
-          : subscriptionInfo?.active
-            ? 'TRIAL'
-            : 'HẾT HẠN';
-
-    const statusTitle = !user
-      ? 'Chưa đăng nhập Google'
-      : subscriptionLoading && !subscriptionInfo
-        ? 'Đang kiểm tra tài khoản...'
-        : isPremiumAccount
-          ? 'Tài khoản đã nâng cấp PRO'
-          : subscriptionInfo?.active
-            ? 'Tài khoản đang dùng thử 1 giờ'
-            : 'Tài khoản đã hết hạn';
-
-    const planText = subscriptionInfo?.planName || (subscriptionInfo?.active ? 'Dùng thử 1 giờ' : 'Chưa có gói');
-    const startedText = formatSubscriptionDateCompact(subscriptionInfo?.startedAt);
-    const expiresText = formatSubscriptionDateCompact(subscriptionInfo?.expiresAt);
-    const remainingText = user ? getRemainingText(subscriptionInfo?.expiresAt) : '---';
-    const payUrl = user ? buildPaymentUrl(user) : '#';
-
-    root.innerHTML = `
-      <style>
-        #vtw-account-status-root-20260519 * { box-sizing: border-box; font-family: Arial, sans-serif; }
-        #vtw-account-status-root-20260519 .vtw-float-btn {
-          position: fixed !important;
-          top: 7px !important;
-          right: 410px !important;
-          left: auto !important;
-          bottom: auto !important;
-          z-index: 2147483646 !important;
-          height: 34px !important;
-          min-width: 176px !important;
-          max-width: 220px !important;
-          border: 2px solid #bfdbfe !important;
-          border-radius: 999px !important;
-          padding: 7px 16px !important;
-          background: ${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important;
-          color: ${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important;
-          font-weight: 900 !important;
-          font-size: 12px !important;
-          text-transform: uppercase !important;
-          box-shadow: 0 8px 24px rgba(37,99,235,.22) !important;
-          cursor: pointer !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 8px !important;
-          line-height: 1 !important;
-          white-space: nowrap !important;
-          pointer-events: auto !important;
-          transform: none !important;
-          margin: 0 !important;
-        }
-        @media (max-width: 1500px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn { right: 355px !important; }
-        }
-        @media (max-width: 1250px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn {
-            right: 255px !important;
-            min-width: 145px !important;
-            font-size: 11px !important;
-            padding: 7px 10px !important;
-          }
-        }
-        @media (max-width: 900px) {
-          #vtw-account-status-root-20260519 .vtw-float-btn {
-            right: 12px !important;
-            top: 58px !important;
-            min-width: 145px !important;
-            font-size: 11px !important;
-            padding: 7px 10px !important;
-          }
-        }
-        #vtw-account-status-root-20260519 .vtw-overlay {
-          position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; display: none; align-items: center !important; justify-content: center !important;
-          background: rgba(15,23,42,.52) !important; backdrop-filter: blur(3px) !important; padding: 18px !important;
-        }
-        #vtw-account-status-root-20260519 .vtw-panel { width: 460px !important; max-width: calc(100vw - 30px) !important; background:#fff !important; border-radius: 24px !important; overflow:hidden !important; box-shadow:0 28px 90px rgba(15,23,42,.45) !important; border:1px solid #bfdbfe !important; }
-        #vtw-account-status-root-20260519 .vtw-head { padding:18px !important; background:linear-gradient(135deg,#2563eb,#4f46e5) !important; color:#fff !important; display:flex !important; justify-content:space-between !important; gap:12px !important; align-items:center !important; }
-        #vtw-account-status-root-20260519 .vtw-card { border:1px solid #e5e7eb !important; background:#f8fafc !important; border-radius:16px !important; padding:12px !important; }
-        #vtw-account-status-root-20260519 .vtw-label { font-size:10px !important; color:#94a3b8 !important; font-weight:900 !important; text-transform:uppercase !important; }
-        #vtw-account-status-root-20260519 .vtw-value { font-size:15px !important; color:#0f172a !important; font-weight:900 !important; margin-top:5px !important; }
-      </style>
-      <button class="vtw-float-btn" id="vtw-open-account-20260519">● ${accountLabel} · ${remainingText}</button>
-      <div class="vtw-overlay" id="vtw-overlay-20260519">
-        <div class="vtw-panel" onclick="event.stopPropagation()">
-          <div class="vtw-head">
-            <div>
-              <div style="font-size:12px;font-weight:900;opacity:.85;text-transform:uppercase;">Tài khoản & hạn sử dụng</div>
-              <div style="font-size:22px;font-weight:900;margin-top:4px;">${statusTitle}</div>
-              <div style="font-size:12px;font-weight:700;opacity:.85;margin-top:3px;">${user?.displayName || 'Người dùng'} · ${user?.email || 'Chưa có email'}</div>
-            </div>
-            <button id="vtw-close-account-20260519" style="width:38px;height:38px;border-radius:999px;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:22px;cursor:pointer;">×</button>
-          </div>
-          <div style="padding:18px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <div class="vtw-card"><div class="vtw-label">Gói đã đăng ký</div><div class="vtw-value">${planText}</div></div>
-              <div class="vtw-card" style="background:${subscriptionInfo?.active ? '#ecfdf5' : '#fef2f2'} !important;border-color:${subscriptionInfo?.active ? '#86efac' : '#fecaca'} !important;"><div class="vtw-label" style="color:${subscriptionInfo?.active ? '#059669' : '#dc2626'} !important;">Còn lại</div><div class="vtw-value" style="color:${subscriptionInfo?.active ? '#047857' : '#b91c1c'} !important;">${remainingText}</div></div>
-              <div class="vtw-card"><div class="vtw-label">Ngày đăng ký</div><div class="vtw-value">${startedText}</div></div>
-              <div class="vtw-card"><div class="vtw-label">Hạn sử dụng</div><div class="vtw-value">${expiresText}</div></div>
-            </div>
-            <div style="display:flex;gap:10px;margin-top:16px;">
-              <a href="${payUrl}" target="_blank" rel="noreferrer" style="flex:1;text-align:center;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,#f97316,#ef4444);color:#fff;text-decoration:none;font-size:12px;font-weight:900;text-transform:uppercase;">${isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</a>
-              <button id="vtw-settings-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Cài đặt</button>
-              <button id="vtw-logout-account-20260519" style="padding:12px 14px;border-radius:14px;border:1px solid #e5e7eb;background:#f8fafc;color:#334155;font-size:12px;font-weight:900;text-transform:uppercase;cursor:pointer;">Đăng xuất</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const overlay = document.getElementById('vtw-overlay-20260519') as HTMLDivElement | null;
-    const openBtn = document.getElementById('vtw-open-account-20260519');
-    const closeBtn = document.getElementById('vtw-close-account-20260519');
-    const logoutBtn = document.getElementById('vtw-logout-account-20260519');
-    const settingsBtn = document.getElementById('vtw-settings-account-20260519');
-
-    const openPanel = () => { if (overlay) overlay.style.display = 'flex'; };
-    const closePanel = () => { if (overlay) overlay.style.display = 'none'; };
-    const doLogout = async () => { await logoutUser(); closePanel(); };
-    const openApiSettings = () => {
-      closePanel();
-      setShowKeyInputModal(true);
-    };
-
-    // VTW_HARD_ACCOUNT_POSITION_20260520_LOCKED:
-    // Bản cứng nhất: không đo header, không bám popup, không phụ thuộc Tailwind.
-    // Ép style inline lặp lại để nút PRO luôn nằm cố định trên thanh tiêu đề.
-    const forceHardAccountButton = () => {
-      const btn = document.getElementById('vtw-open-account-20260519') as HTMLButtonElement | null;
-      if (!btn) return;
-
-      const width = window.innerWidth || document.documentElement.clientWidth || 1600;
-      let top = '7px';
-      let right = '410px';
-      let minWidth = '176px';
-      let fontSize = '12px';
-      let padding = '7px 16px';
-
-      if (width <= 900) {
-        top = '58px';
-        right = '12px';
-        minWidth = '145px';
-        fontSize = '11px';
-        padding = '7px 10px';
-      } else if (width <= 1250) {
-        right = '255px';
-        minWidth = '145px';
-        fontSize = '11px';
-        padding = '7px 10px';
-      } else if (width <= 1500) {
-        right = '355px';
-      }
-
-      btn.setAttribute(
-        'style',
-        [
-          'position:fixed !important',
-          `top:${top} !important`,
-          `right:${right} !important`,
-          'left:auto !important',
-          'bottom:auto !important',
-          'z-index:2147483646 !important',
-          'height:34px !important',
-          `min-width:${minWidth} !important`,
-          'max-width:220px !important',
-          'border:2px solid #bfdbfe !important',
-          'border-radius:999px !important',
-          `padding:${padding} !important`,
-          `background:${isPremiumAccount ? '#dbeafe' : subscriptionInfo?.active ? '#e0f2fe' : '#fee2e2'} !important`,
-          `color:${isPremiumAccount ? '#1d4ed8' : subscriptionInfo?.active ? '#0369a1' : '#b91c1c'} !important`,
-          'font-weight:900 !important',
-          `font-size:${fontSize} !important`,
-          'text-transform:uppercase !important',
-          'box-shadow:0 8px 24px rgba(37,99,235,.22) !important',
-          'cursor:pointer !important',
-          'display:flex !important',
-          'align-items:center !important',
-          'justify-content:center !important',
-          'gap:8px !important',
-          'line-height:1 !important',
-          'white-space:nowrap !important',
-          'pointer-events:auto !important',
-          'transform:none !important',
-          'margin:0 !important'
-        ].join(';')
-      );
-    };
-
-    forceHardAccountButton();
-    window.setTimeout(forceHardAccountButton, 50);
-    window.setTimeout(forceHardAccountButton, 250);
-    window.setTimeout(forceHardAccountButton, 800);
-    const vtwHardAccountPositionTimer = window.setInterval(forceHardAccountButton, 700);
-    window.addEventListener('resize', forceHardAccountButton);
-
-    openBtn?.addEventListener('click', openPanel);
-    closeBtn?.addEventListener('click', closePanel);
-    overlay?.addEventListener('click', closePanel);
-    logoutBtn?.addEventListener('click', doLogout);
-    settingsBtn?.addEventListener('click', openApiSettings);
-
-    return () => {
-      openBtn?.removeEventListener('click', openPanel);
-      closeBtn?.removeEventListener('click', closePanel);
-      overlay?.removeEventListener('click', closePanel);
-      logoutBtn?.removeEventListener('click', doLogout);
-      settingsBtn?.removeEventListener('click', openApiSettings);
-      window.removeEventListener('resize', forceHardAccountButton);
-      window.clearInterval(vtwHardAccountPositionTimer);
-    };
+    const root = document.getElementById('vtw-account-status-root-20260519');
+    if (root) root.remove();
   }, [user, subscriptionInfo, subscriptionLoading, subscriptionTick]);
 
   const [activeTab, setActiveTab] = useState(1);
@@ -584,6 +649,7 @@ export default function App() {
   const [apiKeyIndex, setApiKeyIndex] = useState(0);
   const [apiKeysHistory, setApiKeysHistory] = useState<string[]>([]);
   const [exhaustedKeys, setExhaustedKeys] = useState<string[]>([]);
+  const exhaustedKeysRef = useRef<string[]>([]);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -618,12 +684,17 @@ export default function App() {
   const [suggestedNiches, setSuggestedNiches] = useState<{ category: string, items: string[] }[]>(SUGGESTED_NICHES);
   const [trendingRegion, setTrendingRegion] = useState(config.region);
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
+  const [scanningNicheCategory, setScanningNicheCategory] = useState<string | null>(null);
+  const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
   const [selectedHistoryKeys, setSelectedHistoryKeys] = useState<string[]>([]);
+  const [geminiKeysHistory, setGeminiKeysHistory] = useState<string[]>([]);
+  const [selectedGeminiHistoryKeys, setSelectedGeminiHistoryKeys] = useState<string[]>([]);
+  const [showGeminiKeyHistory, setShowGeminiKeyHistory] = useState(false);
   const [showNicheModal, setShowNicheModal] = useState(false);
   const clearHistory = () => {
     triggerConfirm(
@@ -642,10 +713,46 @@ export default function App() {
     const currentKeys = config.apiKeys.map(k => k.trim()).filter(Boolean);
     const newKeys = [...new Set([...currentKeys, ...keysToAdd.map(k => k.trim()).filter(Boolean)])];
     setConfig({ ...config, apiKeys: newKeys });
+    setManualKeysInput(newKeys.join('\n'));
     localStorage.setItem('youtube_api_keys', JSON.stringify(newKeys));
+    localStorage.setItem('youtube_api_keys_text_draft', newKeys.join('\n'));
     setSelectedHistoryKeys([]);
     setShowKeyHistory(false);
-    setStatus(`Đã thêm ${keysToAdd.length} Key vào danh sách hoạt động.`);
+    setStatus(`Đã thêm ${keysToAdd.length} Key vào ô nhập YouTube API.`);
+  };
+
+  const useGeminiHistoryKey = (keysToUse: string[]) => {
+    const key = keysToUse.map(k => k.trim()).filter(Boolean)[0];
+    if (!key) return;
+    setGeminiApiKey(key);
+    localStorage.setItem('youtube_gemini_api_key', key);
+    const nextHistory = [...new Set([key, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+    setGeminiKeysHistory(nextHistory);
+    localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextHistory));
+    setSelectedGeminiHistoryKeys([]);
+    setShowGeminiKeyHistory(false);
+    setStatus('Đã khôi phục Gemini API Key vào ô nhập.');
+  };
+
+  const clearGeminiHistory = () => {
+    triggerConfirm(
+      "Xóa lịch sử Gemini",
+      "Bạn có chắc chắn muốn xóa toàn bộ lịch sử Gemini API Key không?",
+      () => {
+        setGeminiKeysHistory([]);
+        setSelectedGeminiHistoryKeys([]);
+        localStorage.removeItem('youtube_gemini_api_keys_history');
+      },
+      "XÁC NHẬN XÓA"
+    );
+  };
+
+  const removeFromGeminiHistory = (keyToRemove: string) => {
+    const next = geminiKeysHistory.filter(k => k !== keyToRemove);
+    setGeminiKeysHistory(next);
+    localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(next));
+    setSelectedGeminiHistoryKeys(prev => prev.filter(k => k !== keyToRemove));
+    setStatus("Đã xóa Gemini Key khỏi lịch sử.");
   };
 
   const removeFromHistory = (keyToRemove: string) => {
@@ -677,19 +784,66 @@ export default function App() {
       if (showKeyHistory && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
         setShowKeyHistory(false);
       }
+      if (showGeminiKeyHistory && keyHistoryRef.current && !keyHistoryRef.current.contains(event.target as Node)) {
+        setShowGeminiKeyHistory(false);
+      }
       if (menuPos.visible && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuPos(prev => ({ ...prev, visible: false }));
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyHistory, menuPos.visible]);
+  }, [showRegionList, showKeyInputModal, showKeyHistory, showGeminiKeyHistory, menuPos.visible]);
+
+  // Đóng bảng thao tác khi cuộn/đổi màn hình để không bị dính sai kênh.
+  useEffect(() => {
+    if (!menuPos.visible) return;
+
+    const closeFloatingMenu = () => {
+      setMenuPos(prev => prev.visible ? ({ ...prev, visible: false }) : prev);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeFloatingMenu();
+    };
+
+    window.addEventListener('scroll', closeFloatingMenu, true);
+    window.addEventListener('resize', closeFloatingMenu);
+    window.addEventListener('orientationchange', closeFloatingMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('scroll', closeFloatingMenu, true);
+      window.removeEventListener('resize', closeFloatingMenu);
+      window.removeEventListener('orientationchange', closeFloatingMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuPos.visible]);
+
+  // Chỉ bản mobile: hiện nút lên đầu trang khi đã lướt xuống.
+  useEffect(() => {
+    const handleScrollTopVisibility = () => {
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      setShowScrollTop(window.innerWidth <= 900 && y > 420);
+    };
+    handleScrollTopVisibility();
+    window.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
+    window.addEventListener('resize', handleScrollTopVisibility);
+    window.addEventListener('orientationchange', handleScrollTopVisibility);
+    return () => {
+      window.removeEventListener('scroll', handleScrollTopVisibility);
+      window.removeEventListener('resize', handleScrollTopVisibility);
+      window.removeEventListener('orientationchange', handleScrollTopVisibility);
+    };
+  }, []);
 
   const [status, setStatus] = useState('Sẵn sàng.');
   const [progress, setProgress] = useState(0);
   const [isHunting, setIsHunting] = useState(false);
   const [quotaUsed, setQuotaUsed] = useState(0);
+  const quotaUsedRef = useRef(0);
   const [totalQuotaToday, setTotalQuotaToday] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [results, setResults] = useState<ChannelResult[]>([]);
   const isHuntingRef = useRef(false);
@@ -709,8 +863,9 @@ export default function App() {
   // --- Niche Research State ---
   const [nicheInput, setNicheInput] = useState('');
   const [nicheRegion, setNicheRegion] = useState('VN');
-  const [nicheTime, setNicheTime] = useState('day');
+  const [nicheTime, setNicheTime] = useState('month');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
+  const [nicheMaxSub, setNicheMaxSub] = useState(250000);
   const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
@@ -724,11 +879,11 @@ export default function App() {
     channels: any[];
     thumbnails: any[];
   } | null>(null);
-  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('summary');
+  const [nicheActiveSubTab, setNicheActiveSubTab] = useState('videos');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
-  const [videoFilters, setVideoFilters] = useState({ trendScore: 0, views: 0, vph: 0 });
+  const [videoFilters, setVideoFilters] = useState({ trendScoreMin: 0, trendScoreMax: 100, viewsMin: 0, viewsMax: 10000000, vphMin: 0, vphMax: 10000, subsMax: 10000000 });
   const [modalTrendingVideos, setModalTrendingVideos] = useState<{title: string, subtitle: string, videos: any[]} | null>(null);
-  const [channelFilters, setChannelFilters] = useState({ views: 0, subscribers: 0, videosCount: 0 });
+  const [channelFilters, setChannelFilters] = useState({ subscribersMin: 0, subscribersMax: 10000000, viewsMin: 0, viewsMax: 10000000, videosMin: 0, videosMax: 10000, vphMax: 10000 });
   const [showNicheHistory, setShowNicheHistory] = useState(false);
   const [spyProjects, setSpyProjects] = useState<SpyResult[]>([]);
   const [videoProjects, setVideoProjects] = useState<any[]>([]);
@@ -742,6 +897,8 @@ export default function App() {
   useEffect(() => {
     const savedKeys = localStorage.getItem('youtube_api_keys');
     const savedKeyHistory = localStorage.getItem('youtube_api_keys_history');
+    const savedGeminiKeyHistory = localStorage.getItem('youtube_gemini_api_keys_history');
+    const savedKeysDraft = localStorage.getItem('youtube_api_keys_text_draft');
     const savedConfig = localStorage.getItem('youtube_hunter_config');
     const savedResults = localStorage.getItem('youtube_hunter_results');
     const savedTracking = localStorage.getItem('youtube_tracking_channels');
@@ -749,9 +906,15 @@ export default function App() {
     if (savedKeys) {
       const keys = JSON.parse(savedKeys);
       setConfig(prev => ({ ...prev, apiKeys: keys }));
+      setManualKeysInput(savedKeysDraft || (Array.isArray(keys) ? keys.join('\n') : ''));
+    } else if (savedKeysDraft) {
+      setManualKeysInput(savedKeysDraft);
     }
     if (savedKeyHistory) {
       setApiKeysHistory(JSON.parse(savedKeyHistory));
+    }
+    if (savedGeminiKeyHistory) {
+      try { setGeminiKeysHistory(JSON.parse(savedGeminiKeyHistory)); } catch {}
     }
     if (savedConfig) {
       const parsed = JSON.parse(savedConfig);
@@ -761,6 +924,7 @@ export default function App() {
       }
       setConfig(prev => {
         const next = { ...prev, ...parsed };
+        if (typeof next.deepDrillSmallTrend !== 'boolean') next.deepDrillSmallTrend = false;
         // Ensure API keys are not overwritten by empty array in config if we have keys from savedKeys
         if (prev.apiKeys.length > 0 && (!parsed.apiKeys || parsed.apiKeys.length === 0)) {
           next.apiKeys = prev.apiKeys;
@@ -768,43 +932,87 @@ export default function App() {
         return next;
       });
     }
-    if (savedResults) setResults(JSON.parse(savedResults));
+    if (savedResults) {
+      const cleaned = dedupeChannelResults(JSON.parse(savedResults));
+      setResults(cleaned);
+      resultsRef.current = cleaned;
+      localStorage.setItem('youtube_hunter_results', JSON.stringify(cleaned));
+    }
     if (savedTracking) setTrackingChannels(JSON.parse(savedTracking));
     
     const savedSpyProjects = localStorage.getItem('youtube_spy_projects');
-    if (savedSpyProjects) setSpyProjects(JSON.parse(savedSpyProjects));
+    if (savedSpyProjects) {
+      try {
+        const parsedSpyProjects = JSON.parse(savedSpyProjects);
+        setSpyProjects(parsedSpyProjects);
+        if (Array.isArray(parsedSpyProjects) && parsedSpyProjects[0]) {
+          setSpyResult(parsedSpyProjects[0]);
+          if (parsedSpyProjects[0]?.channelInfo?.id) setSpyInput(parsedSpyProjects[0].channelInfo.id);
+        }
+      } catch (error) {
+        console.warn('Không đọc được lịch sử Spy đã lưu:', error);
+      }
+    }
 
     const savedVideoProjects = localStorage.getItem('youtube_video_projects');
-    if (savedVideoProjects) setVideoProjects(JSON.parse(savedVideoProjects));
+    if (savedVideoProjects) {
+      try {
+        const parsedVideoProjects = JSON.parse(savedVideoProjects);
+        setVideoProjects(parsedVideoProjects);
+        if (Array.isArray(parsedVideoProjects) && parsedVideoProjects[0]) {
+          setVideoResult(parsedVideoProjects[0]);
+          if (parsedVideoProjects[0]?.id) setVideoInput(parsedVideoProjects[0].id);
+        }
+      } catch (error) {
+        console.warn('Không đọc được lịch sử Video đã lưu:', error);
+      }
+    }
 
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
-    const savedSuggestedNiches = localStorage.getItem(`youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`);
-    if (savedSuggestedNiches) {
-      try {
-        const parsedSuggestedNiches = JSON.parse(savedSuggestedNiches);
-        if (Array.isArray(parsedSuggestedNiches) && parsedSuggestedNiches.length > 0) {
-          setSuggestedNiches(parsedSuggestedNiches.map((niche: any) => ({
-            ...niche,
-            items: Array.isArray(niche.items) ? niche.items.slice(0, 5) : []
-          })));
-        }
-      } catch (error) {
-        console.warn('Không đọc được danh sách ngách đã lưu:', error);
+    // Bước 54: ô Từ khóa/Key luôn lấy lại từ khóa cuối người dùng đã tìm kiếm.
+    const savedLastNicheKeyword = localStorage.getItem('youtube_last_niche_keyword');
+    if (savedLastNicheKeyword) setNicheInput(savedLastNicheKeyword);
+
+    // Bước 76: không nạp lại dữ liệu ngách cũ trong popup gợi ý.
+    // Mỗi lần mở app dùng bộ chủ đề mới theo khu vực hiện tại để tránh sai ngôn ngữ/khu vực.
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('youtube_suggested_niches_trending_v3_') || key.startsWith('youtube_suggested_niches_trending_v4_') || key.startsWith('youtube_suggested_niches_gemini_manual_') || key.startsWith('youtube_suggested_niches_youtube_manual_')) {
+        localStorage.removeItem(key);
       }
-    }
+    });
+    setSuggestedNiches(getLocalizedNicheTemplate(trendingRegion || config.region || 'VN'));
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
-    if (savedGeminiKey) setGeminiApiKey(savedGeminiKey);
+    if (savedGeminiKey) {
+      setGeminiApiKey(savedGeminiKey);
+      const currentGeminiHistory = savedGeminiKeyHistory ? JSON.parse(savedGeminiKeyHistory) : [];
+      const nextGeminiHistory = [...new Set([savedGeminiKey, ...(Array.isArray(currentGeminiHistory) ? currentGeminiHistory : [])])];
+      setGeminiKeysHistory(nextGeminiHistory);
+      localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextGeminiHistory));
+    }
     
     const savedGeminiModel = localStorage.getItem('youtube_gemini_model');
     if (savedGeminiModel) setGeminiModel(savedGeminiModel);
 
+    // Khôi phục danh sách key YouTube đã hết quota trong ngày để tự động bỏ qua, không cần xóa thủ công.
+    try {
+      const savedExhausted = JSON.parse(localStorage.getItem('youtube_exhausted_keys') || '{}');
+      const today = new Date().toISOString().split('T')[0];
+      if (savedExhausted?.date === today && Array.isArray(savedExhausted.keys)) {
+        const restored = savedExhausted.keys.map((k: any) => String(k || '').trim()).filter(Boolean);
+        exhaustedKeysRef.current = restored;
+        setExhaustedKeys(restored);
+      }
+    } catch (e) {
+      console.warn('Không đọc được danh sách key lỗi đã lưu:', e);
+    }
+
     // Handle payment success return
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('paid') === 'success') {
-      alert(`Thanh toán thành công! Mã đơn: ${urlParams.get('orderCode') || ''}`);
+      setStatus(`Thanh toán thành công! Mã đơn: ${urlParams.get('orderCode') || ''}`);
       // Clean up URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -829,26 +1037,37 @@ export default function App() {
       localStorage.setItem('youtube_quota_today', JSON.stringify({ value: 0, date: today }));
     }
 
-    // Load exhausted keys and clear if it's a new day
-    const savedExhausted = localStorage.getItem('youtube_exhausted_keys');
-    if (savedExhausted) {
-      try {
-        const { keys, date } = JSON.parse(savedExhausted);
-        const today = new Date().toISOString().split('T')[0];
-        if (date === today) {
-          setExhaustedKeys(keys);
-        } else {
-          localStorage.removeItem('youtube_exhausted_keys');
-        }
-      } catch (e) {
-        console.error("Error parsing exhausted keys", e);
+    // Load session quota so every API call keeps adding during the current browser tab/session.
+    try {
+      const savedSessionQuota = JSON.parse(sessionStorage.getItem('youtube_quota_session') || '{}');
+      const sessionId = sessionStorage.getItem('youtube_quota_session_id') || (() => {
+        const id = String(Date.now());
+        sessionStorage.setItem('youtube_quota_session_id', id);
+        return id;
+      })();
+      if (savedSessionQuota?.sessionId === sessionId) {
+        const restored = Number(savedSessionQuota.value || 0);
+        quotaUsedRef.current = Number.isFinite(restored) ? restored : 0;
+        setQuotaUsed(quotaUsedRef.current);
       }
+    } catch (error) {
+      console.warn('Không đọc được quota phiên đã lưu:', error);
     }
+
+    // STEP_77_FIX: Không nạp lại danh sách key lỗi cũ từ localStorage.
+    // Mỗi lần tải trang sẽ cho phép thử lại toàn bộ key để tránh tình trạng key còn quota nhưng bị bỏ qua.
+    localStorage.removeItem('youtube_exhausted_keys');
+    exhaustedKeysRef.current = [];
+    setExhaustedKeys([]);
   }, []);
 
   useEffect(() => {
     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
   }, [geminiApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('youtube_api_keys_text_draft', manualKeysInput);
+  }, [manualKeysInput]);
 
   useEffect(() => {
     localStorage.setItem('youtube_gemini_model', geminiModel);
@@ -857,9 +1076,10 @@ export default function App() {
   // Save exhausted keys whenever they change
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
+    exhaustedKeysRef.current = exhaustedKeys.map(k => String(k || '').trim()).filter(Boolean);
     if (exhaustedKeys.length > 0) {
       localStorage.setItem('youtube_exhausted_keys', JSON.stringify({ 
-        keys: exhaustedKeys, 
+        keys: exhaustedKeysRef.current, 
         date: today 
       }));
     } else {
@@ -891,11 +1111,289 @@ export default function App() {
     return false;
   };
 
+  const formatVNNumber = (value: any) => {
+    const n = Number(value || 0);
+    if (!Number.isFinite(n)) return '0';
+    return new Intl.NumberFormat('vi-VN').format(n);
+  };
+
+
+  const REGION_NAME_MAP: Record<string, string> = REGIONS.reduce((acc, item) => {
+    if (item.code) acc[item.code] = item.name.replace(/\s*\([^)]*\)/g, '').trim();
+    return acc;
+  }, {} as Record<string, string>);
+
+  const getCountryFullName = (code?: string) => {
+    const normalized = String(code || '').trim().toUpperCase();
+    if (!normalized || normalized === 'N/A') return 'Không rõ';
+    return REGION_NAME_MAP[normalized] || normalized;
+  };
+
+  const cleanTrendKeyword = (value?: string) => {
+    const raw = String(value || '').trim();
+    if (!raw) return 'Tự động theo khu vực';
+    const autoMatch = raw.match(/Auto\s+[^·]+·\s*([^·]+)(?:·|$)/i);
+    const keyword = (autoMatch ? autoMatch[1] : raw)
+      .replace(/^tự động:\s*/i, '')
+      .replace(/\s*·\s*VPH.*$/i, '')
+      .trim();
+    return keyword || 'Tự động theo khu vực';
+  };
+
+  const getChannelTrendKeyword = (channel: ChannelResult) => cleanTrendKeyword(channel.keywordTitle);
+
+  const getTopicFromKeyword = (keyword: string) => {
+    const normalized = normalizeHunterKeyword(keyword);
+    const found = SUGGESTED_NICHES.find(group =>
+      group.items.some(item => normalized.includes(normalizeHunterKeyword(item)) || normalizeHunterKeyword(item).includes(normalized))
+    );
+    if (found) return found.category.replace(/&/g, 'và');
+    if (/ai|chatgpt|gemini|tool|cong cu|công cụ|automation|seo|app|điện thoại|dien thoai|công nghệ|cong nghe|tech/i.test(normalized)) return 'Công nghệ và AI';
+    if (/tin tức|tin tuc|news|24h|thời sự|thoi su/i.test(normalized)) return 'Tin tức và thời sự';
+    if (/du lịch|du lich|travel|vlog/i.test(normalized)) return 'Du lịch và khám phá';
+    if (/ẩm thực|am thuc|nấu ăn|nau an|food|ăn uống|an uong/i.test(normalized)) return 'Ẩm thực và nấu ăn';
+    if (/game|gaming|lol|lien minh|liên minh|mobile game|highlight|short/i.test(normalized)) return 'Gaming và giải trí';
+    if (/bóng đá|bong da|football|thể thao|the thao/i.test(normalized)) return 'Thể thao';
+    if (/sức khỏe|suc khoe|health|yoga|gym|tập luyện|tap luyen/i.test(normalized)) return 'Sức khỏe và làm đẹp';
+    if (/thú cưng|thu cung|pet|chó|cho|mèo|meo/i.test(normalized)) return 'Pets và động vật';
+    if (/học|hoc|tiếng anh|tieng anh|ielts|giáo dục|giao duc/i.test(normalized)) return 'Giáo dục và học tập';
+    if (/nhạc|nhac|lofi|music|cover/i.test(normalized)) return 'Nhạc và âm thanh';
+    if (/xe|ô tô|oto|car|review xe/i.test(normalized)) return 'Ô tô và xe máy';
+    if (/gia đình|gia dinh|mẹo gia đình|meo gia dinh|mẹo|meo/i.test(normalized)) return 'Mẹo vặt cuộc sống';
+    if (/bất động sản|bat dong san|real estate/i.test(normalized)) return 'Bất động sản';
+    if (/tien|tiền|dau tu|đầu tư|crypto|chung khoan|chứng khoán|tai chinh|tài chính|kiếm tiền|kiem tien/i.test(normalized)) return 'Tài chính và đầu tư';
+    return 'Chủ đề hot khác';
+  };
+
+  const estimateIncomeFromApiViews = (channel: ChannelResult) => {
+    // YouTube Data API v3 không trả thu nhập thật. Mục này ước tính dựa trên view thật từ API × RPM tham khảo theo quốc gia.
+    const views = Number(channel.views || 0);
+    const country = String(channel.country || '').toUpperCase();
+    const rpmByCountry: Record<string, [number, number]> = {
+      US: [1.5, 5], GB: [1.2, 4], CA: [1.2, 4], AU: [1.2, 4], DE: [0.9, 3], FR: [0.7, 2.5],
+      JP: [0.6, 2], KR: [0.5, 1.8], VN: [0.08, 0.45], TH: [0.08, 0.45], ID: [0.05, 0.35], PH: [0.05, 0.35], IN: [0.04, 0.3]
+    };
+    const [low, high] = rpmByCountry[country] || [0.08, 0.8];
+    const lowUsd = Math.round((views / 1000) * low);
+    const highUsd = Math.round((views / 1000) * high);
+    if (views <= 0) return 'Đang cập nhật';
+    return `$${formatVNNumber(lowUsd)} - $${formatVNNumber(highUsd)}`;
+  };
+
+
+  const estimateIncomeFromTracking = (views: number, country?: string) => {
+    const fakeChannel = {
+      views: Number(views || 0),
+      country: country || 'VN'
+    } as ChannelResult;
+    return estimateIncomeFromApiViews(fakeChannel);
+  };
+
+  const getTrackingKeywordFromApiItem = (item: any, fallbackName?: string) => {
+    const title = String(item?.snippet?.title || fallbackName || '').trim();
+    const desc = normalizeHunterKeyword(item?.snippet?.description || '');
+    const topicUrls = Array.isArray(item?.topicDetails?.topicCategories) ? item.topicDetails.topicCategories.join(' ') : '';
+    const text = normalizeHunterKeyword(`${title} ${desc} ${topicUrls}`);
+    const candidates = [
+      'ai tools','chatgpt','youtube automation','tech news','travel vlog','gaming highlights','review điện thoại','make money online',
+      'tin tức','ẩm thực','nấu ăn','du lịch','sức khỏe','làm đẹp','bóng đá','thể thao','giáo dục','tiếng anh','nhạc','lofi','thú cưng','mẹo vặt',
+      'công nghệ','review xe','đầu tư','tài chính','vlog','shorts'
+    ];
+    const found = candidates.find(k => text.includes(normalizeHunterKeyword(k)));
+    if (found) return found;
+    const words = normalizeHunterKeyword(title).split(' ').filter(w => w.length > 2).slice(0, 4).join(' ');
+    return words || 'tự động tracking';
+  };
+
+  const formatChannelUrlShort = (url?: string, id?: string) => {
+    const channelId = String(id || '').trim();
+    if (channelId) return `.../${channelId.slice(-10)}`;
+    const raw = String(url || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+    return raw.length > 28 ? raw.slice(0, 25) + '...' : raw;
+  };
+
+
+  const parseRangeNumber = (value: string, fallback = 0) => {
+    const n = Number(String(value || '').replace(/[^0-9]/g, ''));
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const clampRangePair = (min: number, max: number, absoluteMin: number, absoluteMax: number): [number, number] => {
+    const safeMin = Math.max(absoluteMin, Math.min(min, absoluteMax));
+    const safeMax = Math.max(absoluteMin, Math.min(max, absoluteMax));
+    return safeMin <= safeMax ? [safeMin, safeMax] : [safeMax, safeMin];
+  };
+
+  const RangeFilterBox = ({
+    title,
+    subtitle,
+    min,
+    max,
+    absoluteMin,
+    absoluteMax,
+    step,
+    onChange,
+  }: {
+    title: string;
+    subtitle: string;
+    min: number;
+    max: number;
+    absoluteMin: number;
+    absoluteMax: number;
+    step: number;
+    onChange: (min: number, max: number) => void;
+  }) => {
+    const safeMax = Math.max(absoluteMin, Math.min(Number(max || 0), absoluteMax));
+    const updateMaxOnly = (value: number) => {
+      const nextMax = Math.max(absoluteMin, Math.min(value, absoluteMax));
+      onChange(absoluteMin, nextMax);
+    };
+    return (
+      <div className="vtw-range-box vtw-single-range-box vtw-compact-filter-box">
+        <div className="vtw-compact-filter-head">
+          <span className="vtw-compact-filter-title">{title}</span>
+          <span className="vtw-compact-filter-value">0 → {formatVNNumber(safeMax)}</span>
+        </div>
+        <input
+          type="range"
+          min={absoluteMin}
+          max={absoluteMax}
+          step={step}
+          value={safeMax}
+          onChange={(e) => updateMaxOnly(parseRangeNumber(e.target.value, absoluteMax))}
+          className="vtw-single-range-input vtw-compact-range-input"
+        />
+        <div className="vtw-single-range-scale vtw-compact-range-scale">
+          <span>0</span>
+          <span>{formatVNNumber(Math.round(absoluteMax / 2))}</span>
+          <span>{formatVNNumber(absoluteMax)}</span>
+        </div>
+      </div>
+    );
+  };
+
+
+  const InlineFilterSlider = ({
+    title,
+    value,
+    max,
+    step,
+    onChange,
+  }: {
+    title: string;
+    value: number;
+    max: number;
+    step: number;
+    onChange: (value: number) => void;
+  }) => {
+    const safeValue = Math.max(0, Math.min(Number(value || 0), max));
+    return (
+      <div className="vtw-inline-filter-item">
+        <div className="vtw-inline-filter-head">
+          <span>{title}</span>
+          <strong>0 → {formatVNNumber(safeValue)}</strong>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={max}
+          step={step}
+          value={safeValue}
+          onChange={(e) => onChange(parseRangeNumber(e.target.value, max))}
+          onInput={(e) => onChange(parseRangeNumber((e.target as HTMLInputElement).value, max))}
+          className="vtw-inline-filter-range"
+        />
+        <div className="vtw-inline-filter-scale">
+          <span>0</span>
+          <span>{formatVNNumber(Math.round(max / 2))}</span>
+          <span>{formatVNNumber(max)}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const LightRangeFilterBox = ({
+    title,
+    min,
+    max,
+    absoluteMin,
+    absoluteMax,
+    step,
+    onChange,
+  }: {
+    title: string;
+    min: number;
+    max: number;
+    absoluteMin: number;
+    absoluteMax: number;
+    step: number;
+    onChange: (min: number, max: number) => void;
+  }) => {
+    const updateMin = (value: number) => {
+      const [nextMin, nextMax] = clampRangePair(value, max, absoluteMin, absoluteMax);
+      onChange(nextMin, nextMax);
+    };
+    const updateMax = (value: number) => {
+      const [nextMin, nextMax] = clampRangePair(min, value, absoluteMin, absoluteMax);
+      onChange(nextMin, nextMax);
+    };
+    return (
+      <div className="vtw-sub-range col-span-12 rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="text-[11px] font-black uppercase text-[#2c3e50]">{title}</div>
+          <div className="text-[11px] font-black text-blue-700 tabular-nums">{formatVNNumber(min)} → {formatVNNumber(max)}</div>
+        </div>
+        <div className="vtw-range-manual-note vtw-range-manual-note-light mb-2">Nhập số Min / Max thủ công</div>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={min} onChange={(e) => updateMin(parseRangeNumber(e.target.value, absoluteMin))} className="vtw-range-number vtw-range-number-light" />
+          <input type="number" inputMode="numeric" min={absoluteMin} max={absoluteMax} step={step} value={max} onChange={(e) => updateMax(parseRangeNumber(e.target.value, absoluteMax))} className="vtw-range-number vtw-range-number-light" />
+        </div>
+      </div>
+    );
+  };
+
+  const dedupeChannelResults = (items: ChannelResult[]) => {
+    const seen = new Set<string>();
+    const next: ChannelResult[] = [];
+    for (const item of items || []) {
+      const key = String(item?.id || item?.url || item?.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      next.push(item);
+    }
+    return next.slice(0, STOP_LIMIT);
+  };
+
   const updateQuotaUsage = (amount: number) => {
-    setQuotaUsed(prev => prev + amount);
-    setTotalQuotaToday(prev => {
-      const next = prev + amount;
+    const safeAmount = Number(amount || 0);
+    if (!Number.isFinite(safeAmount) || safeAmount <= 0) return;
+
+    // Không dùng riêng setState cộng dồn vì khi nhiều request chạy liên tục React có thể render trễ.
+    // Dùng ref làm nguồn sự thật để quota phiên luôn cộng dồn từng API call ngay lập tức.
+    const nextSessionQuota = quotaUsedRef.current + safeAmount;
+    quotaUsedRef.current = nextSessionQuota;
+    setQuotaUsed(nextSessionQuota);
+
+    try {
+      const sessionId = sessionStorage.getItem('youtube_quota_session_id') || String(Date.now());
+      sessionStorage.setItem('youtube_quota_session_id', sessionId);
+      sessionStorage.setItem('youtube_quota_session', JSON.stringify({
+        value: nextSessionQuota,
+        sessionId,
+        updatedAt: new Date().toISOString(),
+      }));
+    } catch (error) {
+      console.warn('Không lưu được quota phiên:', error);
+    }
+
+    setTotalQuotaToday(() => {
       const today = new Date().toISOString().split('T')[0];
+      let current = 0;
+      try {
+        const saved = JSON.parse(localStorage.getItem('youtube_quota_today') || '{}');
+        if (saved?.date === today) current = Number(saved.value || 0);
+      } catch (_) {}
+      const next = current + safeAmount;
       localStorage.setItem('youtube_quota_today', JSON.stringify({ value: next, date: today }));
       return next;
     });
@@ -988,515 +1486,851 @@ export default function App() {
 
   const fetchDailyTrendingFromYouTube = async () => {
     if (config.apiKeys.length === 0) {
-      alert('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
+      setStatus('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
       return;
     }
 
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật trend');
+    setStatus('Đang lấy dữ liệu thật từ YouTube API V3...');
 
-    const REGION_LANGUAGE: Record<string, { language: string; prompt: string; searchHint: string }> = {
-      '': {
-        language: 'Đa ngôn ngữ',
-        prompt: 'Trộn ngẫu nhiên theo thị trường toàn cầu: có thể dùng tiếng Việt, tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Thái, tiếng Indonesia, tiếng Tây Ban Nha. Không bắt buộc tất cả là tiếng Việt.',
-        searchHint: 'global trending'
-      },
-      VN: { language: 'Tiếng Việt', prompt: 'Tất cả từ khóa phải viết bằng tiếng Việt tự nhiên.', searchHint: 'hot trend việt nam' },
-      US: { language: 'English', prompt: 'All keywords must be in natural American English. Do not use Vietnamese.', searchHint: 'US trending' },
-      GB: { language: 'English', prompt: 'All keywords must be in natural British English. Do not use Vietnamese.', searchHint: 'UK trending' },
-      CA: { language: 'English', prompt: 'All keywords must be in natural English for Canada. Do not use Vietnamese.', searchHint: 'Canada trending' },
-      AU: { language: 'English', prompt: 'All keywords must be in natural English for Australia. Do not use Vietnamese.', searchHint: 'Australia trending' },
-      IN: { language: 'English/Hindi', prompt: 'Use natural India-market keywords, mainly English or Hindi. Do not use Vietnamese.', searchHint: 'India trending' },
-      JP: { language: '日本語', prompt: 'すべてのキーワードは自然な日本語で書いてください。ベトナム語は使わないでください。', searchHint: '日本 トレンド' },
-      KR: { language: '한국어', prompt: '모든 키워드는 자연스러운 한국어로 작성하세요. 베트남어를 사용하지 마세요.', searchHint: '한국 트렌드' },
-      TH: { language: 'ภาษาไทย', prompt: 'ใช้คำค้นหาเป็นภาษาไทยธรรมชาติเท่านั้น ห้ามใช้ภาษาเวียดนาม', searchHint: 'เทรนด์ไทย' },
-      ID: { language: 'Bahasa Indonesia', prompt: 'Semua keyword harus dalam Bahasa Indonesia yang natural. Jangan gunakan bahasa Vietnam.', searchHint: 'tren indonesia' },
-      PH: { language: 'English/Filipino', prompt: 'Use natural Philippines-market keywords in English or Filipino. Do not use Vietnamese.', searchHint: 'Philippines trending' },
-      MY: { language: 'Malay/English', prompt: 'Use natural Malaysia-market keywords in Malay or English. Do not use Vietnamese.', searchHint: 'Malaysia trending' },
-      SG: { language: 'English', prompt: 'All keywords must be in natural Singapore English. Do not use Vietnamese.', searchHint: 'Singapore trending' },
-      DE: { language: 'Deutsch', prompt: 'Alle Keywords müssen auf natürlichem Deutsch sein. Kein Vietnamesisch verwenden.', searchHint: 'Deutschland Trends' },
-      FR: { language: 'Français', prompt: 'Tous les mots-clés doivent être en français naturel. Ne pas utiliser le vietnamien.', searchHint: 'tendances france' },
-      RU: { language: 'Русский', prompt: 'Все ключевые слова должны быть на естественном русском языке. Не используйте вьетнамский.', searchHint: 'тренды россия' },
-      BR: { language: 'Português', prompt: 'Todas as palavras-chave devem estar em português natural do Brasil. Não use vietnamita.', searchHint: 'tendências brasil' },
-      MX: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural de México. No uses vietnamita.', searchHint: 'tendencias méxico' },
-      ES: { language: 'Español', prompt: 'Todas las palabras clave deben estar en español natural. No uses vietnamita.', searchHint: 'tendencias españa' },
-      IT: { language: 'Italiano', prompt: 'Tutte le keyword devono essere in italiano naturale. Non usare vietnamita.', searchHint: 'tendenze italia' }
-    };
+    const selectedRegion = trendingRegion || config.region || 'VN';
+    const regionLabel = REGIONS.find(r => r.code === selectedRegion)?.name || 'Toàn cầu';
+    const storageKey = `youtube_suggested_niches_trending_v4_${selectedRegion || 'GLOBAL'}`;
+    const publishedAfter = getPublishedAfterDate('month');
 
-    const regionMeta = REGION_LANGUAGE[trendingRegion] || REGION_LANGUAGE.US;
-    const regionLabel = REGIONS.find(r => r.code === trendingRegion)?.name || 'Toàn cầu (Global)';
-    const trendingStorageKey = `youtube_suggested_niches_trending_v3_${trendingRegion || 'GLOBAL'}`;
-
-    const normalizeText = (value: string) =>
-      (value || '')
+    const removeVietnameseTone = (value: string) =>
+      String(value || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/g, 'd');
+        .replace(/đ/g, 'd')
+        .trim();
 
-    const cleanKeyword = (value: string) =>
-      (value || '')
-        .toLowerCase()
-        .replace(/#/g, '')
-        .replace(/[^\p{L}\p{N}\s&+.-]/gu, ' ')
+    const cleanTrendPhrase = (value: string) =>
+      String(value || '')
+        .replace(/#[\w\p{L}\p{N}_-]+/gu, ' $& ')
+        .replace(/https?:\/\/\S+/gi, ' ')
+        .replace(/[|•·,_;:!?()[\]{}"“”'’]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
-    const hasVietnameseDiacritics = (value: string) =>
-      /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(value || '');
-
-    const hasVietnameseCommonWords = (value: string) => {
-      const v = ` ${normalizeText(value)} `;
-      return [
-        ' cach ', ' meo ', ' huong dan ', ' danh gia ', ' nau an ', ' mon an ',
-        ' cong thuc ', ' du lich ', ' suc khoe ', ' lam dep ', ' thoi quen ',
-        ' nguoi ', ' cho nguoi ', ' tai chinh ', ' dau tu ', ' chung khoan ',
-        ' kiem tien ', ' quan an ', ' gia dinh ', ' tieng anh ', ' hoc tap '
-      ].some(word => v.includes(word));
+    const compactKeyword = (value: string) => {
+      const cleaned = cleanTrendPhrase(value)
+        .replace(/^#/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      return words.slice(0, 6).join(' ').toLowerCase();
     };
 
-    const looksLikeBadKeyword = (value: string) => {
-      const v = (value || '').trim();
-      if (!v) return true;
-      if (/[a-z0-9]{16,}/i.test(v.replace(/\s+/g, ''))) return true;
-      if (/[a-z]{5,}\d|\d[a-z]{5,}/i.test(v)) return true;
-      if ((v.match(/[0-9]/g) || []).length >= 5) return true;
-      return false;
+    const isVietnameseLike = (value: string) => {
+      const raw = String(value || '').toLowerCase();
+      const noTone = removeVietnameseTone(raw);
+      return /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(raw)
+        || /\b(cua|của|cho|voi|với|khong|không|cach|cách|huong dan|hướng dẫn|viet nam|việt nam|ngay|ngày|nguoi|người|lam|làm|mon|món)\b/.test(noTone);
     };
 
-    const isKeywordLanguageOk = (keyword: string) => {
-      if (!keyword) return false;
-      if (looksLikeBadKeyword(keyword)) return false;
-
-      // Toàn cầu: cho phép đa ngôn ngữ, nhưng vẫn chặn key rác.
-      if (!trendingRegion) return true;
-
-      // Việt Nam: ưu tiên tiếng Việt, nhưng vẫn cho phép brand/thuật ngữ quốc tế ngắn.
-      if (trendingRegion === 'VN') {
-        return !/[가-힣ぁ-んァ-ン一-龯ก-๙А-Яа-я]/.test(keyword);
-      }
-
-      // Các khu vực khác: không để Gemini/Youtube đổ tiếng Việt vào.
-      if (hasVietnameseDiacritics(keyword) || hasVietnameseCommonWords(keyword)) return false;
-
-      if (['JP'].includes(trendingRegion)) return /[ぁ-んァ-ン一-龯]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
-      if (['KR'].includes(trendingRegion)) return /[가-힣]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
-      if (['TH'].includes(trendingRegion)) return /[ก-๙]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
-      if (['RU'].includes(trendingRegion)) return /[А-Яа-я]/.test(keyword) || /^[a-z0-9\s&+.-]+$/i.test(keyword);
-
-      return true;
+    const languageOk = (value: string) => {
+      const normalized = removeVietnameseTone(value);
+      if (['US', 'GB', 'CA', 'AU', 'SG'].includes(selectedRegion)) return !isVietnameseLike(value) && /[a-z]/i.test(value);
+      if (selectedRegion === 'VN') return /[a-zăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value);
+      if (selectedRegion === 'JP') return /[ぁ-んァ-ン一-龯]/.test(value) || (!isVietnameseLike(value) && /[a-z]/i.test(value));
+      if (selectedRegion === 'KR') return /[가-힣]/.test(value) || (!isVietnameseLike(value) && /[a-z]/i.test(value));
+      if (selectedRegion === 'RU') return /[а-яё]/i.test(value) || (!isVietnameseLike(value) && /[a-z]/i.test(value));
+      return !isVietnameseLike(value) || selectedRegion === 'VN';
     };
 
-    const CATEGORY_PROFILES: Record<string, { rules: string[]; hint: string; banned?: string[] }> = {
+    const categorySeeds: Record<string, { vn: string; en: string; must: RegExp; ban?: RegExp }> = {
       'PHÁT TRIỂN BẢN THÂN': {
-        hint: 'kỹ năng sống, tư duy, thói quen, động lực, năng suất, mục tiêu cá nhân',
-        rules: ['phat trien ban than', 'dong luc', 'ky nang song', 'thoi quen', 'tu duy', 'thanh cong', 'muc tieu', 'tri hoan', 'self improvement', 'motivation', 'quan ly thoi gian', 'nang suat', 'lam viec nang suat', 'ky nang lam viec']
+        vn: 'phát triển bản thân thói quen năng suất thành công',
+        en: 'self improvement habits productivity motivation',
+        must: /(self|motivation|habit|productivity|mindset|success|confidence|discipline|thói quen|năng suất|thành công|tự tin|trì hoãn|phát triển)/i
       },
       'SỨC KHỎE & LÀM ĐẸP': {
-        hint: 'sức khỏe, giảm cân, skincare, làm đẹp, yoga, fitness, chăm sóc cơ thể',
-        rules: ['suc khoe', 'lam dep', 'skincare', 'giam can', 'yoga', 'trang diem', 'mun', 'toc', 'health', 'beauty', 'fitness']
+        vn: 'sức khỏe làm đẹp skincare giảm cân yoga tại nhà',
+        en: 'health beauty skincare weight loss yoga workout',
+        must: /(health|beauty|skincare|weight loss|yoga|workout|fitness|diet|makeup|sức khỏe|làm đẹp|giảm cân|tập|mụn|da|tóc)/i
       },
       'CÔNG NGHỆ & AI': {
-        hint: 'AI, ChatGPT, Gemini, điện thoại, phần mềm, công nghệ, app, thủ thuật số',
-        rules: ['cong nghe', 'ai', 'chatgpt', 'gemini', 'iphone', 'android', 'dien thoai', 'may tinh', 'phan mem', 'technology']
+        vn: 'công nghệ AI ChatGPT công cụ AI ứng dụng AI',
+        en: 'ai tools chatgpt technology apps automation',
+        must: /(ai|chatgpt|gemini|technology|tech|app|software|iphone|android|automation|công nghệ|trí tuệ|điện thoại|ứng dụng|phần mềm)/i
       },
       'GIÁO DỤC & HỌC TẬP': {
-        hint: 'học tập, ngoại ngữ, IELTS, TOEIC, lập trình, ôn thi, phương pháp học',
-        rules: ['giao duc', 'hoc tap', 'hoc tieng', 'ielts', 'toeic', 'lap trinh', 'python', 'on thi', 'education', 'learning']
+        vn: 'học tập tiếng anh ielts tự học kỹ năng',
+        en: 'study tips english learning ielts education',
+        must: /(study|learn|learning|english|ielts|education|school|exam|học|tiếng anh|ôn thi|lập trình|kiến thức|kỹ năng)/i
       },
       'ẨM THỰC & NẤU ĂN': {
-        hint: 'món ăn, công thức nấu ăn, review quán ăn, bếp, đồ ăn, ẩm thực gia đình',
-        rules: ['am thuc', 'nau an', 'mon an', 'do an', 'cong thuc', 'nha bep', 'an uong', 'mukbang', 'food', 'cooking', 'recipe', 'thuc pham', 'quan an', 'gia dinh ngon', 'bua an'],
-        banned: ['bac gau', 'wag bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lmht', 'league of legends', 'lien minh', 'game', 'free fire', 'tik tok free fire', 'tiktok free fire', 'chatgpt']
+        vn: 'ẩm thực nấu ăn món ngon công thức món ăn gia đình',
+        en: 'food cooking recipe meal restaurant review',
+        must: /(food|cook|cooking|recipe|meal|restaurant|kitchen|mukbang|ẩm thực|nấu|món|ăn|công thức|bếp|quán)/i,
+        ban: /(game|lck|league|bolero|reaction|chatgpt|ai tool)/i
       },
       'DU LỊCH & KHÁM PHÁ': {
-        hint: 'du lịch, khám phá địa điểm, resort, vé máy bay, phượt, cắm trại, travel vlog',
-        rules: ['du lich', 'kham pha', 'travel', 'vlog', 'camping', 'phuot', 'da lat', 'nhat ban', 'han quoc', 'tour', 'resort', 've may bay', 'cam trai', 'nghi duong', 'lich trinh'],
-        banned: ['bolero', 'hybe', 'lck', 'chatgpt']
+        vn: 'du lịch khám phá địa điểm travel vlog',
+        en: 'travel vlog destination trip guide adventure',
+        must: /(travel|trip|vlog|tour|destination|adventure|camping|du lịch|khám phá|phượt|địa điểm|homestay)/i
       },
       'GIẢI TRÍ & HÀI HƯỚC': {
-        hint: 'giải trí, phim, hài, meme, reaction, drama, người nổi tiếng, thử thách',
-        rules: ['giai tri', 'hai', 'funny', 'meme', 'reaction', 'phim', 'anime', 'prank', 'thu thach', 'entertainment']
+        vn: 'giải trí hài hước phim ngắn reaction meme',
+        en: 'funny entertainment meme reaction short film',
+        must: /(funny|meme|reaction|entertainment|comedy|movie|film|drama|giải trí|hài|phim|thử thách|meme)/i
       },
-      'THỂ THAO & THỂ HÌNH': {
-        hint: 'thể thao, gym, bóng đá, cầu lông, tennis, workout, fitness',
-        rules: ['the thao', 'gym', 'fitness', 'bong da', 'cau long', 'tennis', 'chay bo', 'workout', 'tang co', 'giam mo'],
-        banned: ['bolero', 'hybe']
+      'THỂ THAO & BÓNG ĐÁ': {
+        vn: 'thể thao gym bóng đá workout fitness',
+        en: 'sports fitness gym football workout',
+        must: /(sport|fitness|gym|football|workout|tennis|basketball|soccer|thể thao|bóng đá|tập|gym|cầu lông)/i
       },
       'PETS & ĐỘNG VẬT': {
-        hint: 'thú cưng, chó mèo, động vật, chăm sóc pet, huấn luyện pet',
-        rules: ['pet', 'thu cung', 'dong vat', 'cho', 'meo', 'cat', 'dog', 'animal', 'grooming', 'bo sat'],
-        banned: ['bolero', 'hybe', 'lck']
+        vn: 'thú cưng chó mèo động vật chăm sóc pet',
+        en: 'pets dogs cats animals pet care',
+        must: /(pet|dog|cat|animal|puppy|kitten|grooming|thú cưng|chó|mèo|động vật|huấn luyện)/i
       },
       'GIA ĐÌNH & ĐỜI SỐNG': {
-        hint: 'gia đình, đời sống, dọn nhà, nuôi con, mẹo nhà cửa, sống xanh',
-        rules: ['gia dinh', 'doi song', 'meo vat', 'don nha', 'nuoi con', 'me bim', 'trong rau', 'home', 'family', 'life']
+        vn: 'gia đình đời sống mẹo nhà cửa nuôi con',
+        en: 'family life home tips parenting cleaning',
+        must: /(family|home|parenting|cleaning|life tips|mom|dad|gia đình|đời sống|dọn nhà|nuôi con|mẹo)/i
       },
       'NGHỆ THUẬT & SÁNG TẠO': {
-        hint: 'vẽ, thiết kế, chụp ảnh, edit video, guitar, Canva, sáng tạo nội dung',
-        rules: ['nghe thuat', 'sang tao', 've tranh', 'chup anh', 'guitar', 'canva', 'edit video', 'art', 'creative', 'design']
+        vn: 'sáng tạo nghệ thuật vẽ canva edit video',
+        en: 'creative art drawing canva video editing',
+        must: /(art|creative|drawing|design|canva|edit|photography|guitar|vẽ|sáng tạo|thiết kế|chụp ảnh|video)/i
       },
       'CÔNG NGHỆ Ô TÔ & XE MÁY': {
-        hint: 'ô tô, xe máy, xe điện, review xe, bảo dưỡng xe, phụ kiện xe',
-        rules: ['oto', 'xe may', 'xe dien', 'review xe', 'bao duong xe', 'phu kien oto', 'car', 'motorbike', 'vehicle'],
-        banned: ['bolero', 'hybe']
+        vn: 'ô tô xe máy review xe phụ kiện xe',
+        en: 'car motorcycle auto review vehicle accessories',
+        must: /(car|auto|vehicle|motorcycle|bike|tesla|ô tô|xe máy|phụ kiện xe|review xe)/i
       },
       'TÂM LÝ HỌC & MỐI QUAN HỆ': {
-        hint: 'tâm lý học, tình yêu, mối quan hệ, MBTI, chữa lành, hôn nhân',
-        rules: ['tam ly', 'moi quan he', 'tinh yeu', 'chia tay', 'mbti', 'hon nhan', 'doc hai', 'psychology', 'relationship']
+        vn: 'tâm lý học mối quan hệ tình yêu chữa lành',
+        en: 'psychology relationship dating healing love',
+        must: /(psychology|relationship|dating|love|healing|mental|tâm lý|tình yêu|mối quan hệ|chữa lành)/i
       },
       'ESPORTS & GAMING': {
-        hint: 'game, esports, Liên Quân, LCK, Valorant, PUBG, Genshin, LOL',
-        rules: ['game', 'gaming', 'esports', 'lien quan', 'tft', 'valorant', 'pubg', 'genshin', 'lol', 'mobile game', 'lck']
+        vn: 'game esports liên quân free fire highlight',
+        en: 'gaming esports gameplay highlights mobile game',
+        must: /(game|gaming|esport|gameplay|highlight|free fire|roblox|minecraft|liên quân|liên minh|pubg)/i
       },
       'HUYỀN BÍ & TÂM LINH': {
-        hint: 'huyền bí, tâm linh, tarot, giấc mơ, phong thủy, bí ẩn',
-        rules: ['huyen bi', 'tam linh', 'tarot', 'giac mo', 'bi an', 'phong thuy', 'nhan qua', 'supernatural', 'mystery']
+        vn: 'huyền bí tâm linh bí ẩn tarot phong thủy',
+        en: 'mystery spiritual tarot paranormal astrology',
+        must: /(mystery|spiritual|tarot|paranormal|astrology|dream|huyền bí|tâm linh|bí ẩn|phong thủy|giấc mơ)/i
       },
       'MẸO VẶT CUỘC SỐNG': {
-        hint: 'mẹo vặt, life hack, sửa chữa, tái chế, mẹo nhà bếp, mẹo sinh hoạt',
-        rules: ['meo vat', 'life hack', 'sua chua', 'tai che', 'bao quan', 'lo vi song', 'ung dung huu ich', 'tips']
+        vn: 'mẹo vặt cuộc sống mẹo nhà bếp thủ thuật',
+        en: 'life hacks tips tricks home hacks',
+        must: /(life hack|tips|tricks|how to|cleaning|mẹo|thủ thuật|cách làm|tái chế)/i
       },
       'VĂN HÓA & LỊCH SỬ': {
-        hint: 'lịch sử, văn hóa, di tích, nhân vật lịch sử, chiến tranh, triều đại',
-        rules: ['lich su', 'van hoa', 'trieu dai', 'chien tranh', 'di tich', 'nhan vat lich su', 'history', 'culture']
+        vn: 'lịch sử văn hóa khám phá triều đại sự kiện',
+        en: 'history culture ancient facts documentary',
+        must: /(history|culture|ancient|documentary|war|facts|lịch sử|văn hóa|triều đại|di tích)/i
       },
       'THỜI TRANG & PHONG CÁCH': {
-        hint: 'thời trang, phối đồ, local brand, sneaker, outfit, phong cách cá nhân',
-        rules: ['thoi trang', 'phoi do', 'local brand', 'vintage', 'sneaker', 'fashion', 'style', 'outfit']
+        vn: 'thời trang phối đồ phong cách outfit',
+        en: 'fashion style outfit clothing trends',
+        must: /(fashion|style|outfit|clothing|sneaker|makeup|thời trang|phối đồ|phong cách|quần áo)/i
       },
       'NÔNG NGHIỆP CÔNG NGHỆ CAO': {
-        hint: 'nông nghiệp, trồng trọt, thủy canh, nuôi tôm, cây cảnh, công nghệ nông nghiệp',
-        rules: ['nong nghiep', 'trong rau', 'thuy canh', 'nuoi tom', 'sau rieng', 'hoa lan', 'cay canh', 'agriculture']
+        vn: 'nông nghiệp trồng cây chăn nuôi thủy canh',
+        en: 'farming agriculture gardening hydroponics',
+        must: /(farm|farming|agriculture|garden|hydroponic|trồng|nông nghiệp|chăn nuôi|cây cảnh|nuôi)/i
       },
       'REVIEW SẢN PHẨM & UNBOXING': {
-        hint: 'review sản phẩm, unboxing, đồ công nghệ, đồ gia dụng, mỹ phẩm, Shopee, phụ kiện',
-        rules: ['review', 'unboxing', 'shopee', 'san pham', 'my pham', 'do cong nghe', 'ban phim', 'smartwatch', 'do gia dung'],
-        banned: ['bolero', 'nhac bolero', 'nhac', 'music', 'karaoke', 'cover', 'lck', 'lien minh', 'hybe', 'son tung']
+        vn: 'review sản phẩm unboxing đồ công nghệ mỹ phẩm',
+        en: 'product review unboxing gadgets shopping',
+        must: /(review|unboxing|product|shopping|gadget|đánh giá|sản phẩm|mở hộp|mua)/i,
+        ban: /(bolero|karaoke|lck|gameplay)/i
       },
       'NHẠC & COVER': {
-        hint: 'nhạc, cover, bolero, lofi, karaoke, remix, acoustic, bài hát',
-        rules: ['nhac', 'cover', 'lofi', 'karaoke', 'beat', 'remix', 'acoustic', 'music', 'song', 'bolero']
+        vn: 'nhạc cover lofi remix karaoke acoustic',
+        en: 'music cover lofi remix karaoke acoustic',
+        must: /(music|song|cover|lofi|remix|karaoke|acoustic|nhạc|bài hát|beat)/i
       },
       'BẤT ĐỘNG SẢN & NHÀ CỬA': {
-        hint: 'bất động sản, nhà đất, căn hộ, nội thất, phong thủy nhà, thiết kế nhà',
-        rules: ['bat dong san', 'nha cua', 'can ho', 'nha pho', 'noi that', 'phong thuy nha', 'real estate', 'home']
+        vn: 'bất động sản nhà cửa căn hộ nội thất',
+        en: 'real estate home interior apartment house',
+        must: /(real estate|house|home|apartment|interior|property|bất động sản|nhà|căn hộ|nội thất)/i
       },
       'CÂU CHUYỆN KHỞI NGHIỆP': {
-        hint: 'khởi nghiệp, kinh doanh, startup, bán hàng, marketing, quản trị, kiếm tiền',
-        rules: ['khoi nghiep', 'kinh doanh', 'startup', 'ban hang', 'marketing 0 dong', 'quan cafe', 'business']
+        vn: 'khởi nghiệp kinh doanh bán hàng marketing',
+        en: 'startup business marketing entrepreneurship sales',
+        must: /(startup|business|marketing|sales|entrepreneur|khởi nghiệp|kinh doanh|bán hàng|startup)/i
       },
       'CHUYỆN LẠ BỐN PHƯƠNG': {
-        hint: 'chuyện lạ, hiện tượng kỳ lạ, khám phá độc lạ, kỷ lục, sinh vật lạ',
-        rules: ['chuyen la', 'ky la', 'guinness', 'sinh vat bien', 'hien tuong', 'doc la', 'strange', 'weird']
+        vn: 'chuyện lạ khám phá kỳ lạ sự thật thú vị',
+        en: 'strange facts weird discoveries amazing',
+        must: /(strange|weird|amazing|facts|discovery|kỳ lạ|chuyện lạ|khám phá|sự thật)/i
       },
       'ASMR & MUKBANG': {
-        hint: 'ASMR, mukbang, ăn uống, âm thanh thư giãn, ăn cay, hải sản',
-        rules: ['asmr', 'mukbang', 'an uong', 'go phim', 'thu gian', 'hai san', 'do an cay']
+        vn: 'asmr mukbang ăn uống âm thanh thư giãn',
+        en: 'asmr mukbang eating sounds relaxing',
+        must: /(asmr|mukbang|eating sounds|relaxing sound|âm thanh|ăn uống)/i
       },
       'XÂY DỰNG & KIẾN TRÚC': {
-        hint: 'xây dựng, kiến trúc, thi công, chống thấm, máy xúc, thiết kế công trình',
-        rules: ['xay dung', 'kien truc', 'thi cong', 'chong tham', 'xi mang', 'may xuc', 'construction', 'architecture']
+        vn: 'xây dựng kiến trúc nhà đẹp thi công',
+        en: 'construction architecture building house design',
+        must: /(construction|architecture|building|house design|xây dựng|kiến trúc|thi công|nhà đẹp)/i
       },
       'MARKETING & TRUYỀN THÔNG': {
-        hint: 'marketing, affiliate, SEO, quảng cáo, content, truyền thông, case study',
-        rules: ['marketing', 'affiliate', 'seo', 'facebook ads', 'content', 'truyen thong', 'case study']
+        vn: 'marketing truyền thông affiliate seo tiktok ads',
+        en: 'marketing social media seo affiliate ads',
+        must: /(marketing|seo|affiliate|ads|social media|content|truyền thông|quảng cáo|tiktok|facebook)/i
       },
       'TRỊ LIỆU ÂM THANH': {
-        hint: 'âm thanh chữa lành, 432hz, tiếng mưa, white noise, nhạc thiền, sleep music',
-        rules: ['am thanh', '432hz', 'tieng mua', 'song bien', 'nhac thien', 'white noise', 'sleep music', 'healing']
+        vn: 'âm thanh chữa lành tiếng mưa thiền ngủ ngon',
+        en: 'healing sound sleep music rain meditation',
+        must: /(healing sound|sleep music|rain sound|meditation|white noise|âm thanh|chữa lành|tiếng mưa|thiền)/i
       },
       'ĐAN LEN & THÊU THÙA': {
-        hint: 'đan len, móc len, crochet, thêu, kim móc, đồ handmade len',
-        rules: ['dan len', 'moc len', 'crochet', 'theu', 'kim moc', 'tui xach len', 'knitting']
+        vn: 'móc len đan len thêu thủ công crochet',
+        en: 'crochet knitting embroidery handmade',
+        must: /(crochet|knitting|embroidery|handmade|móc len|đan len|thêu|len)/i
       },
       'TÀI CHÍNH & ĐẦU TƯ': {
-        hint: 'tài chính, đầu tư, chứng khoán, crypto, tiết kiệm tiền, kiếm tiền online, thẻ tín dụng',
-        rules: ['tai chinh', 'dau tu', 'chung khoan', 'crypto', 'tiet kiem tien', 'the tin dung', 'kiem tien online', 'finance', 'investment'],
-        banned: ['bac gau', 'reaction', 'bolero', 'hybe', 'lck', 'lien minh', 'game', 'nau an']
+        vn: 'tài chính đầu tư chứng khoán crypto kiếm tiền',
+        en: 'finance investing stocks crypto money',
+        must: /(finance|invest|stock|crypto|money|trading|tài chính|đầu tư|chứng khoán|kiếm tiền|tiền)/i,
+        ban: /(game|bolero|mukbang)/i
       }
     };
 
-    const GLOBAL_BLOCK_BY_CATEGORY = (category: string) => {
-      const blocks = [
-        'bac gau', 'bac gau vlog', 'wag bac gau', 'bac gau reaction',
-        'hybe', 'hybe labels', 'free fire', 'tik tok free fire', 'tiktok free fire',
-        'lck live', 'lck', 'lmht', 'league of legends', 'lien minh huyen thoai',
-        'roblox', 'minecraft', 'pubg', 'valorant', 'genshin',
-        'son tung', 'mtp', 'drama showbiz'
-      ];
-      if (category !== 'NHẠC & COVER') blocks.push('bolero', 'nhac bolero', 'karaoke cover', 'nhac remix', 'music video');
-      if (category !== 'ESPORTS & GAMING') blocks.push('game', 'gaming', 'esports', 'lien minh', 'lien quan');
-      if (category !== 'GIẢI TRÍ & HÀI HƯỚC') blocks.push('reaction', 'prank drama');
-      if (category !== 'ẨM THỰC & NẤU ĂN') blocks.push('mukbang');
-      return blocks;
+    const getSeedQuery = (category: string) => {
+      const seed = categorySeeds[category];
+      if (!seed) return selectedRegion === 'VN' ? category.toLowerCase() : category.toLowerCase().replace(/&/g, '');
+      if (selectedRegion === 'VN') return seed.vn;
+      if (selectedRegion === '') return `${seed.en} global trend`;
+      return `${seed.en} ${regionLabel}`;
     };
 
-    const isRelevantForCategory = (category: string, keyword: string, strict = false) => {
-      const cleaned = normalizeText(cleanKeyword(keyword));
-      if (!cleaned) return false;
+    const tokenBanned = /\b(official|video|shorts|viral|full|new|update|2024|2025|2026|part|episode|channel|youtube|subscribe|like|comment|follow)\b/i;
 
-      const profile = CATEGORY_PROFILES[category];
-      const banned = [...(profile?.banned || []), ...GLOBAL_BLOCK_BY_CATEGORY(category)].map(normalizeText);
-
-      // Chặn cứng key lệch chủ đề. Đây là lớp lọc cuối cùng cho cả YouTube V3 và Gemini.
-      if (banned.some(bad => cleaned === bad || cleaned.includes(bad) || bad.includes(cleaned))) return false;
-
-      const rules = (profile?.rules || []).map(normalizeText);
-      const matchedRule = rules.some(rule => cleaned.includes(rule) || rule.includes(cleaned));
-
-      // Khi dữ liệu đến từ YouTube/Gemini phải khớp domain chủ đề, không còn kiểu lấy trend chung rồi nhét vào mọi mục.
-      if (strict) return matchedRule;
-
-      return true;
+    const addPhraseFromText = (text: string, output: string[]) => {
+      const cleaned = cleanTrendPhrase(text);
+      if (!cleaned) return;
+      const chunks = cleaned.split(/[\-–—/\\]+/g).map(compactKeyword).filter(Boolean);
+      chunks.forEach((chunk) => {
+        const words = chunk.split(/\s+/).filter(Boolean);
+        if (words.length >= 2 && words.length <= 6 && !tokenBanned.test(chunk)) output.push(chunk);
+        for (let n = 2; n <= Math.min(4, words.length); n++) {
+          for (let i = 0; i <= words.length - n; i++) {
+            const phrase = words.slice(i, i + n).join(' ');
+            if (phrase.length >= 4 && !tokenBanned.test(phrase)) output.push(phrase);
+          }
+        }
+      });
     };
 
-    const uniqueLimit = (items: string[], limit = 5, category?: string, strict = false) => {
-      const seen = new Set<string>();
+    const extractCandidates = (video: any) => {
       const output: string[] = [];
+      const title = video?.snippet?.title || '';
+      const description = video?.snippet?.description || '';
+      addPhraseFromText(title, output);
+      if (Array.isArray(video?.snippet?.tags)) {
+        video.snippet.tags.forEach((tag: string) => output.push(compactKeyword(tag)));
+      }
+      description.split('\n').slice(0, 6).forEach((line: string) => addPhraseFromText(line, output));
+      return output.filter(Boolean);
+    };
 
-      for (const raw of items) {
-        const cleaned = cleanKeyword(raw);
-        if (!cleaned || cleaned.length < 3 || cleaned.length > 42) continue;
-        if (!isKeywordLanguageOk(cleaned)) continue;
-        if (category && !isRelevantForCategory(category, cleaned, strict)) continue;
+    const scoreVideo = (video: any, channel: any) => {
+      const views = Number(video?.statistics?.viewCount || 0);
+      const subs = Number(channel?.statistics?.subscriberCount || 0);
+      const vph = calculateVPH(views, video?.snippet?.publishedAt);
+      const ratio = views / Math.max(subs, 1);
+      return Math.round((Math.log10(views + 10) * 18) + Math.min(vph, 5000) / 35 + Math.min(ratio, 500) * 2 + (subs <= 50000 ? 120 : 0));
+    };
 
-        const key = normalizeText(cleaned);
-        if (seen.has(key)) continue;
+    const getRegionLanguageName = (code: string) => {
+      const mapping: Record<string, string> = {
+        VN: 'Vietnamese', US: 'English', GB: 'English', CA: 'English', AU: 'English', NZ: 'English',
+        SG: 'English', PH: 'English', IN: 'English', JP: 'Japanese', KR: 'Korean', RU: 'Russian',
+        BR: 'Portuguese', PT: 'Portuguese', ES: 'Spanish', MX: 'Spanish', AR: 'Spanish', CO: 'Spanish',
+        FR: 'French', DE: 'German', TH: 'Thai', ID: 'Indonesian', MY: 'Malay', IT: 'Italian',
+        TR: 'Turkish', SA: 'Arabic', EG: 'Arabic'
+      };
+      return mapping[code] || 'English';
+    };
 
-        seen.add(key);
-        output.push(cleaned);
-        if (output.length >= limit) break;
+    const normalizeGeminiKeywordList = (raw: string) => {
+      let arr: string[] = [];
+      try {
+        const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+        if (Array.isArray(parsed)) arr = parsed.map(String);
+        else if (Array.isArray(parsed?.keywords)) arr = parsed.keywords.map(String);
+      } catch (_) {
+        arr = raw
+          .replace(/```json|```/g, '')
+          .split(/[\n,;]+/g)
+          .map(line => line.replace(/^[-*\d.")\s]+/g, '').trim());
       }
 
-      return output;
+      const seen = new Set<string>();
+      return arr
+        .map(item => item.replace(/^#/, '').replace(/["“”']/g, '').replace(/\s+/g, ' ').trim())
+        .filter(item => item.length >= 3 && item.length <= 42)
+        .filter(item => languageOk(item))
+        .filter(item => {
+          const key = removeVietnameseTone(item);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 5);
     };
 
-    const pickCandidateWords = (video: any) => {
-      const title = video?.snippet?.title || '';
-      const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
-      const description = video?.snippet?.description || '';
-      const candidates: string[] = [];
-
-      tags.forEach((tag: string) => {
-        const cleaned = cleanKeyword(tag);
-        if (cleaned && cleaned.length >= 3 && cleaned.length <= 42) candidates.push(cleaned);
-      });
-
-      const phrases = `${title} ${description}`
-        .split(/[|,.;:!?()\[\]{}"“”'’\n\r\t]+/g)
-        .map(cleanKeyword)
-        .filter(Boolean);
-
-      phrases.forEach((phrase) => {
-        if (phrase.length >= 4 && phrase.length <= 42) candidates.push(phrase);
-      });
-
-      return candidates;
-    };
-
-    const TARGETED_QUERY_BY_CATEGORY: Record<string, string> = {
-      'ẨM THỰC & NẤU ĂN': trendingRegion === 'VN'
-        ? 'ẩm thực nấu ăn món ngon công thức hot trend'
-        : trendingRegion === ''
-          ? 'food cooking recipe trending OR món ngon'
-          : `food cooking recipe trending ${regionMeta.searchHint}`,
-      'TÀI CHÍNH & ĐẦU TƯ': trendingRegion === 'VN'
-        ? 'tài chính đầu tư chứng khoán kiếm tiền online hot trend'
-        : trendingRegion === ''
-          ? 'finance investing stocks crypto trending OR tài chính đầu tư'
-          : `finance investing stocks crypto money trend ${regionMeta.searchHint}`
+    const generateGeminiNicheKeywords = async (category: string, count = 5) => {
+      if (!geminiApiKey) return [] as string[];
+      try {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const lang = getRegionLanguageName(selectedRegion);
+        const prompt = `Return exactly ${count} YouTube niche keyword phrases for this region and category.
+Region code: ${selectedRegion || 'GLOBAL'}
+Region name: ${regionLabel}
+Language required: ${lang}
+Category: ${category}
+Rules:
+- Output must be ONLY a JSON array of strings.
+- Each string must be 2 to 6 words.
+- Do not repeat ideas.
+- Use the natural search language of the selected region only.
+- Do not use Vietnamese unless the selected region is Vietnam.
+- Focus on videos that are hot in the last 30 days based on high views and high VPH.
+- Do not limit by channel size. Large channels are allowed if the video is trending.
+- Keywords must logically match the category.`;
+        const response = await ai.models.generateContent({
+          model: geminiModel,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
+        return normalizeGeminiKeywordList(response.text || '');
+      } catch (e) {
+        console.warn('Gemini fallback keyword generation failed:', e);
+        return [] as string[];
+      }
     };
 
     try {
-      // Luôn bắt đầu từ danh sách gốc để loại bỏ key sai đã lưu trước đó.
-      const sourceNiches = SUGGESTED_NICHES.map((base) => ({
-        ...base,
-        items: uniqueLimit(base.items, 5, base.category, false)
-      }));
+      const updated = [] as { category: string; items: string[] }[];
 
-      const categoryKeywordMap: Record<string, string[]> = {};
-      sourceNiches.forEach((niche) => {
-        categoryKeywordMap[niche.category] = [];
-      });
+      for (let idx = 0; idx < SUGGESTED_NICHES.length; idx++) {
+        const category = SUGGESTED_NICHES[idx].category;
+        const seed = categorySeeds[category];
+        const query = getSeedQuery(category);
+        setStatus(`Đang lấy trend thật: ${category} (${idx + 1}/${SUGGESTED_NICHES.length})...`);
 
-      // Tiết kiệm quota: 1 lượt videos.list chart=mostPopular = 1 quota, dùng làm nguồn trend chung.
-      const popularRes = await youtubeFetch('videos', {
-        part: 'snippet,statistics',
-        chart: 'mostPopular',
-        regionCode: trendingRegion || undefined,
-        maxResults: 50
-      });
-
-      const popularVideos = Array.isArray(popularRes?.items) ? popularRes.items : [];
-
-      popularVideos.forEach((video: any) => {
-        const haystack = normalizeText([
-          video?.snippet?.title || '',
-          video?.snippet?.description || '',
-          ...(Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [])
-        ].join(' '));
-
-        sourceNiches.forEach((niche) => {
-          const profile = CATEGORY_PROFILES[niche.category];
-          const matched = (profile?.rules || []).some((rule) => haystack.includes(normalizeText(rule)));
-
-          if (matched) {
-            categoryKeywordMap[niche.category].push(...pickCandidateWords(video));
-          }
+        const searchRes = await youtubeFetch('search', {
+          part: 'snippet',
+          q: query,
+          type: 'video',
+          regionCode: selectedRegion || undefined,
+          publishedAfter,
+          order: 'viewCount',
+          maxResults: 12,
+          relevanceLanguage: selectedRegion === 'VN' ? 'vi' : ['US','GB','CA','AU','SG'].includes(selectedRegion) ? 'en' : undefined
         });
-      });
 
-      // Sửa riêng 2 mục hay thiếu dữ liệu: 2 lượt search = khoảng 200 quota, tổng vẫn dưới 500.
-      for (const [category, query] of Object.entries(TARGETED_QUERY_BY_CATEGORY)) {
-        try {
-          const searchRes = await youtubeFetch('search', {
-            part: 'snippet',
-            q: query,
-            type: 'video',
-            regionCode: trendingRegion || undefined,
-            order: 'viewCount',
-            publishedAfter: getPublishedAfterDate('month'),
-            maxResults: 5
-          });
-
-          const ids = (searchRes?.items || [])
-            .map((item: any) => item?.id?.videoId)
-            .filter(Boolean);
-
-          if (ids.length > 0) {
-            const detailRes = await youtubeFetch('videos', {
-              part: 'snippet,statistics',
-              id: ids.join(',')
-            });
-
-            (detailRes?.items || []).forEach((video: any) => {
-              categoryKeywordMap[category].push(...pickCandidateWords(video));
-            });
-          }
-        } catch (error) {
-          console.warn(`Không lấy được dữ liệu YouTube riêng cho ${category}:`, error);
+        const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
+        if (videoIds.length === 0) {
+          const aiItems = await generateGeminiNicheKeywords(category, 5);
+          updated.push({ category, items: aiItems.length ? aiItems : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk) });
+          continue;
         }
+
+        const videoDetail = await youtubeFetch('videos', {
+          part: 'snippet,statistics',
+          id: videoIds.join(',')
+        });
+
+        const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
+        const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
+        const channelDetail = channelIds.length > 0 ? await youtubeFetch('channels', {
+          part: 'snippet,statistics',
+          id: channelIds.join(',')
+        }) : { items: [] };
+
+        const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
+        const phraseScores = new Map<string, number>();
+        const loosePhraseScores = new Map<string, number>();
+        // Không giới hạn kênh nhỏ/lớn: miễn video trong 30 ngày có view/VPH tốt là lấy key.
+        const preferredVideos = videos
+          .map((video: any) => ({ video, channel: channelMap.get(video?.snippet?.channelId) }))
+          .filter(({ video }: any) => Number(video?.statistics?.viewCount || 0) > 0);
+
+        preferredVideos.forEach(({ video, channel }: any) => {
+          const baseScore = scoreVideo(video, channel);
+          extractCandidates(video).forEach((phrase) => {
+            const normalizedPhrase = removeVietnameseTone(phrase);
+            if (!languageOk(phrase)) return;
+            if (seed?.ban && seed.ban.test(normalizedPhrase)) return;
+            if (phrase.length < 3 || phrase.length > 42) return;
+
+            const loosePrev = loosePhraseScores.get(phrase) || 0;
+            loosePhraseScores.set(phrase, loosePrev + baseScore);
+
+            if (seed?.must && !seed.must.test(`${phrase} ${normalizedPhrase} ${query}`)) return;
+            const prev = phraseScores.get(phrase) || 0;
+            phraseScores.set(phrase, prev + baseScore + 20);
+          });
+        });
+
+        const ranked = [...phraseScores.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([phrase]) => phrase)
+          .filter((phrase, index, arr) => {
+            const key = removeVietnameseTone(phrase);
+            return arr.findIndex(item => removeVietnameseTone(item) === key) === index;
+          })
+          .slice(0, 5);
+
+        const looseRanked = [...loosePhraseScores.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([phrase]) => phrase)
+          .filter((phrase) => !ranked.some(item => removeVietnameseTone(item) === removeVietnameseTone(phrase)));
+
+        let items = [
+          ...ranked,
+          ...looseRanked
+        ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 5);
+
+        // Nếu YouTube API không đủ dữ liệu đúng chủ đề/khu vực thì dùng Gemini để bù từ khóa,
+        // nhưng vẫn khóa ngôn ngữ theo khu vực đã chọn để tránh sai vùng.
+        if (items.length < 5) {
+          const aiItems = await generateGeminiNicheKeywords(category, 5 - items.length);
+          items = [...items, ...aiItems]
+            .filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i)
+            .slice(0, 5);
+        }
+
+        updated.push({
+          category,
+          items: items.length ? items : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk)
+        });
       }
 
-      const youtubeKeywordMap: Record<string, string[]> = {};
-      sourceNiches.forEach((niche) => {
-        youtubeKeywordMap[niche.category] = uniqueLimit(categoryKeywordMap[niche.category], 2, niche.category, true);
-      });
-
-      const categoriesNeedGemini = sourceNiches.map((niche) => ({
-        category: niche.category,
-        description: CATEGORY_PROFILES[niche.category]?.hint || niche.category,
-        youtubeKeys: youtubeKeywordMap[niche.category]
-      }));
-
-      let geminiKeywordMap: Record<string, string[]> = {};
-
-      if (geminiApiKey) {
-        try {
-          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-          const randomSeed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-          const prompt = `
-You are a YouTube trend keyword research expert for region: ${regionLabel}.
-Generate exactly 5 short trending keyword ideas for EACH category below.
-
-MANDATORY OUTPUT RULES:
-- Return pure JSON only. No markdown. No explanation.
-- JSON format: {"CATEGORY NAME":["key 1","key 2","key 3","key 4","key 5"]}.
-- Category names in JSON keys must match the provided Vietnamese category labels exactly.
-- Keyword language rule: ${regionMeta.prompt}
-- If region is Hoa Kỳ / US, every keyword value must be natural American English. Absolutely no Vietnamese keyword values.
-- If region is not Việt Nam, do not output Vietnamese diacritics or Vietnamese phrases.
-- If region is Global, mix several markets naturally.
-- Keywords must be 100% relevant to the exact category description.
-- Do not put music/bolero into REVIEW SẢN PHẨM & UNBOXING unless the category is NHẠC & COVER.
-- Do not put game/LCK/music/bolero/reaction into ẨM THỰC & NẤU ĂN or TÀI CHÍNH & ĐẦU TƯ.
-- Do not repeat existing YouTube keys.
-- Each run must produce different keywords. Prioritize hottest trends first.
-- Each keyword must be 2 to 6 words, not random IDs, not gibberish.
-- Random seed: ${randomSeed}
-
-CATEGORY DATA:
-${JSON.stringify(categoriesNeedGemini, null, 2)}
-`;
-
-          const response = await ai.models.generateContent({
-            model: geminiModel,
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-          });
-
-          const rawText = response.text || '';
-          const jsonText = rawText
-            .replace(/```json/gi, '')
-            .replace(/```/g, '')
-            .trim();
-
-          const firstBrace = jsonText.indexOf('{');
-          const lastBrace = jsonText.lastIndexOf('}');
-          const safeJson = firstBrace >= 0 && lastBrace > firstBrace
-            ? jsonText.slice(firstBrace, lastBrace + 1)
-            : jsonText;
-
-          const parsed = JSON.parse(safeJson);
-
-          sourceNiches.forEach((niche) => {
-            geminiKeywordMap[niche.category] = Array.isArray(parsed?.[niche.category])
-              ? uniqueLimit(parsed[niche.category], 5, niche.category, false)
-              : [];
-          });
-        } catch (error) {
-          console.warn('Gemini tạo trend bị lỗi, dùng dữ liệu dự phòng:', error);
-        }
-      }
-
-      const updatedNiches = sourceNiches.map((niche) => {
-        const youtubeKeys = uniqueLimit(youtubeKeywordMap[niche.category] || [], 2, niche.category, true);
-        const aiKeys = uniqueLimit(geminiKeywordMap[niche.category] || [], 5, niche.category, true);
-        const fallbackKeys = (trendingRegion === 'VN' || trendingRegion === '')
-          ? uniqueLimit(SUGGESTED_NICHES.find(item => item.category === niche.category)?.items || [], 5, niche.category, false)
-          : [];
-
-        const finalKeys = uniqueLimit([
-          ...youtubeKeys.slice(0, 2),
-          ...aiKeys.slice(0, 5),
-          ...fallbackKeys
-        ], 5, niche.category, false);
-
-        return {
-          ...niche,
-          items: finalKeys
-        };
-      });
-
-      setSuggestedNiches(updatedNiches);
-      localStorage.setItem(trendingStorageKey, JSON.stringify(updatedNiches));
-
-      setStatus('Đã cập nhật Trending thành công.');
-      alert('Đã cập nhật Trending thành công.');
+      setSuggestedNiches(updated);
+      const youtubePayload = { categories: updated, updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_manual' };
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      localStorage.setItem(getTrendingStorageKey(selectedRegion, 'youtube'), JSON.stringify(youtubePayload));
+      setTrendingCacheMeta({ updatedAt: youtubePayload.updatedAt, region: selectedRegion, source: youtubePayload.source });
+      setStatus(`Đã cập nhật key thật từ YouTube API V3 cho ${regionLabel}.`);
     } catch (error: any) {
       console.error(error);
       setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
-      alert('Không thể cập nhật Trending. Vui lòng kiểm tra YouTube API Key / Gemini API Key.');
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
+
+  // Bước mới: popup gợi ý ngách dùng Gemini hiện nhanh theo đúng khu vực/ngôn ngữ.
+  // Khi cần dữ liệu thật thì bấm nút quét thủ công để dùng YouTube API V3.
+  const getTrendingStorageKey = (regionCode: string, source: 'gemini' | 'youtube' = 'gemini') =>
+    `youtube_suggested_niches_${source}_manual_${regionCode || 'VN'}`;
+
+  const normalizeRegionCode = (regionCode?: string) => {
+    const code = String(regionCode || 'VN').trim().toUpperCase();
+    return REGION_AI_CONFIG[code] ? code : 'VN';
+  };
+
+  const parseGeminiJson = (text: string) => {
+    const cleaned = String(text || '').replace(/```json|```/g, '').trim();
+    try {
+      return JSON.parse(cleaned);
+    } catch (_) {
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (!match) return null;
+      try { return JSON.parse(match[0]); } catch { return null; }
+    }
+  };
+
+  const normalizeAiCategories = (value: any, regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    const localizedFallback = getLocalizedNicheTemplate(selectedRegion);
+    const rawCategories = Array.isArray(value?.categories) ? value.categories : [];
+    const fixed = rawCategories
+      .map((cat: any, idx: number) => {
+        const fallback = localizedFallback[idx] || SUGGESTED_NICHES[idx];
+        const localTitle = String(cat?.localCategory || cat?.categoryLocal || cat?.category || cat?.title || fallback?.localCategory || fallback?.category || `Topic ${idx + 1}`).trim();
+        const viTitle = String(cat?.viCategory || cat?.categoryVi || fallback?.viCategory || CATEGORY_VI_TITLES[idx] || '').trim();
+        const category = selectedRegion === 'VN'
+          ? (viTitle || localTitle).toUpperCase()
+          : `${localTitle.replace(/\s*\(.+\)\s*$/, '')} (${(viTitle || CATEGORY_VI_TITLES[idx] || '').toLowerCase()})`;
+        return {
+          category,
+          localCategory: localTitle.replace(/\s*\(.+\)\s*$/, ''),
+          viCategory: viTitle || CATEGORY_VI_TITLES[idx],
+          items: (Array.isArray(cat?.items) ? cat.items : Array.isArray(cat?.keywords) ? cat.keywords : [])
+            .map((item: any) => String(item || '').replace(/^#/, '').replace(/["“”']/g, '').replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .slice(0, 6),
+        };
+      })
+      .filter((cat: any) => cat.category && cat.items.length > 0)
+      .slice(0, 15);
+
+    const used = new Set(fixed.map((x: any) => String(x.viCategory || x.category).toLowerCase()));
+    for (const fallback of localizedFallback) {
+      if (fixed.length >= 15) break;
+      const key = String(fallback.viCategory || fallback.category).toLowerCase();
+      if (!used.has(key)) {
+        fixed.push({ ...fallback, items: fallback.items.slice(0, 6) });
+        used.add(key);
+      }
+    }
+    return fixed.slice(0, 15);
+  };
+
+  const generateGeminiTrendingNichesByRegion = async (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || 'Việt Nam';
+    const regionCfg = REGION_AI_CONFIG[selectedRegion] || REGION_AI_CONFIG.VN;
+
+    if (!geminiApiKey.trim()) throw new Error('Thiếu Gemini API Key.');
+
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey.trim() });
+    const localizedCategoryList = getLocalizedNicheTemplate(selectedRegion);
+    const categoryList = localizedCategoryList.map((x: any, i: number) => `${i + 1}. ${x.localCategory || x.category} (${x.viCategory || CATEGORY_VI_TITLES[i]})`).join('\n');
+    const prompt = `Bạn là chuyên gia nghiên cứu ngách YouTube.
+Tạo danh sách đúng 15 chủ đề ngách YouTube cho khu vực: ${regionName} (${selectedRegion}).
+Tên chủ đề phải viết bằng ngôn ngữ khu vực, kèm tên tiếng Việt riêng trong trường viCategory. Ví dụ vùng US: localCategory="Technology & AI", viCategory="CÔNG NGHỆ & AI".
+Ngôn ngữ bắt buộc của tất cả keyword: ${regionCfg.language}.
+Ghi chú ngôn ngữ: ${regionCfg.note}.
+Tuyệt đối không dùng tiếng Việt nếu khu vực không phải Việt Nam.
+Tuyệt đối không trộn ngôn ngữ/khu vực.
+Mỗi chủ đề phải có đúng 6 keyword/cụm keyword, logic sát đúng với tên chủ đề.
+Các keyword phải là cụm mà người dùng thật có thể tìm trên YouTube, ưu tiên xu hướng 30 ngày gần đây, view/VPH cao.
+Không giải thích. Chỉ trả về JSON hợp lệ.
+
+Danh sách 15 chủ đề bắt buộc giữ đúng thứ tự:
+${categoryList}
+
+JSON mẫu:
+{
+  "regionCode": "${selectedRegion}",
+  "regionName": "${regionName}",
+  "source": "gemini_region_suggestion",
+  "categories": [
+    { "localCategory": "Technology & AI", "viCategory": "CÔNG NGHỆ & AI", "items": ["keyword 1", "keyword 2", "keyword 3", "keyword 4", "keyword 5", "keyword 6"] }
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: geminiModel,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+    });
+
+    const parsed = parseGeminiJson(response.text || '');
+    const categories = normalizeAiCategories(parsed, selectedRegion);
+    const payload = {
+      categories,
+      updatedAt: new Date().toISOString(),
+      region: selectedRegion,
+      source: 'gemini_region_suggestion'
+    };
+    return payload;
+  };
+
+  const loadTrendingNicheCache = async (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    setTrendingRegion(selectedRegion);
+    setIsFetchingDailyTrending(true);
+    setStatus('Đang tạo danh sách chủ đề theo khu vực...');
+
+    try {
+      const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
+      setSuggestedNiches(data.categories);
+      setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
+      setStatus(`Đã tạo danh sách chủ đề cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để tìm key thật theo khu vực.`);
+    } catch (err: any) {
+      setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
+      setTrendingCacheMeta(null);
+      setStatus('Chưa tạo được danh sách mới. Đang dùng danh sách mặc định theo khu vực.');
+    } finally {
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
+
+  const categoryTitleToSearchSeed = (category: string) => {
+    const normalized = String(category || '').toUpperCase();
+    const map: Array<[RegExp, string]> = [
+      [/PHÁT TRIỂN|SELF|自己|자기|พัฒนา|Selbst|Développement|Само|Desenvolvimento|Desarrollo/i, 'self improvement productivity habits motivation time management'],
+      [/SỨC KHỎE|HEALTH|健康|건강|สุขภาพ|Gesundheit|Santé|Здоров|Saúde|Salud/i, 'health beauty skincare workout weight loss'],
+      [/CÔNG NGHỆ|TECH|AI|KI|IA|ИИ|เทคโนโลยี|기술|テクノロジー/i, 'ai tools technology chatgpt apps gadget review'],
+      [/GIÁO DỤC|EDUCATION|学習|교육|การศึกษา|Bildung|Éducation|Образование|Educação|Educación/i, 'study tips learning english education exam'],
+      [/ẨM THỰC|FOOD|COOK|料理|요리|อาหาร|Essen|Cuisine|Еда|Comida|Cocina/i, 'food cooking recipes meal prep easy dinner'],
+      [/DU LỊCH|TRAVEL|旅行|여행|ท่องเที่ยว|Reisen|Voyage|Путешествия|Viagem|Viajes/i, 'travel vlog destination guide places'],
+      [/GIẢI TRÍ|ENTERTAIN|COMEDY|エンタメ|엔터|บันเทิง|Unterhaltung|Divertissement|Развлечения|Entretenimento/i, 'entertainment comedy funny reaction meme viral'],
+      [/THỂ THAO|BÓNG ĐÁ|SPORT|FOOTBALL|FITNESS|サッカー|スポーツ|축구|스포츠|กีฬา|Fußball|Sport|fútbol|futebol|футбол/i, 'football soccer sports highlights match news workout'],
+      [/PETS|ĐỘNG VẬT|PET|ANIMAL|動物|반려동물|สัตว์|Haustiere|Animaux|Питомцы|Animais|Mascotas/i, 'pets animals dogs cats cute grooming'],
+      [/GIA ĐÌNH|ĐỜI SỐNG|FAMILY|LIFESTYLE|ライフ|가족|ครอบครัว|Familie|Famille|Семья|Família|Familia/i, 'family lifestyle home tips parenting cleaning'],
+      [/NGHỆ THUẬT|SÁNG TẠO|ART|CREATIVE|創作|예술|ศิลปะ|Kunst|Art|Искусство|Arte/i, 'art creative design editing canva capcut'],
+      [/XE|Ô TÔ|AUTO|CAR|車|자동차|รถ|Auto|Coche|Carro|авто/i, 'car auto motorcycle review electric vehicle maintenance'],
+      [/TÀI CHÍNH|KIẾM TIỀN|FINANCE|MONEY|お金|재테크|การเงิน|Finanzen|Finance|Финансы|Finanças/i, 'finance make money investing side hustle affiliate'],
+      [/REVIEW|SẢN PHẨM|PRODUCT|商品|제품|สินค้า|Produkt|Produit|товар|Produto|Producto/i, 'product review unboxing gadgets skincare amazon'],
+      [/MARKETING|TRUYỀN THÔNG|MEDIA|マーケ|마케팅|การตลาด|Medien|Médias|Маркетинг|Mídia|Medios/i, 'marketing content creation youtube growth social media'],
+    ];
+    return (map.find(([rx]) => rx.test(normalized))?.[1] || category.replace(/\(.+\)/g, '').toLowerCase()).trim();
+  };
+
+  const getCategoryFallbackItems = (index: number, regionCode: string) => {
+    const templates = getKeywordTemplateForRegion(regionCode);
+    const fallback = templates[index] || REGION_KEYWORD_TEMPLATES.VN[index] || SUGGESTED_NICHES[index]?.items || [];
+    return fallback.map(k => String(k || '').trim()).filter(Boolean).slice(0, 6);
+  };
+
+  const getCategorySeedQueries = (category: string, index: number, regionCode: string, currentItems: string[]) => {
+    const regionCfg = REGION_YT_CONFIG[regionCode] || REGION_YT_CONFIG.VN;
+    const localCategory = String((suggestedNiches[index] as any)?.localCategory || category).replace(/\(.+\)/g, '').trim();
+    const viCategory = String((suggestedNiches[index] as any)?.viCategory || CATEGORY_VI_TITLES[index] || category).trim();
+    const fallbackItems = getCategoryFallbackItems(index, regionCode);
+    const seedItems = [...currentItems, ...fallbackItems].map(k => String(k || '').trim()).filter(Boolean);
+    const categorySeed = categoryTitleToSearchSeed(category);
+
+    const vnSpecialSeeds: Record<number, string[]> = {
+      7: ['bóng đá hôm nay', 'highlight bóng đá', 'tin thể thao việt nam', 'v league', 'lịch thi đấu bóng đá', 'thể thao mới nhất'],
+      11: ['review ô tô', 'xe máy mới', 'ô tô điện', 'kinh nghiệm mua xe', 'phụ kiện ô tô', 'bảo dưỡng xe'],
+      12: ['kiếm tiền online', 'tài chính cá nhân', 'đầu tư cho người mới', 'side hustle', 'tiết kiệm tiền', 'affiliate marketing'],
+    };
+
+    const firstTwo = seedItems.slice(0, 2).join(' ');
+    const firstFour = seedItems.slice(0, 4);
+
+    const queries = [
+      `${firstTwo} ${localCategory}`.trim(),
+      `${firstFour.join(' ')}`.trim(),
+      `${regionCfg.seed} ${localCategory}`.trim(),
+      `${categorySeed} ${regionCfg.seed}`.trim(),
+      `${viCategory} ${regionCfg.seed}`.trim(),
+      ...(regionCode === 'VN' && vnSpecialSeeds[index] ? vnSpecialSeeds[index] : []),
+    ].filter(Boolean);
+
+    return [...new Set(queries)].slice(0, 8);
+  };
+
+  const fetchTrendingKeysForCategory = async (category: string, index: number) => {
+    if (config.apiKeys.length === 0) {
+      setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
+      return;
+    }
+
+    const selectedRegion = normalizeRegionCode(trendingRegion || config.region || 'VN');
+    const regionCfg = REGION_YT_CONFIG[selectedRegion] || REGION_YT_CONFIG.VN;
+    const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
+    const currentItems = suggestedNiches[index]?.items || [];
+    const publishedAfter = getPublishedAfterDate('month');
+    const scanningKey = `${category}-${index}`;
+
+    const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
+      || /\b(của|cho|với|không|cách|hướng dẫn|việt nam|người|làm|món|ngách|bóng đá|thể thao)\b/i.test(value);
+
+    const languageLooksOk = (value: string) => {
+      const v = String(value || '').trim();
+      if (!v) return false;
+      if (selectedRegion === 'VN') return /[a-zăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(v);
+      if (['US','GB','AU','CA','SG','PH','IN'].includes(selectedRegion)) return /[a-z]/i.test(v) && !hasVietnamese(v);
+      if (selectedRegion === 'JP') return /[ぁ-んァ-ン一-龯]/.test(v);
+      if (selectedRegion === 'KR') return /[가-힣]/.test(v);
+      if (selectedRegion === 'TH') return /[\u0E00-\u0E7F]/.test(v);
+      if (selectedRegion === 'RU') return /[а-яё]/i.test(v);
+      if (['BR'].includes(selectedRegion)) return /[a-záàâãéêíóôõúç]/i.test(v) && !hasVietnamese(v);
+      if (['MX','ES'].includes(selectedRegion)) return /[a-záéíóúñü]/i.test(v) && !hasVietnamese(v);
+      if (selectedRegion === 'FR') return /[a-zàâçéèêëîïôûùüÿñæœ]/i.test(v) && !hasVietnamese(v);
+      if (selectedRegion === 'DE') return /[a-zäöüß]/i.test(v) && !hasVietnamese(v);
+      return !hasVietnamese(v);
+    };
+
+    const cleanKeyword = (value: string) => String(value || '')
+      .replace(/https?:\/\/\S+/gi, ' ')
+      .replace(/#[\w\p{L}\p{N}_-]+/gu, ' ')
+      .replace(/[|•·,_;:!?()[\]{}"“”'’]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+    const stopWords = new Set([
+      'official','video','shorts','full','subscribe','comment','channel','youtube','youtube shorts','tiktok',
+      '2024','2025','2026','mới ngày','mỗi ngày','3 phút','kiến thức','giải trí','thú vị','viral','trend',
+      'official video','full video','đăng ký','xem ngay','phần 1','part 1'
+    ]);
+
+    const isBadKeyword = (keyword: string) => {
+      const k = cleanKeyword(keyword);
+      if (!k || stopWords.has(k)) return true;
+      if (/^\d+$/.test(k)) return true;
+      if (/\b(official|subscribe|comment|channel|youtube|shorts|full|part|episode|reaction)\b/i.test(k)) return true;
+      if (/(^|\s)(2024|2025|2026)(\s|$)/.test(k)) return true;
+      return false;
+    };
+
+    const addCandidates = (rawText: string, output: string[]) => {
+      const cleaned = cleanKeyword(rawText);
+      if (!cleaned) return;
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      if (words.length >= 2 && words.length <= 6) output.push(cleaned);
+      for (let n = 2; n <= Math.min(5, words.length); n++) {
+        for (let i = 0; i <= words.length - n; i++) output.push(words.slice(i, i + n).join(' '));
+      }
+    };
+
+    try {
+      setScanningNicheCategory(scanningKey);
+      setIsFetchingDailyTrending(true);
+      setStatus(`Đang quét ${category} tại ${regionName}: ưu tiên video 30 ngày, VPH/View cao...`);
+
+      const seedQueries = getCategorySeedQueries(category, index, selectedRegion, currentItems);
+      const scores = new Map<string, number>();
+      let totalVideos = 0;
+
+      const runSearch = async (query: string, usePublishedAfter: boolean) => {
+        const searchRes = await youtubeFetch('search', {
+          part: 'snippet',
+          q: query,
+          type: 'video',
+          regionCode: regionCfg.regionCode,
+          relevanceLanguage: regionCfg.relevanceLanguage,
+          ...(usePublishedAfter ? { publishedAfter } : {}),
+          order: 'viewCount',
+          maxResults: 30,
+        });
+        return (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
+      };
+
+      let effectiveVideoIds: string[] = [];
+      for (const query of seedQueries) {
+        if (effectiveVideoIds.length >= 45) break;
+        const ids = await runSearch(query, true).catch(() => []);
+        effectiveVideoIds.push(...ids);
+      }
+
+      // Nếu 30 ngày không đủ dữ liệu, mở rộng toàn thời gian nhưng vẫn giữ regionCode + relevanceLanguage.
+      if (effectiveVideoIds.length < 8) {
+        for (const query of seedQueries.slice(0, 5)) {
+          if (effectiveVideoIds.length >= 45) break;
+          const ids = await runSearch(query, false).catch(() => []);
+          effectiveVideoIds.push(...ids);
+        }
+      }
+
+      effectiveVideoIds = [...new Set(effectiveVideoIds)].slice(0, 50);
+
+      if (effectiveVideoIds.length > 0) {
+        const videoDetail = await youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') });
+        const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
+        totalVideos = videos.length;
+
+        const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
+        const channelDetail = channelIds.length ? await youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.join(',') }) : { items: [] };
+        const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
+
+        videos.forEach((video: any) => {
+          const channel: any = channelMap.get(video?.snippet?.channelId);
+          const country = String(channel?.snippet?.country || '').toUpperCase();
+
+          // Lọc đúng khu vực nếu kênh có khai báo country. Nếu không khai báo thì vẫn giữ vì YouTube API nhiều kênh không public country.
+          if (country && country !== regionCfg.regionCode) return;
+
+          const views = Number(video?.statistics?.viewCount || 0);
+          const subs = Number(channel?.statistics?.subscriberCount || 0);
+          const vph = calculateVPH(views, video?.snippet?.publishedAt);
+          const publishedScore = new Date(video?.snippet?.publishedAt || 0).getTime() >= new Date(publishedAfter).getTime() ? 1.25 : 0.75;
+          const baseScore = (
+            Math.log10(views + 10) * 35 +
+            Math.min(vph, 8000) / 16 +
+            Math.min(views / Math.max(subs, 1), 600) * 1.2
+          ) * publishedScore;
+
+          const candidates: string[] = [];
+          addCandidates(video?.snippet?.title || '', candidates);
+          (video?.snippet?.tags || []).forEach((tag: string) => candidates.push(cleanKeyword(tag)));
+          String(video?.snippet?.description || '').split('\n').slice(0, 5).forEach(line => addCandidates(line, candidates));
+
+          candidates
+            .map(cleanKeyword)
+            .filter(k => k.length >= 3 && k.length <= 52)
+            .filter(languageLooksOk)
+            .filter(k => !isBadKeyword(k))
+            .forEach(k => scores.set(k, (scores.get(k) || 0) + baseScore));
+        });
+      }
+
+      // Bơm thêm seed đúng chủ đề/khu vực để luôn có key liên quan nếu YouTube trả ít tag/title tách được.
+      getCategoryFallbackItems(index, selectedRegion).forEach((keyword, idx) => {
+        if (languageLooksOk(keyword) && !isBadKeyword(keyword)) {
+          scores.set(cleanKeyword(keyword), (scores.get(cleanKeyword(keyword)) || 0) + 25 - idx);
+        }
+      });
+
+      const nextItems = [...scores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([keyword]) => keyword)
+        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
+        .slice(0, 6);
+
+      const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
+
+      setSuggestedNiches(prev => {
+        const next = prev.map((item, i) => i === index ? { ...item, items: finalItems } : item).slice(0, 15);
+        return next;
+      });
+
+      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
+      setStatus(`Đã quét xong ${category} tại ${regionName}: lấy ${finalItems.length} key theo chủ đề, sắp xếp ưu tiên trend/VPH/View.${totalVideos ? ` Đã đọc ${totalVideos} video.` : ''}`);
+    } catch (error: any) {
+      console.error(error);
+      setStatus(getFriendlyApiError(error));
+    } finally {
+      setScanningNicheCategory(null);
+      setIsFetchingDailyTrending(false);
+    }
+  };
+
+  // Chỉ admin chạy quét ngầm/định kỳ. Người dùng thường không gọi API YouTube tại popup này.
+  const runAdminTrendingCron = async () => {
+    if (user?.email !== 'chinhkhai79@gmail.com') return;
+    setIsFetchingDailyTrending(true);
+    setStatus('Admin: đang kích hoạt quét ngách hệ thống...');
+    try {
+      const secret = window.prompt('Nhập ADMIN_CRON_SECRET để chạy quét ngách:') || '';
+      if (!secret.trim()) return;
+      const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(trendingRegion || config.region || 'VN')}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': secret.trim()
+        },
+        body: JSON.stringify({ region: trendingRegion || config.region || 'VN' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Admin cron lỗi');
+      setStatus(`Admin: đã cập nhật cache ${data.region || ''}.`);
+      await loadTrendingNicheCache(data.region || trendingRegion || config.region || 'VN');
+    } catch (err: any) {
+      setStatus(err?.message || 'Không chạy được admin cron.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
   };
 
     const runNicheResearch = async (customKeyword?: string) => {
-    const kw = customKeyword || nicheInput;
-    if (!kw.trim()) {
-      alert('Vui lòng nhập từ khóa hoặc ngách cần nghiên cứu.');
-      return;
+    let kw = (customKeyword || nicheInput || '').trim();
+    if (!kw) {
+      kw = getNextAutoNicheSeed(nicheRegion || config.region || 'VN');
+      setNicheInput(kw);
+    }
+
+    if (kw) {
+      localStorage.setItem('youtube_last_niche_keyword', kw);
     }
 
     if (config.apiKeys.length === 0) {
-      alert('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
+      setStatus('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
       return;
     }
 
     setIsNicheSearching(true);
-    setStatus(`Đang nghiên cứu ngách: ${kw}...`);
+    setStatus(`${(customKeyword || nicheInput || '').trim() ? 'Đang nghiên cứu ngách' : 'Tự động chọn ngách theo khu vực/thời gian'}: ${kw}...`);
     
     try {
       // 1. Search videos
@@ -1533,7 +2367,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       const videoIds = videoItems.map((i: any) => i.id.videoId);
 
       if (videoIds.length === 0) {
-        alert('Không tìm thấy dữ liệu thật từ YouTube API cho từ khóa này.');
+        setStatus('Không tìm thấy dữ liệu thật từ YouTube API cho từ khóa này.');
         setIsNicheSearching(false);
         return;
       }
@@ -1550,7 +2384,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
 
       if (allDetailedVideos.length === 0) {
-        alert('Không lấy được thông tin chi tiết video.');
+        setStatus('Không lấy được thông tin chi tiết video.');
         setIsNicheSearching(false);
         return;
       }
@@ -1571,17 +2405,27 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       allChannels.forEach((c: any) => channelsMap.set(c.id, c));
 
       // 4. Process data
-      const processedVideos = allDetailedVideos.map((v: any) => {
+      const subLimitedChannelIds = new Set(
+        allChannels
+          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub)
+          .map((c: any) => c.id)
+      );
+      const videosForProcessing = allDetailedVideos.filter((v: any) => subLimitedChannelIds.has(v.snippet.channelId));
+      const sourceVideosForProcessing = videosForProcessing.length > 0 ? videosForProcessing : allDetailedVideos;
+      const processedVideos = sourceVideosForProcessing.map((v: any) => {
         const chan = channelsMap.get(v.snippet.channelId);
         const stats = v.statistics || {};
         const views = parseInt(stats.viewCount) || 0;
         const vph = calculateVPH(views, v.snippet.publishedAt);
         const trendScore = calculateTrendScore(v, chan);
         
+        const channelSubscriberCount = parseInt(chan?.statistics?.subscriberCount) || 0;
         return {
           ...v,
           vph,
           trendScore,
+          channelStats: chan?.statistics || {},
+          channelSubscriberCount,
           engagementRate: calculateEngagementRate(stats),
           viewPerDay: views / Math.max(1, (new Date().getTime() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
         };
@@ -1666,7 +2510,9 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         keywords: topKeywords,
         videos: processedVideos,
         shorts,
-        channels: allChannels.map((c: any) => {
+        channels: allChannels
+          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub || videosForProcessing.length === 0)
+          .map((c: any) => {
           const chanVideos = processedVideos.filter(v => v.snippet.channelId === c.id);
           return {
             ...c,
@@ -1690,7 +2536,7 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       setStatus(`Đã phân tích xong ngách: ${kw}`);
     } catch (err) {
       console.error(err);
-      alert('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key or Quota.');
+      setStatus('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key hoặc Quota.');
     } finally {
       setIsNicheSearching(false);
     }
@@ -1758,89 +2604,110 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
   ]);
 
   const youtubeFetch = async (endpoint: string, params: Record<string, any>, retryCount = 0): Promise<any> => {
-    const maxRetries = config.apiKeys.length;
-    if (retryCount >= maxRetries) {
-      throw new Error("Tất cả API Key đã cạn kiệt hoặc gặp lỗi liên tục. Vui lòng kiểm tra lại Key!");
+    const keys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
+    if (keys.length === 0) {
+      throw new Error('Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
     }
 
-    const activeKey = getActiveApiKey()?.trim();
-    if (!activeKey || exhaustedKeys.includes(activeKey)) {
-      if (rotateApiKey()) {
-        return youtubeFetch(endpoint, params, retryCount + 1);
-      }
-      throw new Error("Tất cả API Key hiện tại đều không khả dụng (Hết chi phí hoặc bị chặn). Hãy thêm Key mới!");
-    }
+    // STEP_77_FIX: Không dùng cache "key lỗi hôm nay" để chặn key ngay từ đầu.
+    // Lý do: nhiều key bị đánh dấu lỗi do request trước đó sai tham số / lỗi mạng / 403 tạm thời,
+    // sau đó hệ thống bỏ qua hết key mặc dù key vẫn còn quota. Mỗi lần gọi API sẽ thử lại từ key đang chọn,
+    // nếu key lỗi thật thì bỏ qua trong lượt gọi hiện tại và tự chuyển key kế tiếp.
+    const quotaCost = endpoint === 'search' ? 100 : 1;
+    const failedThisCall = new Set<string>();
+    const errorLines: string[] = [];
 
-    const baseUrl = `https://www.googleapis.com/youtube/v3/${endpoint}`;
-    const urlParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, val]) => {
-      if (val !== undefined && val !== null && val !== '') {
-        urlParams.append(key, String(val));
-      }
-    });
-    urlParams.append('key', activeKey);
+    const getReasonText = (data: any, httpStatus?: number) => {
+      return String(
+        data?.error?.errors?.[0]?.reason ||
+        data?.error?.status ||
+        data?.error?.message ||
+        data?.error ||
+        `HTTP_${httpStatus || 'UNKNOWN'}`
+      );
+    };
 
-    try {
-      const response = await fetch(`${baseUrl}?${urlParams.toString()}`, {
-        signal: abortControllerRef.current?.signal
+    const getFriendlyYoutubeReason = (data: any, httpStatus?: number, err?: any) => {
+      const raw = getReasonText(data, httpStatus) || String(err?.message || err || 'UNKNOWN');
+      const lower = String(raw).toLowerCase();
+      if (lower.includes('quota') || lower.includes('dailylimit') || lower.includes('ratelimit')) return 'hết quota hoặc bị giới hạn lượt gọi';
+      if (lower.includes('keyinvalid') || lower.includes('api key not valid') || lower.includes('bad request') || lower.includes('invalid')) return 'key không hợp lệ hoặc sai định dạng';
+      if (lower.includes('accessnotconfigured') || lower.includes('api has not been used') || lower.includes('disabled')) return 'chưa bật YouTube Data API trong Google Cloud';
+      if (lower.includes('referer') || lower.includes('referrer') || lower.includes('ipreferer') || lower.includes('request is missing')) return 'key đang bị giới hạn domain/referrer';
+      if (httpStatus === 401) return 'không được cấp quyền';
+      if (httpStatus === 403) return 'bị từ chối, có thể do quota / domain / quyền API';
+      if (httpStatus === 400) return 'request chưa hợp lệ';
+      return raw;
+    };
+
+    const rememberFailedKeyForDisplay = (key: string, reason: string) => {
+      failedThisCall.add(key);
+      const keyNo = keys.findIndex(k => k === key) + 1;
+      const nextRuntime = Array.from(new Set([...exhaustedKeysRef.current, key]));
+      exhaustedKeysRef.current = nextRuntime;
+      setExhaustedKeys(nextRuntime);
+      errorLines.push(`#${keyNo}: ${reason}`);
+      setLastError(`Key #${keyNo} lỗi: ${reason}`);
+      setStatus(`Key #${keyNo}/${keys.length} lỗi: ${reason}. Đang tự động chuyển sang key tiếp theo...`);
+    };
+
+    const startIndex = Math.max(0, Math.min(apiKeyIndex, keys.length - 1));
+    const orderedEntries = [
+      ...keys.slice(startIndex).map((key, offset) => ({ key, index: startIndex + offset })),
+      ...keys.slice(0, startIndex).map((key, index) => ({ key, index }))
+    ];
+
+    let lastError: any = null;
+
+    for (const { key: activeKey, index: keyIndex } of orderedEntries) {
+      if (!activeKey || failedThisCall.has(activeKey)) continue;
+      const keyNo = keyIndex + 1;
+      setApiKeyIndex(keyIndex);
+      setStatus(`Đang dùng YouTube API Key #${keyNo}/${keys.length}: ${activeKey.slice(0, 10)}... để gọi ${endpoint}.`);
+
+      const baseUrl = `https://www.googleapis.com/youtube/v3/${endpoint}`;
+      const urlParams = new URLSearchParams();
+      Object.entries(params).forEach(([paramKey, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          urlParams.append(paramKey, String(val));
+        }
       });
-      
-      if (response.status === 403 || response.status === 401) {
-        setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-        if (rotateApiKey()) {
-          return youtubeFetch(endpoint, params, retryCount + 1);
+      urlParams.append('key', activeKey);
+
+      try {
+        const response = await fetch(`${baseUrl}?${urlParams.toString()}`, {
+          signal: abortControllerRef.current?.signal
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && !data?.error) {
+          setApiKeyIndex(keyIndex);
+          setLastError(null);
+          // Key gọi thành công thì bỏ khỏi danh sách lỗi đang hiển thị nếu trước đó bị đánh dấu nhầm.
+          const cleanedFailed = exhaustedKeysRef.current.filter(k => k !== activeKey);
+          exhaustedKeysRef.current = cleanedFailed;
+          setExhaustedKeys(cleanedFailed);
+          setStatus(`Key #${keyNo}/${keys.length} hoạt động tốt. Đã lấy dữ liệu YouTube thành công.`);
+          updateQuotaUsage(quotaCost);
+          return data;
         }
-        throw new Error("Lỗi xác thực (401/403): API Key không hợp lệ hoặc đã hết hạn dùng.");
+
+        const reason = getFriendlyYoutubeReason(data, response.status);
+        lastError = new Error(`Key #${keyNo} lỗi ${response.status}: ${reason}`);
+        rememberFailedKeyForDisplay(activeKey, reason);
+        continue;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') throw err;
+        lastError = err;
+        const reason = getFriendlyYoutubeReason({}, undefined, err);
+        rememberFailedKeyForDisplay(activeKey, reason || 'lỗi kết nối tạm thời');
+        continue;
       }
-
-      if (response.status === 400) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error?.message || "Vui lòng kiểm tra lại tham số.";
-        
-        // If the error message indicates an invalid key, mark it as exhausted and remove from active rotation
-        if (errorMsg.toLowerCase().includes("api key not valid") || errorMsg.toLowerCase().includes("invalid key") || errorMsg.toLowerCase().includes("key")) {
-          setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-          setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
-          setStatus(`XOÁ KEY LỖI: ${activeKey.slice(0,8)}...`);
-          if (rotateApiKey()) {
-            return youtubeFetch(endpoint, params, retryCount + 1);
-          }
-        }
-        throw new Error(`Yêu cầu không hợp lệ (400): ${errorMsg}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        const reason = data.error.errors[0]?.reason;
-        if (['quotaExceeded', 'dailyLimitExceeded', 'keyInvalid', 'forbidden', 'unauthorized', 'accessNotConfigured'].includes(reason)) {
-          setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-          
-          if (['keyInvalid', 'unauthorized', 'forbidden'].includes(reason)) {
-            setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
-            setStatus(`XOÁ KEY CHẾT: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
-          } else {
-            setStatus(`BỎ QUA KEY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
-          }
-          
-          if (rotateApiKey()) {
-            return youtubeFetch(endpoint, params, retryCount + 1);
-          } else {
-            throw new Error(`Cạn kiệt API Key khả dụng. Vui lòng kiểm tra lại danh sách Key! [${reason}]`);
-          }
-        }
-        throw new Error(`Lỗi YouTube API: ${data.error.message}`);
-      }
-
-      // Estimate quota
-      if (endpoint === 'search') updateQuotaUsage(100);
-      else updateQuotaUsage(1);
-
-      return data;
-    } catch (err: any) {
-      if (err.name === 'AbortError') throw err;
-      throw err;
     }
+
+    const detail = errorLines.length ? ` Chi tiết: ${errorLines.join(' | ')}` : '';
+    setStatus(`Không gọi được YouTube API bằng ${keys.length} key hiện có.${detail}`);
+    throw lastError || new Error(`Không gọi được YouTube API bằng các key hiện có.${detail}`);
   };
 
   // --- Logic Functions ---
@@ -1966,11 +2833,63 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     localStorage.setItem('youtube_api_keys_history', JSON.stringify(allKeys));
 
     localStorage.setItem('youtube_api_keys', JSON.stringify(config.apiKeys.map(k => k.trim()).filter(Boolean)));
+    setManualKeysInput(config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
+    localStorage.setItem('youtube_api_keys_text_draft', config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
     localStorage.setItem('youtube_hunter_config', JSON.stringify({
       ...config,
       apiKeys: [] // Don't double save keys
     }));
     setStatus('Đã lưu cấu hình.');
+  };
+
+
+  const shuffleList = <T,>(items: T[]) => {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const diversifySeedsByTopic = (seeds: string[]) => {
+    const usedTopics = new Set<string>();
+    const firstPass: string[] = [];
+    const secondPass: string[] = [];
+    for (const seed of seeds) {
+      const topic = getTopicFromKeyword(seed).toLowerCase();
+      if (!usedTopics.has(topic)) {
+        usedTopics.add(topic);
+        firstPass.push(seed);
+      } else {
+        secondPass.push(seed);
+      }
+    }
+    return [...firstPass, ...shuffleList(secondPass)];
+  };
+
+  const getNextAutoNicheSeed = (regionCode?: string) => {
+    const region = regionCode || config.region || 'VN';
+    const seeds = diversifySeedsByTopic(getAutoHuntSeeds(region));
+    if (!seeds.length) return 'ai tools';
+
+    const storeKey = `youtube_auto_niche_used_${region}`;
+    let used: string[] = [];
+    try {
+      used = JSON.parse(localStorage.getItem(storeKey) || '[]');
+      if (!Array.isArray(used)) used = [];
+    } catch (_) {
+      used = [];
+    }
+
+    let next = seeds.find(seed => !used.includes(seed));
+    if (!next) {
+      used = [];
+      next = shuffleList(seeds)[0] || seeds[0];
+    }
+
+    localStorage.setItem(storeKey, JSON.stringify([...used, next].slice(-seeds.length)));
+    return next;
   };
 
   const getLanguageForRegion = (regionCodeCode: string): string => {
@@ -2024,22 +2943,122 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
     return keyword; 
   };
 
+  const getAutoHuntSeeds = (regionCode?: string) => {
+    const region = regionCode || config.region || 'VN';
+    const seedMap: Record<string, string[]> = {
+      VN: [
+        'ai công cụ mới', 'mẹo điện thoại', 'du lịch việt nam', 'ẩm thực hot', 'game mobile',
+        'bóng đá việt nam', 'tin tức 24h', 'kiếm tiền online', 'sức khỏe tại nhà', 'review xe',
+        'chăm sóc thú cưng', 'học tiếng anh', 'nhạc lofi', 'mẹo gia đình', 'bất động sản'
+      ],
+      US: [
+        'ai tools', 'chatgpt', 'gemini ai', 'make money online', 'youtube automation',
+        'viral shorts', 'tech news', 'productivity apps', 'iphone tips', 'trending news',
+        'travel vlog', 'gaming highlights', 'finance tips'
+      ],
+      GB: ['ai tools', 'chatgpt', 'uk trending news', 'tech news', 'side hustle', 'football highlights', 'travel vlog'],
+      JP: ['AI ツール', 'ChatGPT', '日本 トレンド', 'テックニュース', '旅行 vlog', 'ゲーム 実況'],
+      KR: ['AI 도구', 'ChatGPT', '한국 트렌드', '테크 뉴스', '여행 브이로그', '게임 하이라이트'],
+      TH: ['เครื่องมือ ai', 'chatgpt', 'เทรนด์ไทย', 'ข่าวเทคโนโลยี', 'ท่องเที่ยว', 'เกมมือถือ'],
+      ID: ['tools ai', 'chatgpt', 'tren indonesia', 'berita teknologi', 'cara menghasilkan uang', 'game mobile'],
+      PH: ['ai tools', 'chatgpt', 'philippines trending', 'tech news', 'side hustle', 'travel vlog'],
+      MY: ['ai tools', 'chatgpt', 'malaysia trending', 'tech news', 'buat duit online', 'travel vlog'],
+      SG: ['ai tools', 'chatgpt', 'singapore trending', 'tech news', 'side hustle', 'finance tips'],
+      DE: ['ki tools', 'chatgpt', 'deutschland trends', 'technik news', 'geld verdienen online'],
+      FR: ['outils ia', 'chatgpt', 'tendances france', 'actualité tech', 'gagner argent en ligne'],
+      BR: ['ferramentas ia', 'chatgpt', 'tendências brasil', 'notícias tecnologia', 'ganhar dinheiro online'],
+      MX: ['herramientas ia', 'chatgpt', 'tendencias méxico', 'noticias tecnología', 'ganar dinero online'],
+      ES: ['herramientas ia', 'chatgpt', 'tendencias españa', 'noticias tecnología', 'ganar dinero online'],
+      IT: ['strumenti ai', 'chatgpt', 'tendenze italia', 'notizie tecnologia', 'guadagnare online'],
+      RU: ['инструменты ai', 'chatgpt', 'тренды россия', 'технологии новости', 'заработок онлайн']
+    };
+
+    const fallback = ['ai tools', 'chatgpt', 'trending shorts', 'tech news', 'make money online', 'travel vlog', 'gaming highlights'];
+    return seedMap[region] || fallback;
+  };
+
+  const normalizeHunterKeyword = (value: string) =>
+    (value || '')
+      .toLowerCase()
+      .replace(/#/g, ' ')
+      .replace(/[^\p{L}\p{N}\s._-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const calculateHunterCandidateScore = (video: any, channel: any, seed: string) => {
+    const stats = video?.statistics || {};
+    const channelStats = channel?.statistics || {};
+    const views = parseInt(stats.viewCount) || 0;
+    const subs = parseInt(channelStats.subscriberCount) || 0;
+    const totalChannelViews = parseInt(channelStats.viewCount) || 0;
+    const channelVideoCount = parseInt(channelStats.videoCount) || 0;
+    const vph = calculateVPH(views, video?.snippet?.publishedAt);
+    const viewSubRatio = views / Math.max(1, subs);
+    const avgChannelView = totalChannelViews / Math.max(1, channelVideoCount);
+    const outlierScore = views / Math.max(1, avgChannelView);
+    const channelAgeDays = calculateChannelAge(channel?.snippet?.publishedAt || new Date().toISOString());
+    const uploadRegularity = channelVideoCount / Math.max(1, channelAgeDays / 30);
+    const title = normalizeHunterKeyword(video?.snippet?.title || '');
+    const seedText = normalizeHunterKeyword(seed);
+    const seedWords = seedText.split(' ').filter(Boolean);
+    const similarity = seedWords.length
+      ? seedWords.reduce((acc, word) => acc + (title.includes(word) ? 1 : 0), 0) / Math.max(1, seedWords.length)
+      : 0;
+
+    let score = 0;
+    score += Math.min(35, vph / 10); // VPH cao
+    score += Math.min(25, viewSubRatio * 2.5); // View/Sub Ratio cao
+    score += Math.min(20, outlierScore * 4); // Outlier Score cao
+    score += Math.min(10, uploadRegularity * 1.2); // Upload gần đây đều
+    score += Math.min(10, similarity * 10); // gần cụm trend đang scan
+
+    if (subs > 0 && subs <= 100000) score += 12;
+    else if (subs <= 500000) score += 6;
+
+    return {
+      score: Math.min(100, Math.round(score)),
+      vph,
+      viewSubRatio,
+      outlierScore,
+      uploadRegularity
+    };
+  };
+
+
+  const normalizeDeepDrillText = (value: string) =>
+    (value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/đ/g, 'd');
+
+  const isBroadHighSubExcludedTopic = (video: any, channel: any, seed: string) => {
+    const text = normalizeDeepDrillText([
+      seed,
+      video?.snippet?.title,
+      video?.snippet?.description,
+      channel?.snippet?.title,
+      channel?.snippet?.description
+    ].join(' '));
+
+    return /(giai tri|entertainment|am thuc|food|cooking|nau an|mukbang|suc khoe|health|fitness|lam dep|beauty)/i.test(text);
+  };
+
   const startHunter = async () => {
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       return;
     }
-    if (!config.keyword) {
-      setLastError('Vui lòng nhập từ khóa gốc để bắt đầu săn kênh.');
-      return;
-    }
+
+    const rawKeyword = (config.keyword || '').trim();
+    const isAutoHunt = !rawKeyword;
 
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
     setIsHunting(true);
     isHuntingRef.current = true;
     setLastError(null);
-    setStatus('Đang khởi tạo...');
+    setStatus(config.deepDrillSmallTrend ? 'Đang bật Deep Drill: săn kênh nhỏ/mới trend trong 30 ngày...' : (isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...'));
     setProgress(5);
     if (typeof AbortController !== 'undefined') {
       try {
@@ -2050,170 +3069,169 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
       }
     }
 
-    const ideas = await fetchRealKeywordIdeas(config.keyword);
-    setKeywordIdeas(ideas);
-    
-    let keywordIndex = 0;
-    let regionIter = 0;
+    if (!isAutoHunt) {
+      const ideas = await fetchRealKeywordIdeas(rawKeyword);
+      setKeywordIdeas(ideas);
+    } else {
+      setKeywordIdeas([]);
+    }
 
     try {
-      // We only hunt for the current main config.keyword instead of auto-iterating the entire ideas list
-      if (isHuntingRef.current && resultsRef.current.length < STOP_LIMIT) {
-        let searchKeyword = config.keyword;
-        
-        // Find the idea in our list to show status if it exists
-        const ideaIdx = keywordIdeas.findIndex(i => i.text.toLowerCase() === config.keyword.toLowerCase());
-        
-        if (ideaIdx !== -1) {
-          setKeywordIdeas(prev => {
-            const next = [...prev];
-            next[ideaIdx].status = 'scanning';
-            return next;
-          });
-        }
+      const cycles = config.regions.includes('ALL')
+        ? REGIONS.map(r => r.code).filter(Boolean)
+        : config.regions;
+      const currentRegion = cycles.length > 0 ? cycles[0] : (config.region || 'VN');
+      const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
+      const effectivePublishedAfter = config.deepDrillSmallTrend ? 'month' : config.publishedAfter;
+      const publishedAfter = getPublishedAfterDate(effectivePublishedAfter);
 
-        // Determine regions to cycle through
-        const cycles = config.regions.includes('ALL') 
-          ? REGIONS.map(r => r.code) 
-          : config.regions;
-
-        // Determine region to use
-        const currentRegion = cycles.length > 0 ? cycles[0] : undefined; 
-        const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
-        
+      let scanKeywords: string[] = [];
+      if (isAutoHunt) {
+        scanKeywords = diversifySeedsByTopic(shuffleList(getAutoHuntSeeds(currentRegion))).slice(0, 16);
+      } else {
+        let searchKeyword = rawKeyword;
         if (currentRegion && currentRegion !== 'VN') {
           const targetLang = getLanguageForRegion(currentRegion);
-          const translated = translateKeywordSimple(config.keyword, targetLang);
-          if (translated !== config.keyword) {
-            searchKeyword = translated;
-            setStatus('Đang quét: ' + config.keyword + ' -> ' + translated + ' (' + resultsRef.current.length + '/' + STOP_LIMIT + ')' + regionTag);
-          } else {
-            setStatus('Đang quét: ' + config.keyword + '... (' + resultsRef.current.length + '/' + STOP_LIMIT + ')' + regionTag);
-          }
-        } else {
-          setStatus('Đang quét: ' + config.keyword + '... (' + resultsRef.current.length + '/' + STOP_LIMIT + ')' + regionTag);
+          searchKeyword = translateKeywordSimple(rawKeyword, targetLang);
         }
-        
-        try {
-          const searchRes = await youtubeFetch('search', {
-            part: 'snippet',
-            type: 'video',
-            q: searchKeyword,
-            regionCode: currentRegion,
-            maxResults: Math.min(config.maxVideos, 50),
-            order: 'viewCount',
-            publishedAfter: getPublishedAfterDate(config.publishedAfter)
-          });
+        scanKeywords = [searchKeyword];
+      }
 
-          // Calculate REAL score and competition based on results
-          const resultCount = searchRes.pageInfo.totalResults || 0;
-          const compValue = resultCount > 1000000 ? 'Rất Cao' : resultCount > 500000 ? 'Cao' : resultCount > 50000 ? 'Trung bình' : 'Thấp';
-          
-          let calculatedScore = 0;
-          if (resultCount < 10000) calculatedScore = 8 + Math.random() * 2;
-          else if (resultCount < 50000) calculatedScore = 6 + Math.random() * 2;
-          else if (resultCount < 200000) calculatedScore = 4 + Math.random() * 2;
-          else if (resultCount < 1000000) calculatedScore = 2 + Math.random() * 2;
-          else calculatedScore = 1 + Math.random() * 1.5;
+      const addedChannelIds = new Set<string>(resultsRef.current.map(r => r.id));
+      const usedAutoSeedTopics = new Set<string>();
 
-          const finalScore = Math.min(calculatedScore, 9.9).toFixed(1);
+      for (let k = 0; k < scanKeywords.length; k++) {
+        if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
+        const searchKeyword = scanKeywords[k];
+        const shownKeyword = isAutoHunt ? `tự động: ${searchKeyword}` : rawKeyword;
 
-          if (ideaIdx !== -1) {
-            setKeywordIdeas(prev => {
-              const next = [...prev];
-              next[ideaIdx].score = `${finalScore}/10`;
-              next[ideaIdx].competition = compValue;
-              next[ideaIdx].status = 'done';
-              return next;
-            });
-          }
+        setStatus(
+          isAutoHunt
+            ? `Tự động lọc kênh hot ${regionTag}: cụm "${searchKeyword}" (${resultsRef.current.length}/${STOP_LIMIT})`
+            : `Đang quét: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
+        );
 
-          // ONLY collect deep channel data if we haven't reached the result limit
-          if (isHuntingRef.current && resultsRef.current.length < STOP_LIMIT && searchRes.items && searchRes.items.length > 0) {
-            const channelIds = [...new Set(searchRes.items.map((item: any) => item.snippet.channelId))];
-            const newChannelIds = channelIds.filter(id => !resultsRef.current.some(r => r.id === id));
-            
-            setStatus(`Đã tìm thấy ${newChannelIds.length} kênh tiềm năng. Đang phân tích chi tiết...`);
-            
-            if (newChannelIds.length > 0) {
-              const chunkedIds = [];
-              for (let i = 0; i < newChannelIds.length; i += 50) {
-                chunkedIds.push(newChannelIds.slice(i, i + 50));
-              }
+        const searchRes = await youtubeFetch('search', {
+          part: 'snippet',
+          type: 'video',
+          q: searchKeyword,
+          regionCode: currentRegion,
+          maxResults: config.deepDrillSmallTrend ? 50 : Math.min(Math.max(config.maxVideos, 20), 50),
+          order: 'viewCount',
+          publishedAfter
+        });
 
-              for (const ids of chunkedIds) {
-                if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
-                
-                const channelRes = await youtubeFetch('channels', {
-                  part: 'snippet,statistics,contentDetails',
-                  id: ids.join(','),
-                });
+        if (!searchRes.items?.length) continue;
 
-                for (const channel of channelRes.items) {
-                  if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
+        const videoIds = searchRes.items
+          .map((item: any) => item?.id?.videoId)
+          .filter(Boolean)
+          .slice(0, 50);
 
-                  const subs = parseInt(channel.statistics.subscriberCount) || 0;
-                  const views = parseInt(channel.statistics.viewCount) || 0;
-                  const videos = parseInt(channel.statistics.videoCount) || 0;
+        const videoRes = await youtubeFetch('videos', {
+          part: 'snippet,statistics,contentDetails',
+          id: videoIds.join(',')
+        });
 
-                  const passed = 
-                    subs >= config.minSub &&
-                    subs <= config.maxSub &&
-                    videos >= config.minVideo &&
-                    (config.maxVideo ? videos <= config.maxVideo : true) &&
-                    views >= config.minViews;
+        const videos = videoRes.items || [];
+        const channelIds = [...new Set(videos.map((v: any) => v.snippet.channelId))]
+          .filter((id: any) => !addedChannelIds.has(String(id)) && !resultsRef.current.some(r => r.id === id));
 
-                  if (passed) {
-                    const newResult: ChannelResult = {
-                      icon: channel.snippet.thumbnails.default.url,
-                      name: channel.snippet.title,
-                      id: channel.id,
-                      url: `https://youtube.com/channel/${channel.id}`,
-                      country: channel.snippet.country || 'N/A',
-                      publishedAt: channel.snippet.publishedAt.split('T')[0],
-                      age: calculateChannelAge(channel.snippet.publishedAt),
-                      subs,
-                      views,
-                      videos,
-                      score: calculateNicheScore(channel),
-                      keywordTitle: config.keyword,
-                      lastVideoId: searchRes.items.find((v: any) => v.snippet.channelId === channel.id)?.id?.videoId
-                    };
-                    
-                    setResults(prev => {
-                      const updated = [...prev, newResult];
-                      resultsRef.current = updated;
-                      localStorage.setItem('youtube_hunter_results', JSON.stringify(updated));
-                      return updated;
-                    });
+        if (channelIds.length === 0) continue;
 
-                   }
-                  
-                  // Update progress based on results found vs limit
-                  const currentProgress = Math.min(10 + (resultsRef.current.length / STOP_LIMIT) * 90, 99);
-                  setProgress(currentProgress);
-                }
-              }
-            }
-          }
-        } catch (fetchErr: any) {
-          if (ideaIdx !== -1) {
-            setKeywordIdeas(prev => {
-              const next = [...prev];
-              next[ideaIdx].status = 'idle';
-              return next;
-            });
-          }
-          if (fetchErr.name === 'AbortError') return;
-          throw fetchErr;
-        }
+        const channelRes = await youtubeFetch('channels', {
+          part: 'snippet,statistics,contentDetails',
+          id: channelIds.join(','),
+        });
 
-        if (ideaIdx !== -1) {
-          setKeywordIdeas(prev => {
-            const next = [...prev];
-            next[ideaIdx].status = 'done';
-            return next;
-          });
+        const channelMap = new Map();
+        (channelRes.items || []).forEach((channel: any) => channelMap.set(channel.id, channel));
+
+        const candidates = videos
+          .map((video: any) => {
+            const channel = channelMap.get(video.snippet.channelId);
+            if (!channel) return null;
+
+            const subs = parseInt(channel.statistics.subscriberCount) || 0;
+            const views = parseInt(channel.statistics.viewCount) || 0;
+            const videoCount = parseInt(channel.statistics.videoCount) || 0;
+            const bestVideoViews = parseInt(video.statistics?.viewCount) || 0;
+            const metrics = calculateHunterCandidateScore(video, channel, searchKeyword);
+
+            const deepDrillActive = !!config.deepDrillSmallTrend;
+            const deepDrillMaxSub = 50000;
+            const hardExcludedByTopic = deepDrillActive && subs > 500000 && isBroadHighSubExcludedTopic(video, channel, searchKeyword);
+            const effectiveMinSub = deepDrillActive ? 0 : config.minSub;
+            const effectiveMaxSub = deepDrillActive ? Math.min(config.maxSub || deepDrillMaxSub, deepDrillMaxSub) : config.maxSub;
+            const effectiveMinViews = deepDrillActive ? Math.max(500, Math.floor(config.minViews / 4)) : config.minViews;
+
+            const passed =
+              !hardExcludedByTopic &&
+              subs >= effectiveMinSub &&
+              subs <= effectiveMaxSub &&
+              videoCount >= config.minVideo &&
+              (config.maxVideo ? videoCount <= config.maxVideo : true) &&
+              views >= effectiveMinViews;
+
+            // Khi ô từ khóa trống hoặc Deep Drill, ưu tiên video mới có hiệu suất vượt trội hơn tổng view toàn kênh.
+            const trendPassed = metrics.vph >= 1 || metrics.viewSubRatio >= 1 || metrics.outlierScore >= 1.5 || bestVideoViews >= Math.max(1000, effectiveMinViews / 2);
+            const autoPassed = (isAutoHunt || deepDrillActive) ? passed && trendPassed : passed;
+
+            if (!autoPassed) return null;
+
+            return {
+              channel,
+              video,
+              metrics,
+              rankScore: metrics.score,
+              subs,
+              views,
+              videoCount
+            };
+          })
+          .filter(Boolean)
+          .sort((a: any, b: any) => b.rankScore - a.rankScore)
+          .slice(0, isAutoHunt ? 4 : STOP_LIMIT);
+
+        for (const candidate of candidates as any[]) {
+          if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
+          const candidateChannelId = String(candidate.channel.id);
+          if (addedChannelIds.has(candidateChannelId) || resultsRef.current.some(r => r.id === candidate.channel.id)) continue;
+          addedChannelIds.add(candidateChannelId);
+
+          const channel = candidate.channel;
+          const autoSeedKey = normalizeHunterKeyword(searchKeyword).slice(0, 48);
+          if (isAutoHunt && usedAutoSeedTopics.has(autoSeedKey)) continue;
+          const scoreText = isAutoHunt
+            ? (candidate.rankScore / 10).toFixed(1)
+            : calculateNicheScore(channel);
+
+          const newResult: ChannelResult = {
+            icon: channel.snippet.thumbnails.default.url,
+            name: channel.snippet.title,
+            id: channel.id,
+            url: `https://youtube.com/channel/${channel.id}`,
+            country: channel.snippet.country || currentRegion || 'N/A',
+            publishedAt: channel.snippet.publishedAt.split('T')[0],
+            age: calculateChannelAge(channel.snippet.publishedAt),
+            subs: candidate.subs,
+            views: candidate.views,
+            videos: candidate.videoCount,
+            score: scoreText,
+            keywordTitle: isAutoHunt
+              ? `Auto ${currentRegion || 'Global'} · ${searchKeyword} · VPH ${Math.round(candidate.metrics.vph).toLocaleString('vi-VN')}`
+              : rawKeyword,
+            lastVideoId: candidate.video.id
+          };
+
+          if (isAutoHunt) usedAutoSeedTopics.add(autoSeedKey);
+          const nextResults = dedupeChannelResults([...resultsRef.current.filter(item => item.id !== newResult.id), newResult]);
+          resultsRef.current = nextResults;
+          localStorage.setItem('youtube_hunter_results', JSON.stringify(nextResults));
+          setResults(nextResults);
+
+          const currentProgress = Math.min(10 + (resultsRef.current.length / STOP_LIMIT) * 90, 99);
+          setProgress(currentProgress);
         }
       }
 
@@ -2221,6 +3239,8 @@ ${JSON.stringify(categoriesNeedGemini, null, 2)}
         setStatus('🎯 ĐÃ GOM ĐỦ 10 KÊNH NGON! Đã tự động dừng.');
       } else if (!isHuntingRef.current) {
         setStatus('Đã dừng bởi người dùng.');
+      } else if (isAutoHunt) {
+        setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.`);
       } else {
         setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.`);
       }
@@ -2441,7 +3461,7 @@ ${topKeywordsStr}`;
       let allItems: any[] = [];
       for (const ids of chunkedIds) {
         const res = await youtubeFetch('channels', {
-          part: 'snippet,statistics',
+          part: 'snippet,statistics,topicDetails',
           id: ids.join(',')
         });
         if (res.items) {
@@ -2462,8 +3482,12 @@ ${topKeywordsStr}`;
             videos: parseInt(item.statistics.videoCount) || 0
           };
 
-          // Update icon if missing or updated
+          // Update metadata from real YouTube Data API v3 response
           const updatedIcon = item.snippet?.thumbnails?.default?.url || c.icon;
+          const updatedCountry = item.snippet?.country || c.country || 'VN';
+          const updatedKeyword = getTrackingKeywordFromApiItem(item, c.name || item.snippet?.title);
+          const updatedTopic = getTopicFromKeyword(updatedKeyword);
+          const updatedIncome = estimateIncomeFromTracking(newSnapshot.views, updatedCountry);
 
           const history = [...c.history];
           const last = history[history.length - 1];
@@ -2479,13 +3503,22 @@ ${topKeywordsStr}`;
             history[history.length - 1] = newSnapshot;
           }
 
-          return { ...c, history, icon: updatedIcon };
+          return {
+            ...c,
+            name: item.snippet?.title || c.name,
+            history,
+            icon: updatedIcon,
+            country: updatedCountry,
+            keywordTitle: updatedKeyword,
+            topic: updatedTopic,
+            income: updatedIncome
+          };
         });
         localStorage.setItem('youtube_tracking_channels', JSON.stringify(next));
         return next;
       });
       setStatus('Cập nhật tracking hoàn tất.');
-      alert(`Đã cập nhật số liệu mới nhất cho ${trackingChannels.length} kênh!`);
+      setStatus(`Đã cập nhật số liệu mới nhất cho ${trackingChannels.length} kênh.`);
     } catch (err: any) {
       setStatus(`Lỗi: ${err.message}`);
     }
@@ -2507,7 +3540,10 @@ ${topKeywordsStr}`;
         content += `   ID Kênh: ${r.id}\n`;
         content += `   Đường dẫn: ${r.url}\n`;
         content += `   Thông tin: ${r.country || 'N/A'} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
-        content += `   Chỉ số: ${r.subs.toLocaleString()} Subs | ${r.views.toLocaleString()} Views | ${r.videos.toLocaleString()} Videos\n`;
+        content += `   Chỉ số: ${formatVNNumber(r.subs)} Subs | ${formatVNNumber(r.views)} Views | ${formatVNNumber(r.videos)} Videos\n`;
+        content += `   Từ khóa/ngách: ${getChannelTrendKeyword(r)}\n`;
+        content += `   Chủ đề: ${getTopicFromKeyword(getChannelTrendKeyword(r))}\n`;
+        content += `   Thu nhập ước tính: ${estimateIncomeFromApiViews(r)}\n`;
         content += `   Đánh giá: ĐIỂM SEO [${r.score}]\n`;
         content += '--------------------------------------------------\n';
       });
@@ -2592,6 +3628,23 @@ ${topKeywordsStr}`;
     setMenuPos({ x: e.clientX, y: e.clientY, visible: true, channel });
   };
 
+  const openChannelActionMenu = (e: React.MouseEvent, channel: ChannelResult) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedResultId(channel.id);
+
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    setMenuPos({
+      x: isMobile ? 12 : rect.left,
+      y: isMobile ? Math.max(80, window.innerHeight - 290) : rect.bottom + 6,
+      visible: true,
+      channel
+    });
+  };
+
   const closeMenu = () => setMenuPos({ ...menuPos, visible: false });
 
   const addToTracking = (channel: ChannelResult) => {
@@ -2602,6 +3655,10 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
+        country: channel.country,
+        keywordTitle: getChannelTrendKeyword(channel),
+        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
+        income: estimateIncomeFromApiViews(channel),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -2636,6 +3693,10 @@ ${topKeywordsStr}`;
         id: channel.id,
         name: channel.name,
         icon: channel.icon,
+        country: channel.country,
+        keywordTitle: getChannelTrendKeyword(channel),
+        topic: getTopicFromKeyword(getChannelTrendKeyword(channel)),
+        income: estimateIncomeFromApiViews(channel),
         history: [{
           date: new Date().toISOString().split('T')[0],
           subs: channel.subs,
@@ -2648,7 +3709,7 @@ ${topKeywordsStr}`;
     setTrackingChannels(updatedTracking);
     localStorage.setItem('youtube_tracking_channels', JSON.stringify(updatedTracking));
     setStatus(`Đã thêm ${newChannels.length} kênh vào tracking.`);
-    alert(`Đã thêm ${newChannels.length} kênh mới vào danh sách theo dõi!`);
+    setStatus(`Đã thêm ${newChannels.length} kênh mới vào danh sách theo dõi.`);
   };
 
   const goToSpy = (channelId: string) => {
@@ -2677,6 +3738,227 @@ ${topKeywordsStr}`;
       '43': 'Shows', '44': 'Trailers'
     };
     return cats[id] || 'Unknown';
+  };
+
+
+
+  const stripCodeFence = (text: string) => String(text || '').replace(/```json|```/g, '').trim();
+
+  const parseGeminiJsonObject = (text: string) => {
+    const cleaned = stripCodeFence(text);
+    try {
+      return JSON.parse(cleaned);
+    } catch (_) {
+      const first = cleaned.indexOf('{');
+      const last = cleaned.lastIndexOf('}');
+      if (first >= 0 && last > first) {
+        try { return JSON.parse(cleaned.slice(first, last + 1)); } catch (__) {}
+      }
+    }
+    return null;
+  };
+
+  const asArrayText = (value: any, fallback: string[] = []) => {
+    if (Array.isArray(value)) {
+      return value.map(v => String(v || '').trim()).filter(Boolean).slice(0, 8);
+    }
+    if (typeof value === 'string' && value.trim()) return [value.trim()];
+    return fallback;
+  };
+
+  const calculateVideoVph = (viewCount: number, publishedAt?: string) => {
+    if (!publishedAt) return 0;
+    const published = new Date(publishedAt).getTime();
+    if (!Number.isFinite(published)) return 0;
+    const hours = Math.max(1, (Date.now() - published) / 36e5);
+    return Math.round(Number(viewCount || 0) / hours);
+  };
+
+  const getVideoRpmRange = (categoryId?: string, country?: string) => {
+    const highValueCategories = ['27', '28', '26', '25'];
+    const midValueCategories = ['22', '24', '19', '2', '17'];
+    const normalizedCountry = String(country || '').toUpperCase();
+    let base: [number, number] = highValueCategories.includes(String(categoryId || '')) ? [0.8, 4.5] : midValueCategories.includes(String(categoryId || '')) ? [0.5, 2.5] : [0.25, 1.5];
+    if (['US', 'GB', 'CA', 'AU'].includes(normalizedCountry)) base = [base[0] * 2.5, base[1] * 2.8];
+    if (['VN', 'TH', 'ID', 'PH', 'IN'].includes(normalizedCountry)) base = [base[0] * 0.45, base[1] * 0.55];
+    return `$${base[0].toFixed(2)} - $${base[1].toFixed(2)}`;
+  };
+
+  const buildFallbackVideoAudit = (video: any) => {
+    const title = String(video?.snippet?.title || '');
+    const description = String(video?.snippet?.description || '');
+    const tags = Array.isArray(video?.snippet?.tags) ? video.snippet.tags : [];
+    const views = parseInt(video?.statistics?.viewCount || '0') || 0;
+    const likes = parseInt(video?.statistics?.likeCount || '0') || 0;
+    const comments = parseInt(video?.statistics?.commentCount || '0') || 0;
+    const vph = calculateVideoVph(views, video?.snippet?.publishedAt);
+    const hasLink = /https?:\/\//i.test(description);
+    const hasHashtag = /#/i.test(`${title} ${description}`) || tags.length > 0;
+    const titleTooLong = title.length > 72;
+    const engagementRate = views ? ((likes + comments) / views) * 100 : 0;
+
+    return {
+      source: 'fallback',
+      overview: [
+        {
+          key: 'title',
+          title: 'TIÊU ĐỀ (TITLE)',
+          icon: 'T',
+          current: titleTooLong ? 'Tiêu đề có nhiều từ khóa nhưng hơi dài, dễ bị cắt trên mobile.' : 'Tiêu đề rõ chủ đề chính và có khả năng thu hút đúng tệp người xem.',
+          strengths: [hasHashtag ? 'Có nhắc tới từ khóa/hashtag liên quan.' : 'Tiêu đề thể hiện được nội dung chính của video.'],
+          improvements: [titleTooLong ? 'Rút gọn phần sau, đưa từ khóa mạnh nhất lên đầu.' : 'Có thể thêm lợi ích cụ thể hoặc yếu tố tò mò để tăng CTR.'],
+          suggestions: [
+            `"${title.slice(0, 52)}${title.length > 52 ? '...' : ''} | Điểm Khác Biệt Cần Biết"`,
+            `"Sự Thật Đằng Sau: ${title.slice(0, 45)}${title.length > 45 ? '...' : ''}"`
+          ]
+        },
+        {
+          key: 'description',
+          title: 'MÔ TẢ (DESCRIPTION)',
+          icon: '▤',
+          current: description.length > 120 ? 'Mô tả đã có dữ liệu để YouTube hiểu nội dung video.' : 'Mô tả còn mỏng, chưa tận dụng tốt để bổ sung ngữ cảnh SEO.',
+          strengths: [hasLink ? 'Có link trong mô tả giúp điều hướng người xem.' : 'Mô tả có thể mở rộng thêm CTA/link liên quan.'],
+          improvements: ['Đưa 2 dòng đầu thật rõ lợi ích, thêm từ khóa phụ và lời kêu gọi hành động.'],
+          suggestions: ['Thêm tóm tắt 2 dòng đầu, link liên quan, hashtag chính và CTA rõ ràng.']
+        },
+        {
+          key: 'thumbnail',
+          title: 'THUMBNAIL',
+          icon: '▧',
+          current: 'Thumbnail lấy từ YouTube API. AI đánh giá dựa trên tiêu đề, chủ đề và hiệu suất hiện tại.',
+          strengths: ['Có thumbnail để người xem nhận diện nội dung.'],
+          improvements: ['Đảm bảo chữ lớn, tương phản mạnh, ít chi tiết và có điểm nhấn thị giác.'],
+          suggestions: ['Dùng 3–5 từ khóa lớn trên ảnh, tránh nhồi quá nhiều chữ.']
+        },
+        {
+          key: 'tags',
+          title: 'TAGS & HASHTAGS',
+          icon: '#',
+          current: tags.length ? `Video có ${tags.length} tags từ dữ liệu YouTube API.` : 'Video chưa có tags công khai trong dữ liệu YouTube API.',
+          strengths: [tags.length ? 'Có bộ tag hỗ trợ YouTube hiểu chủ đề.' : 'Có thể bổ sung tags sát ngách hơn.'],
+          improvements: ['Ưu tiên tag dài 2–5 từ, đúng ngách, tránh tag quá rộng.'],
+          suggestions: tags.slice(0, 5).length ? tags.slice(0, 5) : ['thêm từ khóa chính', 'từ khóa phụ', 'chủ đề video']
+        },
+        {
+          key: 'trend',
+          title: 'CHỦ ĐỀ & XU HƯỚNG',
+          icon: '↗',
+          current: `Video hiện có ${formatVNNumber(views)} lượt xem, khoảng ${formatVNNumber(vph)} VPH.`,
+          strengths: [vph > 100 ? 'Tốc độ xem/giờ đang tốt.' : 'Có dữ liệu thật để đánh giá hiệu suất ban đầu.'],
+          improvements: ['So sánh thêm với video cùng chủ đề để quyết định nhân bản format hay đổi hướng.'],
+          suggestions: ['Làm tiếp video cùng cụm từ khóa nếu VPH cao hơn trung bình kênh.']
+        },
+        {
+          key: 'pinned',
+          title: 'BÌNH LUẬN GHIM',
+          icon: '◆',
+          current: video?._comments?.length ? 'Đã lấy được bình luận nổi bật từ YouTube API để tham khảo phản hồi.' : 'Chưa có dữ liệu bình luận hoặc video tắt bình luận.',
+          strengths: ['Có thể dùng bình luận ghim để tăng chuyển đổi.'],
+          improvements: ['Ghim bình luận chứa CTA/link/tóm tắt lợi ích rõ ràng.'],
+          suggestions: ['“Anh chị muốn nhận tài liệu/checklist thì xem link trong mô tả hoặc bình luận này.”']
+        }
+      ],
+      contentStyle: {
+        contentBullets: [
+          'Nội dung cần bám sát lời hứa trong tiêu đề để giữ chân người xem.',
+          `Hiệu suất hiện tại: ${formatVNNumber(views)} views, ${formatVNNumber(likes)} likes, ${formatVNNumber(comments)} comments.`,
+          engagementRate > 1 ? 'Tỷ lệ tương tác đang có tín hiệu tốt.' : 'Tỷ lệ tương tác còn thấp, nên tăng câu hỏi/CTA trong video.',
+          'Nên đưa lợi ích chính trong 5–10 giây đầu.'
+        ],
+        styleBullets: [
+          'Phong cách nên rõ ràng, vào thẳng vấn đề và có nhịp dựng nhanh hơn ở đoạn mở đầu.',
+          'Cần thêm pattern interrupt, chữ nhấn mạnh hoặc B-roll nếu phần trình bày dài.',
+          'Âm thanh, ánh sáng và bố cục thumbnail nên đồng bộ với tệp người xem mục tiêu.'
+        ],
+        strengths: ['Có dữ liệu thật từ YouTube API để đối chiếu hiệu suất.', hasHashtag ? 'Có dùng từ khóa/hashtag.' : 'Có thể tối ưu thêm từ khóa.'],
+        warnings: [titleTooLong ? 'Tiêu đề dài dễ bị cắt.' : 'Cần kiểm tra CTR thực tế trong YouTube Studio.', vph < 20 ? 'VPH chưa cao, cần cải thiện hook và thumbnail.' : 'Nên nhân bản chủ đề nếu retention tốt.']
+      },
+      conclusion: {
+        headline: vph > 100 ? 'Video có tín hiệu tốt, nên nhân bản chủ đề và tối ưu thêm để tăng chuyển đổi.' : 'Video có nền tảng dữ liệu nhưng cần tối ưu lại hook, thumbnail và CTA để tăng hiệu suất.',
+        badges: [
+          vph > 100 ? 'VPH tốt' : 'Cần tăng VPH',
+          hasLink ? 'Có CTA/link' : 'Thiếu CTA/link',
+          tags.length ? 'Có tags' : 'Thiếu tags'
+        ]
+      }
+    };
+  };
+
+  const analyzeVideoWithGemini = async (video: any) => {
+    const fallback = buildFallbackVideoAudit(video);
+    if (!geminiApiKey) return fallback;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+      const stats = video?.statistics || {};
+      const channelStats = video?._channelInfo?.statistics || {};
+      const dataForAi = {
+        videoId: video?.id,
+        title: video?.snippet?.title,
+        description: video?.snippet?.description,
+        tags: video?.snippet?.tags || [],
+        categoryId: video?.snippet?.categoryId,
+        categoryName: getCategoryName(video?.snippet?.categoryId),
+        publishedAt: video?.snippet?.publishedAt,
+        duration: formatDuration(video?.contentDetails?.duration),
+        viewCount: parseInt(stats.viewCount || '0') || 0,
+        likeCount: parseInt(stats.likeCount || '0') || 0,
+        commentCount: parseInt(stats.commentCount || '0') || 0,
+        vph: calculateVideoVph(parseInt(stats.viewCount || '0') || 0, video?.snippet?.publishedAt),
+        channelTitle: video?.snippet?.channelTitle,
+        channelCountry: video?._channelInfo?.snippet?.country || 'N/A',
+        channelSubscribers: parseInt(channelStats.subscriberCount || '0') || 0,
+        channelViews: parseInt(channelStats.viewCount || '0') || 0,
+        comments: (video?._comments || []).slice(0, 6).map((c: any) => ({ author: c.authorDisplayName, text: String(c.textDisplay || '').replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, '') }))
+      };
+
+      const prompt = `Bạn là chuyên gia tối ưu YouTube. Hãy phân tích video bằng tiếng Việt, nhưng PHẢI dựa trên dữ liệu thật từ YouTube API V3 dưới đây, không bịa số liệu mới.
+
+DỮ LIỆU YOUTUBE API V3:
+${JSON.stringify(dataForAi, null, 2)}
+
+Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, đúng schema:
+{
+  "overview": [
+    {"key":"title","title":"TIÊU ĐỀ (TITLE)","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"description","title":"MÔ TẢ (DESCRIPTION)","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"thumbnail","title":"THUMBNAIL","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"tags","title":"TAGS & HASHTAGS","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"trend","title":"CHỦ ĐỀ & XU HƯỚNG","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]},
+    {"key":"pinned","title":"BÌNH LUẬN GHIM","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]}
+  ],
+  "contentStyle": {
+    "contentBullets":["ít nhất 8 ý chi tiết, cụ thể, dựa vào title/description/comment/tags/thống kê"],
+    "styleBullets":["ít nhất 8 ý chi tiết, cụ thể, nêu rõ nhịp dựng, hook, CTA, âm thanh, hình ảnh, cách trình bày"],
+    "strengths":["..."],
+    "warnings":["..."]
+  },
+  "conclusion": {"headline":"...", "badges":["...", "..."]}
+}
+
+Quy tắc:
+- Không bịa view/sub/like/comment; nếu nhắc số phải lấy đúng từ JSON dữ liệu.
+- Phân tích thumbnail dựa theo tiêu đề, chủ đề và thumbnail URL, không khẳng định chi tiết hình ảnh nếu không chắc.
+- Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.
+- Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.
+- Với tags và bình luận, phải ưu tiên hiển thị/nhận xét từ dữ liệu YouTube API đã cung cấp.`;
+
+      const response = await ai.models.generateContent({
+        model: geminiModel,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      });
+      const parsed = parseGeminiJsonObject(response.text || '');
+      if (!parsed) return fallback;
+      return {
+        source: 'gemini_youtube_v3',
+        overview: Array.isArray(parsed.overview) ? parsed.overview : fallback.overview,
+        contentStyle: parsed.contentStyle || fallback.contentStyle,
+        conclusion: parsed.conclusion || fallback.conclusion,
+      };
+    } catch (err) {
+      console.warn('Gemini video audit failed, using fallback:', err);
+      return fallback;
+    }
   };
 
   const analyzeVideo = async (targetId?: string | any) => {
@@ -2763,24 +4045,42 @@ ${topKeywordsStr}`;
           console.warn("Could not fetch comments", e);
         }
 
-        setVideoResult(v);
-        setStatus('Đã lấy thông tin video.');
+        // BƯỚC 61: Ưu tiên hiển thị dữ liệu thật từ YouTube API V3 trước.
+        // Gemini chỉ chạy phân tích bổ sung ở nền sau đó, không chặn kết quả YouTube.
+        v._estimatedRpmRange = getVideoRpmRange(v.snippet?.categoryId, v._channelInfo?.snippet?.country);
+        v._vph = calculateVideoVph(parseInt(v.statistics?.viewCount || '0') || 0, v.snippet?.publishedAt);
+        v._aiVideoAudit = buildFallbackVideoAudit(v); // report nhanh dựa 100% dữ liệu YouTube API
 
-        // Save to project history
+        const youtubeFirstResult = { ...v };
+        setVideoResult(youtubeFirstResult);
+        setStatus('Đã hiển thị dữ liệu YouTube API V3 trước. Gemini AI đang phân tích bổ sung...');
+        setIsAnalyzingVideo(false);
+
+        // Lưu bản YouTube trước để người dùng thấy ngay và lịch sử có dữ liệu ngay.
         setVideoProjects(prev => {
-          const exists = prev.find(p => p.id === v.id);
-          let next;
-          if (exists) {
-            next = [v, ...prev.filter(p => p.id !== v.id)];
-          } else {
-            next = [v, ...prev];
-          }
-          const limited = next.slice(0, 20); // Keep last 20
-          localStorage.setItem('youtube_video_projects', JSON.stringify(limited));
-          return limited;
+          const next = [youtubeFirstResult, ...prev.filter(p => p.id !== youtubeFirstResult.id)].slice(0, 20);
+          localStorage.setItem('youtube_video_projects', JSON.stringify(next));
+          return next;
         });
+
+        // Chạy Gemini sau khi dữ liệu YouTube đã lên giao diện.
+        analyzeVideoWithGemini(youtubeFirstResult)
+          .then((aiVideoAudit) => {
+            const geminiEnhancedResult = { ...youtubeFirstResult, _aiVideoAudit: aiVideoAudit };
+            setVideoResult((current: any) => current?.id === geminiEnhancedResult.id ? geminiEnhancedResult : current);
+            setVideoProjects(prev => {
+              const next = [geminiEnhancedResult, ...prev.filter(p => p.id !== geminiEnhancedResult.id)].slice(0, 20);
+              localStorage.setItem('youtube_video_projects', JSON.stringify(next));
+              return next;
+            });
+            setStatus('YouTube API đã hiển thị trước; Gemini AI đã phân tích bổ sung xong.');
+          })
+          .catch((err) => {
+            console.warn('Gemini background video audit failed:', err);
+            setStatus('Đã hiển thị dữ liệu YouTube API V3. Gemini AI chưa phân tích được, vẫn giữ kết quả YouTube.');
+          });
       } else {
-        alert('Không tìm thấy video. Vui lòng kiểm tra lại ID/URL.');
+        setStatus('Không tìm thấy video. Vui lòng kiểm tra lại ID/URL.');
         setStatus('Không tìm thấy video.');
       }
     } catch (error) {
@@ -2863,48 +4163,307 @@ ${topKeywordsStr}`;
     return (diff >= 0 ? '+' : '') + diff.toLocaleString();
   };
 
-  return (
-    <div className="min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
-      {/* Header */}
-      <div className="bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
+
+
+  const renderVideoAiAuditSection = () => {
+    const audit = videoResult?._aiVideoAudit;
+    if (!audit) return null;
+
+    const overview = Array.isArray(audit.overview) ? audit.overview : [];
+    const contentStyle = audit.contentStyle || {};
+    const conclusion = audit.conclusion || {};
+    const realTags = Array.isArray(videoResult?.snippet?.tags) ? videoResult.snippet.tags : [];
+    const realComments = Array.isArray(videoResult?._comments) ? videoResult._comments : [];
+    const cleanHtmlText = (txt: any) => String(txt || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+    const iconMap: Record<string, any> = {
+      title: FileText,
+      description: AlignLeft,
+      thumbnail: Image,
+      tags: Tag,
+      trend: TrendingUp,
+      pinned: Pin,
+    };
+
+    const buildAuditText = () => {
+      const lines: string[] = [];
+      lines.push('ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO');
+      lines.push(`Video: ${videoResult?.snippet?.title || ''}`);
+      lines.push(`Link: https://www.youtube.com/watch?v=${videoResult?.id || ''}`);
+      lines.push(`Nguồn: YouTube API V3 + Gemini AI`);
+      lines.push('');
+      overview.forEach((item: any) => {
+        lines.push(`## ${item.title || item.key}`);
+        lines.push(`Hiện tại: ${item.current || ''}`);
+        if (item.key === 'tags' && realTags.length) lines.push(`Tags API: ${realTags.join(', ')}`);
+        if (item.key === 'pinned' && realComments.length) {
+          realComments.slice(0, 5).forEach((c: any, i: number) => lines.push(`Bình luận ${i + 1}: @${c.authorDisplayName || ''} - ${cleanHtmlText(c.textDisplay)}`));
+        }
+        lines.push(`Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`);
+        lines.push(`Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`);
+        lines.push(`Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`);
+        lines.push('');
+      });
+      lines.push('PHÂN TÍCH NỘI DUNG');
+      asArrayText(contentStyle.contentBullets).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
+      lines.push('PHÂN TÍCH PHONG CÁCH');
+      asArrayText(contentStyle.styleBullets).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
+      lines.push('ĐIỂM MẠNH NỔI BẬT');
+      asArrayText(contentStyle.strengths).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
+      lines.push('VẤN ĐỀ CẦN LƯU Ý');
+      asArrayText(contentStyle.warnings).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
+      lines.push('KẾT LUẬN');
+      lines.push(conclusion.headline || '');
+      return lines.join('\n');
+    };
+
+    const exportAuditText = () => downloadAsTxt(buildAuditText(), `Gemini_YouTube_Audit_${videoResult?.id || 'video'}`);
+    const copyOverviewCard = (item: any) => {
+      const lines = [
+        item.title || 'PHÂN TÍCH',
+        `Hiện tại: ${item.current || ''}`,
+        item.key === 'tags' && realTags.length ? `Tags API: ${realTags.join(', ')}` : '',
+        item.key === 'pinned' && realComments.length ? `Bình luận API: ${realComments.slice(0, 3).map((c: any) => '@' + (c.authorDisplayName || '') + ': ' + cleanHtmlText(c.textDisplay)).join(' | ')}` : '',
+        `Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`,
+        `Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`,
+        `Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`
+      ].filter(Boolean).join('\n');
+      copyToClipboard(lines);
+    };
+    const exportOverviewCard = (item: any) => {
+      const title = String(item.title || item.key || 'phan_tich').replace(/[^a-zA-Z0-9À-ỹ_-]+/g, '_');
+      const lines = [
+        item.title || 'PHÂN TÍCH',
+        `Hiện tại: ${item.current || ''}`,
+        item.key === 'tags' && realTags.length ? `Tags API: ${realTags.join(', ')}` : '',
+        item.key === 'pinned' && realComments.length ? `Bình luận API:\n${realComments.slice(0, 10).map((c: any, i: number) => `${i + 1}. @${c.authorDisplayName || ''}: ${cleanHtmlText(c.textDisplay)}`).join('\n')}` : '',
+        `Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`,
+        `Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`,
+        `Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`
+      ].filter(Boolean).join('\n');
+      downloadAsTxt(lines, `${title}_${videoResult?.id || 'video'}`);
+    };
+    const contentText = asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).map(x => `- ${x}`).join('\n');
+    const styleText = asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).map(x => `- ${x}`).join('\n');
+
+    return (
+      <div className="space-y-8 text-left video-ai-audit-section">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+              <Star size={18} />
+            </div>
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase leading-tight">ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO</h2>
+          </div>
+          <button onClick={exportAuditText} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm shrink-0">
+            <Download size={14} /> TẢI TXT
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {overview.map((item: any, idx: number) => {
+            const IconComp = iconMap[item.key] || FileText;
+            const isTags = item.key === 'tags';
+            const isPinned = item.key === 'pinned';
+            return (
+              <div key={`${item.key || idx}`} className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6 text-left relative overflow-hidden border-l-4 border-l-sky-500">
+                <div className="absolute right-4 top-4 text-gray-100"><IconComp size={72} /></div>
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <IconComp size={16} />
+                      </div>
+                      <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 leading-tight">{item.title || 'PHÂN TÍCH'}</h3>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => copyOverviewCard(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Copy mục này"><Copy size={14} /></button>
+                      <button onClick={() => exportOverviewCard(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50" title="Tải mục này"><Download size={14} /></button>
+                    </div>
+                  </div>
+
+                  <p className="text-[13px] italic text-gray-700 leading-relaxed min-h-[48px] border-l border-blue-100 pl-3">{item.current}</p>
+
+                  {isTags && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU THỰC TỪ API ({realTags.length} TAGS):</div>
+                      {realTags.length > 0 ? (
+                        <div className="max-h-[118px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2 pr-1">
+                          {realTags.slice(0, 24).map((tag: string, i: number) => (
+                            <span key={i} className="px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-600">{tag}</span>
+                          ))}
+                        </div>
+                      ) : <div className="text-[12px] text-gray-400 italic">YouTube API chưa trả về tags công khai.</div>}
+                    </div>
+                  )}
+
+                  {isPinned && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU BÌNH LUẬN TỪ API:</div>
+                      {realComments.length > 0 ? (
+                        <div className="space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
+                          {realComments.slice(0, 3).map((c: any, i: number) => (
+                            <div key={i} className="bg-white border border-gray-100 rounded-lg p-2 text-[11px] leading-snug">
+                              <div className="font-black text-gray-900 mb-1">@{c.authorDisplayName || 'viewer'} <span className="text-gray-400 font-bold">• {formatVNNumber(c.likeCount || 0)} like</span></div>
+                              <div className="text-gray-600 whitespace-pre-wrap line-clamp-3">{cleanHtmlText(c.textDisplay)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <div className="text-[12px] text-gray-400 italic">Chưa có bình luận công khai hoặc video tắt bình luận.</div>}
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-green-600 tracking-widest mb-2">ĐIỂM MẠNH:</div>
+                    <ul className="space-y-1.5">
+                      {asArrayText(item.strengths).slice(0, 4).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">✓ {x}</li>)}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-2">CẦN CẢI THIỆN:</div>
+                    <ul className="space-y-1.5">
+                      {asArrayText(item.improvements).slice(0, 4).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">• {x}</li>)}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] font-black uppercase text-blue-600 tracking-widest mb-2">GỢI Ý:</div>
+                    <div className="space-y-2">
+                      {asArrayText(item.suggestions).slice(0, 3).map((x, i) => (
+                        <div key={i} className="bg-gray-50 border border-gray-100 rounded-lg p-2 text-[12px] font-bold italic text-gray-800 leading-snug">“{x}”</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 mt-8">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0"><AlignLeft size={18} /></div>
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase leading-tight">PHÂN TÍCH NỘI DUNG & PHONG CÁCH VIDEO</h2>
+          </div>
+          <button onClick={exportAuditText} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm shrink-0">
+            <Download size={14} /> TẢI TXT
+          </button>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden text-left">
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2"><Bot size={16} className="text-indigo-500" /> PHÂN TÍCH NỘI DUNG</h3>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => copyToClipboard(contentText)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Copy phân tích nội dung"><Copy size={16} /></button>
+                  <button onClick={() => downloadAsTxt(contentText, `Phan_tich_noi_dung_${videoResult?.id || 'video'}`)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Tải phân tích nội dung"><Download size={16} /></button>
+                </div>
+              </div>
+              <ul className="space-y-4">
+                {asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).map((x, i) => <li key={i} className="flex gap-3 text-[14px] text-gray-700 leading-relaxed"><span className="text-blue-500 font-black mt-0.5">•</span><span>{x}</span></li>)}
+              </ul>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2"><Star size={16} className="text-purple-500" /> PHÂN TÍCH PHONG CÁCH</h3>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => copyToClipboard(styleText)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Copy phân tích phong cách"><Copy size={16} /></button>
+                  <button onClick={() => downloadAsTxt(styleText, `Phan_tich_phong_cach_${videoResult?.id || 'video'}`)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Tải phân tích phong cách"><Download size={16} /></button>
+                </div>
+              </div>
+              <ul className="space-y-4">
+                {asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).map((x, i) => <li key={i} className="flex gap-3 text-[14px] text-gray-700 leading-relaxed"><span className="text-purple-500 font-black mt-0.5">•</span><span>{x}</span></li>)}
+              </ul>
+            </div>
+          </div>
+          <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div className="text-[11px] font-black uppercase text-green-600 tracking-widest mb-3">ĐIỂM MẠNH NỔI BẬT</div>
+              <div className="space-y-2">{asArrayText(contentStyle.strengths).map((x, i) => <div key={i} className="bg-green-50 border border-green-100 text-green-800 px-4 py-2 rounded-xl text-[12px] font-bold">✓ {x}</div>)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-black uppercase text-orange-500 tracking-widest mb-3">VẤN ĐỀ CẦN LƯU Ý</div>
+              <div className="space-y-2">{asArrayText(contentStyle.warnings).map((x, i) => <div key={i} className="bg-orange-50 border border-orange-100 text-orange-800 px-4 py-2 rounded-xl text-[12px] font-bold">⚠ {x}</div>)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
+          <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
+          <div className="relative z-10">
+            <div className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
+            <div className="flex flex-wrap gap-2 mt-5">
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[11px] font-black">{badge}</span>)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="vtw-mobile-app min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
+      {/* Header */}
+      <div className="vtw-app-header bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
             <img
               src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
               className="w-7 h-7 rounded-full"
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            <span className="whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            {isMobileViewport ? (
+              <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche Pro</span>
+            ) : (
+              <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            )}
           </h1>
 
-          <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+          <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
-              <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0">
-                <img
-                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
-                  alt="avatar"
-                  className="w-6 h-6 rounded-full shadow-sm"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="leading-tight max-w-[115px]">
-                  <div className="text-[10px] font-black text-gray-700 truncate">{user.displayName || user.email}</div>
-                  <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
-                    {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
-                  </div>
-                </div>
+              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
                 <button
-                  onClick={async () => {
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAccountModal(true);
+                  }}
+                  className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
+                  title="Tài khoản & hạn sử dụng"
+                >
+                  <img
+                    src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+                    alt="avatar"
+                    className="w-6 h-6 rounded-full shadow-sm"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="leading-tight text-left">
+                    <div className="vtw-user-email text-[10px] font-black text-gray-800 whitespace-nowrap">{user.email || user.displayName || 'Tài khoản'}</div>
+                    <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                      {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
                     try {
                       await logoutUser();
-                    } catch (e: any) {
-                      console.error('Lỗi đăng xuất:', e);
+                    } catch (err) {
+                      console.error('Lỗi đăng xuất:', err);
                     }
                   }}
-                  className="ml-1 text-gray-500 hover:text-red-500 transition-colors"
-                  title="Đăng xuất"
+                  className="vtw-header-logout px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
                 >
-                  <LogOut size={14} />
+                  Đăng xuất
                 </button>
               </div>
             ) : (
@@ -2913,7 +4472,7 @@ ${topKeywordsStr}`;
                   try {
                     await loginWithGoogle();
                   } catch (e: any) {
-                    alert('Lỗi đăng nhập: ' + e.message);
+                    setStatus('Lỗi đăng nhập: ' + e.message);
                   }
                 }}
                 className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[11px] shrink-0"
@@ -2937,7 +4496,7 @@ ${topKeywordsStr}`;
               </a>
             ) : (
               <button
-                onClick={() => alert('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
+                onClick={() => setStatus('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
                 title="Cần đăng nhập để Nâng cấp Gói"
               >
@@ -2959,50 +4518,50 @@ ${topKeywordsStr}`;
       </div>
 
       {/* Main Container */}
-      <div className="p-4 pt-2">
+      <div className="vtw-page-wrap p-4 pt-2">
         {!user ? (
           <div className="relative min-h-[calc(100vh-92px)] overflow-hidden rounded-xl bg-blue-50/80">
             {/* Nền preview giao diện chính khi chưa đăng nhập */}
             <div className="absolute inset-0 p-4 pt-2 blur-[2.5px] opacity-55 pointer-events-none select-none">
-              <div className="flex justify-center gap-1 mb-0 relative z-10">
+              <div className="vtw-tabs flex justify-center gap-1 mb-0 relative z-10">
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#3498db] text-white border-t border-x border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)] font-bold flex items-center gap-2">
-                  <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
+                  <Search size={16} /> <span className="vtw-tab-full">TÌM KÊNH & ĐÁNH GIÁ TỪ KHÓA</span><span className="vtw-tab-short">Tìm kênh</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <BarChart2 size={16} /> Phân tích đối thủ (Spy)
+                  <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
+                  <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <Video size={16} /> Kiểm tra Link Video
+                  <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
+                  <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 TÌM NGÁCH YOUTUBE</span><span className="vtw-tab-short">Ngách</span>
                 </div>
               </div>
 
-              <div className="bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
-                <div className="grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
-                  <div className="col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
+              <div className="vtw-main-panel bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
+                <div className="vtw-filter-grid vtw-main-search-card grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                  <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: quân sự</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Việt Nam <span>▼</span></div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Quét tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Video:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Views:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Lượt xem tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
                     </div>
                   </div>
 
-                  <div className="col-span-12 lg:col-span-3 flex items-start justify-end">
+                  <div className="vtw-api-wrap col-span-12 lg:col-span-3 flex items-start justify-end">
                     <div className="bg-white border-2 border-blue-100 p-3 rounded-xl shadow-sm w-[500px] h-[110px]">
                       <div className="flex items-center justify-between mb-2"><span className="text-[10px] font-black text-gray-400 uppercase">Hệ thống API</span><div className="flex gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400"></span><span className="w-2 h-2 rounded-full bg-indigo-500"></span></div></div>
                       <div className="text-[11px] font-bold text-gray-700 flex justify-between"><span>YouTube V3:</span><span className="text-blue-600">0 Keys</span></div>
@@ -3047,7 +4606,7 @@ ${topKeywordsStr}`;
                     try {
                       await loginWithGoogle();
                     } catch (e: any) {
-                      alert('Lỗi đăng nhập: ' + e.message);
+                      setStatus('Lỗi đăng nhập: ' + e.message);
                     }
                   }}
                   className="px-8 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
@@ -3086,62 +4645,62 @@ ${topKeywordsStr}`;
         ) : (
           <>
         {/* Tabs - Centered */}
-        <div className="flex justify-center gap-1 mb-0 relative z-10">
+        <div className="vtw-tabs flex justify-center gap-1 mb-0 relative z-10">
           <button 
             onClick={() => setActiveTab(1)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 1 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 1 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <Search size={16} /> Tìm kênh & Đánh giá Từ khóa
+            <Search size={16} /> <span className="vtw-tab-full">TÌM KÊNH & ĐÁNH GIÁ TỪ KHÓA</span><span className="vtw-tab-short">Tìm kênh</span>
           </button>
           <button 
             onClick={() => setActiveTab(2)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <BarChart2 size={16} /> Phân tích đối thủ (Spy)
-          </button>
-          <button 
-            onClick={() => setActiveTab(3)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
-          >
-            <UserRoundSearch size={16} /> Theo dõi Đối thủ (Tracking)
+            <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
           </button>
           <button 
             onClick={() => setActiveTab(4)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#e67e22] text-white border-[#d35400] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 4 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <Video size={16} /> Kiểm tra Link Video
+            <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
           </button>
           <button 
-            onClick={() => setActiveTab(5)}
-            className={`px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+            onClick={() => setActiveTab(3)}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 3 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <LayoutGrid size={16} /> 🚀 Tìm ngách Youtube
+            <UserRoundSearch size={16} /> <span className="vtw-tab-full">THEO DÕI ĐỐI THỦ (TRACKING)</span><span className="vtw-tab-short">Tracking</span>
+          </button>
+          <button 
+            onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
+            className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 5 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
+          >
+            <LayoutGrid size={16} /> <span className="vtw-tab-full">🚀 TÌM NGÁCH YOUTUBE</span><span className="vtw-tab-short">Ngách</span>
           </button>
         </div>
 
-        <div className="bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
+        <div className="vtw-main-panel bg-[#d9d9d9] border border-[#999] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.1)] rounded-sm relative -mt-[1px]">
           {activeTab === 1 ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
-                <div className="col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
+              <div className="vtw-filter-grid vtw-main-search-card grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
+                <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                   {/* Group 1 */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-keyword flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</label>
                       <input 
                         type="text" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
                         value={config.keyword}
                         onChange={(e) => setConfig({ ...config, keyword: e.target.value })}
-                        placeholder="Ví dụ: quân sự"
+                        placeholder="Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI"
                       />
                     </div>
-                    <div className="flex items-center gap-2 relative">
+                    <div className="vtw-field-row vtw-row-region flex items-center gap-2 relative">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</label>
-                      <div className="w-2/3 relative" ref={regionRef}>
+                      <div className="vtw-region-wrap w-2/3 relative" ref={regionRef}>
                         <button 
                           onClick={() => setShowRegionList(!showRegionList)}
-                          className="w-full border border-[#999] bg-white h-7 px-2 text-left truncate flex justify-between items-center text-[10px]"
+                          className="vtw-main-input vtw-region-button w-full border border-[#999] bg-white h-7 px-2 text-left truncate flex justify-between items-center text-[10px]"
                         >
                           {config.regions.includes('ALL') 
                             ? 'Tất cả khu vực' 
@@ -3149,31 +4708,31 @@ ${topKeywordsStr}`;
                           <span className="text-[8px]">▼</span>
                         </button>
                         {showRegionList && (
-                          <div className="absolute top-8 left-0 right-0 z-[100] bg-white border border-[#999] shadow-xl max-h-48 overflow-y-auto">
+                          <div className="vtw-region-dropdown absolute top-8 left-0 right-0 z-[100] bg-white border border-[#999] shadow-xl max-h-48 overflow-y-auto">
                             <div 
                               onClick={() => { toggleRegion('ALL'); setShowRegionList(false); }}
-                              className={`px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes('ALL') ? 'bg-blue-100 font-bold' : ''}`}
+                              className={`vtw-region-option px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes('ALL') ? 'bg-blue-100 font-bold' : ''}`}
                             >
-                              <input type="checkbox" checked={config.regions.includes('ALL')} readOnly /> Tất cả khu vực (Toàn cầu)
+                              <input type="checkbox" className="vtw-region-check" checked={config.regions.includes('ALL')} readOnly /> Tất cả khu vực (Toàn cầu)
                             </div>
                             <div className="border-t border-[#eee]"></div>
                             {REGIONS.filter(r => r.code !== '').map(r => (
                               <div 
                                 key={r.code}
                                 onClick={() => toggleRegion(r.code)}
-                                className={`px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes(r.code) ? 'bg-blue-100 font-bold' : ''}`}
+                                className={`vtw-region-option px-2 py-1 cursor-pointer hover:bg-blue-50 text-[10px] flex items-center gap-2 ${config.regions.includes(r.code) ? 'bg-blue-100 font-bold' : ''}`}
                               >
-                                <input type="checkbox" checked={config.regions.includes(r.code)} readOnly /> {r.name} ({r.code})
+                                <input type="checkbox" className="vtw-region-check" checked={config.regions.includes(r.code)} readOnly /> {r.name} ({r.code})
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="vtw-field-row vtw-row-published flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</label>
                       <select 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-1 outline-none font-medium"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-1 outline-none font-medium"
                         value={config.publishedAfter}
                         onChange={(e) => setConfig({ ...config, publishedAfter: e.target.value })}
                       >
@@ -3188,60 +4747,62 @@ ${topKeywordsStr}`;
 
                   {/* Group 2 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Quét tối đa:</label>
+                    <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideos}
                         onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Sub:</label>
-                      <input 
-                        type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                    <div className="vtw-field-row vtw-row-minsub flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minSub}
-                        onChange={(e) => setConfig({ ...config, minSub: parseInt(e.target.value) })}
+                        onChange={(e) => setConfig({ ...config, minSub: parseRangeNumber(e.target.value, 0) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Sub:</label>
-                      <input 
-                        type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                    <div className="vtw-field-row vtw-row-maxsub flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxSub}
-                        onChange={(e) => setConfig({ ...config, maxSub: parseInt(e.target.value) })}
+                        onChange={(e) => setConfig({ ...config, maxSub: parseRangeNumber(e.target.value, 10000000) })}
                       />
                     </div>
                   </div>
 
                   {/* Group 3 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Video:</label>
+                    <div className="vtw-field-row vtw-row-minvideo flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minVideo}
                         onChange={(e) => setConfig({ ...config, minVideo: parseInt(e.target.value) })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Max Video:</label>
+                    <div className="vtw-field-row vtw-row-maxvideo flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideo}
                         onChange={(e) => setConfig({ ...config, maxVideo: parseInt(e.target.value) || 0 })}
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Min Views:</label>
+                    <div className="vtw-field-row vtw-row-minviews flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Lượt xem tối thiểu:</label>
                       <input 
                         type="number" 
-                        className="w-2/3 border border-[#999] bg-white h-7 px-2"
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minViews}
                         onChange={(e) => setConfig({ ...config, minViews: parseInt(e.target.value) })}
                       />
@@ -3301,9 +4862,9 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Bottom Actions Row */}
-              <div className="flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
+              <div className="vtw-bottom-actions vtw-auto-hunt-box flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="vtw-auto-hunt-wrap flex items-center gap-2">
                     <input 
                       type="checkbox" 
                       id="autoHunt" 
@@ -3311,8 +4872,21 @@ ${topKeywordsStr}`;
                       checked={config.autoNiche}
                       onChange={(e) => setConfig({ ...config, autoNiche: e.target.checked })}
                     />
-                    <label htmlFor="autoHunt" className="font-bold text-[12px] text-[#d35400] cursor-pointer flex flex-col">
+                    <label htmlFor="autoHunt" className="vtw-auto-hunt-text font-bold text-[12px] text-[#d35400] cursor-pointer flex flex-col">
                       <span>Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</span>
+                    </label>
+                  </div>
+                  <div className="vtw-deep-drill-toggle flex items-center gap-2 bg-white border border-orange-200 rounded-lg px-3 py-2 shadow-sm">
+                    <input
+                      type="checkbox"
+                      id="deepDrillSmallTrend"
+                      className="w-5 h-5 cursor-pointer accent-[#0ea5e9]"
+                      checked={!!config.deepDrillSmallTrend}
+                      onChange={(e) => setConfig({ ...config, deepDrillSmallTrend: e.target.checked })}
+                    />
+                    <label htmlFor="deepDrillSmallTrend" className="cursor-pointer flex flex-col leading-tight">
+                      <span className="font-black text-[12px] text-[#0f766e]">Săn kênh nhỏ / Mới Trend</span>
+                      <span className="text-[10px] text-slate-500">Deep Drill: dưới 50.000 sub, 30 ngày</span>
                     </label>
                   </div>
                 </div>
@@ -3321,16 +4895,16 @@ ${topKeywordsStr}`;
                   {!isHunting ? (
                     <button 
                       onClick={startHunter}
-                      className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
+                      className="vtw-start-button min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
                     >
-                      <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH
+                      <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : ""}
                     </button>
                   ) : (
                     <button 
                       onClick={stopHunter}
-                      className="min-w-[200px] bg-red-600 text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 shadow-[0_4px_0_#900] transition-all animate-pulse"
+                      className="vtw-start-button min-w-[200px] bg-red-600 text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 shadow-[0_4px_0_#900] transition-all animate-pulse"
                     >
-                      <StopCircle size={20} fill="white" /> DỪNG QUÉT
+                      <StopCircle size={20} fill="white" /> DỪNG QUÉT ({Math.round(progress)}%)
                     </button>
                   )}
                 </div>
@@ -3368,7 +4942,7 @@ ${topKeywordsStr}`;
                     </button>
                   </div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse">
+                    <table className="vtw-tracking-table w-full text-left border-collapse">
                       <thead className="bg-[#fdf2e9] sticky top-0 z-10 border-b border-orange-200">
                         <tr>
                           <th className="px-3 py-1.5 text-[11px] font-bold text-orange-800 border-r border-orange-100 italic w-12 text-center">STT</th>
@@ -3426,8 +5000,8 @@ ${topKeywordsStr}`;
               )}
 
 
-              <div className="flex-1 flex flex-col bg-white border border-[#999] shadow-sm relative min-h-[450px] h-[65vh] max-h-[85vh] overflow-hidden">
-                  <div className="bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px] shrink-0">
+              <div className="vtw-results-box flex-1 flex flex-col bg-white border border-[#999] shadow-sm relative min-h-[450px] h-[65vh] max-h-[85vh] overflow-hidden">
+                  <div className="vtw-results-header bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px] shrink-0">
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-2"><CheckCircle2 size={16} /> DANH SÁCH KÊNH QUÉT ĐƯỢC (TỰ ĐỘNG LỌC THEO ĐIỀU KIỆN)</span>
                       <span className="px-2 py-0.5 bg-blue-500 rounded text-[11px] font-black shadow-sm">TỔNG: {results.length}</span>
@@ -3465,28 +5039,31 @@ ${topKeywordsStr}`;
                       </button>
                     </div>
                   </div>
-                  <div className="flex-1 overflow-auto bg-white">
-                    <table className="w-full text-left border-collapse min-w-[1300px]">
+                  <div className="vtw-results-table-wrap flex-1 overflow-auto bg-white">
+                    <table className="vtw-results-table w-full text-left border-collapse min-w-[1580px]">
                       <thead className="bg-[#ecf0f1] border-b border-[#bdc3c7] sticky top-0 z-20 shadow-sm text-black">
                         <tr>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] w-10 text-center">STT</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] w-12 text-center">ICON</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[180px]">TÊN KÊNH</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px]">MÃ KÊNH</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[150px]">URL</th>
-                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-16">QG</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[150px] text-gray-900">TỪ KHÓA/NGÁCH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[135px] text-gray-900">CHỦ ĐỀ</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[120px] text-gray-900">THU NHẬP ($)</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] min-w-[110px]">URL</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center min-w-[88px]">QUỐC GIA</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-28">NGÀY TẠO</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-24">TUỔI KÊNH (NGÀY)</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-24">SUB</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-28">VIEWS</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-20">VIDEOS</th>
                           <th className="px-2 py-2 font-bold text-[11px] text-center w-24 text-orange-600">★ ĐIỂM NGÁCH</th>
-                          <th className="px-2 py-2 font-bold text-[11px] text-center w-16">XÓA</th>
+                          <th className="px-2 py-2 font-bold text-[11px] text-center min-w-[150px]">THAO TÁC</th>
                         </tr>
                       </thead>
                       <tbody>
                         {results.length === 0 && (
-                          <tr><td colSpan={13} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu săn kênh" để bắt đầu...</td></tr>
+                          <tr><td colSpan={16} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu săn kênh" để bắt đầu...</td></tr>
                         )}
                         {results.map((r, i) => (
                           <tr 
@@ -3497,18 +5074,33 @@ ${topKeywordsStr}`;
                           >
                             <td className="px-2 py-1 text-center font-mono text-gray-400 border-r border-[#ddd] w-10">{i + 1}</td>
                             <td className="px-2 py-1 text-center"><img src={r.icon} className="w-7 h-7 rounded-full border border-[#ccc] mx-auto shadow-sm" /></td>
-                            <td className="px-2 py-1 font-bold whitespace-nowrap overflow-hidden text-ellipsis text-black">{r.name}</td>
-                            <td className="px-2 py-1 text-[10px] font-mono text-[#7f8c8d]">{r.id}</td>
-                            <td className="px-2 py-1 text-[10px] text-blue-600 underline truncate hover:text-blue-800"><a href={r.url} target="_blank" rel="noreferrer">{r.url}</a></td>
-                            <td className="px-2 py-1 text-center font-bold text-gray-600">{r.country}</td>
+                            <td className="px-2 py-1 font-bold whitespace-nowrap overflow-hidden text-ellipsis text-black">
+                              <a href={r.url} target="_blank" rel="noreferrer" className="hover:underline text-black" title={`Mở kênh ${r.name}`}>
+                                {r.name}
+                              </a>
+                            </td>
+                            <td className="px-2 py-1 text-[10px] font-mono text-[#7f8c8d] break-all">{r.id}</td>
+                            <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[160px] whitespace-normal">{getChannelTrendKeyword(r)}</td>
+                            <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
+                            <td className="px-2 py-1 text-[10px] font-black text-gray-800 whitespace-nowrap" title="Ước tính từ views thật của YouTube Data API v3 × RPM tham khảo, không phải doanh thu thật YouTube trả.">{estimateIncomeFromApiViews(r)}</td>
+                            <td className="px-2 py-1 text-[9px] text-blue-600 underline hover:text-blue-800 max-w-[110px]"><a href={r.url} target="_blank" rel="noreferrer" title={r.url}>{formatChannelUrlShort(r.url, r.id)}</a></td>
+                            <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryFullName(r.country)}</td>
                             <td className="px-2 py-1 text-center text-gray-500 whitespace-nowrap">{r.publishedAt}</td>
-                            <td className="px-2 py-1 text-right text-green-700 font-medium">{r.age.toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right text-black font-bold">{r.subs.toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right text-blue-800 font-bold">{r.views.toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right text-gray-800">{r.videos.toLocaleString()}</td>
+                            <td className="px-2 py-1 text-right text-green-700 font-medium">{formatVNNumber(r.age)}</td>
+                            <td className="px-2 py-1 text-right text-black font-bold">{formatVNNumber(r.subs)}</td>
+                            <td className="px-2 py-1 text-right text-blue-800 font-bold">{formatVNNumber(r.views)}</td>
+                            <td className="px-2 py-1 text-right text-gray-800">{formatVNNumber(r.videos)}</td>
                             <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
                             <td className="px-2 py-1 text-center">
-                              <div className="flex items-center justify-center gap-1">
+                              <div className="vtw-channel-actions flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => openChannelActionMenu(e, r)}
+                                  className="vtw-mobile-action-btn bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded text-[9px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                                  title="Mở bảng thao tác kênh"
+                                >
+                                  THAO TÁC
+                                </button>
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); goToSpy(r.id); }}
                                   className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[9px] font-black shadow-sm transition-all active:scale-95 uppercase"
@@ -3529,21 +5121,19 @@ ${topKeywordsStr}`;
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    triggerConfirm('Xác nhận xóa', `Xóa kết quả kênh "${r.name}"?`, () => {
-                                      setResults(prev => {
-                                        const next = prev.filter(item => item.id !== r.id);
-                                        resultsRef.current = next;
-                                        localStorage.removeItem('youtube_hunter_results');
-                                        localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
-                                        return next;
-                                      });
-                                      setStatus(`Đã xóa kênh ${r.name}`);
+                                    setResults(prev => {
+                                      const next = prev.filter(item => item.id !== r.id);
+                                      resultsRef.current = next;
+                                      localStorage.removeItem('youtube_hunter_results');
+                                      localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
+                                      return next;
                                     });
+                                    setStatus(`Đã xóa kênh ${r.name}`);
                                   }}
-                                  className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-125"
+                                  className="vtw-delete-action text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-95 font-black uppercase"
                                   title="Xóa"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             </td>
@@ -3558,8 +5148,8 @@ ${topKeywordsStr}`;
 
 
           {activeTab === 2 ? (
-            <div className="space-y-4">
-              <div className="flex gap-4 items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
+            <div className="vtw-spy-panel space-y-4">
+              <div className="vtw-spy-toolbar flex gap-4 items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
                 <label className="font-bold text-[14px]">Channel ID:</label>
                 <input 
                   type="text" 
@@ -3643,10 +5233,10 @@ ${topKeywordsStr}`;
 
               {spyResult ? (
                 <React.Fragment>
-                  <div className="space-y-4">
-                  <div className="flex gap-4">
+                  <div className="vtw-spy-result space-y-4">
+                  <div className="vtw-spy-result-grid flex gap-4">
                     <div 
-                      className="bg-white border border-[#999] p-4 shadow-sm flex flex-col items-center justify-center min-w-[150px] shrink-0 cursor-context-menu"
+                      className="vtw-spy-profile bg-white border border-[#999] p-4 shadow-sm flex flex-col items-center justify-center min-w-[150px] shrink-0 cursor-context-menu"
                       onContextMenu={(e) => handleContextMenu(e, {
                         id: spyResult.channelInfo.id,
                         name: spyResult.channelInfo.snippet.title,
@@ -3667,8 +5257,28 @@ ${topKeywordsStr}`;
                       <a href={`https://youtube.com/channel/${spyResult.channelInfo.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-[10px] mt-1 flex items-center gap-1">
                         Xem kênh <ExternalLink size={10} />
                       </a>
+                      <button
+                        type="button"
+                        onClick={(e) => openChannelActionMenu(e, {
+                          id: spyResult.channelInfo.id,
+                          name: spyResult.channelInfo.snippet.title,
+                          url: `https://youtube.com/channel/${spyResult.channelInfo.id}`,
+                          icon: spyResult.channelInfo.logo,
+                          country: spyResult.channelInfo.snippet.country || '',
+                          publishedAt: spyResult.channelInfo.snippet.publishedAt,
+                          age: calculateChannelAge(spyResult.channelInfo.snippet.publishedAt),
+                          subs: parseInt(spyResult.channelInfo.statistics.subscriberCount || '0'),
+                          views: parseInt(spyResult.channelInfo.statistics.viewCount || '0'),
+                          videos: parseInt(spyResult.channelInfo.statistics.videoCount || '0'),
+                          score: calculateNicheScore(spyResult.channelInfo),
+                          keywordTitle: ''
+                        })}
+                        className="vtw-spy-mobile-action-btn vtw-mobile-action-btn mt-3 w-full bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-[10px] font-black shadow-sm transition-all active:scale-95 uppercase"
+                      >
+                        THAO TÁC
+                      </button>
                     </div>
-                    <div className="flex-1 bg-white border border-[#999] p-4 font-mono text-[13px] text-blue-800 leading-relaxed shadow-inner overflow-x-auto">
+                    <div className="vtw-spy-report flex-1 bg-white border border-[#999] p-4 font-mono text-[13px] text-blue-800 leading-relaxed shadow-inner overflow-x-auto">
                       <div className="mb-2 border-b border-gray-100 pb-1 flex justify-between items-center">
                         <div className="flex flex-wrap gap-x-2">
                           <span className="font-bold">Kênh:</span>
@@ -3682,6 +5292,27 @@ ${topKeywordsStr}`;
                           </a>
                         </div>
                         <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => openChannelActionMenu(e, {
+                              id: spyResult.channelInfo.id,
+                              name: spyResult.channelInfo.snippet.title,
+                              url: `https://youtube.com/channel/${spyResult.channelInfo.id}`,
+                              icon: spyResult.channelInfo.logo,
+                              country: spyResult.channelInfo.snippet.country || '',
+                              publishedAt: spyResult.channelInfo.snippet.publishedAt,
+                              age: calculateChannelAge(spyResult.channelInfo.snippet.publishedAt),
+                              subs: parseInt(spyResult.channelInfo.statistics.subscriberCount || '0'),
+                              views: parseInt(spyResult.channelInfo.statistics.viewCount || '0'),
+                              videos: parseInt(spyResult.channelInfo.statistics.videoCount || '0'),
+                              score: calculateNicheScore(spyResult.channelInfo),
+                              keywordTitle: ''
+                            })}
+                            className="vtw-spy-report-action-btn vtw-mobile-action-btn bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded text-[9px] font-black uppercase"
+                            title="Mở thao tác kênh"
+                          >
+                            THAO TÁC
+                          </button>
                           <button 
                             onClick={() => downloadAsTxt(spyResult.report, spyResult.channelInfo.snippet.title)}
                             className="p-1 hover:bg-gray-100 rounded text-green-600 transition-colors"
@@ -3793,13 +5424,13 @@ ${topKeywordsStr}`;
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white border border-[#999] flex flex-col h-[40vh] min-h-0 overflow-hidden shadow-sm">
+                  <div className="vtw-spy-videos-box bg-white border border-[#999] flex flex-col h-[40vh] min-h-0 overflow-hidden shadow-sm">
                     <div className="bg-[#2c3e50] text-white px-2 py-1 font-bold flex justify-between shrink-0">
                       <span className="flex items-center gap-2 mt-0.5"><MonitorPlay size={14}/> Video mới nhất từ kênh</span>
                       <button onClick={() => downloadTXT('spy')} className="bg-green-600 hover:bg-green-700 px-3 py-0.5 rounded text-[11px]">Tải TXT</button>
                     </div>
                     <div className="flex-1 overflow-auto">
-                      <table className="w-full text-left border-collapse">
+                      <table className="vtw-tracking-table w-full text-left border-collapse">
                         <thead className="bg-[#ecf0f1] border-b border-[#bdc3c7] sticky top-0 z-10 shadow-sm text-black">
                           <tr>
                             <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-center w-24">THUMB</th>
@@ -3857,8 +5488,8 @@ ${topKeywordsStr}`;
           ) : null}
 
           {activeTab === 3 ? (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
+            <div className="vtw-tracking-panel space-y-4">
+              <div className="vtw-tracking-toolbar flex justify-between items-center bg-[#eee] p-4 border border-[#ccc] rounded shadow-sm">
                 <div className="flex gap-2 items-center">
                   <button 
                     onClick={updateTracking}
@@ -3903,19 +5534,18 @@ ${topKeywordsStr}`;
                   </div>
                   
                   {/* Search box for tracking list */}
-                  <div className="ml-2 flex items-center bg-white border border-blue-200 rounded h-10 px-3 min-w-[250px] shadow-sm">
-                    <Search size={14} className="text-blue-400 mr-2" />
+                  <div className="vtw-tracking-search-box ml-2 flex items-center bg-white border-2 border-blue-200 rounded-xl h-10 px-3 min-w-[250px] shadow-sm">
                     <input 
                       type="text"
                       placeholder="Tìm nhanh tên kênh..."
-                      className="bg-transparent text-[12px] font-bold outline-none w-full text-gray-700"
+                      className="bg-transparent text-[12px] font-bold outline-none w-full text-gray-700 placeholder:text-slate-400"
                       value={trackingSearchTerm}
                       onChange={(e) => setTrackingSearchTerm(e.target.value)}
                     />
                     {trackingSearchTerm && (
                       <button 
                         onClick={() => setTrackingSearchTerm('')}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-gray-400 hover:text-gray-600 shrink-0"
                       >
                         <X size={14} />
                       </button>
@@ -3927,19 +5557,21 @@ ${topKeywordsStr}`;
                 </p>
               </div>
 
-              <div className="bg-white border border-[#999] flex flex-col h-[60vh] min-h-0 overflow-hidden shadow-sm">
+              <div className="vtw-tracking-table-box bg-white border border-[#999] flex flex-col h-[60vh] min-h-0 overflow-hidden shadow-sm">
                 <div className="flex-1 overflow-auto">
-                  <table className="w-full text-left border-collapse">
+                  <table className="vtw-tracking-table w-full text-left border-collapse">
                     <thead className="bg-[#e6e6e6] border-b border-[#999] sticky top-0 z-10 shadow-sm">
                     <tr>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] w-10 text-center">STT</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tên Kênh</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Mã Kênh</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Ngách/Kênh</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Chủ đề</th>
+                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Thu nhập ($)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử Sub (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng Sub/Ngày</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Lịch Sử View (Cũ → Mới)</th>
                       <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc]">Tăng View/Ngày</th>
-                      <th className="px-2 py-1 font-normal text-[11px] border-r border-[#ccc] bg-blue-50/50 !text-black">Đánh giá</th>
                       <th className="px-2 py-1 font-normal text-[11px] text-center w-12">XÓA</th>
                     </tr>
                   </thead>
@@ -3996,8 +5628,17 @@ ${topKeywordsStr}`;
                             <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-[10px] bg-gray-50/50">
-                          <div className="flex flex-wrap gap-1 items-center justify-center">
+                        <td className="px-2 py-1 text-left text-blue-700 font-bold bg-blue-50/40">
+                          {c.keywordTitle || getTrackingKeywordFromApiItem({ snippet: { title: c.name } }, c.name)}
+                        </td>
+                        <td className="px-2 py-1 text-left font-bold text-purple-700 bg-purple-50/30">
+                          {c.topic || getTopicFromKeyword(c.keywordTitle || c.name)}
+                        </td>
+                        <td className="px-2 py-1 text-left font-bold text-emerald-700 bg-emerald-50/40 whitespace-nowrap">
+                          {c.income || estimateIncomeFromTracking(c.history[c.history.length - 1]?.views || 0, c.country)}
+                        </td>
+                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-left">
+                          <div className="flex flex-wrap gap-1 items-center justify-start">
                             {c.history.length > 1 ? (
                               <>
                                 <span className="text-gray-400">
@@ -4015,9 +5656,9 @@ ${topKeywordsStr}`;
                             )}
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'subs')}</td>
-                        <td className="px-2 py-1 text-[10px] bg-gray-50/50">
-                          <div className="flex flex-wrap gap-1 items-center justify-center">
+                        <td className="px-2 py-1 text-left font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'subs')}</td>
+                        <td className="px-2 py-1 text-[10px] bg-gray-50/50 text-left">
+                          <div className="flex flex-wrap gap-1 items-center justify-start">
                             {c.history.length > 1 ? (
                               <>
                                 <span className="text-gray-400">
@@ -4035,21 +5676,8 @@ ${topKeywordsStr}`;
                             )}
                           </div>
                         </td>
-                        <td className="px-2 py-1 text-center font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
-                        <td className="px-2 py-1 text-[10px] text-center">
-                          {(() => {
-                            const viewsGrowthStr = getGrowth(c.history, 'views').replace('+', '');
-                            const viewsGrowthNum = parseInt(viewsGrowthStr.replace(/,/g, '')) || 0;
-                            return (
-                              <div className="flex flex-col items-center">
-                                <span className={`px-2 py-0.5 rounded text-white font-bold whitespace-nowrap text-[9px] shadow-sm ${viewsGrowthNum > 10000 ? 'bg-red-600' : viewsGrowthNum > 1000 ? 'bg-orange-600' : 'bg-emerald-600'}`}>
-                                  {viewsGrowthNum > 10000 ? '🔥 TĂNG TRƯỞNG MẠNH' : viewsGrowthNum > 1000 ? '⚡ TĂNG TRƯỞNG TỐT' : '📈 DỮ LIỆU ỔN ĐỊNH'}
-                                </span>
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-2 py-1 text-center">
+                        <td className="px-2 py-1 text-left font-bold text-green-600 bg-green-50/30">{getGrowth(c.history, 'views')}</td>
+                        <td className="px-2 py-1 text-left">
                              <button 
                                type="button"
                                onClick={(e) => {
@@ -4080,9 +5708,9 @@ ${topKeywordsStr}`;
           ) : null}
 
           {activeTab === 5 ? (
-            <div className="flex h-[calc(100vh-140px)] bg-white border border-[#ccc] rounded-b-xl overflow-hidden shadow-2xl relative">
+            <div className="vtw-niche-layout flex h-[calc(100vh-140px)] bg-white border border-[#ccc] rounded-b-xl overflow-hidden shadow-2xl relative">
               {/* Internal Sidebar */}
-              <div className="w-[300px] bg-[#2c3e50] text-white flex flex-col border-r border-[#1a252f] shrink-0">
+              <div className="vtw-niche-sidebar w-[300px] bg-[#2c3e50] text-white flex flex-col border-r border-[#1a252f] shrink-0">
                 <div className="p-4 border-b border-[#34495e] flex flex-col gap-3">
                   <div className="flex items-center gap-2 text-blue-400 font-black italic text-lg uppercase tracking-wider">
                     <Zap size={24} fill="currentColor" /> NICHE RESEARCH
@@ -4142,24 +5770,45 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <label className="text-[9px] uppercase font-bold text-[#95a5a6] flex justify-between">
                       Số lượng phân tích <span>{nicheVideoCount} items</span>
                     </label>
-                    <input 
+                    <input
                       type="range"
-                      min="10"
-                      max="100"
-                      step="10"
+                      min={10}
+                      max={100}
+                      step={10}
                       value={nicheVideoCount}
-                      onChange={(e) => setNicheVideoCount(parseInt(e.target.value))}
-                      className="w-full accent-blue-500 cursor-pointer"
+                      onChange={(e) => setNicheVideoCount(parseInt(e.target.value, 10))}
+                      className="vtw-niche-slider w-full accent-blue-500"
                     />
-                    <div className="flex justify-between text-[8px] text-[#7f8c8d] px-1 font-bold">
-                       <span>10</span>
-                       <span>30</span>
-                       <span>50</span>
-                       <span>100</span>
+                    <div className="vtw-niche-range-scale vtw-count-scale text-[8px] text-[#95a5a6] font-bold">
+                      <span style={{ left: '0%' }}>10</span>
+                      <span style={{ left: '22.22%' }}>30</span>
+                      <span style={{ left: '44.44%' }}>50</span>
+                      <span style={{ left: '100%' }}>100</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-2">
+                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
+                      Phạm vi Sub <span>0 → {formatVNNumber(nicheMaxSub)}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10000000}
+                      step={1000}
+                      value={nicheMaxSub}
+                      onChange={(e) => setNicheMaxSub(parseInt(e.target.value, 10) || 0)}
+                      className="vtw-niche-slider w-full accent-blue-500"
+                    />
+                    <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
+                      <span style={{ left: '0%' }}>0</span>
+                      <span style={{ left: '10%' }}>1M</span>
+                      <span style={{ left: '50%' }}>5M</span>
+                      <span style={{ left: '100%' }}>10M</span>
                     </div>
                   </div>
 
@@ -4186,7 +5835,7 @@ ${topKeywordsStr}`;
                   >
                     {isNicheSearching ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" /> ĐANG PHÂN TÍCH...
+                        <Loader2 size={16} className="animate-spin" /> ĐANG PHÂN TÍCH {Math.round(progress)}%
                       </>
                     ) : (
                       <>
@@ -4200,11 +5849,11 @@ ${topKeywordsStr}`;
                   <div className="px-4 mb-2 text-[10px] uppercase font-bold text-[#95a5a6]">Công cụ Phân tích</div>
                   <nav className="space-y-0.5">
                     {[
-                      { id: 'summary', label: 'Dashboard Tổng quan', icon: Home },
-                      { id: 'keywords', label: 'Bản đồ Từ khóa', icon: LayoutGrid },
                       { id: 'videos', label: 'Top Videos Trending', icon: BarChart3 },
+                      { id: 'channels', label: 'Kênh/Ngách Trending', icon: Users },
+                      { id: 'summary', label: 'Dashboard Tổng quan', icon: Home },
                       { id: 'shorts', label: 'Khám phá Shorts', icon: Smartphone },
-                      { id: 'channels', label: 'Phân tích Đối thủ', icon: Users },
+                      { id: 'keywords', label: 'Bản đồ Từ khóa', icon: LayoutGrid },
                       { id: 'thumbnails', label: 'Mẫu Thumbnail', icon: Image },
                       { id: 'history', label: 'Lịch sử Nghiên cứu', icon: FolderClock },
                     ].map((item) => (
@@ -4223,7 +5872,7 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Main Content Area */}
-              <div className="flex-1 bg-gray-50 overflow-y-auto p-6">
+              <div className="vtw-niche-content flex-1 bg-gray-50 overflow-y-auto p-6">
                 {!nicheResults && nicheActiveSubTab !== 'history' && (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-70">
                     <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
@@ -4349,7 +5998,7 @@ ${topKeywordsStr}`;
                                   <div className="flex items-center gap-4">
                                      <div className="flex flex-col items-end">
                                         <span className="text-[9px] text-gray-400 font-bold uppercase">Trending</span>
-                                        <span className="text-[11px] font-black text-emerald-600">+{kw.vph.toFixed(1)} VPH</span>
+                                        <span className="text-[11px] font-black text-emerald-600">+{formatVNNumber(Math.round(kw.vph))} VPH</span>
                                      </div>
                                      <div className={`w-10 h-6 rounded flex items-center justify-center text-[10px] font-bold ${kw.score > 70 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                                         {kw.score}
@@ -4366,7 +6015,7 @@ ${topKeywordsStr}`;
                           </h3>
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
-                               <div key={i} className="flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
+                               <div key={i} className="vtw-niche-top-video flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
                                   <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200">
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                   </div>
@@ -4377,11 +6026,11 @@ ${topKeywordsStr}`;
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">Lượt xem</span>
-                                           <span className="text-[10px] font-black text-gray-700">{v.statistics.viewCount.toLocaleString()}</span>
+                                           <span className="text-[10px] font-black text-gray-700">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                         </div>
                                         <div className="flex flex-col">
                                            <span className="text-[8px] text-gray-400 font-bold uppercase">VPH (Tốc độ)</span>
-                                           <span className="text-[10px] font-black text-blue-600">+{v.vph.toFixed(0)}</span>
+                                           <span className="text-[10px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))}</span>
                                         </div>
                                         <div className="flex items-center gap-2 ml-auto mt-1 z-20">
                                           <button 
@@ -4443,7 +6092,7 @@ ${topKeywordsStr}`;
                                         <td className="px-6 py-4 text-center font-mono text-[14px] font-black text-gray-300">0{i+1}</td>
                                         <td className="px-6 py-4 text-right font-bold text-gray-500">{kw.count} videos</td>
                                         <td className="px-6 py-4 text-right">
-                                           <div className="text-[13px] font-black text-blue-600">+{kw.vph.toLocaleString()} VPH</div>
+                                           <div className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(kw.vph))} VPH</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <button 
@@ -4454,7 +6103,7 @@ ${topKeywordsStr}`;
                                            </button>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                           <div className="flex flex-col items-center">
+                                           <div className="flex flex-col items-start">
                                               <div className="w-12 bg-gray-200 h-1.5 rounded-full overflow-hidden mb-1">
                                                  <div className="h-full bg-emerald-500" style={{ width: `${kw.score}%` }}></div>
                                               </div>
@@ -4472,47 +6121,11 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
-                    <div className="mb-6">
-                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
-                        <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC DỮ LIỆU TÌM KIẾM CHI TIẾT</div>
-                           <button onClick={() => setVideoFilters({ trendScore: 0, views: 0, vph: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Outlier Score <span className="text-[10px] text-gray-400 font-normal block">Range (0-100+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.trendScore}</span>
-                              </div>
-                              <input type="range" min="0" max="100" value={videoFilters.trendScore} onChange={(e) => setVideoFilters({...videoFilters, trendScore: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.views >= 1000000 ? (videoFilters.views/1000000).toFixed(1) + 'M+' : videoFilters.views >= 1000 ? (videoFilters.views/1000).toFixed(0) + 'K+' : videoFilters.views}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={videoFilters.views} onChange={(e) => setVideoFilters({...videoFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views Per Hour (VPH) <span className="text-[10px] text-gray-400 font-normal block">Range (0-1000+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{videoFilters.vph >= 1000 ? (videoFilters.vph/1000).toFixed(1) + 'K+' : videoFilters.vph}</span>
-                              </div>
-                              <input type="range" min="0" max="10000" step="50" value={videoFilters.vph} onChange={(e) => setVideoFilters({...videoFilters, vph: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {nicheResults.videos.filter((v: any) => {
-                         if (v.trendScore < videoFilters.trendScore) return false;
-                         if (parseInt(v.statistics.viewCount) < videoFilters.views) return false;
-                         if (v.vph < videoFilters.vph) return false;
-                         return true;
-                      }).map((v: any, i: number) => (
-                         <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
-                            <div className="relative aspect-video">
-                               <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                      {nicheResults.videos.map((v: any, i: number) => (
+                         <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                            <div className="relative aspect-video bg-black rounded-t-2xl overflow-hidden">
+                               <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain" />
                                <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                   {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
                                </div>
@@ -4521,17 +6134,23 @@ ${topKeywordsStr}`;
                                      SCORE {v.trendScore}
                                   </div>
                                </div>
-                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
-                                  <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
-                                     <ExternalLink size={14} /> Xem ngay video này
-                                  </a>
-                                  <button 
-                                     onClick={() => analyzeVideo(v.id)}
-                                     className="w-full bg-orange-600 text-white py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
-                                  >
-                                     <Video size={14} /> Phân tích Video (Check)
-                                  </button>
-                               </div>
+                            </div>
+                            <div className="p-3 border-b border-gray-100 grid grid-cols-1 gap-2">
+                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black border border-gray-200 py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-50">
+                                  <ExternalLink size={13} /> Xem video
+                               </a>
+                               <button 
+                                  onClick={() => analyzeVideo(v.id)}
+                                  className="w-full bg-orange-600 text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
+                               >
+                                  <Video size={13} /> Phân tích video
+                               </button>
+                               <button 
+                                  onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
+                                  className="w-full bg-[#2c3e50] text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-[#1f2d3a]"
+                               >
+                                  <BarChart2 size={13} /> Bóc tách kênh này
+                               </button>
                             </div>
                             <div className="p-4">
                                <div className="flex items-center gap-2 mb-2">
@@ -4546,11 +6165,11 @@ ${topKeywordsStr}`;
                                <div className="grid grid-cols-2 gap-2 border-t pt-3">
                                   <div className="flex flex-col">
                                      <span className="text-[9px] text-gray-400 font-bold uppercase">Lượt xem</span>
-                                     <span className="text-[13px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()}</span>
+                                     <span className="text-[13px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col items-end">
                                      <span className="text-[9px] text-gray-400 font-bold uppercase">Tăng trưởng/h</span>
-                                     <span className="text-[13px] font-black text-blue-600">+{v.vph.toFixed(0)} VPH</span>
+                                     <span className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
                                   </div>
                                </div>
                             </div>
@@ -4572,11 +6191,11 @@ ${topKeywordsStr}`;
                             <div className="absolute bottom-0 left-0 right-0 p-4">
                                <div className="flex items-center gap-4 text-white mb-2">
                                   <div className="flex flex-col">
-                                     <span className="text-[16px] font-black">{v.statistics.viewCount.toLocaleString()}</span>
+                                     <span className="text-[16px] font-black">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                      <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">Views</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[16px] font-black text-blue-400">+{v.vph.toFixed(0)}</span>
+                                     <span className="text-[16px] font-black text-blue-400">+{formatVNNumber(Math.round(v.vph || 0))}</span>
                                      <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">VPH</span>
                                   </div>
                                </div>
@@ -4599,44 +6218,8 @@ ${topKeywordsStr}`;
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
-                    <div className="mb-6">
-                      <div className="bg-[#1a202c] p-6 rounded-2xl shadow-xl">
-                        <div className="flex justify-between items-center mb-6 pt-2">
-                           <div className="text-white font-black text-sm uppercase flex items-center gap-2"><Filter size={18} className="text-blue-500" /> BỘ LỌC ĐỐI THỦ</div>
-                           <button onClick={() => setChannelFilters({ views: 0, subscribers: 0, videosCount: 0 })} className="bg-[#2d3748] hover:bg-[#4a5568] text-gray-300 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all shadow-sm">Làm mới bộ lọc (Reset All)</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Subscribers <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.subscribers >= 1000000 ? (channelFilters.subscribers/1000000).toFixed(1) + 'M+' : channelFilters.subscribers >= 1000 ? (channelFilters.subscribers/1000).toFixed(0) + 'K+' : channelFilters.subscribers}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.subscribers} onChange={(e) => setChannelFilters({...channelFilters, subscribers: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Views <span className="text-[10px] text-gray-400 font-normal block">Range (0-10M+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.views >= 1000000 ? (channelFilters.views/1000000).toFixed(1) + 'M+' : channelFilters.views >= 1000 ? (channelFilters.views/1000).toFixed(0) + 'K+' : channelFilters.views}</span>
-                              </div>
-                              <input type="range" min="0" max="10000000" step="50000" value={channelFilters.views} onChange={(e) => setChannelFilters({...channelFilters, views: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                           <div className="bg-[#2d3748] p-4 rounded-xl border border-[#4a5568]/50 shadow-inner">
-                              <div className="flex justify-between text-gray-200 font-bold text-[13px] mb-2">
-                                 <span>Video Count <span className="text-[10px] text-gray-400 font-normal block">Range (0-10,000+)</span></span>
-                                 <span className="text-blue-400 text-lg tabular-nums">{channelFilters.videosCount >= 1000 ? (channelFilters.videosCount/1000).toFixed(1) + 'K+' : channelFilters.videosCount}</span>
-                              </div>
-                              <input type="range" min="0" max="10000" step="100" value={channelFilters.videosCount} onChange={(e) => setChannelFilters({...channelFilters, videosCount: parseInt(e.target.value)})} className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500" />
-                           </div>
-                        </div>
-                      </div>
-                    </div>
                    <div className="space-y-4">
-                      {nicheResults.channels.filter((c: any) => {
-                         if ((parseInt(c.statistics.subscriberCount) || 0) < channelFilters.subscribers) return false;
-                         if ((parseInt(c.statistics.viewCount) || 0) < channelFilters.views) return false;
-                         if ((parseInt(c.statistics.videoCount) || 0) < channelFilters.videosCount) return false;
-                         return true;
-                      }).map((c: any, i: number) => (
+                      {nicheResults.channels.map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
                                <div className="relative">
@@ -4663,7 +6246,7 @@ ${topKeywordsStr}`;
                                      <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
                                      <div className="flex gap-2 items-center">
                                         <Eye size={14} className="text-gray-400" />
-                                        <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.viewCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">views</span></span>
+                                        <span className="text-[12px] font-bold text-gray-600">{formatVNNumber(parseInt(c.statistics.viewCount) || 0)} <span className="font-medium text-gray-400 lowercase">views</span></span>
                                      </div>
                                   </div>
                                </div>
@@ -4686,7 +6269,7 @@ ${topKeywordsStr}`;
                                   </div>
                                </button>
                                <button 
-                                 onClick={() => { setSpyInput(c.id); setActiveTab(2); }}
+                                 onClick={() => { setSpyInput(c.id); setActiveTab(2); analyzeSpy(c.id); }}
                                  className="px-6 py-3 bg-[#e67e22] text-white rounded-2xl text-[12px] font-black uppercase tracking-tight shadow-md hover:bg-[#d35400] active:scale-95 transition-all flex items-center gap-2"
                                >
                                   <BarChart2 size={16} /> Bóc tách kênh này
@@ -4713,7 +6296,7 @@ ${topKeywordsStr}`;
                             <div className="mt-3 flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                                <div className="flex flex-col">
                                   <span className="text-[8px] text-gray-400 font-bold uppercase">View/VPH</span>
-                                  <span className="text-[11px] font-black text-gray-700">{v.statistics.viewCount.toLocaleString()} / <span className="text-blue-500">+{v.vph.toFixed(0)}</span></span>
+                                  <span className="text-[11px] font-black text-gray-700">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-blue-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
                                </div>
                             </div>
                          </div>
@@ -4820,7 +6403,7 @@ ${topKeywordsStr}`;
                     className="bg-[#e67e22] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-3 hover:brightness-110 active:scale-95 shadow-md disabled:opacity-50 flex-1 md:flex-none justify-center transition-all shadow-sm active:shadow-inner"
                   >
                     {isAnalyzingVideo ? <Loader2 className="animate-spin" size={20} /> : <Video size={20} />}
-                    KIỂM TRA VIDEO
+                    {isAnalyzingVideo ? `ĐANG KIỂM TRA ${Math.round(progress)}%` : 'KIỂM TRA VIDEO'}
                   </button>
                   <button 
                     onClick={() => setShowVideoProjects(!showVideoProjects)}
@@ -4881,7 +6464,7 @@ ${topKeywordsStr}`;
                             </div>
                             <div className="text-[9px] text-gray-500 mt-1 flex justify-between items-center">
                               <span><a href={`https://youtube.com/channel/${p.snippet.channelId}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 transition-colors">{p.snippet.channelTitle}</a></span>
-                              <span className="font-mono">{parseInt(p.statistics.viewCount).toLocaleString()} views</span>
+                              <span className="font-mono">{formatVNNumber(parseInt(p.statistics.viewCount) || 0)} views</span>
                             </div>
                           </div>
                         ))}
@@ -5206,6 +6789,9 @@ ${topKeywordsStr}`;
                       </div>
                     </div>
                   </div>
+
+                  {/* Gemini + YouTube API V3 audit sections */}
+                  {renderVideoAiAuditSection()}
                 </div>
               )}
             </div>
@@ -5218,7 +6804,7 @@ ${topKeywordsStr}`;
       {/* Modal Lịch sử Key */}
       <AnimatePresence>
         {showKeyHistory && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-transparent">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -5347,12 +6933,7 @@ ${topKeywordsStr}`;
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerConfirm(
-                              "Xóa Key",
-                              "Bạn có chắc chắn muốn xóa Key này khỏi lịch sử không?",
-                              () => removeFromHistory(key),
-                              "XÁC NHẬN XÓA"
-                            );
+                            removeFromHistory(key);
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -5378,16 +6959,124 @@ ${topKeywordsStr}`;
           </div>
         )}
 
-        {showKeyInputModal && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
+
+        {showGeminiKeyHistory && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-transparent">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100 flex flex-col"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden border border-indigo-100"
+            >
+              <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-4 flex justify-between items-center text-white">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg"><Bot size={24} /></div>
+                  <div>
+                    <h2 className="text-xl font-bold">Lịch sử Gemini API Key</h2>
+                    <p className="text-xs opacity-80">Chọn lại key Gemini đã từng nhập</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowGeminiKeyHistory(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={24} /></button>
+              </div>
+
+              <div className="p-4 border-b border-gray-100 bg-indigo-50 flex flex-wrap gap-3 justify-between items-center">
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => useGeminiHistoryKey(selectedGeminiHistoryKeys)}
+                    disabled={selectedGeminiHistoryKeys.length === 0}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95"
+                  >
+                    <CheckCircle2 size={18} /> Dùng Key chọn
+                  </button>
+                  <button 
+                    onClick={() => setSelectedGeminiHistoryKeys([...geminiKeysHistory])}
+                    className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                  >
+                    Tích chọn hết
+                  </button>
+                  <button 
+                    onClick={() => setSelectedGeminiHistoryKeys([])}
+                    className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold transition-all text-red-500"
+                  >
+                    Bỏ chọn hết
+                  </button>
+                </div>
+                <button onClick={clearGeminiHistory} className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                  <Trash2 size={18} /> Xóa lịch sử
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {geminiKeysHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                    <RotateCcw size={48} className="mb-4 opacity-20" />
+                    <p className="text-lg italic">Không có lịch sử Gemini Key</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {geminiKeysHistory.map((key, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                          selectedGeminiHistoryKeys.includes(key)
+                            ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-gray-50'
+                        }`}
+                        onClick={() => {
+                          if (selectedGeminiHistoryKeys.includes(key)) {
+                            setSelectedGeminiHistoryKeys(prev => prev.filter(k => k !== key));
+                          } else {
+                            setSelectedGeminiHistoryKeys([key]);
+                          }
+                        }}
+                      >
+                        <div className="pt-1">
+                          <input type="checkbox" checked={selectedGeminiHistoryKeys.includes(key)} onChange={() => {}} className="w-5 h-5 accent-indigo-600 rounded border-gray-300 cursor-pointer" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">GEMINI KEY #{idx + 1}</span>
+                            {geminiApiKey.trim() === key.trim() && (
+                              <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> ĐANG SỬ DỤNG
+                              </span>
+                            )}
+                          </div>
+                          <div className="font-mono text-sm break-all p-2 rounded border select-all text-gray-800 bg-gray-50 border-gray-100">{key}</div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromGeminiHistory(key);
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Xóa khỏi lịch sử"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button onClick={() => setShowGeminiKeyHistory(false)} className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-100 transition-colors">Đóng</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showKeyInputModal && (
+          <div className="vtw-api-modal-overlay fixed inset-0 z-[99990] flex items-center justify-center p-4 bg-transparent shadow-2xl">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="vtw-api-modal bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100 flex flex-col"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
+              <div className="vtw-api-modal-header bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
                     <Settings size={28} />
@@ -5403,6 +7092,22 @@ ${topKeywordsStr}`;
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
                         {showApiKeys ? 'ẨN' : 'HIỆN'} KEY
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowKeyHistory(true)}
+                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        title="Lịch sử API Key YouTube"
+                      >
+                        <HistoryIcon size={10} /> YOUTUBE
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowGeminiKeyHistory(true)}
+                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        title="Lịch sử API Key Gemini"
+                      >
+                        <HistoryIcon size={10} /> GEMINI
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -5415,7 +7120,7 @@ ${topKeywordsStr}`;
               </div>
 
               {/* Content */}
-              <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
+              <div className="vtw-api-modal-content p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
                 {/* Section Gemini */}
                 <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
@@ -5449,56 +7154,31 @@ ${topKeywordsStr}`;
                         {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
-                    <div className="mt-3 flex items-center gap-2 text-[10px] text-indigo-600 font-bold uppercase tracking-tight bg-white/50 w-fit px-3 py-1 rounded-full border border-indigo-100">
-                      <Zap size={12} fill="currentColor" />
-                      Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
-                    </div>
-
                     {/* Model Selection UI */}
                     <div className="mt-4">
-                      <button 
-                        type="button"
-                        onClick={() => setShowModelOptions(!showModelOptions)}
-                        className="flex items-center justify-between w-full text-left"
-                      >
+                      <div className="flex items-center justify-between gap-3 mb-2">
                         <span className="text-[11px] font-black text-gray-400 tracking-widest uppercase">Chọn model Gemini</span>
-                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold truncate max-w-[240px]">
                           Đang dùng: {geminiModel}
                         </div>
-                      </button>
-
-                      {showModelOptions && (
-                        <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {GEMINI_MODELS.map(model => (
                           <button
+                            key={model.id}
                             type="button"
-                            onClick={() => setShowModelOptions(!showModelOptions)}
-                            className="w-full text-left px-4 py-2 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                            onClick={() => setGeminiModel(model.id)}
+                            className={`text-left px-3 py-2 rounded-xl border text-[11px] font-bold transition-all active:scale-95 ${
+                              model.id === geminiModel
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                : 'bg-white text-gray-700 border-blue-100 hover:border-blue-400 hover:bg-blue-50'
+                            }`}
+                            title={model.name}
                           >
-                            <span className="text-[12px] font-bold text-gray-800">{GEMINI_MODELS.find(m => m.id === geminiModel)?.name}</span>
-                            <ChevronDown size={14} className="text-gray-400" />
+                            {model.name}
                           </button>
-                          
-                          <div className="max-h-[150px] overflow-y-auto">
-                            {GEMINI_MODELS.map(model => (
-                              <button
-                                key={model.id}
-                                type="button"
-                                onClick={() => {
-                                  setGeminiModel(model.id);
-                                  setShowModelOptions(false);
-                                }}
-                                className={`w-full text-left px-4 py-2 text-[12px] transition-colors border-b border-gray-50 last:border-0 ${
-                                  model.id === geminiModel 
-                                    ? 'bg-blue-600 text-white font-bold' 
-                                    : 'text-gray-600 hover:bg-gray-50'
-                                }`}
-                              >
-                                {model.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -5520,20 +7200,12 @@ ${topKeywordsStr}`;
                     </div>
                   </div>
                   
-                  <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mb-5 shadow-sm relative z-10">
-                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
-                    <ul className="space-y-1 font-medium opacity-90">
-                      <li className="flex items-center gap-2">🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
-                      <li className="flex items-center gap-2">🔹 Hệ thống sẽ <b>tự động xoay vòng Key</b> để quét dữ liệu mượt mà hơn.</li>
-                      <li className="flex items-center gap-2">🔹 Dữ liệu được bảo mật và lưu cục bộ trên trình duyệt của bạn.</li>
-                    </ul>
-                  </div>
 
                   <div className="relative">
                     <textarea 
                       value={manualKeysInput}
                       onChange={(e) => setManualKeysInput(e.target.value)}
-                      className="w-full h-48 p-5 font-mono text-sm border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10"
+                      className={`w-full h-48 p-5 font-mono text-sm border-2 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10 ${manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean).some(k => exhaustedKeys.includes(k)) ? 'border-red-400 bg-red-50/40' : 'border-gray-100'}`}
                       style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
                       placeholder="Key 1&#10;Key 2&#10;Key 3..."
                     />
@@ -5545,6 +7217,20 @@ ${topKeywordsStr}`;
                       {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
+                  {manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean).some(k => exhaustedKeys.includes(k)) && (
+                    <div className="mt-2 text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                      Các key màu đỏ/đang lỗi hôm nay đã được hệ thống bỏ qua tự động. Hãy đợi quota reset hoặc xóa khỏi ô nhập nếu không dùng nữa.
+                    </div>
+                  )}
+                  <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mt-5 shadow-sm relative z-10">
+                    <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
+                    <ul className="space-y-1 font-medium opacity-90">
+                      <li className="flex items-center gap-2">🔹 Dán danh sách mã API, <b>mỗi mã trên 1 dòng riêng biệt</b>.</li>
+                      <li className="flex items-center gap-2">🔹 Hệ thống sẽ <b>tự động xoay vòng Key</b> để quét dữ liệu mượt mà hơn.</li>
+                      <li className="flex items-center gap-2">🔹 Dữ liệu được bảo mật và lưu cục bộ trên trình duyệt của bạn.</li>
+                    </ul>
+                  </div>
+
                 </div>
               </div>
 
@@ -5563,10 +7249,18 @@ ${topKeywordsStr}`;
                     localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
                     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
                     localStorage.setItem('youtube_gemini_model', geminiModel);
+                    localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
                     
                     const newHistory = [...new Set([...apiKeysHistory, ...keys])];
                     setApiKeysHistory(newHistory);
                     localStorage.setItem('youtube_api_keys_history', JSON.stringify(newHistory));
+
+                    const cleanGeminiKey = geminiApiKey.trim();
+                    if (cleanGeminiKey) {
+                      const newGeminiHistory = [...new Set([cleanGeminiKey, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+                      setGeminiKeysHistory(newGeminiHistory);
+                      localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(newGeminiHistory));
+                    }
                     
                     setShowKeyInputModal(false);
                     setStatus(`Đã cập nhật hệ thống API thành công.`);
@@ -5583,26 +7277,17 @@ ${topKeywordsStr}`;
       </AnimatePresence>
 
       {/* Footer Info */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-4 py-1.5 flex justify-between items-center text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
-        <div className="flex gap-4 items-center">
-          <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100"><AlertCircle size={14} className="text-blue-500" /> <span className="font-medium text-blue-700">{status}</span></span>
-          <div className="flex items-center gap-3">
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Quota phiên này: <b className="text-gray-900">{quotaUsed.toLocaleString()}</b> units</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold">Tổng Quota hôm nay đã dùng: {totalQuotaToday.toLocaleString()} units</span>
+      <div className="vtw-footer-status fixed bottom-0 left-0 right-0 bg-white border-t border-[#ccc] px-3 py-1.5 flex items-center gap-3 text-[11px] text-[#333] shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[900]">
+        <div className="flex-1 min-w-0 pr-2">
+          <div className="vtw-status-log flex items-start gap-1.5 bg-blue-50 px-2 py-1 rounded border border-blue-100 max-w-full">
+            <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
+            <span className="font-medium text-blue-700 whitespace-normal break-words leading-snug">{status}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-gray-500">{Math.round(progress)}%</span>
-          <div className="w-[300px] bg-[#eee] border border-[#ccc] h-4 rounded-full overflow-hidden flex relative shadow-inner">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500 flex items-center justify-center" 
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.15)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.15)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[progress-bar-stripes_1s_linear_infinite]"></div>
-            </div>
-          </div>
+        <div className="vtw-quota-box ml-auto shrink-0 flex items-center gap-2 justify-end">
+          <span className="text-gray-600 whitespace-nowrap">Quota phiên này: <b className="text-gray-900">{formatVNNumber(quotaUsed)}</b> units</span>
+          <span className="text-gray-400">|</span>
+          <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 font-bold whitespace-nowrap">Tổng Quota hôm nay đã dùng: {formatVNNumber(totalQuotaToday)} units</span>
         </div>
       </div>
 
@@ -5610,13 +7295,28 @@ ${topKeywordsStr}`;
       {menuPos.visible && (
         <div 
           ref={menuRef}
-          className="fixed z-[1000] bg-white border border-[#ccc] shadow-[0_4px_12px_rgba(0,0,0,0.15)] w-[280px] text-[13px] rounded-md overflow-hidden select-none"
+          className="vtw-channel-context-menu fixed z-[1000] bg-white border border-[#ccc] shadow-[0_4px_12px_rgba(0,0,0,0.15)] w-[280px] text-[13px] rounded-md overflow-hidden select-none"
           style={{ 
             top: Math.min(menuPos.y, window.innerHeight - 250), 
             left: Math.min(menuPos.x, window.innerWidth - 300) 
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          <div className="vtw-channel-menu-head flex items-center justify-between gap-3 px-4 py-3 bg-slate-800 text-white border-b border-white/10">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-wide text-blue-200">Thao tác kênh</div>
+              <div className="truncate text-[13px] font-black">{menuPos.channel?.name || 'Kênh đã chọn'}</div>
+            </div>
+            <button
+              type="button"
+              onClick={closeMenu}
+              className="shrink-0 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white text-xl leading-none flex items-center justify-center"
+              aria-label="Đóng bảng thao tác"
+            >
+              ×
+            </button>
+          </div>
+
           {/* Header/Primary Action */}
           <button 
             onClick={() => addToTracking(menuPos.channel!)}
@@ -5672,9 +7372,9 @@ ${topKeywordsStr}`;
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.isOpen && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-transparent p-4 pointer-events-auto">
             <motion.div 
-              className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden border border-gray-200"
+              className="bg-white rounded-xl shadow-[0_18px_55px_rgba(0,0,0,0.35)] max-w-sm w-full overflow-hidden border border-gray-200"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -5736,7 +7436,6 @@ ${topKeywordsStr}`;
                   </div>
                   <div>
                     <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
-                    <p className="text-[11px] text-blue-200 font-bold opacity-80 uppercase tracking-tighter">Click vào từ khóa để tự động điền và phân tích nhanh</p>
                   </div>
                 </div>
                 <button 
@@ -5749,30 +7448,41 @@ ${topKeywordsStr}`;
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
                 
-                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+                <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+                     <div className="flex flex-col gap-1 min-w-0">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
-                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU TRENDING TỪ YOUTUBE API</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Cập nhật danh sách từ khóa ngách hot nhất hôm nay theo quốc gia</span>
+                        <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH THEO KHU VỰC</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Chọn khu vực để đổi ngôn ngữ chủ đề/key. Bấm kính lúp từng chủ đề để tìm key đúng khu vực; ưu tiên 30 ngày, nếu thiếu dữ liệu sẽ mở rộng toàn thời gian.</span>
+                        {trendingCacheMeta?.updatedAt && (
+                          <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
+                        )}
                      </h3>
-                     <div className="flex items-center gap-3">
+                     </div>
+                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
                          <div className="relative">
                            <select
                               value={trendingRegion}
-                              onChange={(e) => setTrendingRegion(e.target.value)}
-                              className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
+                              onChange={(e) => { const nextRegion = e.target.value; setTrendingRegion(nextRegion); setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
+                              className="appearance-none w-full h-12 bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[12px] px-4 pr-9 rounded-xl outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
-                              {REGIONS.map(r => (
-                                <option key={r.code || 'GL'} value={r.code}>{r.name}</option>
+                              {REGIONS.filter(r => r.code).map(r => (
+                                <option key={r.code} value={r.code}>{r.name}</option>
                               ))}
                            </select>
                            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                          </div>
                          <button
-                            onClick={fetchDailyTrendingFromYouTube}
+                            onClick={() => loadTrendingNicheCache(trendingRegion || config.region || 'VN')}
                             disabled={isFetchingDailyTrending}
-                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
+                            className="h-12 w-full justify-center bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-4 rounded-xl text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật trend</> : <><Search size={16}/> Cập nhật Trending</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo...</> : <><Bot size={16}/> Tạo 15 chủ đề</>}
+                         </button>
+                         <button
+                            onClick={() => { const nextRegion = trendingRegion || config.region || 'VN'; setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
+                            className="h-12 w-full justify-center bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 rounded-xl text-[12px] font-black tracking-tight uppercase shadow border border-blue-700 transition-all flex items-center gap-2"
+                         >
+                            <RefreshCw size={16}/> Chủ đề mặc định
                          </button>
                      </div>
                 </div>
@@ -5780,26 +7490,42 @@ ${topKeywordsStr}`;
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {suggestedNiches.map((category, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
+                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight leading-tight">{renderBilingualCategoryLabel(category.category)}</h4>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            title="Tìm key thật theo khu vực cho chủ đề này"
+                            onClick={() => fetchTrendingKeysForCategory(category.category, idx)}
+                            disabled={isFetchingDailyTrending}
+                            className="w-8 h-8 rounded-lg bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-100 flex items-center justify-center transition-all disabled:opacity-50"
+                          >
+                            {scanningNicheCategory === `${category.category}-${idx}` ? <RefreshCw size={15} className="animate-spin" /> : <Search size={15} />}
+                          </button>
+                          <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(6, category.items.length)} KEY</span>
+                        </div>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.slice(0, 5).map((item, itemIdx) => (
-                          <button
-                            key={itemIdx}
-                            onClick={() => {
-                              setNicheInput(item);
-                              setShowNicheModal(false);
-                              // Auto start research after a small delay
-                              setTimeout(() => {
-                                runNicheResearch(item);
-                              }, 100);
-                            }}
-                            className="bg-gray-50 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-600 border border-gray-200 transition-all hover:scale-105 active:scale-95"
-                          >
-                            {item}
-                          </button>
+                        {category.items.slice(0, 6).map((item, itemIdx) => (
+                          <div key={itemIdx} className="flex items-center bg-gray-50 border border-gray-200 rounded-lg overflow-hidden hover:border-blue-300 transition-all">
+                            <button
+                              onClick={() => {
+                                setNicheInput(item);
+                                localStorage.setItem('youtube_last_niche_keyword', item);
+                                setShowNicheModal(false);
+                                setStatus(`Đã chọn key: ${item}. Bấm PHÂN TÍCH NGAY để chạy phân tích.`);
+                              }}
+                              className="px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-blue-600 hover:text-white transition-all text-left"
+                            >
+                              {item}
+                            </button>
+                            <button
+                              title="Copy key"
+                              onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(item); setStatus(`Đã copy key: ${item}`); }}
+                              className="px-2 py-1.5 text-blue-500 hover:bg-blue-50 border-l border-gray-200"
+                            >
+                              <Copy size={12} />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -5808,7 +7534,7 @@ ${topKeywordsStr}`;
               </div>
 
               <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
-                Mẹo: Bạn có thể nhập từ khóa bất kỳ vào ô tìm kiếm nếu không tìm thấy chủ đề ưng ý tại đây.
+                Mẹo: chọn khu vực trước, bấm icon kính lúp ở từng chủ đề để tìm key đúng khu vực. Bấm key để dùng trực tiếp, hoặc bấm icon copy để copy từng key.
               </div>
             </motion.div>
           </div>
@@ -5817,7 +7543,7 @@ ${topKeywordsStr}`;
 
       <AnimatePresence>
         {modalTrendingVideos && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-transparent p-4">
             <motion.div 
               className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -5851,7 +7577,7 @@ ${topKeywordsStr}`;
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
-                      <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                      <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                          <div className="relative aspect-video">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
@@ -5877,7 +7603,7 @@ ${topKeywordsStr}`;
                                </div>
                                <div className="flex flex-col items-end">
                                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views / VPH</span>
-                                  <span className="text-[11px] font-black text-gray-800">{v.statistics.viewCount.toLocaleString()} / <span className="text-orange-500">+{v.vph.toFixed(0)}</span></span>
+                                  <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
                                </div>
                             </div>
                          </div>
@@ -5885,6 +7611,136 @@ ${topKeywordsStr}`;
                     ))}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 44px !important; gap: 8px !important; align-items: stretch !important; }
+          .vtw-channel-actions button { min-height: 44px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; }
+          .vtw-channel-actions .vtw-delete-action span { display: none !important; }
+          .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
+          .vtw-results-table-wrap thead { display: none; }
+          .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
+          .vtw-results-table-wrap tbody tr { margin: 12px 10px !important; padding: 16px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; }
+          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 10px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important; align-items: center !important; }
+          .vtw-results-table-wrap tbody tr td:before { content: ''; font-size: 11px; font-weight: 900; color: #64748b; text-transform: uppercase; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3):before { content: 'Tên kênh'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(4):before { content: 'Mã kênh'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(5):before { content: 'Từ khóa/ngách'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(6):before { content: 'Chủ đề'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(7):before { content: 'Thu nhập ($)'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(8):before { content: 'URL'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(9):before { content: 'Quốc gia'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(10):before { content: 'Ngày tạo'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(11):before { content: 'Tuổi kênh'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(12):before { content: 'Sub'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(13):before { content: 'Views'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Điểm'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Thao tác'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2) { grid-template-columns: 1fr 1fr !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-template-columns: 1fr !important; }
+          textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 11px !important; line-height: 1.55 !important; }
+          .vtw-spy-report { text-align: left !important; }
+        }
+      `}</style>
+
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="vtw-scroll-top-mobile"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Lên đầu trang"
+          title="Lên đầu trang"
+        >
+          ↑
+        </button>
+      )}
+
+      <AnimatePresence>
+        {showAccountModal && user && (
+          <div
+            className="vtw-account-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center bg-transparent p-4"
+            onClick={() => setShowAccountModal(false)}
+          >
+            <motion.div
+              className="vtw-account-modal bg-white rounded-[26px] shadow-2xl border border-blue-100 overflow-hidden w-full max-w-[440px]"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 18 }}
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4 relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountModal(false)}
+                  className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white"
+                  title="Đóng"
+                >
+                  <X size={20} />
+                </button>
+                <div className="text-[11px] font-black uppercase tracking-wide opacity-90 mb-2">Tài khoản & hạn sử dụng</div>
+                <div className="text-[24px] leading-tight font-black">
+                  {isPremiumAccount ? 'Tài khoản đã nâng cấp PRO' : subscriptionInfo?.active ? 'Tài khoản đang dùng thử' : 'Tài khoản đã hết hạn'}
+                </div>
+                <div className="text-[12px] font-bold opacity-95 mt-2 break-all">
+                  {user.displayName || 'Tài khoản'} · {user.email}
+                </div>
+              </div>
+
+              <div className="p-4 grid grid-cols-2 gap-3 bg-white">
+                <div className="vtw-account-info-card">
+                  <div className="vtw-account-info-label">Gói đã đăng ký</div>
+                  <div className="vtw-account-info-value">{subscriptionInfo?.planName || (isPremiumAccount ? 'Gói PRO' : subscriptionInfo?.active ? 'Dùng thử' : 'Chưa có gói')}</div>
+                </div>
+                <div className="vtw-account-info-card vtw-account-info-card-green">
+                  <div className="vtw-account-info-label text-green-700">Còn lại</div>
+                  <div className="vtw-account-info-value text-green-700">{getRemainingText(subscriptionInfo?.expiresAt)}</div>
+                </div>
+                <div className="vtw-account-info-card">
+                  <div className="vtw-account-info-label">Ngày đăng ký</div>
+                  <div className="vtw-account-info-value">{formatSubscriptionDateCompact(subscriptionInfo?.startedAt)}</div>
+                </div>
+                <div className="vtw-account-info-card">
+                  <div className="vtw-account-info-label">Hạn sử dụng</div>
+                  <div className="vtw-account-info-value">{formatSubscriptionDateCompact(subscriptionInfo?.expiresAt)}</div>
+                </div>
+              </div>
+
+              <div className="px-4 pb-4 grid grid-cols-3 gap-2 bg-white">
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = buildPaymentUrl(user); }}
+                  className="vtw-account-action vtw-account-action-upgrade"
+                >
+                  Nâng cấp thêm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAccountModal(false); setShowKeyInputModal(true); }}
+                  className="vtw-account-action vtw-account-action-settings"
+                >
+                  Cài đặt
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setShowAccountModal(false);
+                      await logoutUser();
+                    } catch (e: any) {
+                      console.error('Lỗi đăng xuất:', e);
+                    }
+                  }}
+                  className="vtw-account-action vtw-account-action-logout"
+                >
+                  Đăng xuất
+                </button>
               </div>
             </motion.div>
           </div>
