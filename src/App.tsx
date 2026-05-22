@@ -420,7 +420,6 @@ export default function App() {
   const [trendingRegion, setTrendingRegion] = useState(config.region);
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
-  const [adminTrendingScheduleAt, setAdminTrendingScheduleAt] = useState(() => localStorage.getItem('research_admin_trending_schedule_at') || '');
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [showModelOptions, setShowModelOptions] = useState(false);
@@ -1663,47 +1662,6 @@ Rules:
   };
 
 
-  const buildRegionSafeFallbackNiches = (regionCode?: string) => {
-    const code = regionCode || trendingRegion || config.region || 'VN';
-    const en = [
-      ['self improvement habits','productivity tips','discipline motivation','confidence building','stop procrastination'],
-      ['home workout','skincare routine','weight loss tips','yoga at home','healthy meal prep'],
-      ['ai tools','chatgpt tutorial','iphone tips','budget phone review','automation tools'],
-      ['study tips','learn english','coding for beginners','ielts vocabulary','exam preparation'],
-      ['easy recipes','meal prep','home cooking','healthy snacks','budget meals'],
-      ['travel vlog','budget travel','hidden places','solo travel tips','camping guide']
-    ];
-    const map: Record<string, string[][]> = {
-      VN: SUGGESTED_NICHES.slice(0, 6).map(x => x.items.slice(0, 5)),
-      JP: [
-        ['自己啓発 習慣','生産性 向上','先延ばし 克服','朝活 ルーティン','メンタル 強化'],
-        ['自宅 筋トレ','スキンケア 初心者','ダイエット 食事','ヨガ 自宅','薄毛 対策'],
-        ['AI ツール','ChatGPT 使い方','iPhone 便利技','格安スマホ レビュー','自動化 ツール'],
-        ['勉強法','英語 学習','プログラミング 初心者','資格 勉強','受験 対策'],
-        ['簡単 レシピ','作り置き','一人暮らし 料理','節約 ごはん','弁当 レシピ'],
-        ['日本 旅行 vlog','東京 穴場','格安 旅行','一人旅 コツ','キャンプ 初心者']
-      ],
-      KR: [
-        ['자기계발 습관','생산성 높이는 법','미루기 극복','아침 루틴','멘탈 관리'],
-        ['홈트레이닝','스킨케어 루틴','다이어트 식단','요가 홈트','탈모 관리'],
-        ['AI 도구','ChatGPT 사용법','아이폰 꿀팁','가성비 스마트폰','업무 자동화'],
-        ['공부법','영어 공부','코딩 입문','자격증 공부','시험 준비'],
-        ['간단 요리','밀프렙','집밥 레시피','건강 간식','절약 요리'],
-        ['한국 여행 브이로그','서울 숨은 명소','저가 여행','혼자 여행 팁','캠핑 가이드']
-      ],
-      TH: [
-        ['พัฒนาตัวเอง','เพิ่มประสิทธิภาพ','เลิกผัดวันประกันพรุ่ง','กิจวัตรตอนเช้า','สร้างวินัย'],
-        ['ออกกำลังกายที่บ้าน','สกินแคร์มือใหม่','ลดน้ำหนัก','โยคะที่บ้าน','ดูแลผม'],
-        ['เครื่องมือ AI','วิธีใช้ ChatGPT','เทคนิค iPhone','รีวิวมือถือราคาประหยัด','ระบบอัตโนมัติ'],
-        ['เทคนิคการเรียน','เรียนภาษาอังกฤษ','เริ่มเขียนโค้ด','เตรียมสอบ','อ่านหนังสือ'],
-        ['เมนูง่ายๆ','ทำอาหารที่บ้าน','อาหารคลีน','เมนูประหยัด','ขนมง่ายๆ'],
-        ['เที่ยวไทย','ที่เที่ยวลับ','เที่ยวประหยัด','เดินทางคนเดียว','แคมป์ปิ้ง']
-      ]
-    };
-    const pool = map[code] || en;
-    return SUGGESTED_NICHES.map((group, idx) => ({ category: group.category, items: (pool[idx % pool.length] || en[idx % en.length]).slice(0, 5) }));
-  };
-
   // Bước 62: Người dùng chỉ đọc dữ liệu ngách đã được admin quét sẵn.
   // Không cho người dùng tự quét YouTube API ở popup gợi ý ngách để tiết kiệm quota.
   const loadTrendingNicheCache = async (regionCode?: string) => {
@@ -1757,141 +1715,39 @@ Rules:
           }
         } catch {}
       }
-      setSuggestedNiches(buildRegionSafeFallbackNiches(selectedRegion));
-      setStatus(err?.message || 'Chưa có dữ liệu ngách hệ thống cho khu vực này. Đang hiển thị bộ key dự phòng đúng ngôn ngữ khu vực.');
+      setSuggestedNiches(SUGGESTED_NICHES);
+      setStatus(err?.message || 'Chưa có dữ liệu ngách hệ thống cho khu vực này.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
   };
 
-  const getTrendingRegionLabel = (regionCode?: string) => {
-    const code = regionCode || trendingRegion || config.region || 'VN';
-    return REGIONS.find(r => r.code === code)?.name || code || 'Toàn cầu';
-  };
-
-  const getNicheItemText = (item: any) => String(item?.keyword || item?.text || item || '').trim();
-
-  const buildTrendingTxt = (categoryName?: string, items?: any[]) => {
-    const regionLabel = getTrendingRegionLabel();
-    const updated = trendingCacheMeta?.updatedAt ? new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN') : 'Chưa rõ';
-    const source = trendingCacheMeta?.source || 'system-cache';
-    const lines: string[] = [];
-    lines.push('DANH SÁCH KEY NGÁCH TRENDING');
-    lines.push(`Khu vực: ${regionLabel}`);
-    lines.push(`Nguồn: ${source}`);
-    lines.push(`Cập nhật: ${updated}`);
-    lines.push('');
-
-    const groups = categoryName
-      ? [{ category: categoryName, items: items || [] }]
-      : suggestedNiches;
-
-    groups.forEach((group: any, idx: number) => {
-      lines.push(`${idx + 1}. ${String(group.category || '').toUpperCase()}`);
-      (group.items || []).slice(0, 5).forEach((item: any, i: number) => {
-        const key = getNicheItemText(item);
-        if (key) lines.push(`   ${i + 1}) ${key}`);
-      });
-      lines.push('');
-    });
-    return lines.join('\n');
-  };
-
-  const downloadTrendingKeysTxt = (categoryName?: string, items?: any[]) => {
-    const regionLabel = getTrendingRegionLabel().replace(/[^\p{L}\p{N}]+/gu, '_');
-    const suffix = categoryName ? String(categoryName).replace(/[^\p{L}\p{N}]+/gu, '_') : 'Tat_Ca_Chu_De';
-    downloadAsTxt(buildTrendingTxt(categoryName, items), `Key_Ngach_Trending_${regionLabel}_${suffix}`);
-  };
-
-  const copyTrendingKey = async (key: string) => {
-    const text = String(key || '').trim();
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setStatus(`Đã copy key: ${text}`);
-    } catch {
-      setStatus('Trình duyệt không cho copy tự động. Hãy bôi đen và copy thủ công.');
-    }
-  };
-
-  const useTrendingKeyNow = (key: string) => {
-    const text = String(key || '').trim();
-    if (!text) return;
-    setNicheInput(text);
-    localStorage.setItem('youtube_last_niche_keyword', text);
-    setShowNicheModal(false);
-    setTimeout(() => runNicheResearch(text), 120);
-  };
-
   // Chỉ admin chạy quét ngầm/định kỳ. Người dùng thường không gọi API YouTube tại popup này.
-  const runAdminTrendingCron = async (autoRun = false) => {
+  const runAdminTrendingCron = async () => {
     if (user?.email !== 'chinhkhai79@gmail.com') return;
-    const selectedRegion = trendingRegion || config.region || 'VN';
-    const activeYoutubeKeys = (config.apiKeys || []).map(k => String(k || '').trim()).filter(Boolean);
     setIsFetchingDailyTrending(true);
-    setStatus(autoRun ? 'Admin: đến lịch tự động, đang quét cuốn chiếu...' : 'Admin: đang quét cuốn chiếu, có kết quả nào sẽ hiện trước kết quả đó...');
-
+    setStatus('Admin: đang kích hoạt quét ngách hệ thống...');
     try {
-      // Bước 67: chạy nhiều request nhỏ để tránh timeout Vercel.
-      // Sau mỗi request, cache đã được ghi từng chủ đề nên UI tải lại ngay, không phải chờ đủ toàn bộ 30 chủ đề.
-      let lastData: any = null;
-      for (let round = 0; round < 30; round++) {
-        const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(selectedRegion)}&adminEmail=${encodeURIComponent(user.email)}&timeBudgetMs=6500`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-email': user.email
-          },
-          body: JSON.stringify({
-            region: selectedRegion,
-            apiKeys: activeYoutubeKeys,
-            adminEmail: user.email,
-            nextScanAt: adminTrendingScheduleAt || null,
-            timeBudgetMs: 6500
-          })
-        });
-        const data = await res.json().catch(() => ({}));
-        lastData = data;
-        if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Admin cron lỗi');
-
-        await loadTrendingNicheCache(data.region || selectedRegion);
-        const doneNames = Array.isArray(data.scannedCategories) ? data.scannedCategories.join(', ') : '';
-        setStatus(`Admin: đã lưu cuốn chiếu ${data.scannedCategories?.length || 0} chủ đề${doneNames ? ` (${doneNames})` : ''}.`);
-
-        if (data.scanStatus === 'quota-paused') break;
-        if (Number(data.nextCategoryIndex || 0) === 0 && round > 0) break;
-        if (!Array.isArray(data.scannedCategories) || data.scannedCategories.length === 0) break;
-        await new Promise(resolve => setTimeout(resolve, 350));
-      }
-
-      setStatus(lastData?.scanStatus === 'quota-paused'
-        ? `Admin: đã lưu các kết quả quét được trước khi hết quota cho ${lastData.region || selectedRegion}. Mai hệ thống sẽ quét tiếp khu vực/chủ đề còn lại.`
-        : `Admin: đã cập nhật cuốn chiếu cache ${lastData?.region || selectedRegion}.`);
-      localStorage.setItem('research_admin_trending_last_run_at', new Date().toISOString());
-      if (autoRun) {
-        localStorage.removeItem('research_admin_trending_schedule_at');
-        setAdminTrendingScheduleAt('');
-      }
+      const secret = window.prompt('Nhập ADMIN_CRON_SECRET để chạy quét ngách:') || '';
+      if (!secret.trim()) return;
+      const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(trendingRegion || config.region || 'VN')}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': secret.trim()
+        },
+        body: JSON.stringify({ region: trendingRegion || config.region || 'VN' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Admin cron lỗi');
+      setStatus(`Admin: đã cập nhật cache ${data.region || ''}.`);
+      await loadTrendingNicheCache(data.region || trendingRegion || config.region || 'VN');
     } catch (err: any) {
       setStatus(err?.message || 'Không chạy được admin cron.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
   };
-
-  useEffect(() => {
-    if (user?.email !== 'chinhkhai79@gmail.com' || !adminTrendingScheduleAt) return;
-    localStorage.setItem('research_admin_trending_schedule_at', adminTrendingScheduleAt);
-    const tick = () => {
-      const due = new Date(adminTrendingScheduleAt).getTime();
-      if (Number.isFinite(due) && Date.now() >= due && !isFetchingDailyTrending) {
-        runAdminTrendingCron(true);
-      }
-    };
-    tick();
-    const timer = window.setInterval(tick, 30000);
-    return () => window.clearInterval(timer);
-  }, [user?.email, adminTrendingScheduleAt, isFetchingDailyTrending, trendingRegion, config.region, config.apiKeys]);
 
     const runNicheResearch = async (customKeyword?: string) => {
     let kw = (customKeyword || nicheInput || '').trim();
@@ -2184,89 +2040,123 @@ Rules:
   ]);
 
   const youtubeFetch = async (endpoint: string, params: Record<string, any>, retryCount = 0): Promise<any> => {
-    const maxRetries = config.apiKeys.length;
-    if (retryCount >= maxRetries) {
-      throw new Error("Tất cả API Key đã cạn kiệt hoặc gặp lỗi liên tục. Vui lòng kiểm tra lại Key!");
+    const keys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
+    if (keys.length === 0) {
+      throw new Error('Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
     }
 
-    const activeKey = getActiveApiKey()?.trim();
-    if (!activeKey || exhaustedKeys.includes(activeKey)) {
-      if (rotateApiKey()) {
-        return youtubeFetch(endpoint, params, retryCount + 1);
-      }
-      throw new Error("Tất cả API Key hiện tại đều không khả dụng (Hết chi phí hoặc bị chặn). Hãy thêm Key mới!");
-    }
+    const quotaCost = endpoint === 'search' ? 100 : 1;
+    const currentExhausted = new Set(exhaustedKeys.map(k => String(k || '').trim()).filter(Boolean));
+    const today = new Date().toISOString().split('T')[0];
 
-    const baseUrl = `https://www.googleapis.com/youtube/v3/${endpoint}`;
-    const urlParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, val]) => {
-      if (val !== undefined && val !== null && val !== '') {
-        urlParams.append(key, String(val));
-      }
-    });
-    urlParams.append('key', activeKey);
+    const saveExhaustedKeyNow = (key: string, reason: string) => {
+      currentExhausted.add(key);
+      const nextKeys = Array.from(currentExhausted);
+      setExhaustedKeys(nextKeys);
+      localStorage.setItem('youtube_exhausted_keys', JSON.stringify({ keys: nextKeys, date: today }));
+      const keyNo = keys.findIndex(k => k === key) + 1;
+      setStatus(`Key #${keyNo} đã hết/lỗi (${reason}). Tự động bỏ qua và dùng key tiếp theo...`);
+      setLastError(`Key #${keyNo} lỗi: ${reason}`);
+    };
 
-    try {
-      const response = await fetch(`${baseUrl}?${urlParams.toString()}`, {
-        signal: abortControllerRef.current?.signal
+    const shouldSkipKey = (key: string) => currentExhausted.has(key);
+    const isQuotaOrKeyError = (data: any, httpStatus?: number) => {
+      const reason = String(
+        data?.error?.errors?.[0]?.reason ||
+        data?.error?.status ||
+        data?.error?.message ||
+        data?.error ||
+        ''
+      ).toLowerCase();
+
+      return (
+        httpStatus === 401 ||
+        httpStatus === 403 ||
+        reason.includes('quota') ||
+        reason.includes('daily') ||
+        reason.includes('limit') ||
+        reason.includes('keyinvalid') ||
+        reason.includes('api key not valid') ||
+        reason.includes('invalid key') ||
+        reason.includes('forbidden') ||
+        reason.includes('unauthorized') ||
+        reason.includes('accessnotconfigured')
+      );
+    };
+
+    const getReasonText = (data: any, httpStatus?: number) => {
+      return String(
+        data?.error?.errors?.[0]?.reason ||
+        data?.error?.status ||
+        data?.error?.message ||
+        data?.error ||
+        `HTTP_${httpStatus || 'UNKNOWN'}`
+      );
+    };
+
+    let lastError: any = null;
+    const startIndex = Math.max(0, Math.min(apiKeyIndex, keys.length - 1));
+    const orderedKeys = [
+      ...keys.slice(startIndex),
+      ...keys.slice(0, startIndex)
+    ];
+
+    for (const activeKey of orderedKeys) {
+      if (!activeKey || shouldSkipKey(activeKey)) continue;
+
+      const keyIndex = keys.findIndex(k => k === activeKey);
+      const keyNo = keyIndex + 1;
+      setApiKeyIndex(keyIndex);
+      setStatus(`Đang dùng YouTube API Key #${keyNo}/${keys.length}: ${activeKey.slice(0, 8)}... để gọi ${endpoint}`);
+
+      const baseUrl = `https://www.googleapis.com/youtube/v3/${endpoint}`;
+      const urlParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          urlParams.append(key, String(val));
+        }
       });
-      
-      if (response.status === 403 || response.status === 401) {
-        setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-        if (rotateApiKey()) {
-          return youtubeFetch(endpoint, params, retryCount + 1);
+      urlParams.append('key', activeKey);
+
+      try {
+        const response = await fetch(`${baseUrl}?${urlParams.toString()}`, {
+          signal: abortControllerRef.current?.signal
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && !data?.error) {
+          setApiKeyIndex(keyIndex);
+          setStatus(`Key #${keyNo} hoạt động tốt. Đã lấy dữ liệu YouTube thành công.`);
+          setLastError(null);
+          updateQuotaUsage(quotaCost);
+          return data;
         }
-        throw new Error("Lỗi xác thực (401/403): API Key không hợp lệ hoặc đã hết hạn dùng.");
-      }
 
-      if (response.status === 400) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error?.message || "Vui lòng kiểm tra lại tham số.";
-        
-        // If the error message indicates an invalid key, mark it as exhausted and remove from active rotation
-        if (errorMsg.toLowerCase().includes("api key not valid") || errorMsg.toLowerCase().includes("invalid key") || errorMsg.toLowerCase().includes("key")) {
-          setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-          setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
-          setStatus(`XOÁ KEY LỖI: ${activeKey.slice(0,8)}...`);
-          if (rotateApiKey()) {
-            return youtubeFetch(endpoint, params, retryCount + 1);
-          }
+        if (isQuotaOrKeyError(data, response.status)) {
+          const reason = getReasonText(data, response.status);
+          saveExhaustedKeyNow(activeKey, reason);
+          lastError = data;
+          continue;
         }
-        throw new Error(`Yêu cầu không hợp lệ (400): ${errorMsg}`);
+
+        const errorMessage = getReasonText(data, response.status);
+        throw new Error(`Lỗi YouTube API (${response.status}): ${errorMessage}`);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') throw err;
+        lastError = err;
+        setStatus(`Key #${keyNo} gọi lỗi tạm thời. Tự thử key tiếp theo...`);
+        continue;
       }
-
-      const data = await response.json();
-
-      if (data.error) {
-        const reason = data.error.errors[0]?.reason;
-        if (['quotaExceeded', 'dailyLimitExceeded', 'keyInvalid', 'forbidden', 'unauthorized', 'accessNotConfigured'].includes(reason)) {
-          setExhaustedKeys(prev => [...new Set([...prev, activeKey])]);
-          
-          if (['keyInvalid', 'unauthorized', 'forbidden'].includes(reason)) {
-            setConfig(prev => ({ ...prev, apiKeys: prev.apiKeys.filter(k => k !== activeKey) }));
-            setStatus(`XOÁ KEY CHẾT: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
-          } else {
-            setStatus(`BỎ QUA KEY: ${activeKey.slice(0,8)}... (Lý do: ${reason})`);
-          }
-          
-          if (rotateApiKey()) {
-            return youtubeFetch(endpoint, params, retryCount + 1);
-          } else {
-            throw new Error(`Cạn kiệt API Key khả dụng. Vui lòng kiểm tra lại danh sách Key! [${reason}]`);
-          }
-        }
-        throw new Error(`Lỗi YouTube API: ${data.error.message}`);
-      }
-
-      // Estimate quota
-      if (endpoint === 'search') updateQuotaUsage(100);
-      else updateQuotaUsage(1);
-
-      return data;
-    } catch (err: any) {
-      if (err.name === 'AbortError') throw err;
-      throw err;
     }
+
+    const remain = keys.filter(k => !currentExhausted.has(k)).length;
+    if (remain <= 0) {
+      setStatus('Tất cả YouTube API Key hôm nay đã hết quota hoặc lỗi. Hãy thêm key mới hoặc đợi reset quota.');
+      throw new Error('Tất cả YouTube API Key hôm nay đã hết quota hoặc lỗi.');
+    }
+
+    throw lastError || new Error('Không gọi được YouTube API bằng các key hiện có.');
   };
 
   // --- Logic Functions ---
@@ -6494,7 +6384,12 @@ Quy tắc:
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeFromHistory(key);
+                            triggerConfirm(
+                              "Xóa Key",
+                              "Bạn có chắc chắn muốn xóa Key này khỏi lịch sử không?",
+                              () => removeFromHistory(key),
+                              "XÁC NHẬN XÓA"
+                            );
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -6608,7 +6503,7 @@ Quy tắc:
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeFromGeminiHistory(key);
+                            triggerConfirm('Xóa Gemini Key', 'Bạn có chắc chắn muốn xóa Gemini Key này khỏi lịch sử không?', () => removeFromGeminiHistory(key), 'XÁC NHẬN XÓA');
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -6962,7 +6857,7 @@ Quy tắc:
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.isOpen && (
-          <div className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4">
             <motion.div 
               className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden border border-gray-200"
               initial={{ scale: 0.9, opacity: 0 }}
@@ -7038,20 +6933,20 @@ Quy tắc:
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
                 
-                <div className="mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Chọn khu vực rồi bấm Admin quét để lấy key/cụm key từ video đang trend 30 ngày: ưu tiên VPH cao, views cao, có thể gồm cả kênh lớn.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Dữ liệu do hệ thống tự quét định kỳ bằng YouTube API V3; người dùng chỉ xem/copy/tải key để tiết kiệm quota.</span>
                         {trendingCacheMeta?.updatedAt && (
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
                      </h3>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full md:w-auto md:min-w-[560px]">
-                         <div className="relative h-12">
+                     <div className="flex items-center gap-3">
+                         <div className="relative">
                            <select
                               value={trendingRegion}
                               onChange={(e) => { setTrendingRegion(e.target.value); loadTrendingNicheCache(e.target.value); }}
-                              className="h-12 w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-black text-[11px] px-3 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
+                              className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.map(r => (
                                 <option key={r.code || 'GL'} value={r.code}>{r.name}</option>
@@ -7062,76 +6957,55 @@ Quy tắc:
                          <button
                             onClick={() => loadTrendingNicheCache(trendingRegion || config.region || 'VN')}
                             disabled={isFetchingDailyTrending}
-                            className="h-12 w-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center justify-center gap-2 text-center leading-tight"
+                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={15} className="animate-spin"/> Đang tải</> : <><Search size={15}/> Tải dữ liệu</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tải...</> : <><Search size={16}/> Tải dữ liệu mới nhất</>}
                          </button>
-                         <button
-                            onClick={user?.email === 'chinhkhai79@gmail.com' ? runAdminTrendingCron : () => downloadTrendingKeysTxt()}
-                            disabled={isFetchingDailyTrending}
-                            className="h-12 w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-center leading-tight"
-                         >
-                            {user?.email === 'chinhkhai79@gmail.com' ? <><RefreshCw size={14}/> Admin quét</> : <><Download size={14}/> Tải toàn bộ</>}
-                         </button>
+                         {user?.email === 'chinhkhai79@gmail.com' && (
+                           <button
+                              onClick={runAdminTrendingCron}
+                              disabled={isFetchingDailyTrending}
+                              className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2.5 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                           >
+                              <RefreshCw size={14}/> Admin quét
+                           </button>
+                         )}
                      </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {suggestedNiches.map((category, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
-                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight leading-snug">{category.category}</h4>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            title="Tải TXT riêng chủ đề này"
-                            onClick={() => downloadTrendingKeysTxt(category.category, category.items)}
-                            className="w-7 h-7 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-100 flex items-center justify-center transition-all"
-                          >
-                            <Download size={13} />
-                          </button>
-                          <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
-                        </div>
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
+                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.slice(0, 5).map((item, itemIdx) => {
-                          const keyText = getNicheItemText(item);
-                          return (
-                            <div key={itemIdx} className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 overflow-hidden hover:border-blue-300 transition-all">
-                              <button
-                                type="button"
-                                title="Dùng key này và phân tích ngay"
-                                onClick={() => useTrendingKeyNow(keyText)}
-                                className="hover:bg-blue-600 hover:text-white px-3 py-1.5 text-[11px] font-medium text-gray-600 transition-all active:scale-95"
-                              >
-                                {keyText}
-                              </button>
-                              <button
-                                type="button"
-                                title="Copy key"
-                                onClick={(e) => { e.stopPropagation(); copyTrendingKey(keyText); }}
-                                className="w-7 h-7 border-l border-gray-200 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all"
-                              >
-                                <Copy size={12} />
-                              </button>
-                            </div>
-                          );
-                        })}
+                        {category.items.slice(0, 5).map((item, itemIdx) => (
+                          <button
+                            key={itemIdx}
+                            onClick={() => {
+                              setNicheInput(item);
+                              localStorage.setItem('youtube_last_niche_keyword', item);
+                              setShowNicheModal(false);
+                              // Auto start research after a small delay
+                              setTimeout(() => {
+                                runNicheResearch(item);
+                              }, 100);
+                            }}
+                            className="bg-gray-50 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-600 border border-gray-200 transition-all hover:scale-105 active:scale-95"
+                          >
+                            {item}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white p-4 flex flex-col md:flex-row items-center justify-between gap-3 border-t border-gray-100 text-[11px] text-gray-400 font-medium">
-                <span className="italic">Mẹo: Bấm key để dùng trực tiếp, hoặc bấm icon copy để copy từng key.</span>
-                <button
-                  type="button"
-                  onClick={() => downloadTrendingKeysTxt()}
-                  className="h-10 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-black uppercase not-italic flex items-center gap-2 shadow"
-                >
-                  <Download size={14}/> Tải toàn bộ key TXT
-                </button>
+              <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
+                Mẹo: Bạn có thể nhập từ khóa bất kỳ vào ô tìm kiếm nếu không tìm thấy chủ đề ưng ý tại đây.
               </div>
             </motion.div>
           </div>
