@@ -241,6 +241,40 @@ const REGION_AI_CONFIG: Record<string, { language: string; note: string; seed: s
   ES: { language: 'español de España', note: 'Spain Spanish only, no Vietnamese', seed: 'nichos en tendencia España' },
 };
 
+const REGION_YT_CONFIG: Record<string, { regionCode: string; relevanceLanguage: string; seed: string; language: string }> = {
+  VN: { regionCode: 'VN', relevanceLanguage: 'vi', seed: 'xu hướng youtube việt nam', language: 'Vietnamese' },
+  US: { regionCode: 'US', relevanceLanguage: 'en', seed: 'youtube trending niches united states', language: 'English' },
+  GB: { regionCode: 'GB', relevanceLanguage: 'en', seed: 'youtube trending niches united kingdom', language: 'English' },
+  IN: { regionCode: 'IN', relevanceLanguage: 'hi', seed: 'india youtube trending niches', language: 'Hindi or Indian English' },
+  JP: { regionCode: 'JP', relevanceLanguage: 'ja', seed: '日本 youtube トレンド ニッチ', language: 'Japanese' },
+  KR: { regionCode: 'KR', relevanceLanguage: 'ko', seed: '한국 유튜브 트렌드 니치', language: 'Korean' },
+  TH: { regionCode: 'TH', relevanceLanguage: 'th', seed: 'เทรนด์ youtube ไทย', language: 'Thai' },
+  ID: { regionCode: 'ID', relevanceLanguage: 'id', seed: 'tren youtube indonesia', language: 'Indonesian' },
+  PH: { regionCode: 'PH', relevanceLanguage: 'en', seed: 'philippines youtube trending niches', language: 'English or Tagalog' },
+  MY: { regionCode: 'MY', relevanceLanguage: 'ms', seed: 'trend youtube malaysia', language: 'Malay' },
+  SG: { regionCode: 'SG', relevanceLanguage: 'en', seed: 'singapore youtube trending niches', language: 'English' },
+  DE: { regionCode: 'DE', relevanceLanguage: 'de', seed: 'youtube trend nischen deutschland', language: 'German' },
+  FR: { regionCode: 'FR', relevanceLanguage: 'fr', seed: 'niches tendance youtube france', language: 'French' },
+  RU: { regionCode: 'RU', relevanceLanguage: 'ru', seed: 'трендовые ниши youtube россия', language: 'Russian' },
+  BR: { regionCode: 'BR', relevanceLanguage: 'pt', seed: 'nichos em alta youtube brasil', language: 'Portuguese' },
+  MX: { regionCode: 'MX', relevanceLanguage: 'es', seed: 'nichos tendencia youtube méxico', language: 'Spanish' },
+  AU: { regionCode: 'AU', relevanceLanguage: 'en', seed: 'australia youtube trending niches', language: 'English' },
+  CA: { regionCode: 'CA', relevanceLanguage: 'en', seed: 'canada youtube trending niches', language: 'English' },
+  ES: { regionCode: 'ES', relevanceLanguage: 'es', seed: 'nichos tendencia youtube españa', language: 'Spanish' },
+};
+
+function getFriendlyApiError(error: any): string {
+  const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
+  const text = String(raw).toLowerCase();
+  if (text.includes('api key expired') || text.includes('api_key_invalid') || text.includes('key expired')) return 'API key đã hết hạn hoặc không còn hợp lệ. Vui lòng thay API key mới trong phần Cài đặt API.';
+  if (text.includes('api key not valid') || text.includes('invalid api key') || text.includes('keyinvalid')) return 'API key không hợp lệ. Vui lòng kiểm tra lại key hoặc nhập key mới.';
+  if (text.includes('quota') || text.includes('daily') || text.includes('limit') || text.includes('exceeded')) return 'API key đã hết quota hoặc bị giới hạn. Hệ thống sẽ tự bỏ qua key lỗi và thử key tiếp theo nếu có.';
+  if (text.includes('403')) return 'API bị từ chối truy cập. Vui lòng kiểm tra quyền API key hoặc bật đúng dịch vụ trong Google Cloud.';
+  if (text.includes('400')) return 'Yêu cầu API chưa hợp lệ. Vui lòng kiểm tra lại key, model hoặc dữ liệu đầu vào.';
+  if (text.includes('failed to fetch') || text.includes('network')) return 'Không kết nối được tới API. Vui lòng kiểm tra mạng hoặc thử lại sau.';
+  return raw && raw.length < 220 ? raw : 'Có lỗi khi gọi API. Vui lòng kiểm tra lại key hoặc thử lại sau.';
+}
+
 const GEMINI_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash — Khuyên dùng: ổn định, mạnh, phù hợp phân tích video/kênh.' },
   { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite — Nhẹ hơn 2.5 Flash, tiết kiệm quota hơn.' },
@@ -252,21 +286,21 @@ const GEMINI_MODELS = [
 ];
 
 const SUGGESTED_NICHES = [
-  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua trì hoãn', 'thói quen kỷ luật', 'kỹ năng tự tin', 'quản lý thời gian', 'tư duy tích cực', 'chữa lành bản thân'] },
-  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tại nhà', 'skincare cho da mụn', 'yoga giảm stress', 'ăn sạch mỗi ngày', 'chăm sóc tóc rụng', 'bài tập giữ dáng'] },
-  { category: 'CÔNG NGHỆ & AI', items: ['công cụ AI mới', 'hướng dẫn ChatGPT', 'AI tạo video', 'review điện thoại', 'tự động hóa công việc', 'ứng dụng AI học tập'] },
-  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh giao tiếp', 'mẹo học nhanh', 'tự học lập trình', 'ôn thi hiệu quả', 'IELTS vocabulary', 'kỹ năng thuyết trình'] },
-  { category: 'ẨM THỰC & NẤU ĂN', items: ['món ăn gia đình', 'nấu ăn sinh viên', 'món ngon dễ làm', 'meal prep healthy', 'công thức nồi chiên', 'ẩm thực đường phố'] },
-  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch tự túc', 'travel vlog', 'review homestay', 'địa điểm cuối tuần', 'kinh nghiệm xin visa', 'mẹo săn vé rẻ'] },
-  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'reaction trending', 'meme compilation', 'thử thách vui', 'tóm tắt phim', 'clip giải trí'] },
-  { category: 'THỂ THAO & THỂ HÌNH', items: ['home workout', 'giảm mỡ bụng', 'tập gym cơ bản', 'bóng đá hôm nay', 'bài tập tăng cơ', 'dinh dưỡng thể hình'] },
-  { category: 'PETS & ĐỘNG VẬT', items: ['huấn luyện chó con', 'chăm sóc mèo', 'pet grooming', 'đồ chơi thú cưng', 'vlog chó mèo', 'thức ăn thú cưng'] },
-  { category: 'GAMING & ESPORTS', items: ['gameplay highlights', 'mobile game mới', 'mẹo leo rank', 'review game hot', 'esports moments', 'streamer reaction'] },
-  { category: 'TÀI CHÍNH & ĐẦU TƯ', items: ['kiếm tiền online', 'đầu tư cho người mới', 'crypto news', 'quản lý tài chính', 'affiliate marketing', 'stock market tips'] },
-  { category: 'MARKETING & KINH DOANH', items: ['content marketing', 'tăng trưởng kênh', 'bán hàng online', 'affiliate tiktok', 'SEO cơ bản', 'chiến lược thương hiệu'] },
-  { category: 'Ô TÔ & XE MÁY', items: ['review xe mới', 'phụ kiện ô tô', 'kinh nghiệm mua xe', 'bảo dưỡng xe máy', 'ô tô điện', 'độ xe đẹp'] },
-  { category: 'NHẠC & ÂM THANH', items: ['nhạc lofi chill', 'acoustic cover', 'nhạc ngủ sâu', 'beat free', 'music production', 'nhạc thiền'] },
-  { category: 'MẸO VẶT & ĐỜI SỐNG', items: ['mẹo dọn nhà', 'life hacks', 'tái chế đồ cũ', 'mẹo tiết kiệm tiền', 'trang trí phòng nhỏ', 'ứng dụng hữu ích'] },
+  { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua trì hoãn', 'kỷ luật bản thân', 'thói quen thành công', 'quản lý thời gian', 'tư duy tích cực', 'năng suất cá nhân'] },
+  { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tại nhà', 'yoga tại nhà', 'skincare cơ bản', 'ăn sạch sống khỏe', 'bài tập giảm mỡ', 'chăm sóc tóc'] },
+  { category: 'CÔNG NGHỆ & AI', items: ['công cụ AI mới', 'hướng dẫn ChatGPT', 'ứng dụng AI', 'review điện thoại', 'mẹo iPhone', 'tự động hóa AI'] },
+  { category: 'GIÁO DỤC & HỌC TẬP', items: ['học tiếng Anh', 'mẹo học nhanh', 'từ vựng IELTS', 'tự học lập trình', 'ôn thi hiệu quả', 'kỹ năng ghi nhớ'] },
+  { category: 'ẨM THỰC & NẤU ĂN', items: ['món ngon dễ làm', 'nấu ăn gia đình', 'công thức món chay', 'bữa sáng nhanh', 'meal prep', 'món ăn healthy'] },
+  { category: 'DU LỊCH & KHÁM PHÁ', items: ['du lịch tự túc', 'travel vlog', 'địa điểm đẹp', 'du lịch tiết kiệm', 'ẩm thực địa phương', 'cắm trại cuối tuần'] },
+  { category: 'GIẢI TRÍ & HÀI HƯỚC', items: ['phim hài ngắn', 'reaction video', 'tóm tắt phim', 'meme hài hước', 'thử thách vui', 'câu chuyện lạ'] },
+  { category: 'THỂ THAO & THỂ HÌNH', items: ['home workout', 'tăng cơ giảm mỡ', 'bài tập gym', 'bóng đá hôm nay', 'chạy bộ cho người mới', 'dinh dưỡng thể hình'] },
+  { category: 'PETS & ĐỘNG VẬT', items: ['huấn luyện chó', 'chăm sóc mèo', 'thú cưng đáng yêu', 'pet grooming', 'thức ăn cho mèo', 'vlog chó mèo'] },
+  { category: 'GIA ĐÌNH & ĐỜI SỐNG', items: ['mẹo dọn nhà', 'nuôi dạy con', 'tài chính gia đình', 'trang trí nhà nhỏ', 'mẹo nhà bếp', 'đời sống tối giản'] },
+  { category: 'NGHỆ THUẬT & SÁNG TẠO', items: ['vẽ tranh dễ', 'thiết kế Canva', 'edit video CapCut', 'chụp ảnh điện thoại', 'guitar cơ bản', 'ý tưởng sáng tạo'] },
+  { category: 'XE & CÔNG NGHỆ Ô TÔ', items: ['review xe máy', 'ô tô điện', 'kinh nghiệm mua xe', 'phụ kiện ô tô', 'bảo dưỡng xe', 'xe tiết kiệm xăng'] },
+  { category: 'TÀI CHÍNH & KIẾM TIỀN', items: ['kiếm tiền online', 'quản lý tài chính', 'đầu tư cho người mới', 'side hustle', 'affiliate marketing', 'tiết kiệm tiền'] },
+  { category: 'REVIEW SẢN PHẨM', items: ['unboxing sản phẩm', 'review đồ công nghệ', 'review mỹ phẩm', 'đồ gia dụng thông minh', 'sản phẩm viral', 'mua gì đáng tiền'] },
+  { category: 'MARKETING & TRUYỀN THÔNG', items: ['content marketing', 'xây kênh YouTube', 'SEO cơ bản', 'chạy quảng cáo', 'tăng trưởng TikTok', 'chiến lược nội dung'] }
 ];
 
 const STOP_LIMIT = 10;
@@ -424,6 +458,7 @@ export default function App() {
   const [suggestedNiches, setSuggestedNiches] = useState<{ category: string, items: string[] }[]>(SUGGESTED_NICHES);
   const [trendingRegion, setTrendingRegion] = useState(config.region);
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
+  const [scanningNicheCategory, setScanningNicheCategory] = useState<string | null>(null);
   const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
@@ -722,7 +757,7 @@ export default function App() {
         if (Array.isArray(parsedSuggestedNiches) && parsedSuggestedNiches.length > 0) {
           setSuggestedNiches(parsedSuggestedNiches.map((niche: any) => ({
             ...niche,
-            items: Array.isArray(niche.items) ? niche.items.slice(0, 6) : []
+            items: Array.isArray(niche.items) ? niche.items.slice(0, 5) : []
           })));
         }
       } catch (error) {
@@ -1519,10 +1554,10 @@ export default function App() {
           seen.add(key);
           return true;
         })
-        .slice(0, 6);
+        .slice(0, 5);
     };
 
-    const generateGeminiNicheKeywords = async (category: string, count = 6) => {
+    const generateGeminiNicheKeywords = async (category: string, count = 5) => {
       if (!geminiApiKey) return [] as string[];
       try {
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
@@ -1574,8 +1609,8 @@ Rules:
 
         const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
         if (videoIds.length === 0) {
-          const aiItems = await generateGeminiNicheKeywords(category, 6);
-          updated.push({ category, items: aiItems.length ? aiItems.slice(0, 6) : SUGGESTED_NICHES[idx].items.slice(0, 6).filter(languageOk) });
+          const aiItems = await generateGeminiNicheKeywords(category, 5);
+          updated.push({ category, items: aiItems.length ? aiItems : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk) });
           continue;
         }
 
@@ -1623,7 +1658,7 @@ Rules:
             const key = removeVietnameseTone(phrase);
             return arr.findIndex(item => removeVietnameseTone(item) === key) === index;
           })
-          .slice(0, 6);
+          .slice(0, 5);
 
         const looseRanked = [...loosePhraseScores.entries()]
           .sort((a, b) => b[1] - a[1])
@@ -1633,20 +1668,20 @@ Rules:
         let items = [
           ...ranked,
           ...looseRanked
-        ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 6);
+        ].filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i).slice(0, 5);
 
         // Nếu YouTube API không đủ dữ liệu đúng chủ đề/khu vực thì dùng Gemini để bù từ khóa,
         // nhưng vẫn khóa ngôn ngữ theo khu vực đã chọn để tránh sai vùng.
-        if (items.length < 6) {
-          const aiItems = await generateGeminiNicheKeywords(category, 6 - items.length);
+        if (items.length < 5) {
+          const aiItems = await generateGeminiNicheKeywords(category, 5 - items.length);
           items = [...items, ...aiItems]
             .filter((item, i, arr) => arr.findIndex(x => removeVietnameseTone(x) === removeVietnameseTone(item)) === i)
-            .slice(0, 6);
+            .slice(0, 5);
         }
 
         updated.push({
           category,
-          items: items.length ? items : SUGGESTED_NICHES[idx].items.slice(0, 6).filter(languageOk)
+          items: items.length ? items : SUGGESTED_NICHES[idx].items.slice(0, 5).filter(languageOk)
         });
       }
 
@@ -1699,7 +1734,7 @@ Rules:
       .filter((cat: any) => cat.category && cat.items.length > 0)
       .slice(0, 15);
 
-    // Nếu Gemini trả thiếu chủ đề, giữ đủ khung 15 chủ đề và bù bằng key cũ theo đúng category.
+    // Nếu Gemini trả thiếu chủ đề, giữ đủ khung 30 chủ đề và bù bằng key cũ theo đúng category.
     const used = new Set(fixed.map((x: any) => x.category));
     for (const fallback of SUGGESTED_NICHES) {
       if (fixed.length >= 15) break;
@@ -1720,7 +1755,7 @@ Rules:
     if (!geminiApiKey.trim()) throw new Error('Thiếu Gemini API Key.');
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey.trim() });
-    const categoryList = SUGGESTED_NICHES.map((x, i) => `${i + 1}. ${x.category}`).join('\n');
+    const categoryList = SUGGESTED_NICHES.slice(0, 15).map((x, i) => `${i + 1}. ${x.category}`).join('\n');
     const prompt = `Bạn là chuyên gia nghiên cứu ngách YouTube.
 Tạo danh sách đúng 15 chủ đề ngách YouTube cho khu vực: ${regionName} (${selectedRegion}).
 Ngôn ngữ bắt buộc của tất cả keyword: ${regionCfg.language}.
@@ -1773,7 +1808,7 @@ JSON mẫu:
       const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
       setSuggestedNiches(data.categories);
       setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
-      setStatus(`Đã tạo key gợi ý bằng Gemini cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Mỗi chủ đề có nút icon để quét dữ liệu thật bằng YouTube API V3.`);
+      setStatus(`Đã tạo key gợi ý bằng Gemini cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp trên từng chủ đề để lấy key thật từ YouTube API V3.`);
     } catch (err: any) {
       const savedGemini = localStorage.getItem(getTrendingStorageKey(selectedRegion, 'gemini'));
       const savedYoutube = localStorage.getItem(getTrendingStorageKey(selectedRegion, 'youtube'));
@@ -1796,195 +1831,154 @@ JSON mẫu:
       }
       setSuggestedNiches(SUGGESTED_NICHES);
       setTrendingCacheMeta(null);
-      setStatus(err?.message || 'Không tạo được key Gemini theo khu vực.');
+      setStatus(getFriendlyApiError(err) || 'Không tạo được key Gemini theo khu vực.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
   };
 
 
-  const getRegionLanguageForYouTube = (regionCode: string) => {
-    const mapping: Record<string, string> = {
-      VN: 'vi', US: 'en', GB: 'en', CA: 'en', AU: 'en', SG: 'en', IN: 'en',
-      JP: 'ja', KR: 'ko', RU: 'ru', BR: 'pt', MX: 'es', ES: 'es', FR: 'fr', DE: 'de',
-      TH: 'th', ID: 'id', MY: 'ms', PH: 'en', IT: 'it'
+  const categoryTitleToSearchSeed = (category: string) => {
+    const map: Record<string, string> = {
+      'PHÁT TRIỂN BẢN THÂN': 'self improvement productivity motivation habits',
+      'SỨC KHỎE & LÀM ĐẸP': 'health beauty skincare weight loss workout',
+      'CÔNG NGHỆ & AI': 'ai tools technology chatgpt apps',
+      'GIÁO DỤC & HỌC TẬP': 'study tips education learning english',
+      'ẨM THỰC & NẤU ĂN': 'food cooking recipes meals',
+      'DU LỊCH & KHÁM PHÁ': 'travel vlog destination guide',
+      'GIẢI TRÍ & HÀI HƯỚC': 'entertainment funny reaction meme',
+      'THỂ THAO & THỂ HÌNH': 'sports fitness workout football',
+      'PETS & ĐỘNG VẬT': 'pets animals dogs cats',
+      'GIA ĐÌNH & ĐỜI SỐNG': 'family life home tips parenting',
+      'NGHỆ THUẬT & SÁNG TẠO': 'creative art design editing',
+      'XE & CÔNG NGHỆ Ô TÔ': 'car motorcycle auto review',
+      'TÀI CHÍNH & KIẾM TIỀN': 'make money personal finance side hustle',
+      'REVIEW SẢN PHẨM': 'product review unboxing gadgets',
+      'MARKETING & TRUYỀN THÔNG': 'marketing content creation youtube growth',
     };
-    return mapping[regionCode] || undefined;
+    return map[category] || category.toLowerCase();
   };
 
-  const getYouTubeCategorySeed = (category: string, regionCode: string) => {
-    const seeds: Record<string, string> = {
-      'PHÁT TRIỂN BẢN THÂN': 'self improvement habits productivity motivation',
-      'SỨC KHỎE & LÀM ĐẸP': 'health beauty skincare weight loss fitness',
-      'CÔNG NGHỆ & AI': 'ai tools chatgpt technology tutorial',
-      'GIÁO DỤC & HỌC TẬP': 'study tips learning english education',
-      'ẨM THỰC & NẤU ĂN': 'food cooking recipes easy meals',
-      'DU LỊCH & KHÁM PHÁ': 'travel vlog destination guide adventure',
-      'GIẢI TRÍ & HÀI HƯỚC': 'funny entertainment reaction meme',
-      'THỂ THAO & THỂ HÌNH': 'fitness workout sports football gym',
-      'PETS & ĐỘNG VẬT': 'pets animals dog cat care',
-      'GAMING & ESPORTS': 'gaming gameplay highlights esports',
-      'TÀI CHÍNH & ĐẦU TƯ': 'finance investing crypto money tips',
-      'MARKETING & KINH DOANH': 'marketing business online sales growth',
-      'Ô TÔ & XE MÁY': 'car motorcycle review auto tips',
-      'NHẠC & ÂM THANH': 'music cover lofi relaxing songs',
-      'MẸO VẶT & ĐỜI SỐNG': 'life hacks home tips cleaning'
-    };
-
-    const vietnameseSeeds: Record<string, string> = {
-      'PHÁT TRIỂN BẢN THÂN': 'phát triển bản thân thói quen năng suất',
-      'SỨC KHỎE & LÀM ĐẸP': 'sức khỏe làm đẹp giảm cân skincare',
-      'CÔNG NGHỆ & AI': 'công nghệ AI ChatGPT công cụ AI',
-      'GIÁO DỤC & HỌC TẬP': 'học tập tiếng anh tự học hiệu quả',
-      'ẨM THỰC & NẤU ĂN': 'ẩm thực nấu ăn món ngon công thức',
-      'DU LỊCH & KHÁM PHÁ': 'du lịch khám phá travel vlog',
-      'GIẢI TRÍ & HÀI HƯỚC': 'giải trí hài hước reaction phim ngắn',
-      'THỂ THAO & THỂ HÌNH': 'thể thao gym bóng đá workout',
-      'PETS & ĐỘNG VẬT': 'thú cưng chó mèo động vật',
-      'GAMING & ESPORTS': 'game esports highlight liên quân',
-      'TÀI CHÍNH & ĐẦU TƯ': 'tài chính đầu tư kiếm tiền online',
-      'MARKETING & KINH DOANH': 'marketing kinh doanh bán hàng online',
-      'Ô TÔ & XE MÁY': 'ô tô xe máy review xe',
-      'NHẠC & ÂM THANH': 'nhạc lofi cover thư giãn',
-      'MẸO VẶT & ĐỜI SỐNG': 'mẹo vặt cuộc sống dọn nhà'
-    };
-
-    if (regionCode === 'VN') return vietnameseSeeds[category] || category.toLowerCase();
-    return seeds[category] || category.toLowerCase().replace(/&/g, '');
-  };
-
-  const scanCategoryTrendingFromYouTube = async (categoryIndex: number) => {
+  const fetchTrendingKeysForCategory = async (category: string, index: number) => {
     if (config.apiKeys.length === 0) {
-      setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách bằng dữ liệu thật.');
+      setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
       return;
     }
 
     const selectedRegion = normalizeRegionCode(trendingRegion || config.region || 'VN');
-    const category = suggestedNiches[categoryIndex]?.category || SUGGESTED_NICHES[categoryIndex]?.category;
-    if (!category) return;
+    const regionCfg = REGION_YT_CONFIG[selectedRegion] || REGION_YT_CONFIG.VN;
+    const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
+    const currentItems = suggestedNiches[index]?.items || [];
+    const publishedAfter = getPublishedAfterDate('month');
+    const scanningKey = `${category}-${index}`;
 
-    setIsFetchingDailyTrending(true);
-    setStatus(`Đang quét YouTube API V3 cho chủ đề ${category} tại khu vực ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}...`);
+    const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
+      || /\b(của|cho|với|không|cách|hướng dẫn|việt nam|người|làm|món|ngách)\b/i.test(value);
 
-    const cleanPhrase = (value: string) => String(value || '')
-      .replace(/#[\w\p{L}\p{N}_-]+/gu, ' ')
+    const languageLooksOk = (value: string) => {
+      const v = String(value || '').trim();
+      if (!v) return false;
+      if (selectedRegion === 'VN') return /[a-zăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(v);
+      if (['US','GB','AU','CA','SG','PH','IN'].includes(selectedRegion)) return /[a-z]/i.test(v) && !hasVietnamese(v);
+      if (selectedRegion === 'JP') return /[ぁ-んァ-ン一-龯]/.test(v);
+      if (selectedRegion === 'KR') return /[가-힣]/.test(v);
+      if (selectedRegion === 'TH') return /[\u0E00-\u0E7F]/.test(v);
+      if (selectedRegion === 'RU') return /[а-яё]/i.test(v);
+      if (['BR'].includes(selectedRegion)) return /[a-záàâãéêíóôõúç]/i.test(v) && !hasVietnamese(v);
+      if (['MX','ES'].includes(selectedRegion)) return /[a-záéíóúñü]/i.test(v) && !hasVietnamese(v);
+      if (selectedRegion === 'FR') return /[a-zàâçéèêëîïôûùüÿñæœ]/i.test(v) && !hasVietnamese(v);
+      if (selectedRegion === 'DE') return /[a-zäöüß]/i.test(v) && !hasVietnamese(v);
+      return !hasVietnamese(v);
+    };
+
+    const cleanKeyword = (value: string) => String(value || '')
       .replace(/https?:\/\/\S+/gi, ' ')
+      .replace(/#[\w\p{L}\p{N}_-]+/gu, ' ')
       .replace(/[|•·,_;:!?()[\]{}"“”'’]+/g, ' ')
       .replace(/\s+/g, ' ')
-      .trim();
-
-    const removeTone = (value: string) => String(value || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .trim();
-
-    const stopWords = /\b(official|video|shorts|viral|full|new|update|2024|2025|2026|part|episode|channel|youtube|subscribe|like|comment|follow|today|latest|this|that|with|from|the|and|for|you|your)\b/i;
+      .trim()
+      .toLowerCase();
 
     const addCandidates = (text: string, output: string[]) => {
-      const words = cleanPhrase(text).split(/\s+/).filter(Boolean);
-      if (words.length < 2) return;
-      for (let n = 2; n <= Math.min(5, words.length); n++) {
-        for (let i = 0; i <= words.length - n; i++) {
-          const phrase = words.slice(i, i + n).join(' ').replace(/^#/, '').trim().toLowerCase();
-          if (phrase.length >= 4 && phrase.length <= 46 && !stopWords.test(phrase)) output.push(phrase);
-        }
+      const cleaned = cleanKeyword(text);
+      if (!cleaned) return;
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      if (words.length >= 2 && words.length <= 6) output.push(cleaned);
+      for (let n = 2; n <= Math.min(4, words.length); n++) {
+        for (let i = 0; i <= words.length - n; i++) output.push(words.slice(i, i + n).join(' '));
       }
     };
 
     try {
-      const query = getYouTubeCategorySeed(category, selectedRegion);
-      const publishedAfter = getPublishedAfterDate('month');
-      const relevanceLanguage = getRegionLanguageForYouTube(selectedRegion);
+      setScanningNicheCategory(scanningKey);
+      setIsFetchingDailyTrending(true);
+      setStatus(`Đang quét YouTube API V3: ${category} tại ${regionName}...`);
 
+      const localSeed = currentItems.filter(languageLooksOk).slice(0, 3).join(' ');
+      const query = `${localSeed || regionCfg.seed} ${categoryTitleToSearchSeed(category)}`.trim();
       const searchRes = await youtubeFetch('search', {
         part: 'snippet',
         q: query,
         type: 'video',
-        regionCode: selectedRegion,
+        regionCode: regionCfg.regionCode,
+        relevanceLanguage: regionCfg.relevanceLanguage,
         publishedAfter,
         order: 'viewCount',
-        maxResults: 35,
-        relevanceLanguage
+        maxResults: 30,
       });
 
       const videoIds = (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
-      if (videoIds.length === 0) throw new Error('Không tìm thấy video trend trong 30 ngày cho chủ đề này.');
+      if (videoIds.length === 0) throw new Error(`Không tìm thấy video trend phù hợp cho ${category} tại ${regionName}.`);
 
-      const videoDetail = await youtubeFetch('videos', {
-        part: 'snippet,statistics',
-        id: videoIds.join(',')
-      });
-
+      const videoDetail = await youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: videoIds.join(',') });
       const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
       const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
-      const channelDetail = channelIds.length ? await youtubeFetch('channels', {
-        part: 'snippet,statistics',
-        id: channelIds.join(',')
-      }) : { items: [] };
+      const channelDetail = channelIds.length ? await youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.join(',') }) : { items: [] };
       const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
+      const scores = new Map<string, number>();
 
-      const scoredVideos = videos.map((video: any) => {
-        const channel: any = channelMap.get(video?.snippet?.channelId) || {};
+      videos.forEach((video: any) => {
+        const channel: any = channelMap.get(video?.snippet?.channelId);
+        const country = String(channel?.snippet?.country || '').toUpperCase();
+        if (country && country !== regionCfg.regionCode) return;
         const views = Number(video?.statistics?.viewCount || 0);
         const subs = Number(channel?.statistics?.subscriberCount || 0);
         const vph = calculateVPH(views, video?.snippet?.publishedAt);
-        const subNear30k = subs > 0 ? Math.max(0, 1 - Math.abs(subs - 30000) / 70000) : 0;
-        const score = (vph * 2.5) + (Math.log10(views + 10) * 35) + (subNear30k * 140) + (subs > 0 && subs <= 80000 ? 90 : 0);
-        return { video, channel, views, subs, vph, score };
-      }).filter((x: any) => x.views > 0 && x.vph > 0)
-        .sort((a: any, b: any) => b.score - a.score);
-
-      const preferred = scoredVideos.filter((x: any) => x.subs > 0 && x.subs <= 80000).slice(0, 18);
-      const pool = (preferred.length >= 6 ? preferred : scoredVideos.slice(0, 18));
-
-      const phraseScores = new Map<string, number>();
-      for (const item of pool) {
+        const baseScore = Math.log10(views + 10) * 35 + Math.min(vph, 5000) / 20 + Math.min(views / Math.max(subs, 1), 500) * 1.5;
         const candidates: string[] = [];
-        addCandidates(item.video?.snippet?.title || '', candidates);
-        if (Array.isArray(item.video?.snippet?.tags)) {
-          item.video.snippet.tags.slice(0, 12).forEach((tag: string) => addCandidates(tag, candidates));
-        }
-        candidates.forEach((phrase) => {
-          const key = removeTone(phrase);
-          if (!key || key.length < 4) return;
-          const prev = phraseScores.get(phrase) || 0;
-          phraseScores.set(phrase, prev + item.score);
-        });
-      }
-
-      const seen = new Set<string>();
-      let keys = [...phraseScores.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .map(([phrase]) => phrase)
-        .filter((phrase) => {
-          const key = removeTone(phrase);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .slice(0, 6);
-
-      if (keys.length < 6) {
-        const fallback = SUGGESTED_NICHES.find(x => x.category === category)?.items || [];
-        keys = [...keys, ...fallback].filter((item, idx, arr) => arr.findIndex(x => removeTone(x) === removeTone(item)) === idx).slice(0, 6);
-      }
-
-      setSuggestedNiches(prev => {
-        const next = prev.map((item, idx) => idx === categoryIndex ? { ...item, items: keys } : item);
-        const payload = { categories: next, updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_category_manual' };
-        localStorage.setItem(getTrendingStorageKey(selectedRegion, 'youtube'), JSON.stringify(payload));
-        localStorage.setItem(`youtube_suggested_niches_trending_v4_${selectedRegion}`, JSON.stringify(next));
-        setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
-        return next;
+        addCandidates(video?.snippet?.title || '', candidates);
+        (video?.snippet?.tags || []).forEach((tag: string) => candidates.push(cleanKeyword(tag)));
+        String(video?.snippet?.description || '').split('\n').slice(0, 4).forEach(line => addCandidates(line, candidates));
+        candidates
+          .map(cleanKeyword)
+          .filter(k => k.length >= 3 && k.length <= 48)
+          .filter(languageLooksOk)
+          .filter(k => !/\b(official|video|shorts|full|subscribe|comment|channel|youtube|2024|2025|2026)\b/i.test(k))
+          .forEach(k => scores.set(k, (scores.get(k) || 0) + baseScore));
       });
 
-      setStatus(`Đã quét xong chủ đề ${category}: lấy ${keys.length} key từ video trend 30 ngày, ưu tiên VPH/View cao và kênh quanh 30k sub.`);
+      const nextItems = [...scores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([keyword]) => keyword)
+        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
+        .slice(0, 6);
+
+      if (nextItems.length === 0) throw new Error(`Có video nhưng chưa tách được key đúng ngôn ngữ cho ${regionName}. Hãy bấm Tạo 15 chủ đề Gemini rồi quét lại.`);
+
+      setSuggestedNiches(prev => {
+        const next = prev.map((item, i) => i === index ? { ...item, items: nextItems } : item).slice(0, 15);
+        const payload = { categories: next, updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_manual_category' };
+        localStorage.setItem(getTrendingStorageKey(selectedRegion, 'youtube'), JSON.stringify(payload));
+        localStorage.setItem(`youtube_suggested_niches_trending_v4_${selectedRegion}`, JSON.stringify(next));
+        return next;
+      });
+      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_manual_category' });
+      setStatus(`Đã quét xong ${category}: lấy ${nextItems.length} key thật từ YouTube API V3 cho ${regionName}.`);
     } catch (error: any) {
       console.error(error);
-      setStatus(`Lỗi quét chủ đề ${category}: ${error?.message || 'Không xác định'}`);
+      setStatus(getFriendlyApiError(error));
     } finally {
+      setScanningNicheCategory(null);
       setIsFetchingDailyTrending(false);
     }
   };
@@ -5438,7 +5432,7 @@ Quy tắc:
                     <div className="flex items-center justify-between">
                       <label className="text-[10px] uppercase font-bold text-[#95a5a6] block">TỪ KHÓA / NGÁCH RESEARCH</label>
                       <button 
-                        onClick={() => { setShowNicheModal(true); loadTrendingNicheCache(trendingRegion || config.region || 'VN'); }}
+                        onClick={() => setShowNicheModal(true)}
                         className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-400/20 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 font-bold shadow-sm"
                       >
                         <LayoutGrid size={10} /> XEM GỢI Ý NGÁCH
@@ -7187,7 +7181,7 @@ Quy tắc:
                     <LayoutGrid size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH 15 CHỦ ĐỀ NGÁCH GỢI Ý</h3>
+                    <h3 className="font-black text-xl uppercase tracking-wider">DANH SÁCH {suggestedNiches.length} CHỦ ĐỀ NGÁCH GỢI Ý</h3>
                   </div>
                 </div>
                 <button 
@@ -7203,7 +7197,7 @@ Quy tắc:
                 <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Mỗi chủ đề có nút quét riêng bằng YouTube API V3 theo khu vực: ưu tiên video 30 ngày, VPH/View cao và kênh quanh 30k sub.</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Mỗi chủ đề có nút quét riêng bằng YouTube API V3 theo khu vực. Không tự quét khi mở bảng.</span>
                         {trendingCacheMeta?.updatedAt && (
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
@@ -7212,7 +7206,7 @@ Quy tắc:
                          <div className="relative">
                            <select
                               value={trendingRegion}
-                              onChange={(e) => { setTrendingRegion(e.target.value); loadTrendingNicheCache(e.target.value); }}
+                              onChange={(e) => setTrendingRegion(e.target.value)}
                               className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.filter(r => r.code).map(r => (
@@ -7228,24 +7222,22 @@ Quy tắc:
                          >
                             {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tạo...</> : <><Bot size={16}/> Tạo 15 chủ đề Gemini</>}
                          </button>
-
                      </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {suggestedNiches.map((category, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <div className="flex items-center gap-2">
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
+                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight leading-tight">{category.category}</h4>
+                        <div className="flex items-center gap-2 shrink-0">
                           <button
-                            type="button"
-                            onClick={() => scanCategoryTrendingFromYouTube(idx)}
-                            disabled={isFetchingDailyTrending}
                             title="Quét ngách thật bằng YouTube API V3 cho chủ đề này"
-                            className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-500 hover:text-white disabled:opacity-50 flex items-center justify-center transition-all active:scale-95"
+                            onClick={() => fetchTrendingKeysForCategory(category.category, idx)}
+                            disabled={isFetchingDailyTrending}
+                            className="w-8 h-8 rounded-lg bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-100 flex items-center justify-center transition-all disabled:opacity-50"
                           >
-                            {isFetchingDailyTrending ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                            {scanningNicheCategory === `${category.category}-${idx}` ? <RefreshCw size={15} className="animate-spin" /> : <Search size={15} />}
                           </button>
                           <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(6, category.items.length)} KEY</span>
                         </div>
@@ -7272,7 +7264,7 @@ Quy tắc:
               </div>
 
               <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
-                Mẹo: Bạn có thể nhập từ khóa bất kỳ vào ô tìm kiếm nếu không tìm thấy chủ đề ưng ý tại đây.
+                Mẹo: bấm icon kính lúp trên từng chủ đề để quét key thật bằng YouTube API V3 theo khu vực đã chọn.
               </div>
             </motion.div>
           </div>
