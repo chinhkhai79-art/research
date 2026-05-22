@@ -4976,21 +4976,19 @@ Quy tắc:
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    triggerConfirm('Xác nhận xóa', `Xóa kết quả kênh "${r.name}"?`, () => {
-                                      setResults(prev => {
-                                        const next = prev.filter(item => item.id !== r.id);
-                                        resultsRef.current = next;
-                                        localStorage.removeItem('youtube_hunter_results');
-                                        localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
-                                        return next;
-                                      });
-                                      setStatus(`Đã xóa kênh ${r.name}`);
+                                    setResults(prev => {
+                                      const next = prev.filter(item => item.id !== r.id);
+                                      resultsRef.current = next;
+                                      localStorage.removeItem('youtube_hunter_results');
+                                      localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
+                                      return next;
                                     });
+                                    setStatus(`Đã xóa kênh ${r.name}`);
                                   }}
                                   className="vtw-delete-action text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-95 font-black uppercase"
                                   title="Xóa"
                                 >
-                                  <Trash2 size={12} /> <span>XÓA</span>
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             </td>
@@ -6661,7 +6659,7 @@ Quy tắc:
       {/* Modal Lịch sử Key */}
       <AnimatePresence>
         {showKeyHistory && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-transparent">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -6790,12 +6788,7 @@ Quy tắc:
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerConfirm(
-                              "Xóa Key",
-                              "Bạn có chắc chắn muốn xóa Key này khỏi lịch sử không?",
-                              () => removeFromHistory(key),
-                              "XÁC NHẬN XÓA"
-                            );
+                            removeFromHistory(key);
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -6823,7 +6816,7 @@ Quy tắc:
 
 
         {showGeminiKeyHistory && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-transparent">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -6909,7 +6902,7 @@ Quy tắc:
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerConfirm('Xóa Gemini Key', 'Bạn có chắc chắn muốn xóa Gemini Key này khỏi lịch sử không?', () => removeFromGeminiHistory(key), 'XÁC NHẬN XÓA');
+                            removeFromGeminiHistory(key);
                           }}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           title="Xóa khỏi lịch sử"
@@ -6930,7 +6923,7 @@ Quy tắc:
         )}
 
         {showKeyInputModal && (
-          <div className="vtw-api-modal-overlay fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm shadow-2xl">
+          <div className="vtw-api-modal-overlay fixed inset-0 z-[99990] flex items-center justify-center p-4 bg-transparent shadow-2xl">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -7016,56 +7009,31 @@ Quy tắc:
                         {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
-                    <div className="mt-3 flex items-center gap-2 text-[10px] text-indigo-600 font-bold uppercase tracking-tight bg-white/50 w-fit px-3 py-1 rounded-full border border-indigo-100">
-                      <Zap size={12} fill="currentColor" />
-                      Kích hoạt Trí tuệ nhân tạo để phân tích ngách chuyên sâu
-                    </div>
-
                     {/* Model Selection UI */}
                     <div className="mt-4">
-                      <button 
-                        type="button"
-                        onClick={() => setShowModelOptions(!showModelOptions)}
-                        className="flex items-center justify-between w-full text-left"
-                      >
+                      <div className="flex items-center justify-between gap-3 mb-2">
                         <span className="text-[11px] font-black text-gray-400 tracking-widest uppercase">Chọn model Gemini</span>
-                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold truncate max-w-[240px]">
                           Đang dùng: {geminiModel}
                         </div>
-                      </button>
-
-                      {showModelOptions && (
-                        <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {GEMINI_MODELS.map(model => (
                           <button
+                            key={model.id}
                             type="button"
-                            onClick={() => setShowModelOptions(!showModelOptions)}
-                            className="w-full text-left px-4 py-2 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                            onClick={() => setGeminiModel(model.id)}
+                            className={`text-left px-3 py-2 rounded-xl border text-[11px] font-bold transition-all active:scale-95 ${
+                              model.id === geminiModel
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                : 'bg-white text-gray-700 border-blue-100 hover:border-blue-400 hover:bg-blue-50'
+                            }`}
+                            title={model.name}
                           >
-                            <span className="text-[12px] font-bold text-gray-800">{GEMINI_MODELS.find(m => m.id === geminiModel)?.name}</span>
-                            <ChevronDown size={14} className="text-gray-400" />
+                            {model.name}
                           </button>
-                          
-                          <div className="max-h-[150px] overflow-y-auto">
-                            {GEMINI_MODELS.map(model => (
-                              <button
-                                key={model.id}
-                                type="button"
-                                onClick={() => {
-                                  setGeminiModel(model.id);
-                                  setShowModelOptions(false);
-                                }}
-                                className={`w-full text-left px-4 py-2 text-[12px] transition-colors border-b border-gray-50 last:border-0 ${
-                                  model.id === geminiModel 
-                                    ? 'bg-blue-600 text-white font-bold' 
-                                    : 'text-gray-600 hover:bg-gray-50'
-                                }`}
-                              >
-                                {model.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -7092,7 +7060,7 @@ Quy tắc:
                     <textarea 
                       value={manualKeysInput}
                       onChange={(e) => setManualKeysInput(e.target.value)}
-                      className="w-full h-48 p-5 font-mono text-sm border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10"
+                      className={`w-full h-48 p-5 font-mono text-sm border-2 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10 ${manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean).some(k => exhaustedKeys.includes(k)) ? 'border-red-400 bg-red-50/40' : 'border-gray-100'}`}
                       style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
                       placeholder="Key 1&#10;Key 2&#10;Key 3..."
                     />
@@ -7104,6 +7072,11 @@ Quy tắc:
                       {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
+                  {manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean).some(k => exhaustedKeys.includes(k)) && (
+                    <div className="mt-2 text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                      Các key màu đỏ/đang lỗi hôm nay đã được hệ thống bỏ qua tự động. Hãy đợi quota reset hoặc xóa khỏi ô nhập nếu không dùng nữa.
+                    </div>
+                  )}
                   <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mt-5 shadow-sm relative z-10">
                     <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
                     <ul className="space-y-1 font-medium opacity-90">
@@ -7254,9 +7227,9 @@ Quy tắc:
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.isOpen && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-transparent p-4 pointer-events-auto">
             <motion.div 
-              className="bg-white rounded-lg shadow-2xl max-w-sm w-full overflow-hidden border border-gray-200"
+              className="bg-white rounded-xl shadow-[0_18px_55px_rgba(0,0,0,0.35)] max-w-sm w-full overflow-hidden border border-gray-200"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -7425,7 +7398,7 @@ Quy tắc:
 
       <AnimatePresence>
         {modalTrendingVideos && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-transparent p-4">
             <motion.div 
               className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -7499,6 +7472,38 @@ Quy tắc:
         )}
       </AnimatePresence>
 
+      <style>{`
+        @media (max-width: 640px) {
+          .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 44px !important; gap: 8px !important; align-items: stretch !important; }
+          .vtw-channel-actions button { min-height: 44px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; }
+          .vtw-channel-actions .vtw-delete-action span { display: none !important; }
+          .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
+          .vtw-results-table-wrap thead { display: none; }
+          .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
+          .vtw-results-table-wrap tbody tr { margin: 12px 10px !important; padding: 16px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; }
+          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 10px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important; align-items: center !important; }
+          .vtw-results-table-wrap tbody tr td:before { content: ''; font-size: 11px; font-weight: 900; color: #64748b; text-transform: uppercase; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3):before { content: 'Tên kênh'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(4):before { content: 'Mã kênh'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(5):before { content: 'Từ khóa/ngách'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(6):before { content: 'Chủ đề'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(7):before { content: 'Thu nhập ($)'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(8):before { content: 'URL'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(9):before { content: 'Quốc gia'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(10):before { content: 'Ngày tạo'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(11):before { content: 'Tuổi kênh'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(12):before { content: 'Sub'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(13):before { content: 'Views'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Điểm'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Thao tác'; }
+          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2) { grid-template-columns: 1fr 1fr !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-template-columns: 1fr !important; }
+          textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 11px !important; line-height: 1.55 !important; }
+          .vtw-spy-report { text-align: left !important; }
+        }
+      `}</style>
+
 
       {showScrollTop && (
         <button
@@ -7515,7 +7520,7 @@ Quy tắc:
       <AnimatePresence>
         {showAccountModal && user && (
           <div
-            className="vtw-account-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center bg-black/45 backdrop-blur-sm p-4"
+            className="vtw-account-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center bg-transparent p-4"
             onClick={() => setShowAccountModal(false)}
           >
             <motion.div
