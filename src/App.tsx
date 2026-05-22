@@ -1826,33 +1826,52 @@ Rules:
   // Chỉ admin chạy quét ngầm/định kỳ. Người dùng thường không gọi API YouTube tại popup này.
   const runAdminTrendingCron = async (autoRun = false) => {
     if (user?.email !== 'chinhkhai79@gmail.com') return;
+    const selectedRegion = trendingRegion || config.region || 'VN';
+    const activeYoutubeKeys = (config.apiKeys || []).map(k => String(k || '').trim()).filter(Boolean);
     setIsFetchingDailyTrending(true);
-    setStatus(autoRun ? 'Admin: đến lịch tự động, đang quét ngách hệ thống...' : 'Admin: đang kích hoạt quét ngách hệ thống...');
+    setStatus(autoRun ? 'Admin: đến lịch tự động, đang quét cuốn chiếu...' : 'Admin: đang quét cuốn chiếu, có kết quả nào sẽ hiện trước kết quả đó...');
+
     try {
-      const activeYoutubeKeys = (config.apiKeys || []).map(k => String(k || '').trim()).filter(Boolean);
-      const selectedRegion = trendingRegion || config.region || 'VN';
-      const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(selectedRegion)}&adminEmail=${encodeURIComponent(user.email)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': user.email
-        },
-        body: JSON.stringify({
-          region: selectedRegion,
-          apiKeys: activeYoutubeKeys,
-          adminEmail: user.email,
-          nextScanAt: adminTrendingScheduleAt || null
-        })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Admin cron lỗi');
-      setStatus(`Admin: đã cập nhật cache ${data.region || selectedRegion}.`);
+      // Bước 67: chạy nhiều request nhỏ để tránh timeout Vercel.
+      // Sau mỗi request, cache đã được ghi từng chủ đề nên UI tải lại ngay, không phải chờ đủ toàn bộ 30 chủ đề.
+      let lastData: any = null;
+      for (let round = 0; round < 30; round++) {
+        const res = await fetch(`/api/admin-trending-cron?region=${encodeURIComponent(selectedRegion)}&adminEmail=${encodeURIComponent(user.email)}&timeBudgetMs=6500`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-email': user.email
+          },
+          body: JSON.stringify({
+            region: selectedRegion,
+            apiKeys: activeYoutubeKeys,
+            adminEmail: user.email,
+            nextScanAt: adminTrendingScheduleAt || null,
+            timeBudgetMs: 6500
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        lastData = data;
+        if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Admin cron lỗi');
+
+        await loadTrendingNicheCache(data.region || selectedRegion);
+        const doneNames = Array.isArray(data.scannedCategories) ? data.scannedCategories.join(', ') : '';
+        setStatus(`Admin: đã lưu cuốn chiếu ${data.scannedCategories?.length || 0} chủ đề${doneNames ? ` (${doneNames})` : ''}.`);
+
+        if (data.scanStatus === 'quota-paused') break;
+        if (Number(data.nextCategoryIndex || 0) === 0 && round > 0) break;
+        if (!Array.isArray(data.scannedCategories) || data.scannedCategories.length === 0) break;
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+
+      setStatus(lastData?.scanStatus === 'quota-paused'
+        ? `Admin: đã lưu các kết quả quét được trước khi hết quota cho ${lastData.region || selectedRegion}. Mai hệ thống sẽ quét tiếp khu vực/chủ đề còn lại.`
+        : `Admin: đã cập nhật cuốn chiếu cache ${lastData?.region || selectedRegion}.`);
       localStorage.setItem('research_admin_trending_last_run_at', new Date().toISOString());
       if (autoRun) {
         localStorage.removeItem('research_admin_trending_schedule_at');
         setAdminTrendingScheduleAt('');
       }
-      await loadTrendingNicheCache(data.region || selectedRegion);
     } catch (err: any) {
       setStatus(err?.message || 'Không chạy được admin cron.');
     } finally {

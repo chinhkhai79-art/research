@@ -1,4 +1,4 @@
-import { writeTrendingCache, readCronState, writeCronState, normalizeRegion } from '../lib/trending-store.js';
+import { readTrendingCache, writeTrendingCache, readCronState, writeCronState, normalizeRegion } from '../lib/trending-store.js';
 
 const REGIONS = ['VN', 'US', 'AU', 'GB', 'CA', 'IN', 'SG', 'JP', 'KR', 'TH', 'ID', 'PH', 'MY', 'DE', 'FR', 'BR'];
 const CATEGORY_DEFS = [
@@ -155,6 +155,47 @@ async function scanCategory(categoryName, seedsDef, region, keys, used) {
   return sorted.filter(x => !seen.has(x.keyword) && seen.add(x.keyword)).slice(0, 5);
 }
 
+function normalizeItem(item, scannedAt) {
+  const keyword = compactKeyword(item?.keyword || item || '');
+  if (!keyword) return null;
+  return {
+    ...item,
+    keyword,
+    scannedAt: item?.scannedAt || scannedAt,
+    source: item?.source || 'youtube-api-v3'
+  };
+}
+
+function mergeCategoryItems(oldItems = [], newItems = [], scannedAt) {
+  const byKey = new Map();
+  // Dữ liệu cũ chưa có scannedAt được xem là cũ nhất, để key mới tự đè lên trước.
+  for (const raw of oldItems || []) {
+    const item = normalizeItem(raw, '1970-01-01T00:00:00.000Z');
+    if (item && !byKey.has(item.keyword)) byKey.set(item.keyword, item);
+  }
+  for (const raw of newItems || []) {
+    const item = normalizeItem(raw, scannedAt);
+    if (item) byKey.set(item.keyword, { ...byKey.get(item.keyword), ...item, scannedAt });
+  }
+  return [...byKey.values()]
+    .sort((a, b) => new Date(b.scannedAt || 0).getTime() - new Date(a.scannedAt || 0).getTime())
+    .slice(0, 5);
+}
+
+function ensureCategoryList(existing = []) {
+  const map = new Map((existing || []).map(c => [String(c.category || '').toUpperCase(), c]));
+  return CATEGORY_DEFS.map(([category]) => {
+    const old = map.get(String(category).toUpperCase());
+    return old || { category, items: [] };
+  });
+}
+
+function getRegionProgress(state, region) {
+  const progress = state?.regionProgress || {};
+  const idx = Number(progress?.[region]?.nextCategoryIndex || 0);
+  return Number.isFinite(idx) && idx >= 0 ? idx % CATEGORY_DEFS.length : 0;
+}
+
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
   if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ ok: false, error: 'Method not allowed' });
@@ -181,29 +222,93 @@ export default async function handler(req, res) {
     const state = await readCronState();
     let region = normalizeRegion(req.query?.region || req.body?.region || '');
     if (!region || region === 'GLOBAL') region = REGIONS[Number(state.nextRegionIndex || 0) % REGIONS.length];
-    const used = { exhausted: new Set(Array.isArray(state.exhaustedKeysToday) ? state.exhaustedKeysToday : []) };
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const exhaustedState = state.exhaustedKeysDate === todayKey ? state.exhaustedKeysToday : [];
+    const used = { exhausted: new Set(Array.isArray(exhaustedState) ? exhaustedState : []) };
 
-    const categories = [];
-    for (const [categoryName, seedsDef] of CATEGORY_DEFS) {
+    // Cuốn chiếu: lấy cache cũ, quét từng chủ đề, có chủ đề nào xong là ghi ngay chủ đề đó vào Firebase.
+    // UI có thể gọi /api/trending-cache liên tục để thấy kết quả mới trước, không phải đợi toàn bộ 30 chủ đề.
+    const existingDoc = await readTrendingCache(region);
+    let categories = ensureCategoryList(existingDoc?.categories || []);
+    const startIndex = getRegionProgress(state, region);
+    const startedAt = Date.now();
+    const timeBudgetMs = Math.max(3500, Math.min(Number(req.body?.timeBudgetMs || req.query?.timeBudgetMs || 8500), 25000));
+    const nextScanAt = req.body?.nextScanAt || req.query?.nextScanAt || existingDoc?.nextScanAt || null;
+    const scannedCategories = [];
+    let nextCategoryIndex = startIndex;
+    let quotaStopped = false;
+
+    for (let offset = 0; offset < CATEGORY_DEFS.length; offset++) {
+      const idx = (startIndex + offset) % CATEGORY_DEFS.length;
+      const [categoryName, seedsDef] = CATEGORY_DEFS[idx];
+      const scannedAt = new Date().toISOString();
       try {
         const items = await scanCategory(categoryName, seedsDef, region, keys, used);
-        categories.push({ category: categoryName, items });
+        const old = categories[idx] || { category: categoryName, items: [] };
+        categories[idx] = {
+          ...old,
+          category: categoryName,
+          items: mergeCategoryItems(old.items || [], items || [], scannedAt),
+          updatedAt: scannedAt,
+          status: 'done'
+        };
+        scannedCategories.push(categoryName);
+        nextCategoryIndex = (idx + 1) % CATEGORY_DEFS.length;
+
+        // Ghi ngay sau mỗi chủ đề để frontend hiển thị dần kiểu cuốn chiếu.
+        await writeTrendingCache(region, {
+          source: 'youtube-api-admin-cron-rolling',
+          updatedAt: scannedAt,
+          nextScanAt,
+          scanStatus: nextCategoryIndex === 0 ? 'completed-cycle' : 'running-partial',
+          nextCategoryIndex,
+          categories
+        });
       } catch (e) {
-        categories.push({ category: categoryName, items: [], error: e?.message || String(e) });
-        if (String(e?.message || e).toLowerCase().includes('quota')) break;
+        const msg = e?.message || String(e);
+        const old = categories[idx] || { category: categoryName, items: [] };
+        categories[idx] = { ...old, category: categoryName, error: msg, status: 'pending-or-quota' };
+        nextCategoryIndex = idx;
+        if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('api key')) {
+          quotaStopped = true;
+          break;
+        }
       }
+
+      if (Date.now() - startedAt > timeBudgetMs) break;
     }
+
     const updatedAt = new Date().toISOString();
-    const nextScanAt = req.body?.nextScanAt || req.query?.nextScanAt || null;
-    const saved = await writeTrendingCache(region, { source: 'youtube-api-admin-cron', updatedAt, nextScanAt, categories });
     const currentIdx = REGIONS.indexOf(region);
+    const regionProgress = { ...(state.regionProgress || {}) };
+    regionProgress[region] = { nextCategoryIndex, updatedAt };
+    await writeTrendingCache(region, {
+      source: 'youtube-api-admin-cron-rolling',
+      updatedAt,
+      nextScanAt,
+      scanStatus: quotaStopped ? 'quota-paused' : (nextCategoryIndex === 0 ? 'completed-cycle' : 'running-partial'),
+      nextCategoryIndex,
+      categories
+    });
     await writeCronState({
-      nextRegionIndex: currentIdx >= 0 ? (currentIdx + 1) % REGIONS.length : 0,
+      nextRegionIndex: quotaStopped ? (currentIdx >= 0 ? (currentIdx + 1) % REGIONS.length : 0) : (currentIdx >= 0 ? currentIdx : 0),
+      regionProgress,
       lastRegion: region,
       lastRunAt: updatedAt,
+      exhaustedKeysDate: todayKey,
       exhaustedKeysToday: [...used.exhausted]
     });
-    return res.status(200).json({ ok: true, region, updatedAt, categories: saved.categories, exhaustedKeys: used.exhausted.size });
+    return res.status(200).json({
+      ok: true,
+      rolling: true,
+      region,
+      updatedAt,
+      nextCategoryIndex,
+      scannedCategories,
+      scanStatus: quotaStopped ? 'quota-paused' : 'partial-saved',
+      categories,
+      exhaustedKeys: used.exhausted.size
+    });
   } catch (error) {
     console.error('[admin-trending-cron]', error);
     return res.status(500).json({ ok: false, error: error?.message || 'Server error' });
