@@ -1722,6 +1722,65 @@ Rules:
     }
   };
 
+  const getTrendingRegionLabel = (regionCode?: string) => {
+    const code = regionCode || trendingRegion || config.region || 'VN';
+    return REGIONS.find(r => r.code === code)?.name || code || 'Toàn cầu';
+  };
+
+  const getNicheItemText = (item: any) => String(item?.keyword || item?.text || item || '').trim();
+
+  const buildTrendingTxt = (categoryName?: string, items?: any[]) => {
+    const regionLabel = getTrendingRegionLabel();
+    const updated = trendingCacheMeta?.updatedAt ? new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN') : 'Chưa rõ';
+    const source = trendingCacheMeta?.source || 'system-cache';
+    const lines: string[] = [];
+    lines.push('DANH SÁCH KEY NGÁCH TRENDING');
+    lines.push(`Khu vực: ${regionLabel}`);
+    lines.push(`Nguồn: ${source}`);
+    lines.push(`Cập nhật: ${updated}`);
+    lines.push('');
+
+    const groups = categoryName
+      ? [{ category: categoryName, items: items || [] }]
+      : suggestedNiches;
+
+    groups.forEach((group: any, idx: number) => {
+      lines.push(`${idx + 1}. ${String(group.category || '').toUpperCase()}`);
+      (group.items || []).slice(0, 5).forEach((item: any, i: number) => {
+        const key = getNicheItemText(item);
+        if (key) lines.push(`   ${i + 1}) ${key}`);
+      });
+      lines.push('');
+    });
+    return lines.join('\n');
+  };
+
+  const downloadTrendingKeysTxt = (categoryName?: string, items?: any[]) => {
+    const regionLabel = getTrendingRegionLabel().replace(/[^\p{L}\p{N}]+/gu, '_');
+    const suffix = categoryName ? String(categoryName).replace(/[^\p{L}\p{N}]+/gu, '_') : 'Tat_Ca_Chu_De';
+    downloadAsTxt(buildTrendingTxt(categoryName, items), `Key_Ngach_Trending_${regionLabel}_${suffix}`);
+  };
+
+  const copyTrendingKey = async (key: string) => {
+    const text = String(key || '').trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus(`Đã copy key: ${text}`);
+    } catch {
+      setStatus('Trình duyệt không cho copy tự động. Hãy bôi đen và copy thủ công.');
+    }
+  };
+
+  const useTrendingKeyNow = (key: string) => {
+    const text = String(key || '').trim();
+    if (!text) return;
+    setNicheInput(text);
+    localStorage.setItem('youtube_last_niche_keyword', text);
+    setShowNicheModal(false);
+    setTimeout(() => runNicheResearch(text), 120);
+  };
+
   // Chỉ admin chạy quét ngầm/định kỳ. Người dùng thường không gọi API YouTube tại popup này.
   const runAdminTrendingCron = async () => {
     if (user?.email !== 'chinhkhai79@gmail.com') return;
@@ -6899,7 +6958,7 @@ Quy tắc:
 
               <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9fa] custom-scrollbar">
                 
-                <div className="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-orange-100">
+                <div className="mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-orange-100">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH TRENDING</span>
                         <span className="text-[10px] text-gray-500 font-medium mt-1">Dữ liệu do hệ thống tự quét định kỳ bằng YouTube API V3; người dùng chỉ xem/copy/tải key để tiết kiệm quota.</span>
@@ -6907,12 +6966,12 @@ Quy tắc:
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
                      </h3>
-                     <div className="flex items-center gap-3">
-                         <div className="relative">
+                     <div className="grid grid-cols-3 gap-3 w-full md:w-auto md:min-w-[470px]">
+                         <div className="relative h-12">
                            <select
                               value={trendingRegion}
                               onChange={(e) => { setTrendingRegion(e.target.value); loadTrendingNicheCache(e.target.value); }}
-                              className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[11px] px-3 py-2.5 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
+                              className="h-12 w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 font-black text-[11px] px-3 pr-8 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.map(r => (
                                 <option key={r.code || 'GL'} value={r.code}>{r.name}</option>
@@ -6923,55 +6982,76 @@ Quy tắc:
                          <button
                             onClick={() => loadTrendingNicheCache(trendingRegion || config.region || 'VN')}
                             disabled={isFetchingDailyTrending}
-                            className="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-5 py-2.5 rounded-lg text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
+                            className="h-12 w-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center justify-center gap-2 text-center leading-tight"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang tải...</> : <><Search size={16}/> Tải dữ liệu mới nhất</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={15} className="animate-spin"/> Đang tải</> : <><Search size={15}/> Tải dữ liệu</>}
                          </button>
-                         {user?.email === 'chinhkhai79@gmail.com' && (
-                           <button
-                              onClick={runAdminTrendingCron}
-                              disabled={isFetchingDailyTrending}
-                              className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2.5 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center gap-2"
-                           >
-                              <RefreshCw size={14}/> Admin quét
-                           </button>
-                         )}
+                         <button
+                            onClick={user?.email === 'chinhkhai79@gmail.com' ? runAdminTrendingCron : () => downloadTrendingKeysTxt()}
+                            disabled={isFetchingDailyTrending}
+                            className="h-12 w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-3 rounded-lg text-[11px] font-black uppercase shadow border border-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-center leading-tight"
+                         >
+                            {user?.email === 'chinhkhai79@gmail.com' ? <><RefreshCw size={14}/> Admin quét</> : <><Download size={14}/> Tải TXT</>}
+                         </button>
                      </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {suggestedNiches.map((category, idx) => (
                     <div key={idx} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:border-blue-300 transition-colors flex flex-col">
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight">{category.category}</h4>
-                        <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
+                        <h4 className="font-black text-[12px] text-gray-700 uppercase tracking-tight leading-snug">{category.category}</h4>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            title="Tải TXT riêng chủ đề này"
+                            onClick={() => downloadTrendingKeysTxt(category.category, category.items)}
+                            className="w-7 h-7 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-100 flex items-center justify-center transition-all"
+                          >
+                            <Download size={13} />
+                          </button>
+                          <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-2 py-0.5 rounded-full">{Math.min(5, category.items.length)} KEY</span>
+                        </div>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {category.items.slice(0, 5).map((item, itemIdx) => (
-                          <button
-                            key={itemIdx}
-                            onClick={() => {
-                              setNicheInput(item);
-                              localStorage.setItem('youtube_last_niche_keyword', item);
-                              setShowNicheModal(false);
-                              // Auto start research after a small delay
-                              setTimeout(() => {
-                                runNicheResearch(item);
-                              }, 100);
-                            }}
-                            className="bg-gray-50 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-600 border border-gray-200 transition-all hover:scale-105 active:scale-95"
-                          >
-                            {item}
-                          </button>
-                        ))}
+                        {category.items.slice(0, 5).map((item, itemIdx) => {
+                          const keyText = getNicheItemText(item);
+                          return (
+                            <div key={itemIdx} className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 overflow-hidden hover:border-blue-300 transition-all">
+                              <button
+                                type="button"
+                                title="Dùng key này và phân tích ngay"
+                                onClick={() => useTrendingKeyNow(keyText)}
+                                className="hover:bg-blue-600 hover:text-white px-3 py-1.5 text-[11px] font-medium text-gray-600 transition-all active:scale-95"
+                              >
+                                {keyText}
+                              </button>
+                              <button
+                                type="button"
+                                title="Copy key"
+                                onClick={(e) => { e.stopPropagation(); copyTrendingKey(keyText); }}
+                                className="w-7 h-7 border-l border-gray-200 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
-                Mẹo: Bạn có thể nhập từ khóa bất kỳ vào ô tìm kiếm nếu không tìm thấy chủ đề ưng ý tại đây.
+              <div className="bg-white p-4 flex flex-col md:flex-row items-center justify-between gap-3 border-t border-gray-100 text-[11px] text-gray-400 font-medium">
+                <span className="italic">Mẹo: Bấm key để dùng trực tiếp, hoặc bấm icon copy để copy từng key.</span>
+                <button
+                  type="button"
+                  onClick={() => downloadTrendingKeysTxt()}
+                  className="h-10 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white font-black uppercase not-italic flex items-center gap-2 shadow"
+                >
+                  <Download size={14}/> Tải toàn bộ key TXT
+                </button>
               </div>
             </motion.div>
           </div>

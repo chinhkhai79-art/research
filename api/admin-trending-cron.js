@@ -1,54 +1,72 @@
-const { writeTrendingCache, readCronState, writeCronState, normalizeRegion } = require('../lib/trending-store.js');
+import { writeTrendingCache, readCronState, writeCronState, normalizeRegion } from '../lib/trending-store.js';
 
-const REGIONS = ['VN', 'US', 'AU', 'GB', 'CA', 'IN', 'SG', 'JP', 'KR', 'TH', 'ID', 'PH', 'MY'];
-const CATEGORIES = [
-  { category: 'PHÁT TRIỂN BẢN THÂN', seeds: { VN: ['thói quen tốt', 'vượt qua trì hoãn', 'kỷ luật bản thân'], US: ['self improvement habits', 'productivity tips', 'discipline motivation'], AU: ['self improvement habits', 'productivity tips'] } },
-  { category: 'SỨC KHỎE & LÀM ĐẸP', seeds: { VN: ['giảm cân tại nhà', 'skincare cho người mới', 'yoga tại nhà'], US: ['home workout', 'skincare routine', 'weight loss tips'], AU: ['home workout', 'skincare routine'] } },
-  { category: 'CÔNG NGHỆ & AI', seeds: { VN: ['công cụ AI', 'hướng dẫn ChatGPT', 'tạo video bằng AI'], US: ['ai tools', 'chatgpt tutorial', 'ai video tools'], AU: ['ai tools', 'chatgpt tutorial'] } },
-  { category: 'GIÁO DỤC & HỌC TẬP', seeds: { VN: ['học tiếng anh', 'mẹo học tập', 'tự học lập trình'], US: ['study tips', 'learn english', 'coding for beginners'], AU: ['study tips', 'learn english'] } },
-  { category: 'ẨM THỰC & NẤU ĂN', seeds: { VN: ['món ngon dễ làm', 'nấu ăn gia đình', 'công thức món ăn'], US: ['easy recipes', 'meal prep', 'home cooking'], AU: ['easy recipes', 'meal prep'] } },
-  { category: 'DU LỊCH & KHÁM PHÁ', seeds: { VN: ['du lịch việt nam', 'review homestay', 'phượt xe máy'], US: ['travel vlog', 'budget travel', 'hidden places'], AU: ['australia travel vlog', 'budget travel'] } },
-  { category: 'GIẢI TRÍ & HÀI HƯỚC', seeds: { VN: ['phim hài ngắn', 'review phim', 'tình huống hài'], US: ['funny shorts', 'movie recap', 'comedy skit'], AU: ['funny shorts', 'comedy skit'] } },
-  { category: 'THỂ THAO & THỂ HÌNH', seeds: { VN: ['bài tập tăng cơ', 'bóng đá việt nam', 'gym tại nhà'], US: ['fitness tips', 'football highlights', 'home gym'], AU: ['fitness tips', 'football highlights'] } },
-  { category: 'PETS & ĐỘNG VẬT', seeds: { VN: ['chó mèo dễ thương', 'huấn luyện chó', 'thú cưng'], US: ['cute pets', 'dog training', 'cat care'], AU: ['cute pets', 'dog training'] } }
+const REGIONS = ['VN', 'US', 'AU', 'GB', 'CA', 'IN', 'SG', 'JP', 'KR', 'TH', 'ID', 'PH', 'MY', 'DE', 'FR', 'BR'];
+const CATEGORY_DEFS = [
+  ['PHÁT TRIỂN BẢN THÂN', { VN: ['thói quen tốt','vượt qua trì hoãn','kỷ luật bản thân'], US: ['self improvement habits','productivity tips','discipline motivation'], AU: ['self improvement habits','productivity tips'] }],
+  ['SỨC KHỎE & LÀM ĐẸP', { VN: ['giảm cân tại nhà','skincare cho người mới','yoga tại nhà'], US: ['home workout','skincare routine','weight loss tips'], AU: ['home workout','skincare routine'] }],
+  ['CÔNG NGHỆ & AI', { VN: ['công cụ AI','hướng dẫn ChatGPT','tạo video bằng AI'], US: ['ai tools','chatgpt tutorial','ai video tools'], AU: ['ai tools','chatgpt tutorial'] }],
+  ['GIÁO DỤC & HỌC TẬP', { VN: ['học tiếng anh','mẹo học tập','tự học lập trình'], US: ['study tips','learn english','coding for beginners'], AU: ['study tips','learn english'] }],
+  ['ẨM THỰC & NẤU ĂN', { VN: ['món ngon dễ làm','nấu ăn gia đình','công thức món ăn'], US: ['easy recipes','meal prep','home cooking'], AU: ['easy recipes','meal prep'] }],
+  ['DU LỊCH & KHÁM PHÁ', { VN: ['du lịch việt nam','review homestay','phượt xe máy'], US: ['travel vlog','budget travel','hidden places'], AU: ['australia travel vlog','budget travel'] }],
+  ['GIẢI TRÍ & HÀI HƯỚC', { VN: ['phim hài ngắn','review phim','tình huống hài'], US: ['funny shorts','movie recap','comedy skit'], AU: ['funny shorts','comedy skit'] }],
+  ['THỂ THAO & THỂ HÌNH', { VN: ['bài tập tăng cơ','bóng đá việt nam','gym tại nhà'], US: ['fitness tips','football highlights','home gym'], AU: ['fitness tips','football highlights'] }],
+  ['PETS & ĐỘNG VẬT', { VN: ['chó mèo dễ thương','huấn luyện chó','thú cưng'], US: ['cute pets','dog training','cat care'], AU: ['cute pets','dog training'] }],
+  ['GIA ĐÌNH & ĐỜI SỐNG', { VN: ['mẹo dọn nhà','nuôi dạy con','trồng rau ban công'], US: ['family life tips','home organization','parenting tips'], AU: ['home organization','parenting tips'] }],
+  ['NGHỆ THUẬT & SÁNG TẠO', { VN: ['vẽ tranh phong cảnh','thiết kế canva','edit video capcut'], US: ['digital art tutorial','canva design','video editing tips'], AU: ['digital art tutorial','video editing tips'] }],
+  ['CÔNG NGHỆ Ô TÔ & XE MÁY', { VN: ['review xe máy','đánh giá ô tô','phụ kiện ô tô'], US: ['car review','ev cars','motorcycle review'], AU: ['car review','ev cars'] }],
+  ['TÂM LÝ HỌC & MỐI QUAN HỆ', { VN: ['tâm lý học','chữa lành tổn thương','mối quan hệ'], US: ['psychology facts','relationship advice','healing trauma'], AU: ['psychology facts','relationship advice'] }],
+  ['ESPORTS & GAMING', { VN: ['liên quân mobile','free fire highlight','game mobile hay'], US: ['gaming highlights','mobile games','roblox gameplay'], AU: ['gaming highlights','mobile games'] }],
+  ['HUYỀN BÍ & TÂM LINH', { VN: ['bí ẩn tâm linh','tarot tình yêu','giải mã giấc mơ'], US: ['mystery stories','tarot reading','paranormal facts'], AU: ['mystery stories','tarot reading'] }],
+  ['MẸO VẶT CUỘC SỐNG', { VN: ['mẹo vặt nhà bếp','mẹo dọn nhà','thủ thuật cuộc sống'], US: ['life hacks','cleaning hacks','kitchen hacks'], AU: ['life hacks','cleaning hacks'] }],
+  ['VĂN HÓA & LỊCH SỬ', { VN: ['lịch sử việt nam','văn hóa việt nam','sự kiện lịch sử'], US: ['history documentary','ancient history','culture facts'], AU: ['history documentary','culture facts'] }],
+  ['THỜI TRANG & PHONG CÁCH', { VN: ['phối đồ nam','thời trang nữ','outfit đi học'], US: ['fashion trends','outfit ideas','style tips'], AU: ['fashion trends','outfit ideas'] }],
+  ['NÔNG NGHIỆP CÔNG NGHỆ CAO', { VN: ['trồng rau thủy canh','chăm sóc cây cảnh','nông nghiệp hữu cơ'], US: ['hydroponic farming','gardening tips','organic farming'], AU: ['gardening tips','hydroponic farming'] }],
+  ['REVIEW SẢN PHẨM & UNBOXING', { VN: ['unboxing đồ công nghệ','review sản phẩm','đồ decor phòng'], US: ['product review','unboxing gadgets','amazon finds'], AU: ['product review','unboxing gadgets'] }],
+  ['NHẠC & COVER', { VN: ['nhạc lofi chill','cover nhạc trẻ','beat rap free'], US: ['lofi music','acoustic cover','music remix'], AU: ['lofi music','acoustic cover'] }],
+  ['BẤT ĐỘNG SẢN & NHÀ CỬA', { VN: ['mẫu nhà đẹp','nội thất chung cư','kinh nghiệm mua nhà'], US: ['real estate tips','home design','interior design'], AU: ['real estate tips','home design'] }],
+  ['CÂU CHUYỆN KHỞI NGHIỆP', { VN: ['khởi nghiệp ít vốn','kinh nghiệm kinh doanh','marketing 0 đồng'], US: ['startup ideas','small business tips','entrepreneurship'], AU: ['small business tips','startup ideas'] }],
+  ['CHUYỆN LẠ BỐN PHƯƠNG', { VN: ['chuyện lạ thế giới','sinh vật kỳ lạ','kỷ lục guinness'], US: ['weird facts','amazing facts','strange world'], AU: ['weird facts','amazing facts'] }],
+  ['ASMR & MUKBANG', { VN: ['asmr ăn uống','mukbang hải sản','asmr nấu ăn'], US: ['asmr eating','mukbang seafood','relaxing asmr'], AU: ['asmr eating','relaxing asmr'] }],
+  ['XÂY DỰNG & KIẾN TRÚC', { VN: ['xây nhà tiết kiệm','thi công nhà','thiết kế nhà đẹp'], US: ['construction process','architecture design','home renovation'], AU: ['home renovation','architecture design'] }],
+  ['MARKETING & TRUYỀN THÔNG', { VN: ['affiliate marketing','seo website','chạy quảng cáo facebook'], US: ['affiliate marketing','seo tips','social media marketing'], AU: ['affiliate marketing','seo tips'] }],
+  ['TRỊ LIỆU ÂM THANH', { VN: ['tiếng mưa dễ ngủ','nhạc thiền','âm thanh rừng'], US: ['rain sounds sleep','meditation music','white noise'], AU: ['rain sounds sleep','meditation music'] }],
+  ['ĐAN LEN & THÊU THÙA', { VN: ['móc len cơ bản','thêu hoa nổi','đan áo len'], US: ['crochet tutorial','knitting pattern','embroidery design'], AU: ['crochet tutorial','knitting pattern'] }],
+  ['TÀI CHÍNH & ĐẦU TƯ', { VN: ['đầu tư chứng khoán','quản lý tài chính cá nhân','kiếm tiền online'], US: ['personal finance','stock investing','make money online'], AU: ['personal finance','stock investing'] }]
 ];
+
+function setCors(req, res) {
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-secret');
+  if (req.method === 'OPTIONS') { res.status(200).end(); return true; }
+  return false;
+}
 
 function getKeys() {
   return String(process.env.YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEY || '')
-    .split(/[\n,;]+/)
-    .map(x => x.trim())
-    .filter(Boolean);
+    .split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
 }
-function publishedAfter30d() {
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString();
-}
-function formatKeyword(s) {
-  return String(s || '')
+function publishedAfter30d() { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString(); }
+function compactKeyword(value) {
+  return String(value || '')
     .replace(/https?:\/\/\S+/gi, ' ')
     .replace(/[#|•·,_;:!?()[\]{}"“”'’]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-    .split(' ')
-    .slice(0, 5)
-    .join(' ');
+    .trim().toLowerCase().split(' ').filter(Boolean).slice(0, 5).join(' ');
 }
-function pickSeeds(category, region) {
-  return category.seeds[region] || category.seeds.US || category.seeds.VN || [];
-}
+function pickSeeds(def, region) { return def[region] || def.US || def.VN || []; }
 function scoreVideo(video, channel) {
-  const stats = video.statistics || {};
-  const views = Number(stats.viewCount || 0);
-  const publishedAt = new Date(video.snippet?.publishedAt || Date.now()).getTime();
+  const views = Number(video?.statistics?.viewCount || 0);
+  const publishedAt = new Date(video?.snippet?.publishedAt || Date.now()).getTime();
   const ageHours = Math.max(1, (Date.now() - publishedAt) / 36e5);
   const vph = views / ageHours;
   const subs = Number(channel?.statistics?.subscriberCount || 0);
   const viewSubRatio = subs > 0 ? views / subs : views;
-  let score = vph * 3 + viewSubRatio * 12;
-  if (subs <= 50000) score *= 1.6;
-  if (subs <= 30000) score *= 1.25;
+  let score = vph * 3 + viewSubRatio * 12 + views / 1000;
+  if (subs > 0 && subs <= 50000) score *= 2.2;
+  if (subs > 0 && subs <= 30000) score *= 1.35;
   return { views, vph, subs, viewSubRatio, score };
 }
 async function youtubeFetch(path, keys, used) {
@@ -61,19 +79,17 @@ async function youtubeFetch(path, keys, used) {
     if (r.ok) return data;
     const msg = JSON.stringify(data).toLowerCase();
     lastError = data?.error?.message || `YouTube API lỗi ${r.status}`;
-    if (r.status === 403 || msg.includes('quota') || msg.includes('daily')) {
-      used.exhausted.add(key);
-      continue;
-    }
+    if (r.status === 403 || msg.includes('quota') || msg.includes('daily')) { used.exhausted.add(key); continue; }
     throw new Error(lastError);
   }
   throw new Error(lastError || 'Tất cả YouTube API key đã hết quota');
 }
-async function scanCategory(category, region, keys, used) {
+async function scanCategory(categoryName, seedsDef, region, keys, used) {
   const candidates = [];
-  const seeds = pickSeeds(category, region).slice(0, 3);
+  const seeds = pickSeeds(seedsDef, region).slice(0, 3);
   for (const seed of seeds) {
-    const search = await youtubeFetch(`search?part=snippet&type=video&order=viewCount&maxResults=20&regionCode=${encodeURIComponent(region)}&publishedAfter=${encodeURIComponent(publishedAfter30d())}&q=${encodeURIComponent(seed)}`, keys, used);
+    const regionParam = region ? `&regionCode=${encodeURIComponent(region)}` : '';
+    const search = await youtubeFetch(`search?part=snippet&type=video&order=viewCount&maxResults=15${regionParam}&publishedAfter=${encodeURIComponent(publishedAfter30d())}&q=${encodeURIComponent(seed)}`, keys, used);
     const videos = (search.items || []).filter(x => x.id?.videoId);
     if (!videos.length) continue;
     const videoIds = videos.map(x => x.id.videoId).join(',');
@@ -86,55 +102,53 @@ async function scanCategory(category, region, keys, used) {
       const ch = channelMap.get(v.snippet?.channelId);
       const metric = scoreVideo(v, ch);
       if (metric.subs > 1000000) continue;
-      // Ưu tiên kênh nhỏ/trung bình: dưới 50K subs, nhưng nếu thiếu dữ liệu vẫn cho fallback dưới 1M.
-      const keyword = formatKeyword((v.snippet?.tags || [])[0] || seed || v.snippet?.title || '');
-      candidates.push({ keyword, title: v.snippet?.title, videoId: v.id, channelId: ch?.id, channelTitle: ch?.snippet?.title, views: metric.views, vph: Math.round(metric.vph), subs: metric.subs, score: metric.score });
+      const tagKeyword = Array.isArray(v.snippet?.tags) ? v.snippet.tags.map(compactKeyword).find(Boolean) : '';
+      const keyword = compactKeyword(tagKeyword || seed || v.snippet?.title || categoryName);
+      if (!keyword) continue;
+      candidates.push({ keyword, videoId: v.id, channelId: ch?.id || '', channelTitle: ch?.snippet?.title || '', views: metric.views, vph: Math.round(metric.vph), subs: metric.subs, score: Math.round(metric.score) });
     }
   }
   const seen = new Set();
-  return candidates
-    .sort((a, b) => (a.subs <= 50000 ? -1000000 : 0) + b.score - ((b.subs <= 50000 ? -1000000 : 0) + a.score))
-    .filter(x => x.keyword && !seen.has(x.keyword) && seen.add(x.keyword))
-    .slice(0, 5);
+  const sorted = candidates.sort((a, b) => {
+    const smallA = a.subs > 0 && a.subs <= 50000 ? 100000000 : 0;
+    const smallB = b.subs > 0 && b.subs <= 50000 ? 100000000 : 0;
+    return (smallB + b.score) - (smallA + a.score);
+  });
+  return sorted.filter(x => !seen.has(x.keyword) && seen.add(x.keyword)).slice(0, 5);
 }
 
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-secret');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+export default async function handler(req, res) {
+  if (setCors(req, res)) return;
+  if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
-  const expected = process.env.ADMIN_CRON_SECRET;
-  const provided = req.headers['x-admin-secret'] || req.query.secret;
-  const isVercelCron = req.headers['user-agent'] && String(req.headers['user-agent']).includes('vercel-cron');
+  const expected = process.env.ADMIN_CRON_SECRET || '';
+  const provided = req.headers['x-admin-secret'] || req.query?.secret || '';
+  const ua = String(req.headers['user-agent'] || '');
+  const isVercelCron = ua.includes('vercel-cron');
   if (expected && provided !== expected && !isVercelCron) {
-    return res.status(401).json({ error: 'Unauthorized admin cron' });
+    return res.status(401).json({ ok: false, error: 'Unauthorized admin cron' });
   }
 
   try {
     const keys = getKeys();
-    if (!keys.length) return res.status(400).json({ error: 'Thiếu env YOUTUBE_API_KEYS hoặc YOUTUBE_API_KEY trên Vercel' });
-
+    if (!keys.length) return res.status(400).json({ ok: false, error: 'Thiếu env YOUTUBE_API_KEYS hoặc YOUTUBE_API_KEY trên Vercel' });
     const state = await readCronState();
-    let region = normalizeRegion(req.query.region || req.body?.region || '');
-    if (!region || region === 'GLOBAL') {
-      const idx = Number(state.nextRegionIndex || 0) % REGIONS.length;
-      region = REGIONS[idx];
-    }
-
+    let region = normalizeRegion(req.query?.region || req.body?.region || '');
+    if (!region || region === 'GLOBAL') region = REGIONS[Number(state.nextRegionIndex || 0) % REGIONS.length];
     const used = { exhausted: new Set(Array.isArray(state.exhaustedKeysToday) ? state.exhaustedKeysToday : []) };
+
     const categories = [];
-    for (const cat of CATEGORIES) {
+    for (const [categoryName, seedsDef] of CATEGORY_DEFS) {
       try {
-        const items = await scanCategory(cat, region, keys, used);
-        categories.push({ category: cat.category, items });
+        const items = await scanCategory(categoryName, seedsDef, region, keys, used);
+        categories.push({ category: categoryName, items });
       } catch (e) {
-        categories.push({ category: cat.category, items: [], error: e.message });
+        categories.push({ category: categoryName, items: [], error: e?.message || String(e) });
+        if (String(e?.message || e).toLowerCase().includes('quota')) break;
       }
     }
-
     const updatedAt = new Date().toISOString();
-    const next = await writeTrendingCache(region, { source: 'youtube-api-admin-cron', updatedAt, categories });
+    const saved = await writeTrendingCache(region, { source: 'youtube-api-admin-cron', updatedAt, categories });
     const currentIdx = REGIONS.indexOf(region);
     await writeCronState({
       nextRegionIndex: currentIdx >= 0 ? (currentIdx + 1) % REGIONS.length : 0,
@@ -142,9 +156,9 @@ module.exports = async function handler(req, res) {
       lastRunAt: updatedAt,
       exhaustedKeysToday: [...used.exhausted]
     });
-
-    return res.status(200).json({ ok: true, region, updatedAt, categories: next.categories, exhaustedKeys: used.exhausted.size });
+    return res.status(200).json({ ok: true, region, updatedAt, categories: saved.categories, exhaustedKeys: used.exhausted.size });
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Server error' });
+    console.error('[admin-trending-cron]', error);
+    return res.status(500).json({ ok: false, error: error?.message || 'Server error' });
   }
-};
+}
