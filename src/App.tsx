@@ -3254,8 +3254,8 @@ Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, 
     {"key":"pinned","title":"BÌNH LUẬN GHIM","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]}
   ],
   "contentStyle": {
-    "contentBullets":["..."],
-    "styleBullets":["..."],
+    "contentBullets":["ít nhất 8 ý chi tiết, cụ thể, dựa vào title/description/comment/tags/thống kê"],
+    "styleBullets":["ít nhất 8 ý chi tiết, cụ thể, nêu rõ nhịp dựng, hook, CTA, âm thanh, hình ảnh, cách trình bày"],
     "strengths":["..."],
     "warnings":["..."]
   },
@@ -3265,7 +3265,9 @@ Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, 
 Quy tắc:
 - Không bịa view/sub/like/comment; nếu nhắc số phải lấy đúng từ JSON dữ liệu.
 - Phân tích thumbnail dựa theo tiêu đề, chủ đề và thumbnail URL, không khẳng định chi tiết hình ảnh nếu không chắc.
-- Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.`;
+- Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.
+- Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.
+- Với tags và bình luận, phải ưu tiên hiển thị/nhận xét từ dữ liệu YouTube API đã cung cấp.`;
 
       const response = await ai.models.generateContent({
         model: geminiModel,
@@ -3484,6 +3486,9 @@ Quy tắc:
     const overview = Array.isArray(audit.overview) ? audit.overview : [];
     const contentStyle = audit.contentStyle || {};
     const conclusion = audit.conclusion || {};
+    const realTags = Array.isArray(videoResult?.snippet?.tags) ? videoResult.snippet.tags : [];
+    const realComments = Array.isArray(videoResult?._comments) ? videoResult._comments : [];
+    const cleanHtmlText = (txt: any) => String(txt || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
     const iconMap: Record<string, any> = {
       title: FileText,
       description: AlignLeft,
@@ -3493,7 +3498,7 @@ Quy tắc:
       pinned: Pin,
     };
 
-    const exportAuditText = () => {
+    const buildAuditText = () => {
       const lines: string[] = [];
       lines.push('ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO');
       lines.push(`Video: ${videoResult?.snippet?.title || ''}`);
@@ -3503,6 +3508,10 @@ Quy tắc:
       overview.forEach((item: any) => {
         lines.push(`## ${item.title || item.key}`);
         lines.push(`Hiện tại: ${item.current || ''}`);
+        if (item.key === 'tags' && realTags.length) lines.push(`Tags API: ${realTags.join(', ')}`);
+        if (item.key === 'pinned' && realComments.length) {
+          realComments.slice(0, 5).forEach((c: any, i: number) => lines.push(`Bình luận ${i + 1}: @${c.authorDisplayName || ''} - ${cleanHtmlText(c.textDisplay)}`));
+        }
         lines.push(`Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`);
         lines.push(`Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`);
         lines.push(`Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`);
@@ -3510,54 +3519,128 @@ Quy tắc:
       });
       lines.push('PHÂN TÍCH NỘI DUNG');
       asArrayText(contentStyle.contentBullets).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
       lines.push('PHÂN TÍCH PHONG CÁCH');
       asArrayText(contentStyle.styleBullets).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
+      lines.push('ĐIỂM MẠNH NỔI BẬT');
+      asArrayText(contentStyle.strengths).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
+      lines.push('VẤN ĐỀ CẦN LƯU Ý');
+      asArrayText(contentStyle.warnings).forEach(x => lines.push(`- ${x}`));
+      lines.push('');
       lines.push('KẾT LUẬN');
       lines.push(conclusion.headline || '');
-      downloadAsTxt(lines.join('\n'), `Gemini_YouTube_Audit_${videoResult?.id || 'video'}`);
+      return lines.join('\n');
     };
 
+    const exportAuditText = () => downloadAsTxt(buildAuditText(), `Gemini_YouTube_Audit_${videoResult?.id || 'video'}`);
+    const copyOverviewCard = (item: any) => {
+      const lines = [
+        item.title || 'PHÂN TÍCH',
+        `Hiện tại: ${item.current || ''}`,
+        item.key === 'tags' && realTags.length ? `Tags API: ${realTags.join(', ')}` : '',
+        item.key === 'pinned' && realComments.length ? `Bình luận API: ${realComments.slice(0, 3).map((c: any) => '@' + (c.authorDisplayName || '') + ': ' + cleanHtmlText(c.textDisplay)).join(' | ')}` : '',
+        `Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`,
+        `Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`,
+        `Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`
+      ].filter(Boolean).join('\n');
+      copyToClipboard(lines);
+    };
+    const exportOverviewCard = (item: any) => {
+      const title = String(item.title || item.key || 'phan_tich').replace(/[^a-zA-Z0-9À-ỹ_-]+/g, '_');
+      const lines = [
+        item.title || 'PHÂN TÍCH',
+        `Hiện tại: ${item.current || ''}`,
+        item.key === 'tags' && realTags.length ? `Tags API: ${realTags.join(', ')}` : '',
+        item.key === 'pinned' && realComments.length ? `Bình luận API:\n${realComments.slice(0, 10).map((c: any, i: number) => `${i + 1}. @${c.authorDisplayName || ''}: ${cleanHtmlText(c.textDisplay)}`).join('\n')}` : '',
+        `Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`,
+        `Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`,
+        `Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`
+      ].filter(Boolean).join('\n');
+      downloadAsTxt(lines, `${title}_${videoResult?.id || 'video'}`);
+    };
+    const contentText = asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).map(x => `- ${x}`).join('\n');
+    const styleText = asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).map(x => `- ${x}`).join('\n');
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 text-left video-ai-audit-section">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0">
               <Star size={18} />
             </div>
-            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase">ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO</h2>
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase leading-tight">ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO</h2>
           </div>
-          <button onClick={exportAuditText} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm">
+          <button onClick={exportAuditText} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm shrink-0">
             <Download size={14} /> TẢI TXT
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {overview.map((item: any, idx: number) => {
             const IconComp = iconMap[item.key] || FileText;
+            const isTags = item.key === 'tags';
+            const isPinned = item.key === 'pinned';
             return (
-              <div key={`${item.key || idx}`} className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5 text-left relative overflow-hidden">
-                <div className="absolute right-4 top-4 text-gray-100"><IconComp size={64} /></div>
+              <div key={`${item.key || idx}`} className="bg-white rounded-2xl border border-blue-100 shadow-sm p-6 text-left relative overflow-hidden border-l-4 border-l-sky-500">
+                <div className="absolute right-4 top-4 text-gray-100"><IconComp size={72} /></div>
                 <div className="relative z-10 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <IconComp size={16} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <IconComp size={16} />
+                      </div>
+                      <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 leading-tight">{item.title || 'PHÂN TÍCH'}</h3>
                     </div>
-                    <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900">{item.title || 'PHÂN TÍCH'}</h3>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => copyOverviewCard(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Copy mục này"><Copy size={14} /></button>
+                      <button onClick={() => exportOverviewCard(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50" title="Tải mục này"><Download size={14} /></button>
+                    </div>
                   </div>
 
-                  <p className="text-[13px] italic text-gray-700 leading-relaxed min-h-[48px]">{item.current}</p>
+                  <p className="text-[13px] italic text-gray-700 leading-relaxed min-h-[48px] border-l border-blue-100 pl-3">{item.current}</p>
+
+                  {isTags && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU THỰC TỪ API ({realTags.length} TAGS):</div>
+                      {realTags.length > 0 ? (
+                        <div className="max-h-[118px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2 pr-1">
+                          {realTags.slice(0, 24).map((tag: string, i: number) => (
+                            <span key={i} className="px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-600">{tag}</span>
+                          ))}
+                        </div>
+                      ) : <div className="text-[12px] text-gray-400 italic">YouTube API chưa trả về tags công khai.</div>}
+                    </div>
+                  )}
+
+                  {isPinned && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU BÌNH LUẬN TỪ API:</div>
+                      {realComments.length > 0 ? (
+                        <div className="space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
+                          {realComments.slice(0, 3).map((c: any, i: number) => (
+                            <div key={i} className="bg-white border border-gray-100 rounded-lg p-2 text-[11px] leading-snug">
+                              <div className="font-black text-gray-900 mb-1">@{c.authorDisplayName || 'viewer'} <span className="text-gray-400 font-bold">• {formatVNNumber(c.likeCount || 0)} like</span></div>
+                              <div className="text-gray-600 whitespace-pre-wrap line-clamp-3">{cleanHtmlText(c.textDisplay)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <div className="text-[12px] text-gray-400 italic">Chưa có bình luận công khai hoặc video tắt bình luận.</div>}
+                    </div>
+                  )}
 
                   <div>
                     <div className="text-[10px] font-black uppercase text-green-600 tracking-widest mb-2">ĐIỂM MẠNH:</div>
                     <ul className="space-y-1.5">
-                      {asArrayText(item.strengths).slice(0, 3).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">✓ {x}</li>)}
+                      {asArrayText(item.strengths).slice(0, 4).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">✓ {x}</li>)}
                     </ul>
                   </div>
 
                   <div>
                     <div className="text-[10px] font-black uppercase text-red-500 tracking-widest mb-2">CẦN CẢI THIỆN:</div>
                     <ul className="space-y-1.5">
-                      {asArrayText(item.improvements).slice(0, 3).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">• {x}</li>)}
+                      {asArrayText(item.improvements).slice(0, 4).map((x, i) => <li key={i} className="text-[12px] text-gray-700 leading-snug">• {x}</li>)}
                     </ul>
                   </div>
 
@@ -3575,22 +3658,40 @@ Quy tắc:
           })}
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden text-left">
-          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-xl font-black text-gray-900 uppercase flex items-center gap-3"><AlignLeft size={20} className="text-blue-600" /> PHÂN TÍCH NỘI DUNG & PHONG CÁCH VIDEO</h2>
-            <div className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full">YOUTUBE API V3 + GEMINI</div>
+        <div className="flex items-center justify-between gap-3 mt-8">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0"><AlignLeft size={18} /></div>
+            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase leading-tight">PHÂN TÍCH NỘI DUNG & PHONG CÁCH VIDEO</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <button onClick={exportAuditText} className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-gray-700 hover:bg-gray-50 flex items-center gap-2 shadow-sm shrink-0">
+            <Download size={14} /> TẢI TXT
+          </button>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden text-left">
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2"><Bot size={16} className="text-indigo-500" /> PHÂN TÍCH NỘI DUNG</h3>
-              <ul className="space-y-3">
-                {asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).map((x, i) => <li key={i} className="flex gap-3 text-[13px] text-gray-700 leading-relaxed"><span className="text-blue-500 font-black">•</span><span>{x}</span></li>)}
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2"><Bot size={16} className="text-indigo-500" /> PHÂN TÍCH NỘI DUNG</h3>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => copyToClipboard(contentText)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Copy phân tích nội dung"><Copy size={16} /></button>
+                  <button onClick={() => downloadAsTxt(contentText, `Phan_tich_noi_dung_${videoResult?.id || 'video'}`)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Tải phân tích nội dung"><Download size={16} /></button>
+                </div>
+              </div>
+              <ul className="space-y-4">
+                {asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).map((x, i) => <li key={i} className="flex gap-3 text-[14px] text-gray-700 leading-relaxed"><span className="text-blue-500 font-black mt-0.5">•</span><span>{x}</span></li>)}
               </ul>
             </div>
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2"><Star size={16} className="text-purple-500" /> PHÂN TÍCH PHONG CÁCH</h3>
-              <ul className="space-y-3">
-                {asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).map((x, i) => <li key={i} className="flex gap-3 text-[13px] text-gray-700 leading-relaxed"><span className="text-purple-500 font-black">•</span><span>{x}</span></li>)}
+              <div className="flex items-center justify-between gap-3 mb-5">
+                <h3 className="text-[13px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2"><Star size={16} className="text-purple-500" /> PHÂN TÍCH PHONG CÁCH</h3>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => copyToClipboard(styleText)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Copy phân tích phong cách"><Copy size={16} /></button>
+                  <button onClick={() => downloadAsTxt(styleText, `Phan_tich_phong_cach_${videoResult?.id || 'video'}`)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Tải phân tích phong cách"><Download size={16} /></button>
+                </div>
+              </div>
+              <ul className="space-y-4">
+                {asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).map((x, i) => <li key={i} className="flex gap-3 text-[14px] text-gray-700 leading-relaxed"><span className="text-purple-500 font-black mt-0.5">•</span><span>{x}</span></li>)}
               </ul>
             </div>
           </div>
