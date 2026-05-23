@@ -646,6 +646,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(1);
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
+  const [inlineVideoId, setInlineVideoId] = useState<string | null>(null);
   const [isAnalyzingVideo, setIsAnalyzingVideo] = useState(false);
   const [isVideoAuditAnalyzing, setIsVideoAuditAnalyzing] = useState(false);
   const [videoAuditProgress, setVideoAuditProgress] = useState(0);
@@ -1473,8 +1474,8 @@ export default function App() {
     return (
       <div className="vtw-sub-range col-span-12 rounded-xl border border-blue-100 bg-white p-3 shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="text-[11px] font-black uppercase text-[#2c3e50]">{title}</div>
-          <div className="text-[11px] font-black text-blue-700 tabular-nums">{formatVNNumber(min)} → {formatVNNumber(max)}</div>
+          <div className="text-[10px] font-black uppercase text-[#2c3e50]">{title}</div>
+          <div className="text-[10px] font-black text-blue-700 tabular-nums">{formatVNNumber(min)} → {formatVNNumber(max)}</div>
         </div>
         <div className="vtw-range-manual-note vtw-range-manual-note-light mb-2">Nhập số Min / Max thủ công</div>
         <div className="grid grid-cols-2 gap-2">
@@ -4576,11 +4577,11 @@ Quy tắc:
           </div>
           <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <div className="text-[11px] font-black uppercase text-green-600 tracking-widest mb-3">ĐIỂM MẠNH NỔI BẬT</div>
+              <div className="text-[10px] font-black uppercase text-green-600 tracking-widest mb-3">ĐIỂM MẠNH NỔI BẬT</div>
               <div className="space-y-2">{asArrayText(contentStyle.strengths).map((x, i) => <div key={i} className="bg-green-50 border border-green-100 text-green-800 px-4 py-2 rounded-xl text-[12px] font-bold">✓ {x}</div>)}</div>
             </div>
             <div>
-              <div className="text-[11px] font-black uppercase text-orange-500 tracking-widest mb-3">VẤN ĐỀ CẦN LƯU Ý</div>
+              <div className="text-[10px] font-black uppercase text-orange-500 tracking-widest mb-3">VẤN ĐỀ CẦN LƯU Ý</div>
               <div className="space-y-2">{asArrayText(contentStyle.warnings).map((x, i) => <div key={i} className="bg-orange-50 border border-orange-100 text-orange-800 px-4 py-2 rounded-xl text-[12px] font-bold">⚠ {x}</div>)}</div>
             </div>
           </div>
@@ -4589,10 +4590,10 @@ Quy tắc:
         <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
           <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
           <div className="relative z-10">
-            <div className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
             <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
             <div className="flex flex-wrap gap-2 mt-5">
-              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[11px] font-black">{badge}</span>)}
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[10px] font-black">{badge}</span>)}
             </div>
           </div>
         </div>
@@ -5026,11 +5027,11 @@ Quy tắc:
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Video size={12} className="text-red-500" /> YouTube V3:</span>
-                            <span className="text-[11px] font-black text-blue-600">{config.apiKeys.length} Keys ({exhaustedKeys.length} Lỗi)</span>
+                            <span className="text-[10px] font-black text-blue-600">{config.apiKeys.length} Keys ({exhaustedKeys.length} Lỗi)</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Bot size={12} className="text-indigo-500" /> Gemini AI:</span>
-                            <span className={`text-[11px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)` : 'Chưa có'}</span>
+                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)` : 'Chưa có'}</span>
                           </div>
                         </div>
                       </div>
@@ -5197,7 +5198,7 @@ Quy tắc:
                   <div className="vtw-results-header bg-[#2c3e50] text-white px-2 py-1.5 font-bold flex justify-between items-center text-[12px] shrink-0">
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-2"><CheckCircle2 size={16} /> DANH SÁCH KÊNH QUÉT ĐƯỢC (TỰ ĐỘNG LỌC THEO ĐIỀU KIỆN)</span>
-                      <span className="px-2 py-0.5 bg-blue-500 rounded text-[11px] font-black shadow-sm">TỔNG: {results.length}</span>
+                      <span className="px-2 py-0.5 bg-blue-500 rounded text-[10px] font-black shadow-sm">TỔNG: {results.length}</span>
                     </div>
                     <div className="flex gap-2">
                       <button 
@@ -6216,7 +6217,7 @@ Quy tắc:
                                   <div className="flex items-center gap-4">
                                      <div className="flex flex-col items-end">
                                         <span className="text-[9px] text-gray-400 font-bold uppercase">Trending</span>
-                                        <span className="text-[11px] font-black text-emerald-600">+{formatVNNumber(Math.round(kw.vph))} VPH</span>
+                                        <span className="text-[10px] font-black text-emerald-600">+{formatVNNumber(Math.round(kw.vph))} VPH</span>
                                      </div>
                                      <div className={`w-10 h-6 rounded flex items-center justify-center text-[10px] font-bold ${kw.score > 70 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
                                         {kw.score}
@@ -6323,15 +6324,15 @@ Quy tắc:
                             <table className="w-full text-left">
                                <thead className="bg-gray-50 border-b border-gray-200">
                                   <tr>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">Từ khóa</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Điểm liên quan</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-right">Khối lượng tìm kiếm</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Cuộc thi</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Nhìn chung</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Số từ</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-right">Trung bình VPH</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Video Trending</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Tiềm năng</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Từ khóa</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-center">Điểm liên quan</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-right">Khối lượng tìm kiếm</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-center">Cuộc thi</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-center">Nhìn chung</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-center">Số từ</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-right">Trung bình VPH</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-center">Video Trending</th>
+                                     <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-center">Tiềm năng</th>
                                   </tr>
                                </thead>
                                <tbody className="divide-y divide-gray-100">
@@ -6362,7 +6363,7 @@ Quy tắc:
                                         </td>
                                         <td className="px-6 py-4 text-right text-[13px] font-black text-gray-900">{formatVNNumber(volume)}</td>
                                         <td className="px-6 py-4 text-center">
-                                           <span className={`px-3 py-1 rounded-full text-[11px] font-black ${competition >= 70 ? 'bg-red-100 text-red-700' : competition >= 35 ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}`}>{getKeywordCompetitionLabel(competition)}</span>
+                                           <span className={`px-3 py-1 rounded-full text-[10px] font-black ${competition >= 70 ? 'bg-red-100 text-red-700' : competition >= 35 ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}`}>{getKeywordCompetitionLabel(competition)}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <span className={`inline-flex items-center justify-center min-w-9 h-8 px-2 rounded-lg text-[12px] font-black ${overall >= 70 ? 'bg-emerald-100 text-emerald-700' : overall >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'}`}>{overall}</span>
@@ -6374,7 +6375,7 @@ Quy tắc:
                                         <td className="px-6 py-4 text-center">
                                            <button 
                                               onClick={() => setModalTrendingVideos({ title: kw.text, subtitle: 'Danh sách các video có Trend Score > 60 chứa từ khóa này', videos: kw.trendVideos })}
-                                              className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[11px] font-black hover:bg-orange-200 transition-colors shadow-sm cursor-pointer"
+                                              className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black hover:bg-orange-200 transition-colors shadow-sm cursor-pointer"
                                            >
                                               {kw.trendVideosCount} clips
                                            </button>
@@ -6403,24 +6404,21 @@ Quy tắc:
                       {nicheResults.videos.map((v: any, i: number) => (
                          <div
                             key={i}
-                            onClick={(e) => {
-                              const target = e.target as HTMLElement;
-                              if (target.closest('button') || target.closest('a')) return;
-                              window.open(`https://youtube.com/watch?v=${v.id}`, '_blank');
-                            }}
-                            title="Bấm vào khung video để xem trực tiếp trên YouTube"
-                            className="vtw-niche-video-card vtw-square-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col aspect-square cursor-pointer"
+                            className="vtw-niche-video-card vtw-square-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col aspect-square"
                          >
-                            <div className="vtw-video-thumb vtw-thumb-priority w-full h-[52%] bg-[#0b1220] overflow-hidden shrink-0">
-                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="block w-full h-full bg-[#0b1220]">
-                                  <img
-                                    src={v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url}
-                                    className="w-full h-full object-contain bg-[#0b1220]"
-                                    loading="lazy"
-                                  />
-                               </a>
-                            </div>
-                            <div className="vtw-video-info p-2.5 flex flex-col flex-1 min-h-0">
+                            <button
+                               type="button"
+                               onClick={() => setInlineVideoId(v.id)}
+                               title="Bấm thumbnail để xem video trực tiếp trong app"
+                               className="vtw-video-thumb vtw-thumb-priority w-full h-[42%] bg-[#0b1220] overflow-hidden shrink-0 cursor-pointer block p-0 border-0"
+                            >
+                               <img
+                                  src={v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url}
+                                  className="w-full h-full object-contain bg-[#0b1220]"
+                                  loading="lazy"
+                               />
+                            </button>
+                            <div className="vtw-video-info p-2 flex flex-col flex-1 min-h-0">
                                <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
                                   <a href={`https://youtube.com/channel/${v.snippet.channelId}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:opacity-80 transition-opacity min-w-0 flex-1">
                                     <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(v.snippet.channelTitle || 'K')}&background=random`} className="w-5 h-5 rounded-full shrink-0" />
@@ -6441,47 +6439,47 @@ Quy tắc:
                                     </span>
                                   </div>
                                </div>
-                               <h4 className="vtw-video-title text-[11px] font-black text-gray-900 uppercase mb-3 leading-snug min-h-[36px]">
-                                  <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 line-clamp-2">{v.snippet.title}</a>
+                               <h4 className="vtw-video-title text-[10px] font-black text-gray-900 uppercase mb-1.5 leading-tight min-h-[26px]">
+                                  <button type="button" onClick={() => setInlineVideoId(v.id)} className="hover:text-blue-600 line-clamp-2 text-left">{v.snippet.title}</button>
                                </h4>
-                               <div className="vtw-video-actions grid grid-cols-2 gap-2 mb-2">
+                               <div className="vtw-video-actions grid grid-cols-2 gap-1.5 mb-1.5">
                                   <button 
                                      onClick={() => analyzeVideo(v.id)}
-                                     className="w-full bg-orange-600 text-white py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-1.5 uppercase tracking-tight hover:bg-orange-700"
+                                     className="w-full bg-orange-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-orange-700"
                                   >
                                      <Video size={12} /> Phân tích video
                                   </button>
                                   <button 
                                      onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
-                                     className="w-full bg-[#2c3e50] text-white py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-1.5 uppercase tracking-tight hover:bg-[#1f2d3a]"
+                                     className="w-full bg-[#2c3e50] text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-[#1f2d3a]"
                                   >
                                      <BarChart2 size={12} /> Bóc tách kênh này
                                   </button>
                                </div>
-                               <div className="vtw-video-stat-grid grid grid-cols-3 gap-1.5 border-t pt-2 mt-auto">
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
-                                     <span className="text-[6.5px] text-gray-400 font-black uppercase leading-tight">Ngày đăng</span>
-                                     <span className="text-[9px] font-black text-gray-700 leading-snug">{formatDetailedDate(v.snippet.publishedAt)}</span>
+                               <div className="vtw-video-stat-grid grid grid-cols-3 gap-1 border-t pt-1.5 mt-auto">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
+                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Ngày đăng</span>
+                                     <span className="text-[8px] font-black text-gray-700 leading-snug">{formatDetailedDate(v.snippet.publishedAt)}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
-                                     <span className="text-[6.5px] text-gray-400 font-black uppercase leading-tight">Outlier Score</span>
-                                     <span className={`text-[11px] font-black ${(v.trendScore || 0) >= 70 ? 'text-emerald-600' : (v.trendScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'}`}>{v.trendScore || 0}/100</span>
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
+                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Outlier Score</span>
+                                     <span className={`text-[10px] font-black ${(v.trendScore || 0) >= 70 ? 'text-emerald-600' : (v.trendScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'}`}>{v.trendScore || 0}/100</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
-                                     <span className="text-[6.5px] text-gray-400 font-black uppercase leading-tight">Lượt xem</span>
-                                     <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
+                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Lượt xem</span>
+                                     <span className="text-[10px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
-                                     <span className="text-[6.5px] text-gray-400 font-black uppercase leading-tight">Lượt thích</span>
-                                     <span className="text-[11px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
+                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Lượt thích</span>
+                                     <span className="text-[10px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
-                                     <span className="text-[6.5px] text-gray-400 font-black uppercase leading-tight">Bình luận</span>
-                                     <span className="text-[11px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
+                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Bình luận</span>
+                                     <span className="text-[10px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
-                                     <span className="text-[6.5px] text-gray-400 font-black uppercase leading-tight">VPH</span>
-                                     <span className="text-[11px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
+                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">VPH</span>
+                                     <span className="text-[10px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
                                   </div>
                                </div>
                             </div>
@@ -6621,7 +6619,7 @@ Quy tắc:
                             <div className="mt-3 flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                                <div className="flex flex-col">
                                   <span className="text-[8px] text-gray-400 font-bold uppercase">View/VPH</span>
-                                  <span className="text-[11px] font-black text-gray-700">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-blue-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
+                                  <span className="text-[10px] font-black text-gray-700">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-blue-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
                                </div>
                             </div>
                          </div>
@@ -6647,7 +6645,7 @@ Quy tắc:
                                  setNicheHistory([]);
                                  localStorage.setItem('youtube_niche_history', '[]');
                                }}
-                               className="relative z-10 bg-white/20 hover:bg-white/40 px-4 py-2 rounded-xl text-[11px] font-black uppercase border border-white/30 transition-all flex items-center gap-2"
+                               className="relative z-10 bg-white/20 hover:bg-white/40 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-white/30 transition-all flex items-center gap-2"
                              >
                                <Trash2 size={16} /> Dọn sạch lịch sử
                              </button>
@@ -6683,7 +6681,7 @@ Quy tắc:
                                   </div>
                                   <button 
                                     onClick={() => { setNicheInput(h.keyword); runNicheResearch(h.keyword); setNicheActiveSubTab('summary'); }}
-                                    className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-orange-600 transition-colors shadow-lg shadow-gray-200"
+                                    className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-colors shadow-lg shadow-gray-200"
                                   >
                                      Xem lại báo cáo này
                                   </button>
@@ -7456,7 +7454,7 @@ Quy tắc:
                       <Bot size={20} />
                     </div>
                     <div>
-                      <label className="text-[11px] font-black text-indigo-900 uppercase tracking-widest leading-none block mb-1">1. Google Gemini API Keys</label>
+                      <label className="text-[10px] font-black text-indigo-900 uppercase tracking-widest leading-none block mb-1">1. Google Gemini API Keys</label>
                       <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-500 hover:text-indigo-700 font-bold flex items-center gap-1 w-fit transition-colors">
                         Lấy API Key Gemini Miễn Phí <ExternalLink size={10} />
                       </a>
@@ -7894,6 +7892,35 @@ Quy tắc:
       </AnimatePresence>
 
       <AnimatePresence>
+        {inlineVideoId && (
+          <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 p-3">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 18 }}
+              className="bg-black rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-white/10"
+            >
+              <div className="flex items-center justify-between bg-slate-950 text-white px-4 py-3">
+                <div className="text-[12px] font-black uppercase tracking-wide">Xem video trực tiếp trong app</div>
+                <button type="button" onClick={() => setInlineVideoId(null)} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="relative w-full aspect-video bg-black">
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${inlineVideoId}?autoplay=1&rel=0`}
+                  title="YouTube video player"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {modalTrendingVideos && (
           <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-transparent p-4">
             <motion.div 
@@ -7931,15 +7958,9 @@ Quy tắc:
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
                       <div
                         key={i}
-                        onClick={(e) => {
-                          const target = e.target as HTMLElement;
-                          if (target.closest('button') || target.closest('a')) return;
-                          window.open(`https://youtube.com/watch?v=${v.id}`, '_blank');
-                        }}
-                        title="Bấm vào khung video để xem trực tiếp trên YouTube"
-                        className="vtw-niche-video-card vtw-square-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group aspect-square cursor-pointer flex flex-col"
+                        className="vtw-niche-video-card vtw-square-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group aspect-square flex flex-col"
                       >
-                         <div className="relative h-[58%] bg-black shrink-0">
+                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="relative h-[48%] bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : ''}
@@ -7949,14 +7970,12 @@ Quy tắc:
                                   SCORE {v.trendScore}
                                </div>
                             </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity gap-2">
-                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black py-2 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-100">
-                                  <ExternalLink size={14} /> Xem trên YouTube
-                               </a>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                               <Play size={24} className="text-white opacity-0 group-hover:opacity-100 drop-shadow-md" />
                             </div>
-                         </div>
+                         </button>
                          <div className="p-4">
-                            <h4 className="text-[11px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
+                            <h4 className="text-[10px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
                             <div className="mt-3 bg-gray-50 p-2 rounded-lg">
                                <div className="flex flex-col mb-2">
                                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
@@ -7965,19 +7984,19 @@ Quy tắc:
                                <div className="grid grid-cols-3 gap-2">
                                   <div className="flex flex-col">
                                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
-                                     <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                     <span className="text-[10px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
                                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Likes</span>
-                                     <span className="text-[11px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                     <span className="text-[10px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
                                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Comments</span>
-                                     <span className="text-[11px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                     <span className="text-[10px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
                                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">VPH</span>
-                                     <span className="text-[11px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                     <span className="text-[10px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
                                   </div>
                                </div>
                             </div>
@@ -8049,14 +8068,14 @@ Quy tắc:
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
             .vtw-gemini-keys-input { font-size: 8.5px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 52% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 42% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
-            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 12px !important; line-height: 1.3 !important; }
+            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 10px !important; line-height: 1.18 !important; }
             .vtw-niche-video-card .vtw-video-actions { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
-            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 38px !important; padding: 5px 6px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
-            .vtw-niche-video-card .vtw-video-stat span:first-child { font-size: 9px !important; }
-            .vtw-niche-video-card .vtw-video-stat span:last-child { font-size: 10px !important; text-align: left !important; word-break: break-word !important; }
+            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 4px !important; }
+            .vtw-niche-video-card .vtw-video-stat { min-height: 34px !important; padding: 4px 5px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
+            .vtw-niche-video-card .vtw-video-stat span:first-child { font-size: 7px !important; }
+            .vtw-niche-video-card .vtw-video-stat span:last-child { font-size: 9px !important; text-align: left !important; word-break: break-word !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
             .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
           }
@@ -8097,7 +8116,7 @@ Quy tắc:
                 >
                   <X size={20} />
                 </button>
-                <div className="text-[11px] font-black uppercase tracking-wide opacity-90 mb-2">Tài khoản & hạn sử dụng</div>
+                <div className="text-[10px] font-black uppercase tracking-wide opacity-90 mb-2">Tài khoản & hạn sử dụng</div>
                 <div className="text-[24px] leading-tight font-black">
                   {isPremiumAccount ? 'Tài khoản đã nâng cấp PRO' : subscriptionInfo?.active ? 'Tài khoản đang dùng thử' : 'Tài khoản đã hết hạn'}
                 </div>
