@@ -5016,7 +5016,7 @@ Quy tắc:
                 </div>
               </div>
               
-              {lastError && (
+              {false && lastError && (
                 <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700 animate-shake animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="bg-red-100 p-1.5 rounded-full shrink-0">
                     <XCircle size={18} className="text-red-600" />
