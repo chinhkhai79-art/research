@@ -5826,16 +5826,42 @@ Quy tắc:
                   </div>
 
                   <div className="space-y-2 mt-2">
-                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
-                      Phạm vi Sub <span>0 → {formatVNNumber(nicheMaxSub)}</span>
+                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center gap-2">
+                      <span>Phạm vi Sub</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={10000000}
+                          step={10}
+                          value={nicheMaxSub}
+                          onChange={(e) => {
+                            const rawValue = Number(e.target.value || 0);
+                            const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
+                            setNicheMaxSub(safeValue);
+                          }}
+                          onBlur={(e) => {
+                            const rawValue = Number(e.target.value || 0);
+                            const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
+                            setNicheMaxSub(safeValue);
+                          }}
+                          className="w-[82px] h-7 rounded-lg border border-[#4d6b87] bg-[#223548] px-2 text-right text-[10px] font-black text-white outline-none focus:border-blue-400"
+                          title="Nhập số sub tối đa, ví dụ 100000"
+                        />
+                        <span>0 → {formatVNNumber(nicheMaxSub)}</span>
+                      </div>
                     </label>
                     <input
                       type="range"
                       min={0}
                       max={10000000}
-                      step={1000}
+                      step={10}
                       value={nicheMaxSub}
-                      onChange={(e) => setNicheMaxSub(parseInt(e.target.value, 10) || 0)}
+                      onChange={(e) => {
+                        const rawValue = Number(e.target.value || 0);
+                        const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
+                        setNicheMaxSub(safeValue);
+                      }}
                       className="vtw-niche-slider w-full accent-blue-500"
                     />
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
