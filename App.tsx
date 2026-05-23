@@ -5887,7 +5887,7 @@ Quy tắc:
                       { id: 'channels', label: 'Kênh/Ngách Trending', icon: Users },
                       { id: 'summary', label: 'Dashboard Tổng quan', icon: Home },
                       { id: 'shorts', label: 'Khám phá Shorts', icon: Smartphone },
-                      { id: 'keywords', label: 'Bản đồ Từ khóa', icon: LayoutGrid },
+                      { id: 'keywords', label: 'Từ Khóa', icon: LayoutGrid },
                       { id: 'thumbnails', label: 'Mẫu Thumbnail', icon: Image },
                       { id: 'history', label: 'Lịch sử Nghiên cứu', icon: FolderClock },
                     ].map((item) => (
@@ -6088,8 +6088,17 @@ Quy tắc:
                   </div>
                 )}
 
-                {nicheActiveSubTab === 'keywords' && nicheResults && (
-                   <div className="animate-in fade-in duration-500">
+                {nicheActiveSubTab === 'keywords' && nicheResults && (() => {
+                   const keywordRows = nicheResults.keywords.slice(0, displayKeywordLimit === 'all' ? undefined : (displayKeywordLimit as number));
+                   const calcKeywordVolume = (kw: any) => Math.max(1, Math.round(((Number(kw.vph) || 0) * 24 * 30) + ((Number(kw.count) || 0) * 1200) + ((Number(kw.trendVideosCount) || 0) * 2500)));
+                   const calcKeywordCompetitionNumber = (kw: any) => Math.max(1, Math.min(100, Math.round((Number(kw.count) || 0) * 8 + (Number(kw.trendVideosCount) || 0) * 10)));
+                   const getKeywordCompetitionLabel = (value: number) => value >= 70 ? 'Cao' : value >= 35 ? 'Trung bình' : 'Thấp';
+                   const totalScore = keywordRows.length ? Math.round(keywordRows.reduce((sum: number, kw: any) => sum + (Number(kw.score) || 0), 0) / keywordRows.length) : 0;
+                   const totalSearchVolume = keywordRows.reduce((sum: number, kw: any) => sum + calcKeywordVolume(kw), 0);
+                   const avgCompetition = keywordRows.length ? Math.round(keywordRows.reduce((sum: number, kw: any) => sum + calcKeywordCompetitionNumber(kw), 0) / keywordRows.length) : 0;
+                   const avgHourlyViews = keywordRows.length ? Math.round(keywordRows.reduce((sum: number, kw: any) => sum + (Number(kw.vph) || 0), 0) / keywordRows.length) : 0;
+                   return (
+                   <div className="animate-in fade-in duration-500 space-y-5">
                       <div className="bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
                          <div className="bg-[#2c3e50] p-6 text-white flex justify-between items-center relative overflow-hidden">
                              <div className="absolute top-0 right-0 opacity-10 -mr-10 -mt-10">
@@ -6097,36 +6106,80 @@ Quy tắc:
                              </div>
                              <div className="relative">
                                 <h3 className="text-2xl font-black uppercase flex items-center gap-3">
-                                   <AlignLeft /> BẢN ĐỒ TỪ KHÓA LIÊN QUAN
+                                   <AlignLeft /> TỪ KHÓA LIÊN QUAN
                                 </h3>
-                                <p className="text-[12px] text-gray-400 font-medium">Hệ thống phân tích tag & tiêu đề từ các video trending nhất.</p>
+                                <p className="text-[12px] text-gray-400 font-medium">Phân tích từ khóa, tag và tiêu đề từ các video trending mới nhất.</p>
                              </div>
                          </div>
+
+                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 p-5 bg-slate-50 border-b border-gray-100">
+                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden">
+                               <div className="text-[12px] text-gray-400 font-bold mb-3">Tổng điểm <span className={`ml-2 px-2 py-1 rounded-lg text-[10px] ${totalScore >= 70 ? 'bg-emerald-100 text-emerald-700' : totalScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{totalScore >= 70 ? 'Cao' : totalScore >= 50 ? 'Trung bình' : 'Thấp'}</span></div>
+                               <div className="text-3xl font-black text-gray-900">{totalScore}</div>
+                               <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, totalScore)}%` }}></div></div>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                               <div className="text-[12px] text-gray-400 font-bold mb-3">Khối lượng tìm kiếm <span className="ml-2 px-2 py-1 rounded-lg text-[10px] bg-emerald-100 text-emerald-700">Ước tính</span></div>
+                               <div className="text-3xl font-black text-gray-900">{formatVNNumber(totalSearchVolume)}</div>
+                               <div className="text-[10px] text-gray-400 font-bold mt-2">Tổng hợp từ VPH, số video và clip trend</div>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                               <div className="text-[12px] text-gray-400 font-bold mb-3">Cuộc thi <span className={`ml-2 px-2 py-1 rounded-lg text-[10px] ${avgCompetition >= 70 ? 'bg-red-100 text-red-700' : avgCompetition >= 35 ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}`}>{getKeywordCompetitionLabel(avgCompetition)}</span></div>
+                               <div className="text-3xl font-black text-gray-900">{avgCompetition}</div>
+                               <div className="text-[10px] text-gray-400 font-bold mt-2">Càng thấp càng dễ chen ngách</div>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                               <div className="text-[12px] text-gray-400 font-bold mb-3">Số lượt xem mỗi giờ</div>
+                               <div className="text-3xl font-black text-gray-900">{formatVNNumber(avgHourlyViews)}</div>
+                               <div className="text-[10px] text-blue-600 font-black mt-2">VPH trung bình từ dữ liệu video</div>
+                            </div>
+                         </div>
+
                          <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                <thead className="bg-gray-50 border-b border-gray-200">
                                   <tr>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">Từ khóa / Thẻ Tag</th>
+                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase">Từ khóa</th>
+                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Điểm liên quan</th>
+                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-right">Khối lượng tìm kiếm</th>
+                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Cuộc thi</th>
+                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Nhìn chung</th>
+                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Số từ</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center font-mono">Xếp hạng</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-right">Xuất hiện</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-right">Trung bình VPH</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Video Trending</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Tiềm năng</th>
                                   </tr>
                                </thead>
                                <tbody className="divide-y divide-gray-100">
-                                  {nicheResults.keywords.slice(0, displayKeywordLimit === 'all' ? undefined : (displayKeywordLimit as number)).map((kw: any, i: number) => (
+                                  {keywordRows.map((kw: any, i: number) => {
+                                     const relatedScore = Math.round(((Number(kw.score) || 0) * 0.65) + (Math.min(100, (Number(kw.trendVideosCount) || 0) * 18) * 0.35));
+                                     const volume = calcKeywordVolume(kw);
+                                     const competition = calcKeywordCompetitionNumber(kw);
+                                     const overall = Math.max(1, Math.min(100, Math.round(((Number(kw.score) || 0) * 0.6) + ((100 - competition) * 0.15) + (Math.min(100, (Number(kw.vph) || 0) / 20) * 0.25))));
+                                     const wordCount = String(kw.text || '').trim().split(/\s+/).filter(Boolean).length || 1;
+                                     return (
                                      <tr key={i} className="hover:bg-gray-50 transition-colors group">
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 min-w-[220px]">
                                            <div className="flex items-center gap-2">
                                               <span className="text-blue-500 font-bold">#</span>
                                               <span className="text-[14px] font-bold text-gray-800 group-hover:text-blue-700">{kw.text}</span>
                                            </div>
                                         </td>
+                                        <td className="px-6 py-4 text-center">
+                                           <span className="text-[13px] font-black text-gray-800">{relatedScore || '-'}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-[13px] font-black text-gray-900">{formatVNNumber(volume)}</td>
+                                        <td className="px-6 py-4 text-center">
+                                           <span className={`px-3 py-1 rounded-full text-[11px] font-black ${competition >= 70 ? 'bg-red-100 text-red-700' : competition >= 35 ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}`}>{getKeywordCompetitionLabel(competition)}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                           <span className={`inline-flex items-center justify-center min-w-9 h-8 px-2 rounded-lg text-[12px] font-black ${overall >= 70 ? 'bg-emerald-100 text-emerald-700' : overall >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'}`}>{overall}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-[13px] font-black text-gray-700">{wordCount}</td>
                                         <td className="px-6 py-4 text-center font-mono text-[14px] font-black text-gray-300">0{i+1}</td>
-                                        <td className="px-6 py-4 text-right font-bold text-gray-500">{kw.count} videos</td>
                                         <td className="px-6 py-4 text-right">
-                                           <div className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(kw.vph))} VPH</div>
+                                           <div className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(Number(kw.vph) || 0))} VPH</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                            <button 
@@ -6145,13 +6198,14 @@ Quy tắc:
                                            </div>
                                         </td>
                                      </tr>
-                                  ))}
+                                  )})}
                                </tbody>
                             </table>
                          </div>
                       </div>
                    </div>
-                )}
+                   )
+                })()}
 
                 {nicheActiveSubTab === 'videos' && nicheResults && (
                    <div className="animate-in slide-in-from-right duration-500">
