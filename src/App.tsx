@@ -6417,6 +6417,11 @@ Quy tắc:
                                   className="w-full h-full object-contain bg-[#0b1220]"
                                   loading="lazy"
                                />
+                               <span className="vtw-thumb-play absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <span className="w-14 h-14 rounded-full bg-black/30 backdrop-blur-[1px] border border-white/40 flex items-center justify-center shadow-lg">
+                                     <Play size={26} fill="white" className="text-white ml-1 opacity-90" />
+                                  </span>
+                               </span>
                             </button>
                             <div className="vtw-video-info p-2 flex flex-col flex-1 min-h-0">
                                <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
@@ -7477,7 +7482,7 @@ Quy tắc:
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
                         className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[10px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
-                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
+                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '6px' : '14px', lineHeight: isMobileViewport ? '1.15' : '1.45', fontFamily: 'monospace', letterSpacing: isMobileViewport ? '-0.05em' : '0' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
                       <button 
@@ -7972,6 +7977,11 @@ Quy tắc:
                       >
                          <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="relative h-[48%] bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
+                            <span className="vtw-thumb-play absolute inset-0 flex items-center justify-center pointer-events-none">
+                               <span className="w-12 h-12 rounded-full bg-black/30 backdrop-blur-[1px] border border-white/40 flex items-center justify-center shadow-lg">
+                                  <Play size={22} fill="white" className="text-white ml-0.5 opacity-90" />
+                               </span>
+                            </span>
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : ''}
                             </div>
@@ -8077,18 +8087,20 @@ Quy tắc:
           @media (max-width: 640px) {
             .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
             .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
-            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow-x: auto !important; justify-content: flex-start !important; padding-bottom: 4px !important; scrollbar-width: thin !important; }
-            .vtw-user-header-row { flex-shrink: 0 !important; }
-            .vtw-account-box { max-width: 150px !important; padding: 6px 8px !important; }
-            .vtw-user-email { max-width: 92px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            .vtw-header-actions a, .vtw-header-actions button { min-height: 34px !important; padding: 7px 9px !important; font-size: 8px !important; border-radius: 10px !important; white-space: nowrap !important; }
+            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: flex-start !important; flex-wrap: wrap !important; gap: 6px !important; padding-bottom: 4px !important; }
+            .vtw-user-header-row { flex-shrink: 1 !important; min-width: 0 !important; }
+            .vtw-account-box { max-width: 138px !important; padding: 5px 7px !important; }
+            .vtw-user-email { max-width: 78px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .vtw-header-actions a, .vtw-header-actions button { min-height: 31px !important; padding: 6px 7px !important; font-size: 7.5px !important; border-radius: 10px !important; white-space: nowrap !important; }
             .vtw-header-actions svg { width: 13px !important; height: 13px !important; }
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
-            .vtw-gemini-keys-input { font-size: 6.5px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
+            .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
             .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 40% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
+            .vtw-niche-video-card .vtw-thumb-play span { width: 42px !important; height: 42px !important; }
+            .vtw-niche-video-card .vtw-thumb-play svg { width: 20px !important; height: 20px !important; }
             .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 8px !important; line-height: 1.08 !important; margin-bottom: 4px !important; }
             .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 4px !important; }
             .vtw-niche-video-card .vtw-video-actions button { padding: 5px 2px !important; min-height: 26px !important; font-size: 6.5px !important; border-radius: 10px !important; gap: 2px !important; }
