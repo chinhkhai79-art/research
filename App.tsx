@@ -6176,12 +6176,20 @@ Quy tắc:
                                   <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600">{v.snippet.title}</a>
                                </h4>
                                <div className="grid grid-cols-2 gap-2 border-t pt-3">
-                                  <div className="flex flex-col">
-                                     <span className="text-[9px] text-gray-400 font-bold uppercase">Lượt xem</span>
+                                  <div className="flex flex-col bg-gray-50 rounded-xl p-2">
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase">Lượt xem</span>
                                      <span className="text-[13px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
-                                  <div className="flex flex-col items-end">
-                                     <span className="text-[9px] text-gray-400 font-bold uppercase">Tăng trưởng/h</span>
+                                  <div className="flex flex-col bg-gray-50 rounded-xl p-2">
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase">Lượt thích</span>
+                                     <span className="text-[13px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col bg-gray-50 rounded-xl p-2">
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase">Bình luận</span>
+                                     <span className="text-[13px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col bg-gray-50 rounded-xl p-2">
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase">Tăng trưởng/h</span>
                                      <span className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
                                   </div>
                                </div>
@@ -7602,14 +7610,28 @@ Quy tắc:
                          </div>
                          <div className="p-4">
                             <h4 className="text-[11px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
-                            <div className="flex items-center justify-between mt-3 bg-gray-50 p-2 rounded-lg">
-                               <div className="flex flex-col">
+                            <div className="mt-3 bg-gray-50 p-2 rounded-lg">
+                               <div className="flex flex-col mb-2">
                                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
-                                  <span className="text-[10px] font-black text-blue-600 truncate max-w-[100px]">{v.snippet.channelTitle}</span>
+                                  <span className="text-[10px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
                                </div>
-                               <div className="flex flex-col items-end">
-                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views / VPH</span>
-                                  <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))} / <span className="text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span></span>
+                               <div className="grid grid-cols-2 gap-2">
+                                  <div className="flex flex-col">
+                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
+                                     <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Likes</span>
+                                     <span className="text-[11px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Comments</span>
+                                     <span className="text-[11px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">VPH</span>
+                                     <span className="text-[11px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                  </div>
                                </div>
                             </div>
                          </div>
