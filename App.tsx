@@ -870,12 +870,29 @@ export default function App() {
   const [nicheTime, setNicheTime] = useState('month');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
   const [nicheMaxSub, setNicheMaxSub] = useState(250000);
-  const updateNicheMaxSub = (value: number) => {
-    const safeValue = Math.max(0, Math.min(10000000, Math.round(Number(value || 0) / 10) * 10));
+
+  // Ô nhập Sub cho phép nhập số tự do từ 0 trở lên.
+  // Chỉ thanh kéo mới dùng bước 10 để tránh số lẻ.
+  const normalizeSubManualValue = (value: string | number) => {
+    const raw = String(value ?? '').replace(/[^0-9]/g, '');
+    if (!raw) return 0;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.floor(parsed));
+  };
+
+  const updateNicheMaxSubManual = (value: string | number) => {
+    setNicheMaxSub(normalizeSubManualValue(value));
+  };
+
+  const updateNicheMaxSubSlider = (value: string | number) => {
+    const parsed = normalizeSubManualValue(value);
+    const safeValue = Math.max(0, Math.min(10000000, Math.round(parsed / 10) * 10));
     setNicheMaxSub(safeValue);
   };
+
   const stepNicheMaxSub = (delta: number) => {
-    updateNicheMaxSub(nicheMaxSub + delta);
+    updateNicheMaxSubManual(nicheMaxSub + delta);
   };
   const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
@@ -5181,7 +5198,7 @@ Quy tắc:
                             <td className="px-2 py-1 text-right text-gray-800">{formatVNNumber(r.videos)}</td>
                             <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
                             <td className="px-2 py-1 text-center">
-                              <div className="vtw-channel-actions flex items-center justify-center gap-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 34px', gap: 6, alignItems: 'center', width: '100%' }}>
+                              <div className="vtw-channel-actions flex items-center justify-center gap-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, alignItems: 'center', width: '100%' }}>
                                 <button
                                   type="button"
                                   onClick={(e) => openChannelActionMenu(e, r)}
@@ -5206,25 +5223,6 @@ Quy tắc:
                                     CHECK
                                   </button>
                                 )}
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setResults(prev => {
-                                      const next = prev.filter(item => item.id !== r.id);
-                                      resultsRef.current = next;
-                                      localStorage.removeItem('youtube_hunter_results');
-                                      localStorage.setItem('youtube_hunter_results', JSON.stringify(next));
-                                      return next;
-                                    });
-                                    setStatus(`Đã xóa kênh ${r.name}`);
-                                  }}
-                                  className="vtw-delete-action text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-95 font-black uppercase"
-                                  style={{ width: 34, height: 40, minHeight: 40, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fecaca', background: '#fff1f2' }}
-                                  title="Xóa"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
                               </div>
                             </td>
                           </tr>
@@ -5907,14 +5905,13 @@ Quy tắc:
                             <Minus size={14} strokeWidth={3} />
                           </button>
                           <input
-                            type="number"
-                            min={0}
-                            max={10000000}
-                            step={10}
-                            value={nicheMaxSub}
-                            onChange={(e) => updateNicheMaxSub(Number(e.target.value || 0))}
-                            onBlur={(e) => updateNicheMaxSub(Number(e.target.value || 0))}
-                            className="w-[74px] h-8 bg-transparent px-1 text-center text-[10px] font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={String(nicheMaxSub)}
+                            onChange={(e) => updateNicheMaxSubManual(e.target.value)}
+                            onBlur={(e) => updateNicheMaxSubManual(e.target.value)}
+                            className="w-[86px] h-8 bg-transparent px-1 text-center text-[10px] font-black text-white outline-none"
                             title="Nhập số sub tối đa, ví dụ 100000"
                           />
                           <button
@@ -5934,8 +5931,8 @@ Quy tắc:
                       min={0}
                       max={10000000}
                       step={10}
-                      value={nicheMaxSub}
-                      onChange={(e) => updateNicheMaxSub(Number(e.target.value || 0))}
+                      value={Math.min(nicheMaxSub, 10000000)}
+                      onChange={(e) => updateNicheMaxSubSlider(e.target.value)}
                       className="vtw-niche-slider w-full accent-blue-500"
                     />
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
@@ -7875,9 +7872,8 @@ Quy tắc:
 
       <style>{`
         @media (max-width: 640px) {
-          .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
+          .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
           .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-          .vtw-channel-actions .vtw-delete-action span { display: none !important; }
           .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
           .vtw-results-table-wrap thead { display: none; }
           .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
@@ -7919,10 +7915,8 @@ Quy tắc:
           .vtw-spy-report { text-align: left !important; }
           .vtw-results-table-wrap tbody tr td:nth-child(3), .vtw-results-table-wrap tbody tr td:nth-child(4) { display: grid !important; grid-template-columns: 1fr !important; }
           .vtw-results-table-wrap tbody tr td:nth-child(3) a, .vtw-results-table-wrap tbody tr td:nth-child(4) { font-size: 12px !important; line-height: 1.25 !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
-          .vtw-results-table-wrap .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
+          .vtw-results-table-wrap .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
           .vtw-results-table-wrap .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; padding: 6px 3px !important; font-size: 9px !important; border-radius: 10px !important; }
-          .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action { width: 34px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; border: 1px solid #fecaca !important; background: #fff1f2 !important; grid-column: auto !important; }
-          .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action svg { width: 14px !important; height: 14px !important; }
           .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
           .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
