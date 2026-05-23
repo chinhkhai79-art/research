@@ -3881,8 +3881,14 @@ ${topKeywordsStr}`;
 
   const formatDuration = (pt: string) => {
     if (!pt || typeof pt !== 'string') return 'N/A';
-    const time = pt.replace('PT', '').toLowerCase();
-    return time.replace('h', 'h ').replace('m', 'm ').replace('s', 's');
+    const hours = Number((pt.match(/(\d+)H/) || [])[1] || 0);
+    const minutes = Number((pt.match(/(\d+)M/) || [])[1] || 0);
+    const seconds = Number((pt.match(/(\d+)S/) || [])[1] || 0);
+    const parts: string[] = [];
+    if (hours > 0) parts.push(`${hours} giờ`);
+    if (minutes > 0) parts.push(`${minutes} phút`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds} giây`);
+    return parts.join(' ');
   };
 
   const getCategoryName = (id: string) => {
@@ -6397,7 +6403,7 @@ Quy tắc:
                       {nicheResults.videos.map((v: any, i: number) => (
                          <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col">
                             <div className="vtw-video-thumb vtw-thumb-priority w-full bg-[#0b1220] overflow-hidden">
-                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="block w-full aspect-video bg-[#0b1220]">
+                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="block w-full aspect-square bg-[#0b1220]">
                                   <img
                                     src={v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url}
                                     className="w-full h-full object-contain bg-[#0b1220]"
@@ -6413,8 +6419,8 @@ Quy tắc:
                                   </a>
                                   <div className="flex items-center gap-1 shrink-0">
                                     {v.contentDetails?.duration && (
-                                      <span className="bg-gray-100 text-gray-600 text-[8px] font-black px-1.5 py-1 rounded-md uppercase">
-                                        {v.contentDetails.duration.replace('PT', '').toLowerCase()}
+                                      <span className="bg-gray-100 text-gray-600 text-[9px] font-black px-2 py-1 rounded-md whitespace-nowrap">
+                                        {formatDuration(v.contentDetails.duration)}
                                       </span>
                                     )}
                                     <span className={`text-white text-[8px] font-black px-1.5 py-1 rounded-md shadow-sm ${
@@ -7119,7 +7125,7 @@ Quy tắc:
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden border border-orange-100"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[76vh] flex flex-col overflow-hidden border border-orange-100"
             >
               {/* Header */}
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 flex justify-between items-center text-white">
@@ -7128,8 +7134,8 @@ Quy tắc:
                     <Save size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">Lịch sử API Keys</h2>
-                    <p className="text-xs opacity-80">Quản lý và khôi phục các Key đã từng sử dụng</p>
+                    <h2 className="text-base font-bold">Lịch sử YouTube API Key</h2>
+                    <p className="text-[10px] opacity-80">Chọn nhiều key để dùng lại nhanh</p>
                   </div>
                 </div>
                 <button 
@@ -7150,7 +7156,7 @@ Quy tắc:
                     title="Sử dụng các Key đang được tích chọn"
                   >
                     <CheckCircle2 size={18} />
-                    Dùng {selectedHistoryKeys.length} Key chọn
+                    Dùng {selectedHistoryKeys.length} key
                   </button>
                   <button 
                     onClick={() => {
@@ -7198,7 +7204,7 @@ Quy tắc:
                     {apiKeysHistory.map((key, idx) => (
                       <div 
                         key={idx}
-                        className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
                           selectedHistoryKeys.includes(key) 
                             ? 'border-orange-500 bg-orange-50 shadow-sm' 
                             : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-gray-50'
@@ -7236,7 +7242,7 @@ Quy tắc:
                               )}
                             </div>
                           </div>
-                          <div className={`font-mono text-sm break-all p-2 rounded border select-all ${exhaustedKeys.includes(key.trim()) ? 'text-red-600 bg-red-50 border-red-200 font-bold' : 'text-gray-800 bg-gray-50 border-gray-100'}`}>
+                          <div className={`font-mono text-[13px] break-all p-2 rounded border select-all ${exhaustedKeys.includes(key.trim()) ? 'text-red-600 bg-red-50 border-red-200 font-bold' : 'text-gray-800 bg-gray-50 border-gray-100'}`}>
                             {key}
                           </div>
                         </div>
@@ -7450,9 +7456,10 @@ Quy tắc:
                   <div className="relative z-10">
                     <div className="relative">
                       <textarea 
+                        wrap="off"
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[11px] shadow-inner custom-scrollbar resize-y"
+                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[10px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
@@ -7914,10 +7921,10 @@ Quy tắc:
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
                       <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
-                         <div className="relative aspect-video">
+                         <div className="relative aspect-square bg-black">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                               {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
+                               {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : ''}
                             </div>
                             <div className="absolute top-2 left-2 flex gap-1">
                                <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
@@ -8022,7 +8029,8 @@ Quy tắc:
           @media (max-width: 640px) {
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; aspect-ratio: 16 / 9 !important; border-radius: 16px 16px 0 0 !important; }
+            .vtw-gemini-keys-input { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; }
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; aspect-ratio: 1 / 1 !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
             .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 12px !important; line-height: 1.3 !important; }
             .vtw-niche-video-card .vtw-video-actions { grid-template-columns: 1fr !important; }
