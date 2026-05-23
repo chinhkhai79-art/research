@@ -7459,7 +7459,7 @@ Quy tắc:
                         wrap="off"
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[10px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
+                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-sm shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
@@ -8029,7 +8029,7 @@ Quy tắc:
           @media (max-width: 640px) {
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
-            .vtw-gemini-keys-input { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; }
+            .vtw-gemini-keys-input { font-size: 8.5px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
             .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; aspect-ratio: 1 / 1 !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
             .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 12px !important; line-height: 1.3 !important; }
