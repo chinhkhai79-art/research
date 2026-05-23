@@ -6410,7 +6410,7 @@ Quy tắc:
                                type="button"
                                onClick={() => setInlineVideoId(v.id)}
                                title="Bấm thumbnail để xem video trực tiếp trong app"
-                               className="vtw-video-thumb vtw-thumb-priority w-full h-[42%] bg-[#0b1220] overflow-hidden shrink-0 cursor-pointer block p-0 border-0"
+                               className="vtw-video-thumb vtw-thumb-priority w-full h-[56%] bg-[#0b1220] overflow-hidden shrink-0 cursor-pointer block p-0 border-0"
                             >
                                <img
                                   src={v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url}
@@ -6442,44 +6442,54 @@ Quy tắc:
                                <h4 className="vtw-video-title text-[10px] font-black text-gray-900 uppercase mb-1.5 leading-tight min-h-[26px]">
                                   <button type="button" onClick={() => setInlineVideoId(v.id)} className="hover:text-blue-600 line-clamp-2 text-left">{v.snippet.title}</button>
                                </h4>
-                               <div className="vtw-video-actions grid grid-cols-2 gap-1.5 mb-1.5">
+                               <div className="vtw-video-actions grid grid-cols-3 gap-1.5 mb-1.5">
                                   <button 
                                      onClick={() => analyzeVideo(v.id)}
                                      className="w-full bg-orange-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-orange-700"
+                                     title="Phân tích video"
                                   >
                                      <Video size={12} /> Phân tích video
                                   </button>
                                   <button 
+                                     type="button"
+                                     onClick={() => setInlineVideoId(v.id)}
+                                     className="w-full bg-blue-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-blue-700"
+                                     title="Xem video trực tiếp trong app"
+                                  >
+                                     <Play size={12} /> Xem video
+                                  </button>
+                                  <button 
                                      onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
                                      className="w-full bg-[#2c3e50] text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-[#1f2d3a]"
+                                     title="Bóc tách kênh này"
                                   >
-                                     <BarChart2 size={12} /> Bóc tách kênh này
+                                     <BarChart2 size={12} /> Bóc tách kênh
                                   </button>
                                </div>
                                <div className="vtw-video-stat-grid grid grid-cols-3 gap-1 border-t pt-1.5 mt-auto">
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
-                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Ngày đăng</span>
-                                     <span className="text-[8px] font-black text-gray-700 leading-snug">{formatDetailedDate(v.snippet.publishedAt)}</span>
+                                  <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="Ngày đăng">
+                                     <Clock size={12} className="text-gray-400 shrink-0" />
+                                     <span className="text-[7px] font-black text-gray-700 leading-tight">{formatDetailedDate(v.snippet.publishedAt)}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
-                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Outlier Score</span>
+                                  <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="Outlier Score">
+                                     <Star size={12} className="text-gray-400 shrink-0" />
                                      <span className={`text-[10px] font-black ${(v.trendScore || 0) >= 70 ? 'text-emerald-600' : (v.trendScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'}`}>{v.trendScore || 0}/100</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
-                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Lượt xem</span>
+                                  <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="Lượt xem">
+                                     <Eye size={12} className="text-gray-400 shrink-0" />
                                      <span className="text-[10px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
-                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Lượt thích</span>
+                                  <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="Lượt thích">
+                                     <ThumbsUp size={12} className="text-gray-400 shrink-0" />
                                      <span className="text-[10px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
-                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">Bình luận</span>
+                                  <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="Bình luận">
+                                     <MessageCircle size={12} className="text-gray-400 shrink-0" />
                                      <span className="text-[10px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-lg p-1.5 min-h-[44px]">
-                                     <span className="text-[6px] text-gray-400 font-black uppercase leading-tight">VPH</span>
-                                     <span className="text-[10px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
+                                  <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="VPH">
+                                     <TrendingUp size={12} className="text-gray-400 shrink-0" />
+                                     <span className="text-[10px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))}</span>
                                   </div>
                                </div>
                             </div>
@@ -8077,16 +8087,17 @@ Quy tắc:
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
             .vtw-gemini-keys-input { font-size: 6.5px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 32% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 40% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
             .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 8px !important; line-height: 1.08 !important; margin-bottom: 4px !important; }
-            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: 1fr 1fr !important; gap: 4px !important; margin-bottom: 4px !important; }
-            .vtw-niche-video-card .vtw-video-actions button { padding-top: 5px !important; padding-bottom: 5px !important; min-height: 28px !important; font-size: 7px !important; border-radius: 10px !important; }
+            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-actions button { padding: 5px 2px !important; min-height: 26px !important; font-size: 6.5px !important; border-radius: 10px !important; gap: 2px !important; }
+            .vtw-niche-video-card .vtw-video-actions button svg { width: 10px !important; height: 10px !important; }
             .vtw-niche-video-card .vtw-video-info { padding: 7px !important; }
             .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 4px !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 30px !important; padding: 3px 4px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border-radius: 8px !important; }
-            .vtw-niche-video-card .vtw-video-stat span:first-child { font-size: 5.5px !important; line-height: 1 !important; }
-            .vtw-niche-video-card .vtw-video-stat span:last-child { font-size: 7px !important; line-height: 1.08 !important; text-align: left !important; word-break: break-word !important; }
+            .vtw-niche-video-card .vtw-video-stat { min-height: 25px !important; padding: 3px 4px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 8px !important; gap: 2px !important; }
+            .vtw-niche-video-card .vtw-video-stat svg { width: 9px !important; height: 9px !important; }
+            .vtw-niche-video-card .vtw-video-stat span { font-size: 6.3px !important; line-height: 1.05 !important; text-align: left !important; word-break: break-word !important; }
             .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 4px !important; }
             .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 7px !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
