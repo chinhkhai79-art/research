@@ -278,13 +278,13 @@ function getFriendlyApiError(error: any): string {
 }
 
 const GEMINI_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash — Khuyên dùng: ổn định, mạnh, phù hợp phân tích video/kênh.' },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite — Nhẹ hơn 2.5 Flash, tiết kiệm quota hơn.' },
-  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash-Lite Preview — Model mới, nhanh, dùng khi key/project có hỗ trợ.' },
-  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview — Model mới, mạnh hơn, phù hợp phân tích sâu khi được hỗ trợ.' },
-  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest — Alias tự động của Google, dùng khi project hỗ trợ alias latest.' },
-  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite — Dự phòng nếu key/project còn hỗ trợ.' },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash — Dự phòng nếu key/project còn hỗ trợ.' },
+  { id: 'gemini-2.5-flash', name: '2.5 Flash — ổn định, mạnh' },
+  { id: 'gemini-2.5-flash-lite', name: '2.5 Flash-Lite — tiết kiệm quota' },
+  { id: 'gemini-3.1-flash-lite-preview', name: '3.1 Flash-Lite Preview — mới, nhanh' },
+  { id: 'gemini-3-flash-preview', name: '3 Flash Preview — phân tích sâu' },
+  { id: 'gemini-flash-latest', name: 'Flash Latest — tự động' },
+  { id: 'gemini-2.0-flash-lite', name: '2.0 Flash Lite — dự phòng' },
+  { id: 'gemini-2.0-flash', name: '2.0 Flash — dự phòng' },
 ];
 
 const SUGGESTED_NICHES = [
@@ -691,6 +691,9 @@ export default function App() {
   const [scanningNicheCategory, setScanningNicheCategory] = useState<string | null>(null);
   const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
   const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
+  const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
+  const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
+  const exhaustedGeminiKeysRef = useRef<string[]>([]);
   const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
@@ -725,17 +728,34 @@ export default function App() {
     setStatus(`Đã thêm ${keysToAdd.length} Key vào ô nhập YouTube API.`);
   };
 
+  const parseGeminiKeyText = (text: string) => {
+    return [...new Set(String(text || '')
+      .split(/[\r\n,;]+/g)
+      .map(k => k.trim())
+      .filter(Boolean))];
+  };
+
+  const saveGeminiKeysText = (keys: string[]) => {
+    const cleanKeys = [...new Set(keys.map(k => String(k || '').trim()).filter(Boolean))];
+    const text = cleanKeys.join('\n');
+    setGeminiApiKey(text);
+    localStorage.setItem('youtube_gemini_api_key', text);
+    if (geminiKeyIndex >= cleanKeys.length) setGeminiKeyIndex(0);
+    return cleanKeys;
+  };
+
   const useGeminiHistoryKey = (keysToUse: string[]) => {
-    const key = keysToUse.map(k => k.trim()).filter(Boolean)[0];
-    if (!key) return;
-    setGeminiApiKey(key);
-    localStorage.setItem('youtube_gemini_api_key', key);
-    const nextHistory = [...new Set([key, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+    const selectedKeys = keysToUse.map(k => k.trim()).filter(Boolean);
+    if (selectedKeys.length === 0) return;
+    const currentKeys = parseGeminiKeyText(geminiApiKey);
+    const nextKeys = [...new Set([...currentKeys, ...selectedKeys])];
+    saveGeminiKeysText(nextKeys);
+    const nextHistory = [...new Set([...selectedKeys, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
     setGeminiKeysHistory(nextHistory);
     localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextHistory));
     setSelectedGeminiHistoryKeys([]);
     setShowGeminiKeyHistory(false);
-    setStatus('Đã khôi phục Gemini API Key vào ô nhập.');
+    setStatus(`Đã thêm ${selectedKeys.length} Gemini Key vào ô nhập.`);
   };
 
   const clearGeminiHistory = () => {
@@ -1091,6 +1111,13 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
+    const keys = parseGeminiKeyText(geminiApiKey);
+    if (keys.length > 0) {
+      const nextHistory = [...new Set([...keys, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+      setGeminiKeysHistory(nextHistory);
+      localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextHistory));
+    }
+    if (geminiKeyIndex >= keys.length) setGeminiKeyIndex(0);
   }, [geminiApiKey]);
 
   useEffect(() => {
@@ -1122,6 +1149,10 @@ export default function App() {
     }
   }, [exhaustedKeys]);
 
+  useEffect(() => {
+    exhaustedGeminiKeysRef.current = exhaustedGeminiKeys.map(k => String(k || '').trim()).filter(Boolean);
+  }, [exhaustedGeminiKeys]);
+
   // --- API Helpers ---
   const getActiveApiKey = () => config.apiKeys[apiKeyIndex] || '';
 
@@ -1144,6 +1175,73 @@ export default function App() {
     }
 
     return false;
+  };
+
+  const getActiveGeminiKeys = () => parseGeminiKeyText(geminiApiKey);
+
+  const getActiveGeminiKey = () => {
+    const keys = getActiveGeminiKeys();
+    return keys[Math.max(0, Math.min(geminiKeyIndex, keys.length - 1))] || '';
+  };
+
+  const isRotatableGeminiError = (error: any) => {
+    const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
+    const text = String(raw).toLowerCase();
+    return text.includes('quota')
+      || text.includes('limit')
+      || text.includes('exceeded')
+      || text.includes('resource_exhausted')
+      || text.includes('429')
+      || text.includes('api key not valid')
+      || text.includes('api_key_invalid')
+      || text.includes('invalid api key')
+      || text.includes('api key expired')
+      || text.includes('key expired')
+      || text.includes('403');
+  };
+
+  const callGeminiGenerateContent = async (prompt: string) => {
+    const keys = getActiveGeminiKeys();
+    if (keys.length === 0) throw new Error('Thiếu Gemini API Key. Vui lòng dán ít nhất 1 key.');
+
+    const safeIndex = Math.max(0, Math.min(geminiKeyIndex, keys.length - 1));
+    const orderedIndexes = [
+      ...keys.map((_, idx) => idx).slice(safeIndex),
+      ...keys.map((_, idx) => idx).slice(0, safeIndex)
+    ];
+
+    let lastError: any = null;
+    for (const idx of orderedIndexes) {
+      const key = keys[idx];
+      if (exhaustedGeminiKeysRef.current.includes(key)) continue;
+      try {
+        setGeminiKeyIndex(idx);
+        const ai = new GoogleGenAI({ apiKey: key });
+        const response = await ai.models.generateContent({
+          model: geminiModel,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
+        return response;
+      } catch (error: any) {
+        lastError = error;
+        if (isRotatableGeminiError(error)) {
+          setExhaustedGeminiKeys(prev => {
+            const next = [...new Set([...prev, key])];
+            exhaustedGeminiKeysRef.current = next;
+            return next;
+          });
+          const nextAvailable = keys.findIndex((candidate, candidateIndex) => candidateIndex !== idx && !exhaustedGeminiKeysRef.current.includes(candidate));
+          if (nextAvailable !== -1) {
+            setGeminiKeyIndex(nextAvailable);
+            setStatus(`Gemini Key #${idx + 1} lỗi/hết quota, đang tự chuyển sang Key #${nextAvailable + 1}...`);
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+
+    throw new Error(`Tất cả Gemini API Key đều lỗi hoặc hết quota. ${getFriendlyApiError(lastError)}`);
   };
 
   const formatVNNumber = (value: any) => {
@@ -1816,9 +1914,8 @@ export default function App() {
     };
 
     const generateGeminiNicheKeywords = async (category: string, count = 5) => {
-      if (!geminiApiKey) return [] as string[];
+      if (getActiveGeminiKeys().length === 0) return [] as string[];
       try {
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
         const lang = getRegionLanguageName(selectedRegion);
         const prompt = `Return exactly ${count} YouTube niche keyword phrases for this region and category.
 Region code: ${selectedRegion || 'GLOBAL'}
@@ -1834,10 +1931,7 @@ Rules:
 - Focus on videos that are hot in the last 30 days based on high views and high VPH.
 - Do not limit by channel size. Large channels are allowed if the video is trending.
 - Keywords must logically match the category.`;
-        const response = await ai.models.generateContent({
-          model: geminiModel,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
+        const response = await callGeminiGenerateContent(prompt);
         return normalizeGeminiKeywordList(response.text || '');
       } catch (e) {
         console.warn('Gemini fallback keyword generation failed:', e);
@@ -2021,9 +2115,8 @@ Rules:
     const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || 'Việt Nam';
     const regionCfg = REGION_AI_CONFIG[selectedRegion] || REGION_AI_CONFIG.VN;
 
-    if (!geminiApiKey.trim()) throw new Error('Thiếu Gemini API Key.');
+    if (getActiveGeminiKeys().length === 0) throw new Error('Thiếu Gemini API Key.');
 
-    const ai = new GoogleGenAI({ apiKey: geminiApiKey.trim() });
     const localizedCategoryList = getLocalizedNicheTemplate(selectedRegion);
     const categoryList = localizedCategoryList.map((x: any, i: number) => `${i + 1}. ${x.localCategory || x.category} (${x.viCategory || CATEGORY_VI_TITLES[i]})`).join('\n');
     const prompt = `Bạn là chuyên gia nghiên cứu ngách YouTube.
@@ -2050,10 +2143,7 @@ JSON mẫu:
   ]
 }`;
 
-    const response = await ai.models.generateContent({
-      model: geminiModel,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
-    });
+    const response = await callGeminiGenerateContent(prompt);
 
     const parsed = parseGeminiJson(response.text || '');
     const categories = normalizeAiCategories(parsed, selectedRegion);
@@ -2584,8 +2674,8 @@ JSON mẫu:
   };
 
   const analyzeWithAI = async () => {
-    if (!geminiApiKey) {
-      setStatus('Lỗi: Vui lòng nhập Gemini API Key ở trên header.');
+    if (getActiveGeminiKeys().length === 0) {
+      setStatus('Lỗi: Vui lòng nhập ít nhất 1 Gemini API Key ở Cài đặt API.');
       return;
     }
     if (!nicheResults) return;
@@ -2596,8 +2686,6 @@ JSON mẫu:
     setProgress(30);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-
       const prompt = `Bạn là một chuyên gia marketing và nghiên cứu thị trường YouTube hàng đầu Việt Nam. 
       Hãy phân tích dữ liệu sau về ngách "${nicheResults.summary.keyword}" và đưa ra đánh giá chiến lược:
       
@@ -2622,10 +2710,7 @@ JSON mẫu:
       Trả về định dạng Markdown chuyên nghiệp, có các tiêu đề (Heading), danh sách gạch đầu dòng và nhấn mạnh (bold) các từ khóa quan trọng. Trình bày đẹp mắt.`;
 
       setProgress(60);
-      const response = await ai.models.generateContent({
-        model: geminiModel,
-        contents: [{ role: "user", parts: [{ text: prompt }] }]
-      });
+      const response = await callGeminiGenerateContent(prompt);
       const text = response.text || "Lỗi: Không có phản hồi từ AI.";
       setAiAnalysisResult(text);
       setProgress(100);
@@ -3960,10 +4045,9 @@ ${topKeywordsStr}`;
 
   const analyzeVideoWithGemini = async (video: any) => {
     const fallback = buildFallbackVideoAudit(video);
-    if (!geminiApiKey) return fallback;
+    if (getActiveGeminiKeys().length === 0) return fallback;
 
     try {
-      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
       const stats = video?.statistics || {};
       const channelStats = video?._channelInfo?.statistics || {};
       const dataForAi = {
@@ -4017,10 +4101,7 @@ Quy tắc:
 - Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.
 - Với tags và bình luận, phải ưu tiên hiển thị/nhận xét từ dữ liệu YouTube API đã cung cấp.`;
 
-      const response = await ai.models.generateContent({
-        model: geminiModel,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
-      });
+      const response = await callGeminiGenerateContent(prompt);
       const parsed = parseGeminiJsonObject(response.text || '');
       if (!parsed) return fallback;
       return {
@@ -4943,7 +5024,7 @@ Quy tắc:
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Bot size={12} className="text-indigo-500" /> Gemini AI:</span>
-                            <span className={`text-[11px] font-black ${geminiApiKey ? 'text-green-600' : 'text-gray-400'}`}>{geminiApiKey ? 'Sẵn sàng' : 'Chưa có'}</span>
+                            <span className={`text-[11px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)` : 'Chưa có'}</span>
                           </div>
                         </div>
                       </div>
@@ -7187,14 +7268,14 @@ Quy tắc:
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden border border-indigo-100"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[76vh] flex flex-col overflow-hidden border border-indigo-100"
             >
               <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-4 flex justify-between items-center text-white">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white/20 rounded-lg"><Bot size={24} /></div>
                   <div>
-                    <h2 className="text-xl font-bold">Lịch sử Gemini API Key</h2>
-                    <p className="text-xs opacity-80">Chọn lại key Gemini đã từng nhập</p>
+                    <h2 className="text-base font-bold">Lịch sử Gemini Key</h2>
+                    <p className="text-[10px] opacity-80">Chọn nhiều key để xoay vòng</p>
                   </div>
                 </div>
                 <button onClick={() => setShowGeminiKeyHistory(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X size={24} /></button>
@@ -7207,7 +7288,7 @@ Quy tắc:
                     disabled={selectedGeminiHistoryKeys.length === 0}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95"
                   >
-                    <CheckCircle2 size={18} /> Dùng Key chọn
+                    <CheckCircle2 size={14} /> Dùng {selectedGeminiHistoryKeys.length} key
                   </button>
                   <button 
                     onClick={() => setSelectedGeminiHistoryKeys([...geminiKeysHistory])}
@@ -7247,7 +7328,7 @@ Quy tắc:
                           if (selectedGeminiHistoryKeys.includes(key)) {
                             setSelectedGeminiHistoryKeys(prev => prev.filter(k => k !== key));
                           } else {
-                            setSelectedGeminiHistoryKeys([key]);
+                            setSelectedGeminiHistoryKeys(prev => [...prev, key]);
                           }
                         }}
                       >
@@ -7263,7 +7344,7 @@ Quy tắc:
                               </span>
                             )}
                           </div>
-                          <div className="font-mono text-sm break-all p-2 rounded border select-all text-gray-800 bg-gray-50 border-gray-100">{key}</div>
+                          <div className="font-mono text-[11px] break-all p-2 rounded border select-all text-gray-800 bg-gray-50 border-gray-100">{key}</div>
                         </div>
                         <button
                           onClick={(e) => {
@@ -7297,18 +7378,18 @@ Quy tắc:
               className="vtw-api-modal bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-blue-100 flex flex-col"
             >
               {/* Header */}
-              <div className="vtw-api-modal-header bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
+              <div className="vtw-api-modal-header bg-gradient-to-r from-blue-600 to-indigo-700 p-4 flex justify-between items-center text-white shrink-0">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
-                    <Settings size={28} />
+                  <div className="p-2 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
+                    <Settings size={22} />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black uppercase tracking-tight">CÀI ĐẶT API HỆ THỐNG</h2>
+                    <h2 className="text-xl font-black uppercase tracking-tight">CÀI ĐẶT API HỆ THỐNG</h2>
                     <div className="flex items-center gap-2">
                       <p className="text-[11px] font-bold opacity-80 uppercase tracking-tighter">Quản lý kết nối YouTube & Gemini AI</p>
                       <button 
                         onClick={() => setShowApiKeys(!showApiKeys)}
-                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        className="text-[8px] bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
                       >
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
                         {showApiKeys ? 'ẨN' : 'HIỆN'} KEY
@@ -7316,7 +7397,7 @@ Quy tắc:
                       <button
                         type="button"
                         onClick={() => setShowKeyHistory(true)}
-                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        className="text-[8px] bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
                         title="Lịch sử API Key YouTube"
                       >
                         <HistoryIcon size={10} /> YOUTUBE
@@ -7324,7 +7405,7 @@ Quy tắc:
                       <button
                         type="button"
                         onClick={() => setShowGeminiKeyHistory(true)}
-                        className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
+                        className="text-[8px] bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
                         title="Lịch sử API Key Gemini"
                       >
                         <HistoryIcon size={10} /> GEMINI
@@ -7341,18 +7422,18 @@ Quy tắc:
               </div>
 
               {/* Content */}
-              <div className="vtw-api-modal-content p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[65vh]">
+              <div className="vtw-api-modal-content p-5 space-y-5 overflow-y-auto custom-scrollbar max-h-[65vh]">
                 {/* Section Gemini */}
-                <div className="bg-indigo-50/50 p-6 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
+                <div className="bg-indigo-50/50 p-4 rounded-3xl border-2 border-indigo-100/50 shadow-sm relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
                     <Bot size={100} />
                   </div>
-                  <div className="flex items-center gap-3 mb-4 relative z-10">
+                  <div className="flex items-center gap-2 mb-3 relative z-10">
                     <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
                       <Bot size={20} />
                     </div>
                     <div>
-                      <label className="text-[13px] font-black text-indigo-900 uppercase tracking-widest leading-none block mb-1">1. Google Gemini API Key</label>
+                      <label className="text-[11px] font-black text-indigo-900 uppercase tracking-widest leading-none block mb-1">1. Google Gemini API Keys</label>
                       <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[10px] text-indigo-500 hover:text-indigo-700 font-bold flex items-center gap-1 w-fit transition-colors">
                         Lấy API Key Gemini Miễn Phí <ExternalLink size={10} />
                       </a>
@@ -7360,26 +7441,31 @@ Quy tắc:
                   </div>
                   <div className="relative z-10">
                     <div className="relative">
-                      <input 
-                        type={showApiKeys ? "text" : "password"}
+                      <textarea 
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="w-full px-5 py-4 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-sm shadow-inner"
-                        placeholder="AIzaSy... (Dùng cho AI Phân tích chiến lược)"
+                        className="w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[11px] shadow-inner custom-scrollbar resize-y"
+                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
+                        placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
                       <button 
                         type="button"
                         onClick={() => setShowApiKeys(!showApiKeys)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-indigo-400 hover:text-indigo-600 transition-colors"
+                        className="absolute right-3 bottom-3 p-2 text-indigo-400 hover:text-indigo-600 transition-colors"
                       >
-                        {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
+                        {showApiKeys ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-600">
+                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Gemini: {getActiveGeminiKeys().length} key</span>
+                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Đang dùng #{Math.min(geminiKeyIndex + 1, Math.max(getActiveGeminiKeys().length, 1))}</span>
+                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Lỗi/hết quota: {exhaustedGeminiKeys.length}</span>
                     </div>
                     {/* Model Selection UI - collapsed by default */}
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-3 mb-2">
-                        <span className="text-[11px] font-black text-gray-400 tracking-widest uppercase">Chọn model Gemini</span>
-                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold truncate max-w-[240px]">
+                        <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Chọn model</span>
+                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[190px]">
                           Đang dùng: {geminiModel}
                         </div>
                       </div>
@@ -7387,11 +7473,11 @@ Quy tắc:
                       <button
                         type="button"
                         onClick={() => setShowModelOptions(prev => !prev)}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 border-indigo-100 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm text-left active:scale-[0.99]"
+                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-2xl border-2 border-indigo-100 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm text-left active:scale-[0.99]"
                       >
                         <div className="min-w-0">
-                          <div className="text-[12px] font-black text-indigo-700 uppercase tracking-wide">Model đang chọn</div>
-                          <div className="text-[12px] font-bold text-gray-700 truncate">
+                          <div className="text-[10px] font-black text-indigo-700 uppercase tracking-wide">Model đang chọn</div>
+                          <div className="text-[10px] font-bold text-gray-700 truncate">
                             {GEMINI_MODELS.find(model => model.id === geminiModel)?.name || geminiModel}
                           </div>
                         </div>
@@ -7416,7 +7502,7 @@ Quy tắc:
                                     setGeminiModel(model.id);
                                     setShowModelOptions(false);
                                   }}
-                                  className={`text-left px-3 py-2 rounded-xl border text-[11px] font-bold transition-all active:scale-95 ${
+                                  className={`text-left px-3 py-2 rounded-xl border text-[10px] font-bold transition-all active:scale-95 ${
                                     model.id === geminiModel
                                       ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                                       : 'bg-white text-gray-700 border-blue-100 hover:border-blue-400 hover:bg-blue-50'
@@ -7493,23 +7579,26 @@ Quy tắc:
                     const keys = manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean);
                     setConfig(prev => ({ ...prev, apiKeys: keys }));
                     localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
-                    localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
+                    const geminiKeys = parseGeminiKeyText(geminiApiKey);
+                    localStorage.setItem('youtube_gemini_api_key', geminiKeys.join('\n'));
                     localStorage.setItem('youtube_gemini_model', geminiModel);
                     localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
+                    setGeminiApiKey(geminiKeys.join('\n'));
+                    setExhaustedGeminiKeys([]);
+                    exhaustedGeminiKeysRef.current = [];
                     
                     const newHistory = [...new Set([...apiKeysHistory, ...keys])];
                     setApiKeysHistory(newHistory);
                     localStorage.setItem('youtube_api_keys_history', JSON.stringify(newHistory));
 
-                    const cleanGeminiKey = geminiApiKey.trim();
-                    if (cleanGeminiKey) {
-                      const newGeminiHistory = [...new Set([cleanGeminiKey, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
+                    if (geminiKeys.length > 0) {
+                      const newGeminiHistory = [...new Set([...geminiKeys, ...geminiKeysHistory.map(k => k.trim()).filter(Boolean)])];
                       setGeminiKeysHistory(newGeminiHistory);
                       localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(newGeminiHistory));
                     }
                     
                     setShowKeyInputModal(false);
-                    setStatus(`Đã cập nhật hệ thống API thành công.`);
+                    setStatus(`Đã cập nhật API: ${keys.length} YouTube key, ${geminiKeys.length} Gemini key.`);
                   }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-10 py-3 rounded-2xl font-black uppercase tracking-[0.2em] hover:scale-105 shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center gap-3 text-[12px]"
                 >
