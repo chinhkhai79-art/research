@@ -1078,6 +1078,13 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('youtube_api_keys_text_draft', manualKeysInput);
+    const keys = manualKeysInput.split(/\r?\n/).map(k => k.trim()).filter(Boolean);
+    const current = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
+    if (keys.length > 0 && keys.join('\n') !== current.join('\n')) {
+      setConfig(prev => ({ ...prev, apiKeys: keys }));
+      localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
+      if (apiKeyIndex >= keys.length) setApiKeyIndex(0);
+    }
   }, [manualKeysInput]);
 
   useEffect(() => {
@@ -2620,10 +2627,29 @@ JSON mẫu:
     'pet grooming', 'rust removal', 'RC boat', 'fitness after 50', 'diabetes health tips'
   ]);
 
+  const getMergedYoutubeKeys = () => {
+    const fromTextarea = manualKeysInput
+      .split(/\r?\n/)
+      .map(k => String(k || '').trim())
+      .filter(Boolean);
+    const fromConfig = config.apiKeys
+      .map(k => String(k || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set([...fromTextarea, ...fromConfig]));
+  };
+
   const youtubeFetch = async (endpoint: string, params: Record<string, any>, retryCount = 0): Promise<any> => {
-    const keys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
+    const keys = getMergedYoutubeKeys();
     if (keys.length === 0) {
       throw new Error('Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
+    }
+
+    // Đồng bộ ngay danh sách key đang nhập để hệ thống xoay vòng đủ key, không cần bấm lưu lại.
+    const currentConfigKeys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
+    if (keys.join('\n') !== currentConfigKeys.join('\n')) {
+      setConfig(prev => ({ ...prev, apiKeys: keys }));
+      localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
+      localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
     }
 
     // STEP_77_FIX: Không dùng cache "key lỗi hôm nay" để chặn key ngay từ đầu.
@@ -5155,7 +5181,7 @@ Quy tắc:
                             <td className="px-2 py-1 text-right text-gray-800">{formatVNNumber(r.videos)}</td>
                             <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
                             <td className="px-2 py-1 text-center">
-                              <div className="vtw-channel-actions flex items-center justify-center gap-1">
+                              <div className="vtw-channel-actions flex items-center justify-center gap-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 34px', gap: 6, alignItems: 'center', width: '100%' }}>
                                 <button
                                   type="button"
                                   onClick={(e) => openChannelActionMenu(e, r)}
@@ -5194,6 +5220,7 @@ Quy tắc:
                                     setStatus(`Đã xóa kênh ${r.name}`);
                                   }}
                                   className="vtw-delete-action text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all active:scale-95 font-black uppercase"
+                                  style={{ width: 34, height: 40, minHeight: 40, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fecaca', background: '#fff1f2' }}
                                   title="Xóa"
                                 >
                                   <Trash2 size={14} />
@@ -7848,14 +7875,14 @@ Quy tắc:
 
       <style>{`
         @media (max-width: 640px) {
-          .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 44px !important; gap: 8px !important; align-items: stretch !important; }
-          .vtw-channel-actions button { min-height: 44px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; }
+          .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
+          .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
           .vtw-channel-actions .vtw-delete-action span { display: none !important; }
           .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
           .vtw-results-table-wrap thead { display: none; }
           .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
-          .vtw-results-table-wrap tbody tr { margin: 12px 10px !important; padding: 16px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; }
-          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 10px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important; align-items: center !important; }
+          .vtw-results-table-wrap tbody tr { margin: 12px 10px !important; padding: 16px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; column-gap: 14px !important; }
+          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 10px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: 1fr !important; gap: 4px !important; align-items: start !important; min-width: 0 !important; }
           .vtw-results-table-wrap tbody tr td:before { content: ''; font-size: 11px; font-weight: 900; color: #64748b; text-transform: uppercase; }
           .vtw-results-table-wrap tbody tr td:nth-child(3):before { content: 'Tên kênh'; }
           .vtw-results-table-wrap tbody tr td:nth-child(4):before { content: 'Mã kênh'; }
@@ -7871,15 +7898,30 @@ Quy tắc:
           .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos'; }
           .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Điểm'; }
           .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Thao tác'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2) { grid-template-columns: 1fr 1fr !important; }
+
+          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2) { grid-column: span 1 !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3) { grid-column: 1 / 2 !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(4) { grid-column: 2 / 3 !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(5),
+          .vtw-results-table-wrap tbody tr td:nth-child(6),
+          .vtw-results-table-wrap tbody tr td:nth-child(7),
+          .vtw-results-table-wrap tbody tr td:nth-child(8),
+          .vtw-results-table-wrap tbody tr td:nth-child(9),
+          .vtw-results-table-wrap tbody tr td:nth-child(10),
+          .vtw-results-table-wrap tbody tr td:nth-child(11),
+          .vtw-results-table-wrap tbody tr td:nth-child(12),
+          .vtw-results-table-wrap tbody tr td:nth-child(13),
+          .vtw-results-table-wrap tbody tr td:nth-child(14),
+          .vtw-results-table-wrap tbody tr td:nth-child(15) { grid-column: span 1 !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-column: 1 / -1 !important; }
           .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-template-columns: 1fr !important; }
           textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 11px !important; line-height: 1.55 !important; }
           .vtw-spy-report { text-align: left !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(3), .vtw-results-table-wrap tbody tr td:nth-child(4) { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3), .vtw-results-table-wrap tbody tr td:nth-child(4) { display: grid !important; grid-template-columns: 1fr !important; }
           .vtw-results-table-wrap tbody tr td:nth-child(3) a, .vtw-results-table-wrap tbody tr td:nth-child(4) { font-size: 12px !important; line-height: 1.25 !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
-          .vtw-results-table-wrap .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 36px !important; gap: 6px !important; align-items: center !important; }
-          .vtw-results-table-wrap .vtw-channel-actions button { min-height: 40px !important; padding: 6px 4px !important; font-size: 9px !important; }
-          .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action { width: 36px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; border: 1px solid #fecaca !important; background: #fff1f2 !important; }
+          .vtw-results-table-wrap .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
+          .vtw-results-table-wrap .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; padding: 6px 3px !important; font-size: 9px !important; border-radius: 10px !important; }
+          .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action { width: 34px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; border: 1px solid #fecaca !important; background: #fff1f2 !important; grid-column: auto !important; }
           .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action svg { width: 14px !important; height: 14px !important; }
           .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
