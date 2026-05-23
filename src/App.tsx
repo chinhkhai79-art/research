@@ -6145,7 +6145,6 @@ Quy tắc:
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Cuộc thi</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Nhìn chung</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Số từ</th>
-                                     <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center font-mono">Xếp hạng</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-right">Trung bình VPH</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Video Trending</th>
                                      <th className="px-6 py-4 text-[11px] font-black text-gray-500 uppercase text-center">Tiềm năng</th>
@@ -6164,6 +6163,14 @@ Quy tắc:
                                            <div className="flex items-center gap-2">
                                               <span className="text-blue-500 font-bold">#</span>
                                               <span className="text-[14px] font-bold text-gray-800 group-hover:text-blue-700">{kw.text}</span>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); copyToClipboard(String(kw.text || '')); }}
+                                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors opacity-80 group-hover:opacity-100"
+                                                title="Sao chép từ khóa"
+                                              >
+                                                <Copy size={13} />
+                                              </button>
                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -6177,7 +6184,6 @@ Quy tắc:
                                            <span className={`inline-flex items-center justify-center min-w-9 h-8 px-2 rounded-lg text-[12px] font-black ${overall >= 70 ? 'bg-emerald-100 text-emerald-700' : overall >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'}`}>{overall}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center text-[13px] font-black text-gray-700">{wordCount}</td>
-                                        <td className="px-6 py-4 text-center font-mono text-[14px] font-black text-gray-300">0{i+1}</td>
                                         <td className="px-6 py-4 text-right">
                                            <div className="text-[13px] font-black text-blue-600">+{formatVNNumber(Math.round(Number(kw.vph) || 0))} VPH</div>
                                         </td>
