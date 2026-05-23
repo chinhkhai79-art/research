@@ -7466,7 +7466,7 @@ Quy tắc:
                         wrap="off"
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-sm shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
+                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[10px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
@@ -8061,21 +8061,34 @@ Quy tắc:
           .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
           .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
+          .vtw-gemini-keys-input { font-size: 10px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
         }
 
           @media (max-width: 640px) {
+            .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
+            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
+            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow-x: auto !important; justify-content: flex-start !important; padding-bottom: 4px !important; scrollbar-width: thin !important; }
+            .vtw-user-header-row { flex-shrink: 0 !important; }
+            .vtw-account-box { max-width: 150px !important; padding: 6px 8px !important; }
+            .vtw-user-email { max-width: 92px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .vtw-header-actions a, .vtw-header-actions button { min-height: 34px !important; padding: 7px 9px !important; font-size: 8px !important; border-radius: 10px !important; white-space: nowrap !important; }
+            .vtw-header-actions svg { width: 13px !important; height: 13px !important; }
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
-            .vtw-gemini-keys-input { font-size: 8.5px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 42% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
+            .vtw-gemini-keys-input { font-size: 6.5px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 32% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
-            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 10px !important; line-height: 1.18 !important; }
-            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
-            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 4px !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 34px !important; padding: 4px 5px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; }
-            .vtw-niche-video-card .vtw-video-stat span:first-child { font-size: 7px !important; }
-            .vtw-niche-video-card .vtw-video-stat span:last-child { font-size: 9px !important; text-align: left !important; word-break: break-word !important; }
+            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 8px !important; line-height: 1.08 !important; margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: 1fr 1fr !important; gap: 4px !important; margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-actions button { padding-top: 5px !important; padding-bottom: 5px !important; min-height: 28px !important; font-size: 7px !important; border-radius: 10px !important; }
+            .vtw-niche-video-card .vtw-video-info { padding: 7px !important; }
+            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 4px !important; }
+            .vtw-niche-video-card .vtw-video-stat { min-height: 30px !important; padding: 3px 4px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; border-radius: 8px !important; }
+            .vtw-niche-video-card .vtw-video-stat span:first-child { font-size: 5.5px !important; line-height: 1 !important; }
+            .vtw-niche-video-card .vtw-video-stat span:last-child { font-size: 7px !important; line-height: 1.08 !important; text-align: left !important; word-break: break-word !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 7px !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
             .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
           }
