@@ -3368,22 +3368,31 @@ JSON mẫu:
         id: videoIds.join(',')
       });
 
-      const processedVideos = videoRes.items.map((v: any) => {
+      const processedVideosBase = videoRes.items.map((v: any) => {
         const age = calculateChannelAge(v.snippet.publishedAt) || 1;
+        const views = parseInt(v.statistics?.viewCount || '0') || 0;
+        const vph = calculateVPH(views, v.snippet.publishedAt);
         return {
           id: v.id,
           title: v.snippet.title,
-          thumbnail: v.snippet.thumbnails.default.url,
+          thumbnail: v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url,
           date: formatDetailedDate(v.snippet.publishedAt),
-          views: parseInt(v.statistics.viewCount),
-          viewsPerDay: Math.round(parseInt(v.statistics.viewCount) / age),
+          views,
+          viewsPerDay: Math.round(views / age),
+          vph,
+          likeCount: parseInt(v.statistics?.likeCount || '0') || 0,
+          commentCount: parseInt(v.statistics?.commentCount || '0') || 0,
           url: `https://www.youtube.com/watch?v=${v.id}`,
           tags: v.snippet.tags || []
         };
       });
 
-      const totalRecentViews = processedVideos.reduce((a, b) => a + b.views, 0);
-      const avgViews = Math.round(totalRecentViews / processedVideos.length);
+      const totalRecentViews = processedVideosBase.reduce((a, b) => a + b.views, 0);
+      const avgViews = Math.round(totalRecentViews / Math.max(1, processedVideosBase.length));
+      const processedVideos = processedVideosBase.map((v: any) => ({
+        ...v,
+        outlierScore: Math.min(100, Math.max(0, Math.round((v.views / Math.max(1, avgViews)) * 50 + Math.min(50, v.vph / 10))))
+      }));
       const maxViews = Math.max(...processedVideos.map(v => v.views));
       const topVideo = processedVideos.find(v => v.views === maxViews);
 
@@ -5452,6 +5461,8 @@ Quy tắc:
                             <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc]">TIÊU ĐỀ</th>
                             <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-center w-48">NGÀY ĐĂNG</th>
                             <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-right">VIEWS</th>
+                            <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-right">VPH</th>
+                            <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-center">OUTLIER SCORE</th>
                             <th className="px-2 py-1.5 font-bold text-[10px] border-r border-[#ccc] text-right">VIEWS/NGÀY</th>
                             <th className="px-2 py-1.5 font-bold text-[10px]">URL</th>
                           </tr>
@@ -5482,6 +5493,16 @@ Quy tắc:
                               </td>
                               <td className="px-2 py-1 text-center text-gray-600 text-[8.8px]">{v.date}</td>
                               <td className="px-2 py-1 text-right font-medium">{v.views.toLocaleString()}</td>
+                              <td className="px-2 py-1 text-right text-blue-600 font-bold">+{Math.round(v.vph || 0).toLocaleString()} VPH</td>
+                              <td className="px-2 py-1 text-center">
+                                <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-black ${
+                                  (v.outlierScore || 0) >= 70 ? 'bg-emerald-100 text-emerald-700' :
+                                  (v.outlierScore || 0) >= 40 ? 'bg-orange-100 text-orange-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {v.outlierScore || 0}/100
+                                </span>
+                              </td>
                               <td className="px-2 py-1 text-right text-blue-600 font-bold">{v.viewsPerDay.toLocaleString()}</td>
                               <td className="px-2 py-1 text-blue-600 underline truncate max-w-[200px]">
                                 <a href={v.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600">
@@ -6176,6 +6197,14 @@ Quy tắc:
                                   <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600">{v.snippet.title}</a>
                                </h4>
                                <div className="grid grid-cols-2 gap-2 border-t pt-3">
+                                  <div className="flex flex-col bg-gray-50 rounded-xl p-2">
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase">Ngày đăng</span>
+                                     <span className="text-[11px] font-black text-gray-700">{formatDetailedDate(v.snippet.publishedAt)}</span>
+                                  </div>
+                                  <div className="flex flex-col bg-gray-50 rounded-xl p-2">
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase">Outlier Score</span>
+                                     <span className={`text-[13px] font-black ${(v.trendScore || 0) >= 70 ? 'text-emerald-600' : (v.trendScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'}`}>{v.trendScore || 0}/100</span>
+                                  </div>
                                   <div className="flex flex-col bg-gray-50 rounded-xl p-2">
                                      <span className="text-[8px] text-gray-400 font-bold uppercase">Lượt xem</span>
                                      <span className="text-[13px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
