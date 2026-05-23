@@ -276,13 +276,15 @@ function getFriendlyApiError(error: any): string {
 }
 
 const GEMINI_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash — Khuyên dùng: ổn định, mạnh, phù hợp phân tích video/kênh.' },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite — Nhẹ hơn 2.5 Flash, tiết kiệm quota hơn.' },
-  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash-Lite Preview — Model mới, nhanh, dùng khi key/project có hỗ trợ.' },
-  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview — Model mới, mạnh hơn, phù hợp phân tích sâu khi được hỗ trợ.' },
-  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest — Alias tự động của Google, dùng khi project hỗ trợ alias latest.' },
-  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite — Dự phòng nếu key/project còn hỗ trợ.' },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash — Dự phòng nếu key/project còn hỗ trợ.' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash — mới nhất, nhanh.' },
+  { id: 'gemini-3.5-pro', name: 'Gemini 3.5 Pro — mạnh nhất.' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash — ổn định.' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite — tiết kiệm.' },
+  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash-Lite Preview — nhanh.' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview — phân tích sâu.' },
+  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest — tự động.' },
+  { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite — dự phòng.' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash — dự phòng.' },
 ];
 
 const SUGGESTED_NICHES = [
@@ -4567,7 +4569,7 @@ Quy tắc:
                 <div className="vtw-filter-grid vtw-main-search-card grid grid-cols-12 gap-4 bg-[#f1f1f1] p-4 border border-[#bbb] rounded shadow-sm">
                   <div className="vtw-filter-fields col-span-12 lg:col-span-9 grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI</div></div>
+                      <div className="vtw-api-top-actions flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Từ khóa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 text-gray-400 flex items-center">Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Khu vực:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Việt Nam <span>▼</span></div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
                     </div>
@@ -5826,42 +5828,16 @@ Quy tắc:
                   </div>
 
                   <div className="space-y-2 mt-2">
-                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center gap-2">
-                      <span>Phạm vi Sub</span>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={10000000}
-                          step={10}
-                          value={nicheMaxSub}
-                          onChange={(e) => {
-                            const rawValue = Number(e.target.value || 0);
-                            const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
-                            setNicheMaxSub(safeValue);
-                          }}
-                          onBlur={(e) => {
-                            const rawValue = Number(e.target.value || 0);
-                            const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
-                            setNicheMaxSub(safeValue);
-                          }}
-                          className="w-[82px] h-7 rounded-lg border border-[#4d6b87] bg-[#223548] px-2 text-right text-[10px] font-black text-white outline-none focus:border-blue-400"
-                          title="Nhập số sub tối đa, ví dụ 100000"
-                        />
-                        <span>0 → {formatVNNumber(nicheMaxSub)}</span>
-                      </div>
+                    <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center">
+                      Phạm vi Sub <span>0 → {formatVNNumber(nicheMaxSub)}</span>
                     </label>
                     <input
                       type="range"
                       min={0}
                       max={10000000}
-                      step={10}
+                      step={1000}
                       value={nicheMaxSub}
-                      onChange={(e) => {
-                        const rawValue = Number(e.target.value || 0);
-                        const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
-                        setNicheMaxSub(safeValue);
-                      }}
+                      onChange={(e) => setNicheMaxSub(parseInt(e.target.value, 10) || 0)}
                       className="vtw-niche-slider w-full accent-blue-500"
                     />
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
@@ -7227,14 +7203,14 @@ Quy tắc:
             >
               {/* Header */}
               <div className="vtw-api-modal-header bg-gradient-to-r from-blue-600 to-indigo-700 p-6 flex justify-between items-center text-white shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
+                <div className="vtw-api-header-inner flex items-center gap-4">
+                  <div className="vtw-api-gear p-3 bg-white/20 rounded-2xl backdrop-blur-md shadow-inner">
                     <Settings size={28} />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black uppercase tracking-tight">CÀI ĐẶT API HỆ THỐNG</h2>
-                    <div className="flex items-center gap-2">
-                      <p className="text-[11px] font-bold opacity-80 uppercase tracking-tighter">Quản lý kết nối YouTube & Gemini AI</p>
+                    <h2 className="vtw-api-title text-2xl font-black uppercase tracking-tight">CÀI ĐẶT API HỆ THỐNG</h2>
+                    <div className="vtw-api-top-actions flex items-center gap-2">
+                      <p className="vtw-api-subtitle text-[11px] font-bold opacity-80 uppercase tracking-tighter">Quản lý kết nối YouTube & Gemini AI</p>
                       <button 
                         onClick={() => setShowApiKeys(!showApiKeys)}
                         className="text-[9px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
@@ -7801,15 +7777,27 @@ Quy tắc:
 
       <style>{`
         @media (max-width: 640px) {
-          .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 44px !important; gap: 8px !important; align-items: stretch !important; }
-          .vtw-channel-actions button { min-height: 44px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; }
+          .vtw-api-modal { max-width: calc(100vw - 20px) !important; border-radius: 22px !important; }
+          .vtw-api-modal-header { padding: 14px 14px !important; align-items: flex-start !important; gap: 8px !important; }
+          .vtw-api-header-inner { gap: 10px !important; min-width: 0 !important; }
+          .vtw-api-gear { padding: 10px !important; border-radius: 16px !important; flex-shrink: 0 !important; }
+          .vtw-api-gear svg { width: 20px !important; height: 20px !important; }
+          .vtw-api-title { font-size: 19px !important; line-height: 1.05 !important; letter-spacing: -0.5px !important; }
+          .vtw-api-subtitle { font-size: 9px !important; line-height: 1.15 !important; max-width: 145px !important; }
+          .vtw-api-top-actions { flex-wrap: wrap !important; gap: 5px !important; }
+          .vtw-api-top-actions button { font-size: 8px !important; padding: 5px 7px !important; }
+          .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 34px !important; gap: 6px !important; align-items: stretch !important; width: 100% !important; }
+          .vtw-channel-actions button { min-height: 36px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; font-size: 8px !important; padding: 6px 4px !important; border-radius: 10px !important; }
+          .vtw-channel-actions .vtw-delete-action { width: 34px !important; min-width: 34px !important; padding: 0 !important; background: #fff1f2 !important; border: 1px solid #fecdd3 !important; }
           .vtw-channel-actions .vtw-delete-action span { display: none !important; }
           .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
           .vtw-results-table-wrap thead { display: none; }
           .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
-          .vtw-results-table-wrap tbody tr { margin: 12px 10px !important; padding: 16px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; }
-          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 10px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 8px !important; align-items: center !important; }
-          .vtw-results-table-wrap tbody tr td:before { content: ''; font-size: 11px; font-weight: 900; color: #64748b; text-transform: uppercase; }
+          .vtw-results-table-wrap tbody tr { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0 12px !important; margin: 12px 10px !important; padding: 14px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; }
+          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 8px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 4px !important; align-items: start !important; min-width: 0 !important; }
+          .vtw-results-table-wrap tbody tr td:before { content: ''; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; }
+          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2), .vtw-results-table-wrap tbody tr td:nth-child(5), .vtw-results-table-wrap tbody tr td:nth-child(6), .vtw-results-table-wrap tbody tr td:nth-child(7), .vtw-results-table-wrap tbody tr td:nth-child(8), .vtw-results-table-wrap tbody tr td:nth-child(9), .vtw-results-table-wrap tbody tr td:nth-child(10), .vtw-results-table-wrap tbody tr td:nth-child(11), .vtw-results-table-wrap tbody tr td:nth-child(12), .vtw-results-table-wrap tbody tr td:nth-child(13), .vtw-results-table-wrap tbody tr td:nth-child(14), .vtw-results-table-wrap tbody tr td:nth-child(15), .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-column: 1 / -1 !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3), .vtw-results-table-wrap tbody tr td:nth-child(4) { grid-column: span 1 !important; }
           .vtw-results-table-wrap tbody tr td:nth-child(3):before { content: 'Tên kênh'; }
           .vtw-results-table-wrap tbody tr td:nth-child(4):before { content: 'Mã kênh'; }
           .vtw-results-table-wrap tbody tr td:nth-child(5):before { content: 'Từ khóa/ngách'; }
@@ -7824,9 +7812,7 @@ Quy tắc:
           .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos'; }
           .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Điểm'; }
           .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Thao tác'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2) { grid-template-columns: 1fr 1fr !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-template-columns: 1fr !important; }
-          textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 11px !important; line-height: 1.55 !important; }
+          textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 10px !important; line-height: 1.45 !important; }
           .vtw-spy-report { text-align: left !important; }
         }
 
