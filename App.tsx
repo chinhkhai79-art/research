@@ -6224,9 +6224,6 @@ Quy tắc:
                                </div>
                             </div>
                             <div className="p-3 border-b border-gray-100 grid grid-cols-1 gap-2">
-                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="w-full bg-white text-black border border-gray-200 py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-gray-50">
-                                  <ExternalLink size={13} /> Xem video
-                               </a>
                                <button 
                                   onClick={() => analyzeVideo(v.id)}
                                   className="w-full bg-orange-600 text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
@@ -6250,7 +6247,7 @@ Quy tắc:
                                <h4 className="text-[12px] font-black text-gray-900 uppercase mb-4 leading-tight">
                                   <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600">{v.snippet.title}</a>
                                </h4>
-                               <div className="grid grid-cols-2 gap-2 border-t pt-3">
+                               <div className="grid grid-cols-3 gap-2 border-t pt-3">
                                   <div className="flex flex-col bg-gray-50 rounded-xl p-2">
                                      <span className="text-[8px] text-gray-400 font-bold uppercase">Ngày đăng</span>
                                      <span className="text-[11px] font-black text-gray-700">{formatDetailedDate(v.snippet.publishedAt)}</span>
@@ -6293,14 +6290,27 @@ Quy tắc:
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
                             <div className="absolute bottom-0 left-0 right-0 p-4">
-                               <div className="flex items-center gap-4 text-white mb-2">
+                               <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="min-w-0">
+                                     <div className="text-[10px] text-white font-black uppercase truncate">{v.snippet.channelTitle}</div>
+                                     <div className="text-[8px] text-gray-300 font-bold">{formatVNNumber(Number(v.channelSubscriberCount || 0))} subs • {formatDetailedDate(v.snippet.publishedAt)}</div>
+                                  </div>
+                                  <div className={`shrink-0 text-[10px] font-black px-2 py-1 rounded-lg ${(v.trendScore || 0) >= 70 ? 'bg-emerald-500 text-white' : (v.trendScore || 0) >= 40 ? 'bg-orange-500 text-white' : 'bg-red-600 text-white'}`}>
+                                     {v.trendScore || 0}/100
+                                  </div>
+                               </div>
+                               <div className="grid grid-cols-3 gap-2 text-white mb-2">
                                   <div className="flex flex-col">
-                                     <span className="text-[16px] font-black">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
-                                     <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">Views</span>
+                                     <span className="text-[13px] font-black">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase leading-none">Views</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[16px] font-black text-blue-400">+{formatVNNumber(Math.round(v.vph || 0))}</span>
-                                     <span className="text-[9px] text-gray-400 font-bold uppercase leading-none">VPH</span>
+                                     <span className="text-[13px] font-black text-blue-400">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase leading-none">VPH</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[13px] font-black text-emerald-400">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                     <span className="text-[8px] text-gray-400 font-bold uppercase leading-none">Bình luận</span>
                                   </div>
                                </div>
                                <h4 className="text-[10px] text-white font-bold leading-tight uppercase mb-2 line-clamp-2">{v.snippet.title}</h4>
@@ -7701,7 +7711,7 @@ Quy tắc:
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
                       <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
                          <div className="relative aspect-video">
-                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
                             </div>
@@ -7723,7 +7733,7 @@ Quy tắc:
                                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
                                   <span className="text-[10px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
                                </div>
-                               <div className="grid grid-cols-2 gap-2">
+                               <div className="grid grid-cols-3 gap-2">
                                   <div className="flex flex-col">
                                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
                                      <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
