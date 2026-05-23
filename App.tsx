@@ -16,6 +16,8 @@ import {
   ExternalLink, 
   Copy, 
   PlusCircle, 
+  Plus,
+  Minus,
   MonitorPlay,
   RotateCcw,
   CheckCircle2,
@@ -645,6 +647,8 @@ export default function App() {
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
   const [isAnalyzingVideo, setIsAnalyzingVideo] = useState(false);
+  const [isVideoAuditAnalyzing, setIsVideoAuditAnalyzing] = useState(false);
+  const [videoAuditProgress, setVideoAuditProgress] = useState(0);
   const [config, setConfig] = useState<YouTubeConfig>(DEFAULT_CONFIG);
   const [apiKeyIndex, setApiKeyIndex] = useState(0);
   const [apiKeysHistory, setApiKeysHistory] = useState<string[]>([]);
@@ -866,6 +870,13 @@ export default function App() {
   const [nicheTime, setNicheTime] = useState('month');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
   const [nicheMaxSub, setNicheMaxSub] = useState(250000);
+  const updateNicheMaxSub = (value: number) => {
+    const safeValue = Math.max(0, Math.min(10000000, Math.round(Number(value || 0) / 10) * 10));
+    setNicheMaxSub(safeValue);
+  };
+  const stepNicheMaxSub = (delta: number) => {
+    updateNicheMaxSub(nicheMaxSub + delta);
+  };
   const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
@@ -3996,6 +4007,8 @@ Quy tắc:
     setIsAnalyzingVideo(true);
     setStatus('Đang kiểm tra thông tin video...');
     setVideoResult(null);
+    setIsVideoAuditAnalyzing(false);
+    setVideoAuditProgress(0);
 
     try {
       const extractVideoId = (input: string) => {
@@ -4075,7 +4088,12 @@ Quy tắc:
 
         const youtubeFirstResult = { ...v };
         setVideoResult(youtubeFirstResult);
-        setStatus('Đã hiển thị dữ liệu YouTube API V3 trước. Gemini AI đang phân tích bổ sung...');
+        setStatus('Đã hiển thị dữ liệu video trước. Đang phân tích bổ sung...');
+        setIsVideoAuditAnalyzing(true);
+        setVideoAuditProgress(12);
+        const auditProgressTimer = window.setInterval(() => {
+          setVideoAuditProgress(prev => Math.min(94, prev + 6));
+        }, 450);
         setIsAnalyzingVideo(false);
 
         // Lưu bản YouTube trước để người dùng thấy ngay và lịch sử có dữ liệu ngay.
@@ -4095,11 +4113,20 @@ Quy tắc:
               localStorage.setItem('youtube_video_projects', JSON.stringify(next));
               return next;
             });
-            setStatus('YouTube API đã hiển thị trước; Gemini AI đã phân tích bổ sung xong.');
+            window.clearInterval(auditProgressTimer);
+            setVideoAuditProgress(100);
+            setStatus('Phân tích bổ sung đã hoàn tất.');
+            window.setTimeout(() => {
+              setIsVideoAuditAnalyzing(false);
+              setVideoAuditProgress(0);
+            }, 700);
           })
           .catch((err) => {
             console.warn('Gemini background video audit failed:', err);
-            setStatus('Đã hiển thị dữ liệu YouTube API V3. Gemini AI chưa phân tích được, vẫn giữ kết quả YouTube.');
+            window.clearInterval(auditProgressTimer);
+            setIsVideoAuditAnalyzing(false);
+            setVideoAuditProgress(0);
+            setStatus('Đã hiển thị dữ liệu video. Phân tích bổ sung chưa hoàn tất, vẫn giữ kết quả hiện tại.');
           });
       } else {
         setStatus('Không tìm thấy video. Vui lòng kiểm tra lại ID/URL.');
@@ -4211,7 +4238,7 @@ Quy tắc:
       lines.push('ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO');
       lines.push(`Video: ${videoResult?.snippet?.title || ''}`);
       lines.push(`Link: https://www.youtube.com/watch?v=${videoResult?.id || ''}`);
-      lines.push(`Nguồn: YouTube API V3 + Gemini AI`);
+      lines.push(`Nguồn: Dữ liệu video + phân tích bổ sung`);
       lines.push('');
       overview.forEach((item: any) => {
         lines.push(`## ${item.title || item.key}`);
@@ -4242,7 +4269,7 @@ Quy tắc:
       return lines.join('\n');
     };
 
-    const exportAuditText = () => downloadAsTxt(buildAuditText(), `Gemini_YouTube_Audit_${videoResult?.id || 'video'}`);
+    const exportAuditText = () => downloadAsTxt(buildAuditText(), `Video_Audit_${videoResult?.id || 'video'}`);
     const copyOverviewCard = (item: any) => {
       const lines = [
         item.title || 'PHÂN TÍCH',
@@ -4273,6 +4300,20 @@ Quy tắc:
 
     return (
       <div className="space-y-8 text-left video-ai-audit-section">
+        {isVideoAuditAnalyzing && (
+          <div className="bg-white border border-blue-100 rounded-2xl shadow-sm p-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2 text-blue-700 font-black text-[13px] uppercase tracking-wide">
+                <Loader2 size={16} className="animate-spin" /> Đang phân tích bổ sung
+              </div>
+              <span className="text-blue-700 font-black text-[13px]">{Math.round(videoAuditProgress)}%</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-blue-50 overflow-hidden border border-blue-100">
+              <div className="h-full rounded-full bg-blue-600 transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, videoAuditProgress))}%` }} />
+            </div>
+            <div className="mt-2 text-[11px] font-bold text-gray-500">Dữ liệu video đã hiện trước, phần phân tích sẽ tự cập nhật khi hoàn tất.</div>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0">
@@ -4311,20 +4352,20 @@ Quy tắc:
 
                   {isTags && (
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU THỰC TỪ API ({realTags.length} TAGS):</div>
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU THỰC ({realTags.length} TAGS):</div>
                       {realTags.length > 0 ? (
                         <div className="max-h-[118px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2 pr-1">
                           {realTags.slice(0, 24).map((tag: string, i: number) => (
                             <span key={i} className="px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-600">{tag}</span>
                           ))}
                         </div>
-                      ) : <div className="text-[12px] text-gray-400 italic">YouTube API chưa trả về tags công khai.</div>}
+                      ) : <div className="text-[12px] text-gray-400 italic">Chưa có tags công khai trong dữ liệu video.</div>}
                     </div>
                   )}
 
                   {isPinned && (
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU BÌNH LUẬN TỪ API:</div>
+                      <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">DỮ LIỆU BÌNH LUẬN:</div>
                       {realComments.length > 0 ? (
                         <div className="space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar pr-1">
                           {realComments.slice(0, 3).map((c: any, i: number) => (
@@ -5829,25 +5870,35 @@ Quy tắc:
                     <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center gap-2">
                       <span>Phạm vi Sub</span>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={10000000}
-                          step={10}
-                          value={nicheMaxSub}
-                          onChange={(e) => {
-                            const rawValue = Number(e.target.value || 0);
-                            const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
-                            setNicheMaxSub(safeValue);
-                          }}
-                          onBlur={(e) => {
-                            const rawValue = Number(e.target.value || 0);
-                            const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
-                            setNicheMaxSub(safeValue);
-                          }}
-                          className="w-[82px] h-7 rounded-lg border border-[#4d6b87] bg-[#223548] px-2 text-right text-[10px] font-black text-white outline-none focus:border-blue-400"
-                          title="Nhập số sub tối đa, ví dụ 100000"
-                        />
+                        <div className="vtw-sub-stepper flex items-center rounded-xl border border-[#4d6b87] bg-[#223548] overflow-hidden h-8 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => stepNicheMaxSub(-10)}
+                            className="w-8 h-8 flex items-center justify-center text-white/90 hover:bg-blue-500/30 active:bg-blue-500 transition-all border-r border-[#4d6b87]"
+                            title="Giảm 10 sub"
+                          >
+                            <Minus size={14} strokeWidth={3} />
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            max={10000000}
+                            step={10}
+                            value={nicheMaxSub}
+                            onChange={(e) => updateNicheMaxSub(Number(e.target.value || 0))}
+                            onBlur={(e) => updateNicheMaxSub(Number(e.target.value || 0))}
+                            className="w-[74px] h-8 bg-transparent px-1 text-center text-[10px] font-black text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            title="Nhập số sub tối đa, ví dụ 100000"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => stepNicheMaxSub(10)}
+                            className="w-8 h-8 flex items-center justify-center text-white/90 hover:bg-blue-500/30 active:bg-blue-500 transition-all border-l border-[#4d6b87]"
+                            title="Tăng 10 sub"
+                          >
+                            <Plus size={14} strokeWidth={3} />
+                          </button>
+                        </div>
                         <span>0 → {formatVNNumber(nicheMaxSub)}</span>
                       </div>
                     </label>
@@ -5857,11 +5908,7 @@ Quy tắc:
                       max={10000000}
                       step={10}
                       value={nicheMaxSub}
-                      onChange={(e) => {
-                        const rawValue = Number(e.target.value || 0);
-                        const safeValue = Math.max(0, Math.min(10000000, Math.round(rawValue / 10) * 10));
-                        setNicheMaxSub(safeValue);
-                      }}
+                      onChange={(e) => updateNicheMaxSub(Number(e.target.value || 0))}
                       className="vtw-niche-slider w-full accent-blue-500"
                     />
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
@@ -7828,6 +7875,15 @@ Quy tắc:
           .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-template-columns: 1fr !important; }
           textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 11px !important; line-height: 1.55 !important; }
           .vtw-spy-report { text-align: left !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3), .vtw-results-table-wrap tbody tr td:nth-child(4) { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+          .vtw-results-table-wrap tbody tr td:nth-child(3) a, .vtw-results-table-wrap tbody tr td:nth-child(4) { font-size: 12px !important; line-height: 1.25 !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
+          .vtw-results-table-wrap .vtw-channel-actions { display: grid !important; grid-template-columns: 1fr 1fr 1fr 36px !important; gap: 6px !important; align-items: center !important; }
+          .vtw-results-table-wrap .vtw-channel-actions button { min-height: 40px !important; padding: 6px 4px !important; font-size: 9px !important; }
+          .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action { width: 36px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; border: 1px solid #fecaca !important; background: #fff1f2 !important; }
+          .vtw-results-table-wrap .vtw-channel-actions .vtw-delete-action svg { width: 14px !important; height: 14px !important; }
+          .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
+          textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
+          .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
         }
 
           @media (max-width: 640px) {
