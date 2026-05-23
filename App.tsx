@@ -6396,69 +6396,77 @@ Quy tắc:
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                       {nicheResults.videos.map((v: any, i: number) => (
                          <div key={i} className="vtw-niche-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col">
-                            <div className="vtw-video-thumb relative aspect-video bg-black rounded-t-2xl overflow-hidden">
-                               <img src={v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url} className="w-full h-full object-contain bg-black" />
-                               <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                  {v.contentDetails?.duration ? v.contentDetails.duration.replace('PT', '').toLowerCase() : ''}
-                               </div>
-                               <div className="absolute top-2 left-2 flex gap-1">
-                                  <div className={`text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border ${
-                                    (v.trendScore || 0) >= 70 ? 'bg-emerald-600 border-emerald-400' :
-                                    (v.trendScore || 0) >= 40 ? 'bg-orange-600 border-orange-400' :
-                                    'bg-red-600 border-red-400'
-                                  }`}>
-                                     SCORE {v.trendScore}
+                            <div className="vtw-video-thumb vtw-thumb-priority w-full bg-[#0b1220] overflow-hidden">
+                               <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="block w-full aspect-video bg-[#0b1220]">
+                                  <img
+                                    src={v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url}
+                                    className="w-full h-full object-contain bg-[#0b1220]"
+                                    loading="lazy"
+                                  />
+                               </a>
+                            </div>
+                            <div className="p-3 flex flex-col flex-1">
+                               <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+                                  <a href={`https://youtube.com/channel/${v.snippet.channelId}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:opacity-80 transition-opacity min-w-0 flex-1">
+                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(v.snippet.channelTitle || 'K')}&background=random`} className="w-5 h-5 rounded-full shrink-0" />
+                                    <span className="text-[9px] font-black text-blue-600 truncate uppercase tracking-tighter">{v.snippet.channelTitle}</span>
+                                  </a>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {v.contentDetails?.duration && (
+                                      <span className="bg-gray-100 text-gray-600 text-[8px] font-black px-1.5 py-1 rounded-md uppercase">
+                                        {v.contentDetails.duration.replace('PT', '').toLowerCase()}
+                                      </span>
+                                    )}
+                                    <span className={`text-white text-[8px] font-black px-1.5 py-1 rounded-md shadow-sm ${
+                                      (v.trendScore || 0) >= 70 ? 'bg-emerald-600' :
+                                      (v.trendScore || 0) >= 40 ? 'bg-orange-600' :
+                                      'bg-red-600'
+                                    }`}>
+                                      SCORE {v.trendScore}
+                                    </span>
                                   </div>
                                </div>
-                            </div>
-                            <div className="p-4 flex flex-col flex-1">
-                               <div className="flex items-center gap-2 mb-2 min-w-0">
-                                  <a href={`https://youtube.com/channel/${v.snippet.channelId}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:opacity-80 transition-opacity min-w-0">
-                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(v.snippet.channelTitle || 'K')}&background=random`} className="w-5 h-5 rounded-full shrink-0" />
-                                    <span className="text-[10px] font-bold text-blue-600 truncate uppercase tracking-tighter">{v.snippet.channelTitle}</span>
-                                  </a>
-                               </div>
-                               <h4 className="vtw-video-title text-[12px] font-black text-gray-900 uppercase mb-3 leading-tight min-h-[40px]">
+                               <h4 className="vtw-video-title text-[11px] font-black text-gray-900 uppercase mb-3 leading-snug min-h-[36px]">
                                   <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 line-clamp-2">{v.snippet.title}</a>
                                </h4>
                                <div className="vtw-video-actions grid grid-cols-2 gap-2 mb-3">
                                   <button 
                                      onClick={() => analyzeVideo(v.id)}
-                                     className="w-full bg-orange-600 text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-orange-700"
+                                     className="w-full bg-orange-600 text-white py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-1.5 uppercase tracking-tight hover:bg-orange-700"
                                   >
-                                     <Video size={13} /> Phân tích video
+                                     <Video size={12} /> Phân tích video
                                   </button>
                                   <button 
                                      onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
-                                     className="w-full bg-[#2c3e50] text-white py-2 rounded-xl text-[10px] font-black flex items-center justify-center gap-2 uppercase tracking-tight hover:bg-[#1f2d3a]"
+                                     className="w-full bg-[#2c3e50] text-white py-2 rounded-xl text-[9px] font-black flex items-center justify-center gap-1.5 uppercase tracking-tight hover:bg-[#1f2d3a]"
                                   >
-                                     <BarChart2 size={13} /> Bóc tách kênh này
+                                     <BarChart2 size={12} /> Bóc tách kênh này
                                   </button>
                                </div>
                                <div className="vtw-video-stat-grid grid grid-cols-3 gap-2 border-t pt-3 mt-auto">
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[72px]">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
                                      <span className="text-[7px] text-gray-400 font-black uppercase leading-tight">Ngày đăng</span>
-                                     <span className="text-[10px] font-black text-gray-700 leading-snug">{formatDetailedDate(v.snippet.publishedAt)}</span>
+                                     <span className="text-[9px] font-black text-gray-700 leading-snug">{formatDetailedDate(v.snippet.publishedAt)}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[72px]">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
                                      <span className="text-[7px] text-gray-400 font-black uppercase leading-tight">Outlier Score</span>
-                                     <span className={`text-[12px] font-black ${(v.trendScore || 0) >= 70 ? 'text-emerald-600' : (v.trendScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'}`}>{v.trendScore || 0}/100</span>
+                                     <span className={`text-[11px] font-black ${(v.trendScore || 0) >= 70 ? 'text-emerald-600' : (v.trendScore || 0) >= 40 ? 'text-orange-600' : 'text-red-600'}`}>{v.trendScore || 0}/100</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[72px]">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
                                      <span className="text-[7px] text-gray-400 font-black uppercase leading-tight">Lượt xem</span>
-                                     <span className="text-[12px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                     <span className="text-[11px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[72px]">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
                                      <span className="text-[7px] text-gray-400 font-black uppercase leading-tight">Lượt thích</span>
-                                     <span className="text-[12px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                     <span className="text-[11px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[72px]">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
                                      <span className="text-[7px] text-gray-400 font-black uppercase leading-tight">Bình luận</span>
-                                     <span className="text-[12px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                     <span className="text-[11px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
                                   </div>
-                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[72px]">
+                                  <div className="vtw-video-stat flex flex-col justify-center bg-gray-50 rounded-xl p-2 min-h-[60px]">
                                      <span className="text-[7px] text-gray-400 font-black uppercase leading-tight">VPH</span>
-                                     <span className="text-[12px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
+                                     <span className="text-[11px] font-black text-blue-600">+{formatVNNumber(Math.round(v.vph || 0))} VPH</span>
                                   </div>
                                </div>
                             </div>
