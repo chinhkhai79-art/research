@@ -4673,7 +4673,7 @@ Quy tắc:
 
           <div
             className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) 42px 64px 42px', gap: 5, width: '100%', flex: '0 0 100%', alignItems: 'stretch' } : undefined}
+            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 34px 46px 34px', gap: 3, width: '100%', maxWidth: '100%', flex: '0 0 100%', alignItems: 'stretch', overflow: 'visible' } : undefined}
           >
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
@@ -4684,7 +4684,7 @@ Quy tắc:
                     setShowAccountModal(true);
                   }}
                   className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
-                  style={isMobileViewport ? { gridColumn: 'auto', width: '100%', maxWidth: '100%', minWidth: 0, justifyContent: 'flex-start', paddingLeft: 5, paddingRight: 5 } : undefined}
+                  style={isMobileViewport ? { gridColumn: 'auto', width: '100%', maxWidth: '100%', minWidth: 0, justifyContent: 'flex-start', paddingLeft: 3, paddingRight: 3, gap: 4 } : undefined}
                   title="Tài khoản & hạn sử dụng"
                 >
                   <img
@@ -6892,12 +6892,14 @@ Quy tắc:
                           src={videoResult.snippet.thumbnails.maxres?.url || videoResult.snippet.thumbnails.high?.url} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           alt="Thumbnail"
+                          onClick={() => setInlineVideoId(videoResult.id)}
                         />
                         <button
                           type="button"
-                          onClick={() => setInlineVideoId(videoResult.id)}
+                          onClick={(e) => { e.stopPropagation(); setInlineVideoId(videoResult.id); }}
                           title="Bấm vào ảnh để xem video trực tiếp trong app"
-                          className="absolute inset-0 transition-colors cursor-pointer bg-transparent border-0"
+                          aria-label="Xem video trực tiếp trong app"
+                          className="absolute inset-0 z-10 transition-colors cursor-pointer bg-transparent border-0"
                         />
 
                       </div>
@@ -7535,7 +7537,7 @@ Quy tắc:
                         wrap="off"
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[9px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
+                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[12px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '5px' : '9px', lineHeight: isMobileViewport ? '1.05' : '1.25', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: isMobileViewport ? '-0.08em' : '-0.025em', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
@@ -8128,7 +8130,7 @@ Quy tắc:
           .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
           .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
-          textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 9px !important; line-height: 1.25 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.025em !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
+          textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 12px !important; line-height: 1.55 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
           .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
         }
 
@@ -8149,7 +8151,7 @@ Quy tắc:
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.15 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.06em !important; padding: 8px 9px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; padding: 9px 10px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
             .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 25% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
             .vtw-niche-video-card .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
@@ -8182,9 +8184,29 @@ Quy tắc:
             .vtw-header-icon-btn { min-height: 30px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
             .vtw-header-icon-btn svg { width: 12px !important; height: 12px !important; }
             .vtw-header-icon-btn span { font-size: 5px !important; line-height: 1 !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 5px !important; line-height: 1.05 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.08em !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; padding: 8px 8px !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; padding: 9px 10px !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
             .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
+
+            /* VTW PORTRAIT HEADER FORCE FIT 20260525 */
+            @media (max-width: 430px) {
+              .vtw-app-header { padding-left: 6px !important; padding-right: 6px !important; }
+              .vtw-app-header > div { gap: 4px !important; row-gap: 5px !important; }
+              .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; }
+              .vtw-app-title img { width: 24px !important; height: 24px !important; }
+              .vtw-title-mobile { font-size: 13px !important; max-width: calc(100vw - 72px) !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+              .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) 34px 46px 34px !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 100% !important; gap: 3px !important; justify-content: stretch !important; align-items: stretch !important; overflow: visible !important; }
+              .vtw-user-header-row { display: contents !important; }
+              .vtw-account-box { grid-column: 1 !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; padding: 3px !important; gap: 3px !important; border-radius: 10px !important; }
+              .vtw-account-box img { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
+              .vtw-user-email { max-width: 100% !important; font-size: 6.5px !important; line-height: 1.05 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+              .vtw-account-box .text-\[8px\] { font-size: 5.5px !important; }
+              .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 2px 1px !important; border-radius: 10px !important; }
+              .vtw-header-icon-btn { min-height: 29px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
+              .vtw-header-icon-btn svg { width: 11px !important; height: 11px !important; }
+              .vtw-header-icon-btn span { display: block !important; font-size: 4.8px !important; line-height: 1 !important; white-space: nowrap !important; }
+              textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; letter-spacing: 0 !important; padding: 9px 10px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; }
+            }
           }
       `}</style>
 
