@@ -2058,53 +2058,6 @@ Rules:
   const getTrendingStorageKey = (regionCode: string, source: 'gemini' | 'youtube' = 'gemini') =>
     `youtube_suggested_niches_${source}_manual_${regionCode || 'VN'}`;
 
-  const saveTrendingKeySet = (regionCode: string, categories: { category: string; items: string[] }[], source = 'youtube_api_v3_manual') => {
-    const region = normalizeRegionCode(regionCode || 'VN');
-    const payload = {
-      categories,
-      updatedAt: new Date().toISOString(),
-      region,
-      source
-    };
-    try {
-      localStorage.setItem(getTrendingStorageKey(region, 'youtube'), JSON.stringify(payload));
-      localStorage.setItem(`youtube_suggested_niches_trending_v4_${region}`, JSON.stringify(categories));
-    } catch (err) {
-      console.warn('Không lưu được trend key cache:', err);
-    }
-    return payload;
-  };
-
-  const readSavedTrendingKeySet = (regionCode: string) => {
-    const region = normalizeRegionCode(regionCode || 'VN');
-    try {
-      const raw = localStorage.getItem(getTrendingStorageKey(region, 'youtube'));
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed?.categories)) return parsed;
-      }
-      const legacyRaw = localStorage.getItem(`youtube_suggested_niches_trending_v4_${region}`);
-      if (legacyRaw) {
-        const categories = JSON.parse(legacyRaw);
-        if (Array.isArray(categories)) return { categories, updatedAt: new Date().toISOString(), region, source: 'local_saved_latest' };
-      }
-    } catch (err) {
-      console.warn('Không đọc được trend key cache:', err);
-    }
-    return null;
-  };
-
-  const mergeSavedTrendKeys = (baseCategories: { category: string; items: string[] }[], savedCategories?: { category: string; items: string[] }[]) => {
-    if (!Array.isArray(savedCategories) || savedCategories.length === 0) return baseCategories;
-    return baseCategories.map((cat, idx) => {
-      const saved = savedCategories.find(item => String(item.category || '').toLowerCase() === String(cat.category || '').toLowerCase()) || savedCategories[idx];
-      if (saved && Array.isArray(saved.items) && saved.items.filter(Boolean).length > 0) {
-        return { ...cat, items: saved.items.filter(Boolean).slice(0, 6) };
-      }
-      return cat;
-    });
-  };
-
   const normalizeRegionCode = (regionCode?: string) => {
     const code = String(regionCode || 'VN').trim().toUpperCase();
     return REGION_AI_CONFIG[code] ? code : 'VN';
@@ -2214,12 +2167,9 @@ JSON mẫu:
 
     try {
       const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
-      const savedLatest = readSavedTrendingKeySet(selectedRegion);
-      const mergedCategories = mergeSavedTrendKeys(data.categories, savedLatest?.categories);
-      const payload = saveTrendingKeySet(selectedRegion, mergedCategories, savedLatest ? 'merged_latest_real_keys' : data.source);
-      setSuggestedNiches(mergedCategories);
-      setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
-      setStatus(`Đã cập nhật toàn bộ trend hot cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion} và đã lưu lại các key trend mới nhất.`);
+      setSuggestedNiches(data.categories);
+      setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
+      setStatus(`Đã cập nhật toàn bộ trend hot cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để quét key thật theo khu vực.`);
     } catch (err: any) {
       setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
       setTrendingCacheMeta(null);
@@ -2450,15 +2400,13 @@ JSON mẫu:
 
       const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
 
-      const updatedAt = new Date().toISOString();
       setSuggestedNiches(prev => {
         const next = prev.map((item, i) => i === index ? { ...item, items: finalItems } : item).slice(0, 15);
-        saveTrendingKeySet(selectedRegion, next, 'manual_region_scan_latest');
         return next;
       });
 
-      setTrendingCacheMeta({ updatedAt, region: selectedRegion, source: 'manual_region_scan_latest' });
-      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã lưu key trend mới nhất cho chủ đề này.`);
+      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
+      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
@@ -6894,16 +6842,10 @@ Quy tắc:
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           alt="Thumbnail"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setInlineVideoId(videoResult.id)}
-                          title="Xem video trực tiếp trong app"
-                          className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-all cursor-pointer group/play"
-                        >
-                          <span className="opacity-0 group-hover/play:opacity-100 transition-opacity w-16 h-16 rounded-full bg-black/35 backdrop-blur-sm border border-white/50 flex items-center justify-center shadow-xl">
-                            <Play size={30} fill="white" className="text-white ml-1" />
-                          </span>
-                        </button>
+                        <div 
+                          onClick={() => window.open(`https://www.youtube.com/watch?v=${videoResult.id}`, '_blank')}
+                          className="absolute inset-0 transition-colors cursor-pointer"
+                        />
 
                       </div>
 
@@ -8141,8 +8083,7 @@ Quy tắc:
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
           .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
           .vtw-gemini-keys-input { font-size: 10px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
-          .vtw-video-thumb .vtw-thumb-play { opacity: 0; transition: opacity .18s ease; }
-          .vtw-video-thumb:hover .vtw-thumb-play { opacity: 1; }
+          .vtw-thumb-play { display: none !important; }
         }
 
           @media (max-width: 640px) {
