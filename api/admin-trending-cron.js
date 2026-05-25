@@ -50,10 +50,9 @@ function parseKeyList(value) {
 }
 
 function getKeys(req) {
-  const envKeys = parseKeyList(process.env.YOUTUBE_API_KEYS || process.env.YOUTUBE_API_KEY || '');
   const bodyKeys = parseKeyList(req.body?.apiKeys || req.body?.youtubeApiKeys || req.body?.keys || '');
   const headerKeys = parseKeyList(req.headers['x-youtube-api-keys'] || '');
-  return [...new Set([...envKeys, ...bodyKeys, ...headerKeys])];
+  return [...new Set([...bodyKeys, ...headerKeys])];
 }
 function publishedAfter30d() { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString(); }
 function compactKeyword(value) {
@@ -242,7 +241,7 @@ export default async function handler(req, res) {
         ok: false,
         needKeys: true,
         region: normalizeRegion(req.query?.region || req.body?.region || 'VN'),
-        error: 'Chưa có YouTube API Key. Hãy nhập key trong Cài đặt API hoặc thêm env YOUTUBE_API_KEYS trên Vercel.'
+        error: 'Chưa có YouTube API Key. Hãy nhập key trong Cài đặt API để app gửi key từ trình duyệt khi chạy quét.'
       });
     }
     const state = await readCronState();
