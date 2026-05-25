@@ -652,6 +652,7 @@ export default function App() {
   const [videoAuditProgress, setVideoAuditProgress] = useState(0);
   const [config, setConfig] = useState<YouTubeConfig>(DEFAULT_CONFIG);
   const [apiKeyIndex, setApiKeyIndex] = useState(0);
+  const lastSuccessfulYoutubeKeyIndexRef = useRef<number | null>(null);
   const [apiKeysHistory, setApiKeysHistory] = useState<string[]>([]);
   const [exhaustedKeys, setExhaustedKeys] = useState<string[]>([]);
   const exhaustedKeysRef = useRef<string[]>([]);
@@ -2268,6 +2269,7 @@ JSON mẫu:
     const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
     setTrendingRegion(selectedRegion);
     quotaUsedRef.current = 0;
+    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
 
     // Nút này chỉ lưu lại những chủ đề đã bấm icon kính lúp và đã quét key thật bằng YouTube Data API V3.
@@ -2370,6 +2372,7 @@ JSON mẫu:
 
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
     quotaUsedRef.current = 0;
+    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     if (config.apiKeys.length === 0) {
       setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
@@ -2598,6 +2601,7 @@ JSON mẫu:
     }
 
     quotaUsedRef.current = 0;
+    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setIsNicheSearching(true);
     setStatus(`${(customKeyword || nicheInput || '').trim() ? 'Đang nghiên cứu ngách' : 'Tự động chọn ngách theo khu vực/thời gian'}: ${kw}...`);
@@ -3034,6 +3038,7 @@ JSON mẫu:
 
         if (response.ok && !data?.error) {
           setApiKeyIndex(keyIndex);
+          lastSuccessfulYoutubeKeyIndexRef.current = keyIndex;
           setLastError(null);
           // Key gọi thành công thì bỏ khỏi danh sách lỗi đang hiển thị nếu trước đó bị đánh dấu nhầm.
           const cleanedFailed = exhaustedKeysRef.current.filter(k => k !== activeKey);
@@ -3406,6 +3411,7 @@ JSON mẫu:
     const isAutoHunt = !rawKeyword;
 
     quotaUsedRef.current = 0;
+    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
@@ -3589,14 +3595,15 @@ JSON mẫu:
         }
       }
 
+      const successKeyLabel = lastSuccessfulYoutubeKeyIndexRef.current !== null ? ` (Key ${lastSuccessfulYoutubeKeyIndexRef.current + 1})` : '';
       if (resultsRef.current.length >= STOP_LIMIT) {
-        setStatus('🎯 ĐÃ GOM ĐỦ 10 KÊNH NGON! Đã tự động dừng.');
+        setStatus(`🎯 ĐÃ GOM ĐỦ 10 KÊNH NGON! Đã tự động dừng.${successKeyLabel}`);
       } else if (!isHuntingRef.current) {
         setStatus('Đã dừng bởi người dùng.');
       } else if (isAutoHunt) {
-        setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.`);
+        setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.${successKeyLabel}`);
       } else {
-        setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.`);
+        setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.${successKeyLabel}`);
       }
       setProgress(100);
     } catch (err: any) {
@@ -3657,6 +3664,7 @@ JSON mẫu:
     if (!input) return;
 
     quotaUsedRef.current = 0;
+    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setStatus('Đang phân tích đối thủ...');
     setSpyResult(null);
@@ -4339,6 +4347,7 @@ Quy tắc:
     }
     
     quotaUsedRef.current = 0;
+    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setIsAnalyzingVideo(true);
     setStatus('Đang kiểm tra thông tin video...');
@@ -4867,7 +4876,6 @@ Quy tắc:
                   className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
                   style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 >
-                  <LogOut size={14} />
                   <span className="vtw-logout-label">Đăng xuất</span>
                 </button>
               </div>
@@ -8546,7 +8554,22 @@ Quy tắc:
             }
           }
 
-      `}
+      
+
+          /* VTW PATCH 20260525: logout button no icon, compact and aligned */
+          .vtw-header-logout > svg { display: none !important; }
+          .vtw-header-logout { gap: 0 !important; }
+          @media (min-width: 769px) {
+            .vtw-header-logout { min-height: 36px !important; height: 36px !important; padding: 7px 14px !important; border-radius: 12px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+            .vtw-header-logout .vtw-logout-label { display: inline-block !important; font-size: 10px !important; line-height: 1 !important; white-space: nowrap !important; }
+          }
+          @media (max-width: 768px) {
+            .vtw-header-actions { grid-template-columns: minmax(0, 1fr) 52px 66px 30px !important; gap: 3px !important; }
+            .vtw-header-logout { grid-column: 2 / 3 !important; height: 32px !important; padding: 2px 3px !important; border-radius: 10px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; white-space: nowrap !important; }
+            .vtw-header-logout .vtw-logout-label { display: inline-block !important; font-size: 6.6px !important; line-height: 1 !important; white-space: nowrap !important; }
+          }
+`}
+
 
 </style>
 
