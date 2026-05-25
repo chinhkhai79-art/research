@@ -4673,7 +4673,7 @@ Quy tắc:
 
           <div
             className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, width: '100%', flex: '0 0 100%' } : undefined}
+            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) 42px 64px 42px', gap: 5, width: '100%', flex: '0 0 100%', alignItems: 'stretch' } : undefined}
           >
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
@@ -4684,7 +4684,7 @@ Quy tắc:
                     setShowAccountModal(true);
                   }}
                   className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
-                  style={isMobileViewport ? { gridColumn: '1 / -1', width: '100%', maxWidth: '100%', justifyContent: 'flex-start' } : undefined}
+                  style={isMobileViewport ? { gridColumn: 'auto', width: '100%', maxWidth: '100%', minWidth: 0, justifyContent: 'flex-start', paddingLeft: 5, paddingRight: 5 } : undefined}
                   title="Tài khoản & hạn sử dụng"
                 >
                   <img
@@ -4744,7 +4744,7 @@ Quy tắc:
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
-                <span>{isMobileViewport ? 'Nâng cấp' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
+                <span>{isMobileViewport ? 'Nâng' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
               </a>
             ) : (
               <button
@@ -4765,7 +4765,7 @@ Quy tắc:
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
-              <span>{isMobileViewport ? 'Làm mới' : 'LÀM MỚI'}</span>
+              <span>{isMobileViewport ? 'Mới' : 'LÀM MỚI'}</span>
             </button>
           </div>
         </div>
@@ -6887,7 +6887,7 @@ Quy tắc:
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column: Thumbnail and RPM */}
                     <div className="lg:col-span-4 space-y-4">
-                      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group">
+                      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
                         <img 
                           src={videoResult.snippet.thumbnails.maxres?.url || videoResult.snippet.thumbnails.high?.url} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -7533,11 +7533,10 @@ Quy tắc:
                     <div className="relative">
                       <textarea 
                         wrap="off"
-                        style={{ fontSize: isMobileViewport ? '6px' : '9px', lineHeight: isMobileViewport ? '1.15' : '1.25', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: isMobileViewport ? '-0.06em' : '-0.025em' }}
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
                         className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[9px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
-                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '6px' : '14px', lineHeight: isMobileViewport ? '1.15' : '1.45', fontFamily: 'monospace', letterSpacing: isMobileViewport ? '-0.05em' : '0' } as any}
+                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '5px' : '9px', lineHeight: isMobileViewport ? '1.05' : '1.25', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: isMobileViewport ? '-0.08em' : '-0.025em', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
                       <button 
@@ -8170,6 +8169,20 @@ Quy tắc:
             .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 16px !important; height: 16px !important; }
             .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 5.8px !important; line-height: 1.05 !important; }
             .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 4.8px !important; }
+
+            /* VTW FINAL HARD FIX 20260525: mobile portrait header one horizontal row */
+            .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 7px !important; }
+            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
+            .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1.35fr) 40px 58px 40px !important; width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; gap: 4px !important; overflow: visible !important; align-items: stretch !important; }
+            .vtw-user-header-row { display: contents !important; }
+            .vtw-account-box { grid-column: auto !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 4px 4px !important; }
+            .vtw-account-box img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
+            .vtw-user-email { max-width: 68px !important; font-size: 7px !important; line-height: 1.05 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; padding: 3px 1px !important; }
+            .vtw-header-icon-btn { min-height: 30px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
+            .vtw-header-icon-btn svg { width: 12px !important; height: 12px !important; }
+            .vtw-header-icon-btn span { font-size: 5px !important; line-height: 1 !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 5px !important; line-height: 1.05 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.08em !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; padding: 8px 8px !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
             .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
           }
