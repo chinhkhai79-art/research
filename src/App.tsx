@@ -2058,6 +2058,53 @@ Rules:
   const getTrendingStorageKey = (regionCode: string, source: 'gemini' | 'youtube' = 'gemini') =>
     `youtube_suggested_niches_${source}_manual_${regionCode || 'VN'}`;
 
+  const saveTrendingKeySet = (regionCode: string, categories: { category: string; items: string[] }[], source = 'youtube_api_v3_manual') => {
+    const region = normalizeRegionCode(regionCode || 'VN');
+    const payload = {
+      categories,
+      updatedAt: new Date().toISOString(),
+      region,
+      source
+    };
+    try {
+      localStorage.setItem(getTrendingStorageKey(region, 'youtube'), JSON.stringify(payload));
+      localStorage.setItem(`youtube_suggested_niches_trending_v4_${region}`, JSON.stringify(categories));
+    } catch (err) {
+      console.warn('Không lưu được trend key cache:', err);
+    }
+    return payload;
+  };
+
+  const readSavedTrendingKeySet = (regionCode: string) => {
+    const region = normalizeRegionCode(regionCode || 'VN');
+    try {
+      const raw = localStorage.getItem(getTrendingStorageKey(region, 'youtube'));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.categories)) return parsed;
+      }
+      const legacyRaw = localStorage.getItem(`youtube_suggested_niches_trending_v4_${region}`);
+      if (legacyRaw) {
+        const categories = JSON.parse(legacyRaw);
+        if (Array.isArray(categories)) return { categories, updatedAt: new Date().toISOString(), region, source: 'local_saved_latest' };
+      }
+    } catch (err) {
+      console.warn('Không đọc được trend key cache:', err);
+    }
+    return null;
+  };
+
+  const mergeSavedTrendKeys = (baseCategories: { category: string; items: string[] }[], savedCategories?: { category: string; items: string[] }[]) => {
+    if (!Array.isArray(savedCategories) || savedCategories.length === 0) return baseCategories;
+    return baseCategories.map((cat, idx) => {
+      const saved = savedCategories.find(item => String(item.category || '').toLowerCase() === String(cat.category || '').toLowerCase()) || savedCategories[idx];
+      if (saved && Array.isArray(saved.items) && saved.items.filter(Boolean).length > 0) {
+        return { ...cat, items: saved.items.filter(Boolean).slice(0, 6) };
+      }
+      return cat;
+    });
+  };
+
   const normalizeRegionCode = (regionCode?: string) => {
     const code = String(regionCode || 'VN').trim().toUpperCase();
     return REGION_AI_CONFIG[code] ? code : 'VN';
@@ -2167,9 +2214,12 @@ JSON mẫu:
 
     try {
       const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
-      setSuggestedNiches(data.categories);
-      setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
-      setStatus(`Đã cập nhật toàn bộ trend hot cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để quét key thật theo khu vực.`);
+      const savedLatest = readSavedTrendingKeySet(selectedRegion);
+      const mergedCategories = mergeSavedTrendKeys(data.categories, savedLatest?.categories);
+      const payload = saveTrendingKeySet(selectedRegion, mergedCategories, savedLatest ? 'merged_latest_real_keys' : data.source);
+      setSuggestedNiches(mergedCategories);
+      setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
+      setStatus(`Đã cập nhật toàn bộ trend hot cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion} và đã lưu lại các key trend mới nhất.`);
     } catch (err: any) {
       setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
       setTrendingCacheMeta(null);
@@ -2400,13 +2450,15 @@ JSON mẫu:
 
       const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
 
+      const updatedAt = new Date().toISOString();
       setSuggestedNiches(prev => {
         const next = prev.map((item, i) => i === index ? { ...item, items: finalItems } : item).slice(0, 15);
+        saveTrendingKeySet(selectedRegion, next, 'manual_region_scan_latest');
         return next;
       });
 
-      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
-      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
+      setTrendingCacheMeta({ updatedAt, region: selectedRegion, source: 'manual_region_scan_latest' });
+      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã lưu key trend mới nhất cho chủ đề này.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
@@ -4606,7 +4658,7 @@ Quy tắc:
       {/* Header */}
       <div className="vtw-app-header bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0" style={isMobileViewport ? { flexBasis: '100%', width: '100%' } : undefined}>
+          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
             <img
               src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
               className="w-7 h-7 rounded-full"
@@ -4620,12 +4672,9 @@ Quy tắc:
             )}
           </h1>
 
-          <div
-            className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, width: '100%', flex: '0 0 100%' } : undefined}
-          >
+          <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
-              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
+              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -4633,7 +4682,6 @@ Quy tắc:
                     setShowAccountModal(true);
                   }}
                   className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
-                  style={isMobileViewport ? { gridColumn: '1 / -1', width: '100%', maxWidth: '100%', justifyContent: 'flex-start' } : undefined}
                   title="Tài khoản & hạn sử dụng"
                 >
                   <img
@@ -4642,8 +4690,8 @@ Quy tắc:
                     className="w-6 h-6 rounded-full shadow-sm"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="leading-tight text-left" style={isMobileViewport ? { minWidth: 0, flex: '1 1 auto' } : undefined}>
-                    <div className="vtw-user-email text-[10px] font-black text-gray-800 whitespace-nowrap" title={user.email || user.displayName || 'Tài khoản'}>{user.email || user.displayName || 'Tài khoản'}</div>
+                  <div className="leading-tight text-left">
+                    <div className="vtw-user-email text-[10px] font-black text-gray-800 whitespace-nowrap">{user.email || user.displayName || 'Tài khoản'}</div>
                     <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
                       {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
                     </div>
@@ -4660,7 +4708,6 @@ Quy tắc:
                     }
                   }}
                   className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
-                  style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 >
                   <LogOut size={14} />
                   <span>{isMobileViewport ? 'Thoát' : 'Đăng xuất'}</span>
@@ -4689,7 +4736,6 @@ Quy tắc:
                 target="_blank"
                 rel="noreferrer"
                 className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
-                style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
@@ -4699,7 +4745,6 @@ Quy tắc:
               <button
                 onClick={() => setStatus('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
                 className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
-                style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 title="Cần đăng nhập để Nâng cấp Gói"
               >
                 <Crown size={15} />
@@ -4710,7 +4755,6 @@ Quy tắc:
             <button
               onClick={resetConfig}
               className="vtw-header-refresh vtw-header-icon-btn px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
-              style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
@@ -6426,6 +6470,11 @@ Quy tắc:
                                   className="w-full h-full object-contain bg-[#0b1220]"
                                   loading="lazy"
                                />
+                               <span className="vtw-thumb-play absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <span className="w-14 h-14 rounded-full bg-black/30 backdrop-blur-[1px] border border-white/40 flex items-center justify-center shadow-lg">
+                                     <Play size={26} fill="white" className="text-white ml-1 opacity-90" />
+                                  </span>
+                               </span>
                             </button>
                             <div className="vtw-video-info p-2 flex flex-col flex-1 min-h-0">
                                <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
@@ -6475,7 +6524,7 @@ Quy tắc:
                                      <BarChart2 size={12} /> Bóc tách kênh
                                   </button>
                                </div>
-                               <div className="vtw-video-stat-grid grid grid-cols-3 gap-1 border-t pt-1.5 mt-auto" style={isMobileViewport ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 4 } : undefined}>
+                               <div className="vtw-video-stat-grid grid grid-cols-3 gap-1 border-t pt-1.5 mt-auto">
                                   <div className="vtw-video-stat flex items-center gap-1 bg-gray-50 rounded-lg p-1.5 min-h-[34px]" title="Ngày đăng">
                                      <Clock size={12} className="text-gray-400 shrink-0" />
                                      <span className="text-[7px] font-black text-gray-700 leading-tight">{formatDetailedDate(v.snippet.publishedAt)}</span>
@@ -6797,6 +6846,9 @@ Quy tắc:
                                 src={p.snippet.thumbnails.medium?.url || p.snippet.thumbnails.default?.url} 
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                               />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <Play size={24} className="text-white opacity-0 group-hover:opacity-100 drop-shadow-md" />
+                              </div>
                             </div>
                             <div className="text-[11px] font-bold text-gray-800 line-clamp-2 leading-tight">
                               {p.snippet.title}
@@ -6842,10 +6894,16 @@ Quy tắc:
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           alt="Thumbnail"
                         />
-                        <div 
-                          onClick={() => window.open(`https://www.youtube.com/watch?v=${videoResult.id}`, '_blank')}
-                          className="absolute inset-0 transition-colors cursor-pointer"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => setInlineVideoId(videoResult.id)}
+                          title="Xem video trực tiếp trong app"
+                          className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-all cursor-pointer group/play"
+                        >
+                          <span className="opacity-0 group-hover/play:opacity-100 transition-opacity w-16 h-16 rounded-full bg-black/35 backdrop-blur-sm border border-white/50 flex items-center justify-center shadow-xl">
+                            <Play size={30} fill="white" className="text-white ml-1" />
+                          </span>
+                        </button>
 
                       </div>
 
@@ -7978,6 +8036,11 @@ Quy tắc:
                       >
                          <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="relative h-[48%] bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
+                            <span className="vtw-thumb-play absolute inset-0 flex items-center justify-center pointer-events-none">
+                               <span className="w-12 h-12 rounded-full bg-black/30 backdrop-blur-[1px] border border-white/40 flex items-center justify-center shadow-lg">
+                                  <Play size={22} fill="white" className="text-white ml-0.5 opacity-90" />
+                               </span>
+                            </span>
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : ''}
                             </div>
@@ -7985,6 +8048,9 @@ Quy tắc:
                                <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
                                   SCORE {v.trendScore}
                                </div>
+                            </div>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                               <Play size={24} className="text-white opacity-0 group-hover:opacity-100 drop-shadow-md" />
                             </div>
                          </button>
                          <div className="p-4">
@@ -7994,7 +8060,7 @@ Quy tắc:
                                   <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
                                   <span className="text-[10px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
                                </div>
-                               <div className="grid grid-cols-3 gap-2" style={isMobileViewport ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
+                               <div className="grid grid-cols-3 gap-2">
                                   <div className="flex flex-col">
                                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
                                      <span className="text-[10px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
@@ -8025,7 +8091,7 @@ Quy tắc:
       </AnimatePresence>
 
       <style>{`
-        @media (max-width: 900px) {
+        @media (max-width: 640px) {
           .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
           .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
           .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
@@ -8075,10 +8141,11 @@ Quy tắc:
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
           .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
           .vtw-gemini-keys-input { font-size: 10px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
-          .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
+          .vtw-video-thumb .vtw-thumb-play { opacity: 0; transition: opacity .18s ease; }
+          .vtw-video-thumb:hover .vtw-thumb-play { opacity: 1; }
         }
 
-          @media (max-width: 900px) {
+          @media (max-width: 640px) {
             .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
             .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
             .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: stretch !important; flex-wrap: nowrap !important; gap: 6px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; align-items: stretch !important; }
@@ -8098,7 +8165,7 @@ Quy tắc:
             .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
             .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 25% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
-            .vtw-niche-video-card .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
+            .vtw-niche-video-card .vtw-thumb-play { display: none !important; }
             .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
             .vtw-niche-video-card .vtw-thumb-play svg { width: 17px !important; height: 17px !important; }
             .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 6.4px !important; line-height: 1.05 !important; margin-bottom: 0 !important; display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
