@@ -2821,7 +2821,7 @@ JSON mẫu:
 
     setIsAiAnalyzing(true);
     setAiAnalysisResult(null);
-    setStatus('Đang phân tích ngách bằng trí tuệ nhân tạo (Gemini)...');
+    setStatus(`Đang phân tích ngách bằng trí tuệ nhân tạo (Gemini) bằng key ${maskGeminiKey(getActiveGeminiKey())}...`);
     setProgress(30);
 
     try {
@@ -3770,7 +3770,7 @@ JSON mẫu:
       const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${channel.snippet.country || 'N/A'} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
  Đăng ký: ${parseInt(channel.statistics.subscriberCount).toLocaleString()} | Tổng lượt xem: ${parseInt(channel.statistics.viewCount).toLocaleString()} | Video: ${channel.statistics.videoCount}
  Phân tích gần đây: ${processedVideos.length} | View/ngày: tb ${avgViews} • cao nhất ${maxViews.toLocaleString()}
- Video hàng đầu: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
+ Video mới nhất: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
 
 Thẻ hàng đầu:
 ${topTagsStr}
@@ -4868,7 +4868,7 @@ Quy tắc:
                   style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 >
                   <LogOut size={14} />
-                  <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'Đăng xuất'}</span>
+                  <span className="vtw-logout-label">Đăng xuất</span>
                 </button>
               </div>
             ) : (
@@ -5755,7 +5755,7 @@ Quy tắc:
                         </div>
 
                         <div className="flex flex-wrap gap-x-2">
-                          <span className="font-bold text-red-600">Video hàng đầu:</span>
+                          <span className="font-bold text-red-600">Video mới nhất:</span>
                           {spyResult.videos[0] ? (
                             <a href={`https://youtube.com/watch?v=${spyResult.videos[0].id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-md">
                               https://youtube.com/watch?v=${spyResult.videos[0].id}
@@ -8490,7 +8490,65 @@ Quy tắc:
             textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 18px !important; line-height: 1.45 !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
           }
           }
-      `}</style>
+
+
+          /* VTW FINAL 20260525: status key mask + logout horizontal + Gemini font sync */
+          @media (max-width: 768px) {
+            .vtw-header-actions {
+              display: grid !important;
+              grid-template-columns: minmax(0, 1fr) 74px 66px 30px !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              gap: 3px !important;
+              align-items: stretch !important;
+              overflow: visible !important;
+            }
+            .vtw-header-logout {
+              grid-column: 2 / 3 !important;
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 3px !important;
+              height: 32px !important;
+              padding: 2px 4px !important;
+              white-space: nowrap !important;
+            }
+            .vtw-header-logout svg { width: 12px !important; height: 12px !important; flex: 0 0 auto !important; }
+            .vtw-header-logout .vtw-logout-label {
+              display: inline-block !important;
+              font-size: 6.8px !important;
+              line-height: 1 !important;
+              white-space: nowrap !important;
+            }
+            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
+            .vtw-header-refresh { grid-column: 4 / 5 !important; }
+            .vtw-header-refresh span, .vtw-mobile-hide-label { display: none !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input {
+              font-size: 14px !important;
+              line-height: 1.45 !important;
+              letter-spacing: 0 !important;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+              white-space: pre !important;
+              word-break: normal !important;
+              overflow-wrap: normal !important;
+              overflow-x: auto !important;
+              padding: 10px 12px !important;
+            }
+          }
+
+          @media (min-width: 769px) {
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input {
+              font-size: 14px !important;
+              line-height: 1.45 !important;
+              letter-spacing: 0 !important;
+              font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+            }
+          }
+
+      `}
+
+</style>
 
 
       {showScrollTop && (
@@ -8583,7 +8641,7 @@ Quy tắc:
                   className="vtw-account-action vtw-account-action-logout"
                 >
                   <LogOut size={14} />
-                  <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'Đăng xuất'}</span>
+                  <span className="vtw-logout-label">Đăng xuất</span>
                 </button>
               </div>
             </motion.div>
