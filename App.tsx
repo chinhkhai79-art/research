@@ -7538,7 +7538,7 @@ Quy tắc:
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
                         className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[12px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
-                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '5px' : '9px', lineHeight: isMobileViewport ? '1.05' : '1.25', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: isMobileViewport ? '-0.08em' : '-0.025em', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
+                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '11px' : '13px', lineHeight: '1.45', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: '0', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
                       <button 
@@ -8207,6 +8207,30 @@ Quy tắc:
               .vtw-header-icon-btn span { display: block !important; font-size: 4.8px !important; line-height: 1 !important; white-space: nowrap !important; }
               textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; letter-spacing: 0 !important; padding: 9px 10px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; }
             }
+          }
+
+
+          /* VTW ABSOLUTE FINAL: portrait header one-line actions + readable Gemini key */
+          @media (max-width: 768px) {
+            .vtw-app-header { padding: 6px 6px 7px !important; overflow: visible !important; }
+            .vtw-app-header > div { display: flex !important; flex-wrap: wrap !important; gap: 5px !important; align-items: center !important; }
+            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; margin: 0 !important; min-width: 0 !important; }
+            .vtw-app-title img { width: 24px !important; height: 24px !important; }
+            .vtw-title-mobile { font-size: 14px !important; line-height: 1.1 !important; max-width: calc(100vw - 62px) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+            .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) 36px 56px 36px !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 100% !important; gap: 3px !important; align-items: stretch !important; justify-content: stretch !important; overflow: visible !important; }
+            .vtw-user-header-row { display: contents !important; }
+            .vtw-account-box { display: flex !important; grid-column: 1 / 2 !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 34px !important; padding: 3px 5px !important; gap: 4px !important; border-radius: 11px !important; justify-content: flex-start !important; }
+            .vtw-account-box img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
+            .vtw-user-email { display: block !important; max-width: 100% !important; font-size: 7px !important; line-height: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .vtw-account-box .text-\[8px\] { font-size: 5.5px !important; line-height: 1 !important; }
+            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { display: flex !important; visibility: visible !important; opacity: 1 !important; position: static !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 34px !important; padding: 2px 1px !important; margin: 0 !important; border-radius: 11px !important; }
+            .vtw-header-logout { grid-column: 2 / 3 !important; }
+            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
+            .vtw-header-refresh { grid-column: 4 / 5 !important; }
+            .vtw-header-icon-btn { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; text-align: center !important; }
+            .vtw-header-icon-btn svg { width: 11px !important; height: 11px !important; flex: 0 0 auto !important; }
+            .vtw-header-icon-btn span { display: block !important; font-size: 4.6px !important; line-height: 1 !important; white-space: nowrap !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; word-break: normal !important; overflow-wrap: normal !important; overflow-x: auto !important; }
           }
       `}</style>
 
