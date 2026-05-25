@@ -4622,7 +4622,7 @@ Quy tắc:
 
           <div
             className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, width: '100%', flex: '0 0 100%' } : undefined}
+            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, width: '100%', maxWidth: '100%', flex: '0 0 100%', overflow: 'visible' } : undefined}
           >
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
@@ -8080,8 +8080,8 @@ Quy tắc:
 
           @media (max-width: 900px) {
             .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
-            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
-            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: stretch !important; flex-wrap: nowrap !important; gap: 6px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; align-items: stretch !important; }
+            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; justify-content: flex-start !important; }
+            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow: visible !important; justify-content: stretch !important; flex-wrap: nowrap !important; gap: 6px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; align-items: stretch !important; }
             .vtw-user-header-row { flex-shrink: 1 !important; min-width: 0 !important; display: contents !important; }
             .vtw-account-box { grid-column: 1 / -1 !important; max-width: none !important; width: 100% !important; min-width: 0 !important; padding: 6px 8px !important; justify-content: flex-start !important; }
             .vtw-account-box > div { min-width: 0 !important; flex: 1 1 auto !important; }
@@ -8092,6 +8092,10 @@ Quy tắc:
             .vtw-header-icon-btn { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 2px !important; text-align: center !important; line-height: 1.05 !important; }
             .vtw-header-icon-btn span { display: block !important; font-size: 6px !important; line-height: 1.05 !important; }
             .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; grid-column: auto !important; }
+            .vtw-header-actions > .vtw-header-upgrade, .vtw-header-actions > .vtw-header-refresh { display: flex !important; visibility: visible !important; opacity: 1 !important; }
+            .vtw-user-header-row { display: contents !important; }
+            .vtw-app-header { overflow: visible !important; height: auto !important; min-height: 0 !important; }
+            .vtw-app-header > div { overflow: visible !important; height: auto !important; }
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
