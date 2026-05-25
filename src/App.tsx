@@ -1941,10 +1941,28 @@ Rules:
     };
 
     try {
-      const updated = [] as { category: string; items: string[] }[];
+      const updated = [] as any[];
+      const currentSuggested = Array.isArray(suggestedNiches) ? suggestedNiches : [];
 
       for (let idx = 0; idx < SUGGESTED_NICHES.length; idx++) {
         const category = SUGGESTED_NICHES[idx].category;
+        const currentCategory: any = currentSuggested[idx];
+        const wasRealScanned = currentCategory?.realScanned === true || currentCategory?.source === 'youtube_v3_real_scan';
+
+        // Nếu chủ đề này đã bấm kính lúp và đã có key thật từ YouTube Data API V3,
+        // không cho nút cập nhật toàn bộ/Gemini đè lại bằng dữ liệu gợi ý.
+        if (wasRealScanned && Array.isArray(currentCategory.items) && currentCategory.items.length > 0) {
+          updated.push({
+            ...currentCategory,
+            category: currentCategory.category || category,
+            items: currentCategory.items.slice(0, 6),
+            realScanned: true,
+            source: 'youtube_v3_real_scan',
+            lockedFromBulkUpdate: true
+          });
+          continue;
+        }
+
         const seed = categorySeeds[category];
         const query = getSeedQuery(category);
         setStatus(`Đang lấy trend thật: ${category} (${idx + 1}/${SUGGESTED_NICHES.length})...`);
@@ -2038,12 +2056,13 @@ Rules:
         });
       }
 
+      const preservedCount = updated.filter((item: any) => item?.realScanned === true || item?.source === 'youtube_v3_real_scan').length;
       setSuggestedNiches(updated);
       const youtubePayload = { categories: updated, updatedAt: new Date().toISOString(), region: selectedRegion, source: 'youtube_api_v3_manual' };
       localStorage.setItem(storageKey, JSON.stringify(updated));
       localStorage.setItem(getTrendingStorageKey(selectedRegion, 'youtube'), JSON.stringify(youtubePayload));
       setTrendingCacheMeta({ updatedAt: youtubePayload.updatedAt, region: selectedRegion, source: youtubePayload.source });
-      setStatus(`Đã cập nhật key thật từ YouTube API V3 cho ${regionLabel}.`);
+      setStatus(`Đã cập nhật key cho ${regionLabel}. ${preservedCount ? `Đã giữ nguyên ${preservedCount} chủ đề đã quét bằng kính lúp, không ghi đè.` : 'Chưa có chủ đề kính lúp nào cần giữ.'}`);
     } catch (error: any) {
       console.error(error);
       setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
@@ -2159,21 +2178,46 @@ JSON mẫu:
 
   const loadTrendingNicheCache = async (regionCode?: string) => {
     const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
     setTrendingRegion(selectedRegion);
     quotaUsedRef.current = 0;
     setQuotaUsed(0);
+
+    // Nút này chỉ lưu lại những chủ đề đã bấm icon kính lúp và đã quét key thật bằng YouTube Data API V3.
+    // Các chủ đề chưa bấm kính lúp sẽ không được lưu để tránh lưu dữ liệu gợi ý/giả.
+    const scannedCategories = suggestedNiches
+      .map((item: any, index: number) => ({ ...item, index }))
+      .filter((item: any) => item.realScanned === true || item.source === 'youtube_v3_real_scan');
+
+    if (scannedCategories.length === 0) {
+      setStatus('Chưa có chủ đề nào được quét bằng nút kính lúp. Hãy bấm icon kính lúp ở từng chủ đề trước, sau đó mới bấm Lưu trend hot đã quét để lưu.');
+      return;
+    }
+
     setIsFetchingDailyTrending(true);
-    setStatus('Đang cập nhật toàn bộ trend hot theo khu vực...');
+    setStatus('Đang lưu các chủ đề đã quét key thật bằng YouTube Data API V3...');
 
     try {
-      const data = await generateGeminiTrendingNichesByRegion(selectedRegion);
-      setSuggestedNiches(data.categories);
-      setTrendingCacheMeta({ updatedAt: data.updatedAt, region: selectedRegion, source: data.source });
-      setStatus(`Đã cập nhật toàn bộ trend hot cho ${REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion}. Bấm icon kính lúp ở từng chủ đề để quét key thật theo khu vực.`);
+      const payload = {
+        region: selectedRegion,
+        updatedAt: new Date().toISOString(),
+        source: 'youtube_v3_real_scan_saved',
+        categories: scannedCategories.map((item: any) => ({
+          category: item.category,
+          localCategory: item.localCategory,
+          viCategory: item.viCategory,
+          items: Array.isArray(item.items) ? item.items.slice(0, 6) : [],
+          realScanned: true,
+          realScannedAt: item.realScannedAt || new Date().toISOString(),
+          index: item.index
+        }))
+      };
+      localStorage.setItem(`youtube_real_trend_hot_${selectedRegion}`, JSON.stringify(payload));
+      setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
+      setStatus(`Đã lưu ${scannedCategories.length} chủ đề trend hot đã quét thật tại ${regionName}. Chủ đề chưa bấm kính lúp sẽ không được lưu.`);
     } catch (err: any) {
-      setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
-      setTrendingCacheMeta(null);
-      setStatus('Chưa cập nhật được trend mới. Đang dùng danh sách chủ đề theo khu vực.');
+      console.error(err);
+      setStatus('Không lưu được danh sách trend hot đã quét. Vui lòng thử lại.');
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -2401,7 +2445,14 @@ JSON mẫu:
       const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
 
       setSuggestedNiches(prev => {
-        const next = prev.map((item, i) => i === index ? { ...item, items: finalItems } : item).slice(0, 15);
+        const next = prev.map((item: any, i: number) => i === index ? {
+          ...item,
+          items: finalItems,
+          source: 'youtube_v3_real_scan',
+          realScanned: true,
+          realScannedAt: new Date().toISOString(),
+          region: selectedRegion
+        } : item).slice(0, 15);
         return next;
       });
 
@@ -4622,7 +4673,7 @@ Quy tắc:
 
           <div
             className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, width: '100%', maxWidth: '100%', flex: '0 0 100%', overflow: 'visible' } : undefined}
+            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, width: '100%', flex: '0 0 100%' } : undefined}
           >
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
@@ -6825,10 +6876,10 @@ Quy tắc:
                       </h1>
                     </div>
                     <button 
-                      onClick={() => window.open(`https://www.youtube.com/watch?v=${videoResult.id}`, '_blank')}
+                      onClick={() => setInlineVideoId(videoResult.id)}
                       className="bg-red-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 active:scale-95 transition-all shadow-lg shadow-red-100 shrink-0"
                     >
-                      <Play fill="currentColor" size={18} /> XEM TRÊN YOUTUBE
+                      <Play fill="currentColor" size={18} /> XEM TRONG APP
                     </button>
                   </div>
 
@@ -6842,9 +6893,11 @@ Quy tắc:
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           alt="Thumbnail"
                         />
-                        <div 
-                          onClick={() => window.open(`https://www.youtube.com/watch?v=${videoResult.id}`, '_blank')}
-                          className="absolute inset-0 transition-colors cursor-pointer"
+                        <button
+                          type="button"
+                          onClick={() => setInlineVideoId(videoResult.id)}
+                          title="Bấm vào ảnh để xem video trực tiếp trong app"
+                          className="absolute inset-0 transition-colors cursor-pointer bg-transparent border-0"
                         />
 
                       </div>
@@ -7480,9 +7533,10 @@ Quy tắc:
                     <div className="relative">
                       <textarea 
                         wrap="off"
+                        style={{ fontSize: isMobileViewport ? '6px' : '9px', lineHeight: isMobileViewport ? '1.15' : '1.25', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: isMobileViewport ? '-0.06em' : '-0.025em' }}
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[10px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
+                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[9px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '6px' : '14px', lineHeight: isMobileViewport ? '1.15' : '1.45', fontFamily: 'monospace', letterSpacing: isMobileViewport ? '-0.05em' : '0' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
@@ -7846,10 +7900,11 @@ Quy tắc:
                          </div>
                          <button
                             onClick={() => loadTrendingNicheCache(trendingRegion || config.region || 'VN')}
+                            title="Lưu các chủ đề đã bấm kính lúp và đã quét key thật bằng YouTube API V3"
                             disabled={isFetchingDailyTrending}
                             className="h-12 w-full justify-center bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-4 rounded-xl text-[12px] font-black tracking-tight uppercase shadow border border-orange-600 disabled:opacity-50 disabled:scale-100 transition-all flex items-center gap-2"
                          >
-                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang cập nhật...</> : <><RefreshCw size={16}/> Cập nhật toàn bộ trend hot</>}
+                            {isFetchingDailyTrending ? <><RefreshCw size={16} className="animate-spin"/> Đang lưu...</> : <><RefreshCw size={16}/> Lưu trend hot đã quét</>}
                          </button>
                      </div>
                 </div>
@@ -8074,32 +8129,28 @@ Quy tắc:
           .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
           textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
           .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
-          .vtw-gemini-keys-input { font-size: 10px !important; line-height: 1.35 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.02em !important; }
+          textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 9px !important; line-height: 1.25 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.025em !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
           .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
         }
 
           @media (max-width: 900px) {
             .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
-            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; justify-content: flex-start !important; }
-            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow: visible !important; justify-content: stretch !important; flex-wrap: nowrap !important; gap: 6px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; align-items: stretch !important; }
+            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
+            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: stretch !important; flex-wrap: nowrap !important; gap: 5px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: minmax(0, 1.7fr) 42px minmax(64px, .95fr) 42px !important; align-items: stretch !important; }
             .vtw-user-header-row { flex-shrink: 1 !important; min-width: 0 !important; display: contents !important; }
-            .vtw-account-box { grid-column: 1 / -1 !important; max-width: none !important; width: 100% !important; min-width: 0 !important; padding: 6px 8px !important; justify-content: flex-start !important; }
+            .vtw-account-box { grid-column: auto !important; max-width: none !important; width: 100% !important; min-width: 0 !important; padding: 5px 6px !important; justify-content: flex-start !important; }
             .vtw-account-box > div { min-width: 0 !important; flex: 1 1 auto !important; }
-            .vtw-account-box img { width: 28px !important; height: 28px !important; }
+            .vtw-account-box img { width: 25px !important; height: 25px !important; }
             .vtw-user-email { max-width: calc(100vw - 110px) !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; vertical-align: bottom !important; font-size: 9px !important; }
-            .vtw-header-actions a, .vtw-header-actions button { min-height: 31px !important; padding: 6px 6px !important; font-size: 6.6px !important; border-radius: 10px !important; white-space: normal !important; }
+            .vtw-header-actions a, .vtw-header-actions button { min-height: 31px !important; padding: 4px 3px !important; font-size: 6px !important; border-radius: 10px !important; white-space: normal !important; }
             .vtw-header-actions svg { width: 13px !important; height: 13px !important; }
             .vtw-header-icon-btn { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 2px !important; text-align: center !important; line-height: 1.05 !important; }
-            .vtw-header-icon-btn span { display: block !important; font-size: 6px !important; line-height: 1.05 !important; }
+            .vtw-header-icon-btn span { display: block !important; font-size: 5.4px !important; line-height: 1.05 !important; }
             .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; grid-column: auto !important; }
-            .vtw-header-actions > .vtw-header-upgrade, .vtw-header-actions > .vtw-header-refresh { display: flex !important; visibility: visible !important; opacity: 1 !important; }
-            .vtw-user-header-row { display: contents !important; }
-            .vtw-app-header { overflow: visible !important; height: auto !important; min-height: 0 !important; }
-            .vtw-app-header > div { overflow: visible !important; height: auto !important; }
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
-            .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.15 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.06em !important; padding: 8px 9px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
             .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 25% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
             .vtw-niche-video-card .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
