@@ -1251,7 +1251,7 @@ export default function App() {
           model: geminiModel,
           contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }]
         });
-        results.push({ key, ok: true, label: 'Key hợp lệ', detail: `Dùng được model ${geminiModel}. Key độc lập với Gmail đăng nhập tool.` });
+        results.push({ key, ok: true, label: 'Key hợp lệ', detail: `Dùng được model ${geminiModel}.` });
       } catch (error: any) {
         const info = classifyGeminiError(error);
         results.push({ key, ok: false, label: info.label, detail: info.detail });
@@ -2930,7 +2930,7 @@ JSON mẫu:
         const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
         const data = await response.json().catch(() => ({}));
         if (response.ok && !data?.error) {
-          results.push({ key, ok: true, label: 'Key hợp lệ', detail: 'YouTube API Key V3 gọi được dữ liệu thật. Key độc lập với Gmail đăng nhập tool.' });
+          results.push({ key, ok: true, label: 'Key hợp lệ', detail: 'YouTube API Key V3 gọi được dữ liệu thật.' });
         } else {
           const info = classifyYoutubeError(data, response.status);
           results.push({ key, ok: false, label: info.label, detail: info.detail });
@@ -7720,7 +7720,7 @@ Quy tắc:
                         Check Gemini Key
                       </button>
                       <div className="text-[10px] font-bold text-slate-500 leading-snug">
-                        Tài khoản đăng nhập tool chỉ quản lý người dùng/PRO. Gemini API Key là chìa khóa gọi phân tích và có thể lấy từ Gmail/dự án Google AI Studio khác.
+                        Gemini API Key là chìa khóa gọi phân tích. Key có thể lấy từ Gmail/dự án Google AI Studio khác nếu còn quota và được quyền dùng model đã chọn.
                       </div>
                       {geminiKeyCheckResults.length > 0 && (
                         <div className="space-y-2">
@@ -7849,7 +7849,7 @@ Quy tắc:
                       Check YouTube Key
                     </button>
                     <div className="text-[10px] font-bold text-slate-500 leading-snug">
-                      YouTube API Key V3 độc lập với Gmail đăng nhập tool. Key có thể lấy từ Gmail/dự án Google Cloud khác, miễn là đã bật YouTube Data API v3 và còn quota.
+                      YouTube API Key V3 dùng để gọi dữ liệu thật. Key có thể lấy từ Gmail/dự án Google Cloud khác, miễn là đã bật YouTube Data API v3 và còn quota.
                     </div>
                     {youtubeKeyCheckResults.length > 0 && (
                       <div className="space-y-2">
