@@ -4655,9 +4655,10 @@ Quy tắc:
                       console.error('Lỗi đăng xuất:', err);
                     }
                   }}
-                  className="vtw-header-logout px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
+                  className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
                 >
-                  Đăng xuất
+                  <LogOut size={14} />
+                  <span>{isMobileViewport ? 'Thoát' : 'Đăng xuất'}</span>
                 </button>
               </div>
             ) : (
@@ -4682,30 +4683,30 @@ Quy tắc:
                 href={buildPaymentUrl(user)}
                 target="_blank"
                 rel="noreferrer"
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
+                className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
-                <span>{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+                <span>{isMobileViewport ? 'Nâng cấp' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
               </a>
             ) : (
               <button
                 onClick={() => setStatus('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
+                className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
                 title="Cần đăng nhập để Nâng cấp Gói"
               >
                 <Crown size={15} />
-                <span>NÂNG CẤP GÓI</span>
+                <span>{isMobileViewport ? 'Nâng cấp' : 'NÂNG CẤP GÓI'}</span>
               </button>
             )}
 
             <button
               onClick={resetConfig}
-              className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              className="vtw-header-refresh vtw-header-icon-btn px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
-              <span>LÀM MỚI</span>
+              <span>{isMobileViewport ? 'Làm mới' : 'LÀM MỚI'}</span>
             </button>
           </div>
         </div>
@@ -8087,31 +8088,38 @@ Quy tắc:
           @media (max-width: 640px) {
             .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
             .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
-            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: flex-start !important; flex-wrap: wrap !important; gap: 6px !important; padding-bottom: 4px !important; }
-            .vtw-user-header-row { flex-shrink: 1 !important; min-width: 0 !important; }
-            .vtw-account-box { max-width: 138px !important; padding: 5px 7px !important; }
-            .vtw-user-email { max-width: 78px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            .vtw-header-actions a, .vtw-header-actions button { min-height: 31px !important; padding: 6px 7px !important; font-size: 7.5px !important; border-radius: 10px !important; white-space: nowrap !important; }
+            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: flex-start !important; flex-wrap: wrap !important; gap: 6px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: minmax(0,1.7fr) repeat(3, minmax(0,1fr)) !important; align-items: stretch !important; }
+            .vtw-user-header-row { flex-shrink: 1 !important; min-width: 0 !important; display: contents !important; }
+            .vtw-account-box { max-width: none !important; width: 100% !important; min-width: 0 !important; padding: 5px 7px !important; }
+            .vtw-user-email { max-width: 100% !important; overflow: hidden !important; text-overflow: ellipsis !important; display: inline-block !important; vertical-align: bottom !important; }
+            .vtw-header-actions a, .vtw-header-actions button { min-height: 31px !important; padding: 6px 6px !important; font-size: 6.6px !important; border-radius: 10px !important; white-space: normal !important; }
             .vtw-header-actions svg { width: 13px !important; height: 13px !important; }
+            .vtw-header-icon-btn { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 2px !important; text-align: center !important; line-height: 1.05 !important; }
+            .vtw-header-icon-btn span { display: block !important; font-size: 6px !important; line-height: 1.05 !important; }
+            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; }
             .vtw-niche-content { padding: 12px !important; }
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
             .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 40% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 26% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
-            .vtw-niche-video-card .vtw-thumb-play span { width: 42px !important; height: 42px !important; }
-            .vtw-niche-video-card .vtw-thumb-play svg { width: 20px !important; height: 20px !important; }
-            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 8px !important; line-height: 1.08 !important; margin-bottom: 4px !important; }
-            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 4px !important; }
-            .vtw-niche-video-card .vtw-video-actions button { padding: 5px 2px !important; min-height: 26px !important; font-size: 6.5px !important; border-radius: 10px !important; gap: 2px !important; }
-            .vtw-niche-video-card .vtw-video-actions button svg { width: 10px !important; height: 10px !important; }
-            .vtw-niche-video-card .vtw-video-info { padding: 7px !important; }
-            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 4px !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 25px !important; padding: 3px 4px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 8px !important; gap: 2px !important; }
-            .vtw-niche-video-card .vtw-video-stat svg { width: 9px !important; height: 9px !important; }
-            .vtw-niche-video-card .vtw-video-stat span { font-size: 6.3px !important; line-height: 1.05 !important; text-align: left !important; word-break: break-word !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 4px !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 7px !important; }
+            .vtw-niche-video-card .vtw-thumb-play { display: none !important; }
+            .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
+            .vtw-niche-video-card .vtw-thumb-play svg { width: 17px !important; height: 17px !important; }
+            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 6.4px !important; line-height: 1.05 !important; margin-bottom: 0 !important; display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
+            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 0 !important; }
+            .vtw-niche-video-card .vtw-video-actions button { padding: 3px 2px !important; min-height: 22px !important; font-size: 5.7px !important; border-radius: 9px !important; gap: 1px !important; flex-direction: column !important; }
+            .vtw-niche-video-card .vtw-video-actions button svg { width: 9px !important; height: 9px !important; }
+            .vtw-niche-video-card .vtw-video-actions button span { line-height: 1.02 !important; }
+            .vtw-niche-video-card .vtw-video-info { padding: 5px !important; display: flex !important; flex-direction: column !important; gap: 3px !important; }
+            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 4px !important; margin-top: auto !important; }
+            .vtw-niche-video-card .vtw-video-stat { min-height: 26px !important; padding: 2px 2px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 8px !important; gap: 3px !important; }
+            .vtw-niche-video-card .vtw-video-stat svg { width: 8px !important; height: 8px !important; flex: 0 0 auto !important; }
+            .vtw-niche-video-card .vtw-video-stat span { font-size: 5.6px !important; line-height: 1.05 !important; text-align: left !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 0 !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 16px !important; height: 16px !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 5.8px !important; line-height: 1.05 !important; }
+            .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 5px !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
             .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
           }
@@ -8207,7 +8215,8 @@ Quy tắc:
                   }}
                   className="vtw-account-action vtw-account-action-logout"
                 >
-                  Đăng xuất
+                  <LogOut size={14} />
+                  <span>{isMobileViewport ? 'Thoát' : 'Đăng xuất'}</span>
                 </button>
               </div>
             </motion.div>
