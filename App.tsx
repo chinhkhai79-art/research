@@ -708,6 +708,10 @@ export default function App() {
   const [showGeminiKeyHistory, setShowGeminiKeyHistory] = useState(false);
   const [isCheckingGeminiKeys, setIsCheckingGeminiKeys] = useState(false);
   const [geminiKeyCheckResults, setGeminiKeyCheckResults] = useState<Array<{ key: string; ok: boolean; label: string; detail: string }>>([]);
+  const [showGeminiKeyCheckResults, setShowGeminiKeyCheckResults] = useState(true);
+  const [isCheckingYoutubeKeys, setIsCheckingYoutubeKeys] = useState(false);
+  const [youtubeKeyCheckResults, setYoutubeKeyCheckResults] = useState<Array<{ key: string; ok: boolean; label: string; detail: string }>>([]);
+  const [showYoutubeKeyCheckResults, setShowYoutubeKeyCheckResults] = useState(true);
   const [showNicheModal, setShowNicheModal] = useState(false);
   const clearHistory = () => {
     triggerConfirm(
@@ -1196,6 +1200,12 @@ export default function App() {
     return `${clean.slice(0, 6)}...${clean.slice(-5)}`;
   };
 
+  const maskYoutubeKey = (key: string) => {
+    const clean = String(key || '').trim();
+    if (clean.length <= 12) return clean || 'YouTube key';
+    return `${clean.slice(0, 8)}...${clean.slice(-6)}`;
+  };
+
   const classifyGeminiError = (error: any) => {
     const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
     const status = String(error?.status || error?.error?.status || '').toUpperCase();
@@ -1225,6 +1235,7 @@ export default function App() {
 
   const checkGeminiKeysNow = async () => {
     const keys = getActiveGeminiKeys();
+    setShowGeminiKeyCheckResults(true);
     setGeminiKeyCheckResults([]);
     if (keys.length === 0) {
       setGeminiKeyCheckResults([{ key: '', ok: false, label: 'Thiếu key', detail: 'Vui lòng dán ít nhất 1 Gemini API Key, mỗi key một dòng.' }]);
@@ -2868,6 +2879,81 @@ JSON mẫu:
     return Array.from(new Set([...fromTextarea, ...fromConfig]));
   };
 
+  const getYoutubeErrorText = (data: any, httpStatus?: number, err?: any) => {
+    return String(
+      data?.error?.errors?.[0]?.reason ||
+      data?.error?.status ||
+      data?.error?.message ||
+      data?.error ||
+      err?.message ||
+      err ||
+      `HTTP_${httpStatus || 'UNKNOWN'}`
+    );
+  };
+
+  const classifyYoutubeError = (data: any, httpStatus?: number, err?: any) => {
+    const raw = getYoutubeErrorText(data, httpStatus, err);
+    const lower = String(raw).toLowerCase();
+    if (lower.includes('keyinvalid') || lower.includes('api key not valid') || lower.includes('bad request') || lower.includes('invalid')) {
+      return { label: 'Key sai', detail: 'YouTube API Key không hợp lệ hoặc sai định dạng. Hãy kiểm tra lại key hoặc tạo key mới.' };
+    }
+    if (lower.includes('accessnotconfigured') || lower.includes('api has not been used') || lower.includes('disabled') || lower.includes('youtube data api') && lower.includes('not')) {
+      return { label: 'Chưa bật YouTube Data API v3', detail: 'Project tạo key chưa bật YouTube Data API v3. Vào Google Cloud/API Library bật YouTube Data API v3 rồi thử lại.' };
+    }
+    if (lower.includes('referer') || lower.includes('referrer') || lower.includes('ipreferer') || lower.includes('restriction') || lower.includes('request is missing')) {
+      return { label: 'Key bị giới hạn domain/API', detail: 'Key đang bị giới hạn domain/referrer/API. Hãy cho phép domain research.vanthemmo.com hoặc tạm bỏ Application restrictions để test.' };
+    }
+    if (lower.includes('quota') || lower.includes('dailylimit') || lower.includes('ratelimit') || lower.includes('rate limit') || lower.includes('429')) {
+      return { label: 'Hết quota', detail: 'Key/project đã hết quota hoặc vượt giới hạn tốc độ. Tool sẽ tự xoay sang key khác nếu có.' };
+    }
+    if (httpStatus === 403) {
+      return { label: 'Project không có quyền gọi YouTube Data API', detail: 'Project/key bị từ chối quyền gọi YouTube Data API. Kiểm tra API restrictions, domain restrictions hoặc quota của project.' };
+    }
+    if (httpStatus === 401) return { label: 'Không được cấp quyền', detail: 'Key không được cấp quyền gọi YouTube Data API.' };
+    if (httpStatus === 400) return { label: 'Request chưa hợp lệ', detail: 'Request YouTube API chưa hợp lệ hoặc key sai định dạng.' };
+    return { label: 'Lỗi YouTube API', detail: raw && raw.length < 260 ? raw : 'Không gọi được YouTube API. Hãy kiểm tra key, API đã bật và quota.' };
+  };
+
+  const checkYoutubeKeysNow = async () => {
+    const keys = getMergedYoutubeKeys();
+    setShowYoutubeKeyCheckResults(true);
+    setYoutubeKeyCheckResults([]);
+    if (keys.length === 0) {
+      setYoutubeKeyCheckResults([{ key: '', ok: false, label: 'Thiếu key', detail: 'Vui lòng dán ít nhất 1 YouTube API Key V3, mỗi key một dòng.' }]);
+      return;
+    }
+    setIsCheckingYoutubeKeys(true);
+    const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
+    for (const key of keys) {
+      try {
+        const params = new URLSearchParams({ part: 'snippet', chart: 'mostPopular', regionCode: 'US', maxResults: '1', key });
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && !data?.error) {
+          results.push({ key, ok: true, label: 'Key hợp lệ', detail: 'YouTube API Key V3 gọi được dữ liệu thật. Key độc lập với Gmail đăng nhập tool.' });
+        } else {
+          const info = classifyYoutubeError(data, response.status);
+          results.push({ key, ok: false, label: info.label, detail: info.detail });
+        }
+      } catch (error: any) {
+        const info = classifyYoutubeError({}, undefined, error);
+        results.push({ key, ok: false, label: info.label, detail: info.detail });
+      }
+      setYoutubeKeyCheckResults([...results]);
+    }
+    setIsCheckingYoutubeKeys(false);
+    const goodKeys = results.filter(r => r.ok).map(r => r.key);
+    if (goodKeys.length) {
+      setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      setApiKeyIndex(Math.max(0, keys.findIndex(k => k === goodKeys[0])));
+      setExhaustedKeys(prev => prev.filter(k => !goodKeys.includes(k)));
+      exhaustedKeysRef.current = exhaustedKeysRef.current.filter(k => !goodKeys.includes(k));
+      setStatus(`YouTube: tìm thấy ${goodKeys.length}/${results.length} key hợp lệ. Tool sẽ dùng key hợp lệ để quét dữ liệu.`);
+    } else {
+      setStatus('YouTube: chưa có key hợp lệ. Xem lỗi chi tiết ở phần Check YouTube Key.');
+    }
+  };
+
   const youtubeFetch = async (endpoint: string, params: Record<string, any>, retryCount = 0): Promise<any> => {
     const keys = getMergedYoutubeKeys();
     if (keys.length === 0) {
@@ -2901,16 +2987,8 @@ JSON mẫu:
     };
 
     const getFriendlyYoutubeReason = (data: any, httpStatus?: number, err?: any) => {
-      const raw = getReasonText(data, httpStatus) || String(err?.message || err || 'UNKNOWN');
-      const lower = String(raw).toLowerCase();
-      if (lower.includes('quota') || lower.includes('dailylimit') || lower.includes('ratelimit')) return 'hết quota hoặc bị giới hạn lượt gọi';
-      if (lower.includes('keyinvalid') || lower.includes('api key not valid') || lower.includes('bad request') || lower.includes('invalid')) return 'key không hợp lệ hoặc sai định dạng';
-      if (lower.includes('accessnotconfigured') || lower.includes('api has not been used') || lower.includes('disabled')) return 'chưa bật YouTube Data API trong Google Cloud';
-      if (lower.includes('referer') || lower.includes('referrer') || lower.includes('ipreferer') || lower.includes('request is missing')) return 'key đang bị giới hạn domain/referrer';
-      if (httpStatus === 401) return 'không được cấp quyền';
-      if (httpStatus === 403) return 'bị từ chối, có thể do quota / domain / quyền API';
-      if (httpStatus === 400) return 'request chưa hợp lệ';
-      return raw;
+      const info = classifyYoutubeError(data, httpStatus, err);
+      return `${info.label}: ${info.detail}`;
     };
 
     const rememberFailedKeyForDisplay = (key: string, reason: string) => {
@@ -7646,7 +7724,14 @@ Quy tắc:
                       </div>
                       {geminiKeyCheckResults.length > 0 && (
                         <div className="space-y-2">
-                          {geminiKeyCheckResults.map((item, idx) => (
+                          <button
+                            type="button"
+                            onClick={() => setShowGeminiKeyCheckResults(prev => !prev)}
+                            className="w-fit px-3 py-1.5 rounded-xl border border-indigo-100 bg-white text-indigo-600 font-black text-[10px] hover:bg-indigo-50 active:scale-95"
+                          >
+                            {showGeminiKeyCheckResults ? 'Ẩn thông báo check' : `Mở thông báo check (${geminiKeyCheckResults.length})`}
+                          </button>
+                          {showGeminiKeyCheckResults && geminiKeyCheckResults.map((item, idx) => (
                             <div key={`${item.key || 'empty'}-${idx}`} className={`rounded-2xl border px-3 py-2 text-[11px] font-bold ${item.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
                               <div className="flex items-start gap-2">
                                 {item.ok ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> : <XCircle size={15} className="shrink-0 mt-0.5" />}
@@ -7753,6 +7838,43 @@ Quy tắc:
                       {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
+                  <div className="mt-4 flex flex-col gap-2 relative z-10">
+                    <button
+                      type="button"
+                      onClick={checkYoutubeKeysNow}
+                      disabled={isCheckingYoutubeKeys}
+                      className="w-fit min-w-[190px] px-4 py-2 rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[11px] tracking-widest uppercase shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {isCheckingYoutubeKeys ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                      Check YouTube Key
+                    </button>
+                    <div className="text-[10px] font-bold text-slate-500 leading-snug">
+                      YouTube API Key V3 độc lập với Gmail đăng nhập tool. Key có thể lấy từ Gmail/dự án Google Cloud khác, miễn là đã bật YouTube Data API v3 và còn quota.
+                    </div>
+                    {youtubeKeyCheckResults.length > 0 && (
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowYoutubeKeyCheckResults(prev => !prev)}
+                          className="w-fit px-3 py-1.5 rounded-xl border border-red-100 bg-white text-red-600 font-black text-[10px] hover:bg-red-50 active:scale-95"
+                        >
+                          {showYoutubeKeyCheckResults ? 'Ẩn thông báo check' : `Mở thông báo check (${youtubeKeyCheckResults.length})`}
+                        </button>
+                        {showYoutubeKeyCheckResults && youtubeKeyCheckResults.map((item, idx) => (
+                          <div key={`${item.key || 'empty'}-${idx}`} className={`rounded-2xl border px-3 py-2 text-[11px] font-bold ${item.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                            <div className="flex items-start gap-2">
+                              {item.ok ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> : <XCircle size={15} className="shrink-0 mt-0.5" />}
+                              <div>
+                                <div className="font-black">{item.key ? maskYoutubeKey(item.key) : 'YouTube key'} — {item.label}</div>
+                                <div className="mt-0.5 leading-snug opacity-90">{item.detail}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="bg-white border border-red-100 p-5 rounded-2xl text-[11px] text-gray-600 mt-5 shadow-sm relative z-10">
                     <p className="font-black text-red-600 mb-2 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={14}/> Hướng dẫn dán mã Quota:</p>
                     <ul className="space-y-1 font-medium opacity-90">
