@@ -3616,7 +3616,7 @@ JSON mẫu:
       const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${channel.snippet.country || 'N/A'} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
  Đăng ký: ${parseInt(channel.statistics.subscriberCount).toLocaleString()} | Tổng lượt xem: ${parseInt(channel.statistics.viewCount).toLocaleString()} | Video: ${channel.statistics.videoCount}
  Phân tích gần đây: ${processedVideos.length} | View/ngày: tb ${avgViews} • cao nhất ${maxViews.toLocaleString()}
- Video hàng đầu: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
+ Video mới nhất: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
 
 Thẻ hàng đầu:
 ${topTagsStr}
@@ -5601,7 +5601,7 @@ Quy tắc:
                         </div>
 
                         <div className="flex flex-wrap gap-x-2">
-                          <span className="font-bold text-red-600">Video hàng đầu:</span>
+                          <span className="font-bold text-red-600">Video mới nhất:</span>
                           {spyResult.videos[0] ? (
                             <a href={`https://youtube.com/watch?v=${spyResult.videos[0].id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-md">
                               https://youtube.com/watch?v=${spyResult.videos[0].id}
