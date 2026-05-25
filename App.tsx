@@ -691,7 +691,7 @@ export default function App() {
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [scanningNicheCategory, setScanningNicheCategory] = useState<string | null>(null);
   const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('AIzaSyD1MMwzM-PBDZtueN_6vXXNSiT7_IitXXU');
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
@@ -7484,7 +7484,7 @@ Quy tắc:
                         onChange={(e) => setGeminiApiKey(e.target.value)}
                         className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[10px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '6px' : '14px', lineHeight: isMobileViewport ? '1.15' : '1.45', fontFamily: 'monospace', letterSpacing: isMobileViewport ? '-0.05em' : '0' } as any}
-                        placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nGemini key 1\nGemini key 2"}
+                        placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
                       <button 
                         type="button"
