@@ -265,59 +265,12 @@ const REGION_YT_CONFIG: Record<string, { regionCode: string; relevanceLanguage: 
   ES: { regionCode: 'ES', relevanceLanguage: 'es', seed: 'nichos tendencia youtube españa', language: 'Spanish' },
 };
 
-
-function getApiErrorText(error: any): string {
-  if (typeof error === 'string') return error;
-  const parts = [
-    error?.message,
-    error?.error?.message,
-    error?.status,
-    error?.error?.status,
-    error?.code,
-    error?.error?.code,
-    error?.details,
-    error?.response?.data?.error?.message
-  ].filter(Boolean);
-  try { parts.push(JSON.stringify(error || '')); } catch {}
-  return parts.join(' | ');
-}
-
-function getGeminiFriendlyError(error: any, model = ''): string {
-  const raw = getApiErrorText(error);
-  const text = raw.toLowerCase();
-  const selectedModel = model ? ` Model đang chọn: ${model}.` : '';
-
-  if (text.includes('api key not valid') || text.includes('invalid api key') || text.includes('api_key_invalid') || text.includes('keyinvalid') || text.includes('api key expired') || text.includes('key expired')) {
-    return 'Key sai hoặc không còn hợp lệ. Hãy kiểm tra lại Gemini API Key trong Google AI Studio.';
-  }
-  if (text.includes('generativelanguage.googleapis.com') && (text.includes('disabled') || text.includes('has not been used') || text.includes('not enabled'))) {
-    return 'Chưa bật Generative Language API cho project chứa key. Hãy vào Google Cloud/AI Studio bật Generative Language API rồi thử lại.';
-  }
-  if (text.includes('service_disabled') || text.includes('api has not been used') || text.includes('not been used in project') || text.includes('enable it')) {
-    return 'Chưa bật Generative Language API cho project chứa key. Hãy bật API rồi thử lại.';
-  }
-  if (text.includes('permission_denied') || text.includes('denied access') || text.includes('permission denied')) {
-    return `Project chứa key chưa có quyền dùng Gemini/model đã chọn hoặc bị Google từ chối quyền truy cập.${selectedModel} Có thể đổi sang gemini-2.5-flash hoặc tạo key từ project khác.`;
-  }
-  if (text.includes('resource_exhausted') || text.includes('quota') || text.includes('rate limit') || text.includes('ratelimit') || text.includes('429') || text.includes('exceeded')) {
-    return 'Hết quota hoặc vượt giới hạn gọi API. Hệ thống sẽ tự xoay sang key khác nếu có.';
-  }
-  if ((text.includes('model') && (text.includes('not found') || text.includes('not supported') || text.includes('unsupported') || text.includes('is not found'))) || text.includes('models/') && text.includes('not')) {
-    return `Model không được hỗ trợ bởi key/project này.${selectedModel} Hãy đổi sang gemini-2.5-flash hoặc gemini-2.5-flash-lite.`;
-  }
-  if (text.includes('400')) return `Yêu cầu Gemini chưa hợp lệ. Kiểm tra model đang chọn và dữ liệu đầu vào.${selectedModel}`;
-  if (text.includes('403')) return `Key/project bị từ chối quyền truy cập Gemini.${selectedModel} Hãy kiểm tra API restrictions, Generative Language API và quyền dùng model.`;
-  if (text.includes('failed to fetch') || text.includes('network')) return 'Không kết nối được tới Gemini API. Hãy kiểm tra mạng hoặc thử lại sau.';
-  return raw && raw.length < 240 ? raw : 'Có lỗi khi gọi Gemini API. Hãy kiểm tra key, quota, quyền project và model đang chọn.';
-}
-
 function getFriendlyApiError(error: any): string {
-  const raw = getApiErrorText(error);
+  const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
   const text = String(raw).toLowerCase();
   if (text.includes('api key expired') || text.includes('api_key_invalid') || text.includes('key expired')) return 'API key đã hết hạn hoặc không còn hợp lệ. Vui lòng thay API key mới trong phần Cài đặt API.';
   if (text.includes('api key not valid') || text.includes('invalid api key') || text.includes('keyinvalid')) return 'API key không hợp lệ. Vui lòng kiểm tra lại key hoặc nhập key mới.';
   if (text.includes('quota') || text.includes('daily') || text.includes('limit') || text.includes('exceeded')) return 'API key đã hết quota hoặc bị giới hạn. Hệ thống sẽ tự bỏ qua key lỗi và thử key tiếp theo nếu có.';
-  if (text.includes('permission_denied') || text.includes('denied access') || text.includes('generativelanguage')) return getGeminiFriendlyError(error);
   if (text.includes('403')) return 'API bị từ chối truy cập. Vui lòng kiểm tra quyền API key hoặc bật đúng dịch vụ trong Google Cloud.';
   if (text.includes('400')) return 'Yêu cầu API chưa hợp lệ. Vui lòng kiểm tra lại key, model hoặc dữ liệu đầu vào.';
   if (text.includes('failed to fetch') || text.includes('network')) return 'Không kết nối được tới API. Vui lòng kiểm tra mạng hoặc thử lại sau.';
@@ -738,7 +691,10 @@ export default function App() {
   const [isFetchingDailyTrending, setIsFetchingDailyTrending] = useState(false);
   const [scanningNicheCategory, setScanningNicheCategory] = useState<string | null>(null);
   const [trendingCacheMeta, setTrendingCacheMeta] = useState<{ updatedAt?: string; region?: string; source?: string } | null>(null);
-  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    try { return localStorage.getItem('youtube_gemini_api_key') || ''; }
+    catch { return ''; }
+  });
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
@@ -750,6 +706,8 @@ export default function App() {
   const [geminiKeysHistory, setGeminiKeysHistory] = useState<string[]>([]);
   const [selectedGeminiHistoryKeys, setSelectedGeminiHistoryKeys] = useState<string[]>([]);
   const [showGeminiKeyHistory, setShowGeminiKeyHistory] = useState(false);
+  const [isCheckingGeminiKeys, setIsCheckingGeminiKeys] = useState(false);
+  const [geminiKeyCheckResults, setGeminiKeyCheckResults] = useState<Array<{ key: string; ok: boolean; label: string; detail: string }>>([]);
   const [showNicheModal, setShowNicheModal] = useState(false);
   const clearHistory = () => {
     triggerConfirm(
@@ -782,19 +740,6 @@ export default function App() {
       .map(k => k.trim())
       .filter(Boolean))];
   };
-
-
-  const geminiKeyFormatStatus = useMemo(() => {
-    const keys = parseGeminiKeyText(geminiApiKey);
-    if (keys.length === 0) {
-      return { state: 'empty', message: 'Gemini key để trống. Người dùng tự dán key để phân tích.' };
-    }
-    const invalidKeys = keys.filter(k => !/^AIza[0-9A-Za-z_-]{20,}$/.test(k));
-    if (invalidKeys.length > 0) {
-      return { state: 'invalid', message: `${invalidKeys.length} key sai định dạng. Gemini API Key thường bắt đầu bằng AIza...` };
-    }
-    return { state: 'valid', message: `${keys.length} Gemini key hợp lệ theo định dạng. Key độc lập với email đăng nhập và sẽ được dùng để gọi phân tích.` };
-  }, [geminiApiKey]);
 
   const saveGeminiKeysText = (keys: string[]) => {
     const cleanKeys = [...new Set(keys.map(k => String(k || '').trim()).filter(Boolean))];
@@ -1245,8 +1190,79 @@ export default function App() {
     return keys[Math.max(0, Math.min(geminiKeyIndex, keys.length - 1))] || '';
   };
 
+  const maskGeminiKey = (key: string) => {
+    const clean = String(key || '').trim();
+    if (clean.length <= 12) return clean || 'Gemini key';
+    return `${clean.slice(0, 6)}...${clean.slice(-5)}`;
+  };
+
+  const classifyGeminiError = (error: any) => {
+    const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
+    const status = String(error?.status || error?.error?.status || '').toUpperCase();
+    const code = String(error?.code || error?.error?.code || '').toLowerCase();
+    const text = `${raw} ${status} ${code}`.toLowerCase();
+
+    if (text.includes('api_key_invalid') || text.includes('api key not valid') || text.includes('invalid api key') || text.includes('key invalid') || text.includes('api key expired') || text.includes('key expired')) {
+      return { label: 'Key sai', detail: 'Gemini API Key không hợp lệ hoặc đã hết hạn. Hãy kiểm tra lại key hoặc tạo key mới.' };
+    }
+    if (text.includes('generative language api has not been used') || text.includes('service_disabled') || text.includes('api has not been used') || text.includes('not enabled') || text.includes('enable it')) {
+      return { label: 'Chưa bật Generative Language API', detail: 'Project tạo key chưa bật Generative Language API. Vào Google Cloud/API Library bật Generative Language API rồi thử lại.' };
+    }
+    if (text.includes('quota') || text.includes('rate limit') || text.includes('ratelimit') || text.includes('resource_exhausted') || text.includes('too many requests') || text.includes('429')) {
+      return { label: 'Hết quota', detail: 'Key/project đã hết quota hoặc vượt giới hạn tốc độ. Tool sẽ tự xoay sang key khác nếu có.' };
+    }
+    if (text.includes('model') && (text.includes('not found') || text.includes('not supported') || text.includes('unsupported') || text.includes('not available'))) {
+      return { label: 'Model không được hỗ trợ', detail: `Key/project này chưa hỗ trợ model ${geminiModel}. Hãy đổi sang gemini-2.5-flash hoặc gemini-2.5-flash-lite.` };
+    }
+    if (text.includes('permission_denied') || text.includes('denied access') || text.includes('403')) {
+      return { label: 'Project chưa có quyền model', detail: `Project tạo key bị từ chối quyền hoặc chưa được cấp quyền dùng model ${geminiModel}. Hãy đổi model ổn định hơn hoặc tạo key ở project khác.` };
+    }
+    if (text.includes('400')) {
+      return { label: 'Yêu cầu/model chưa hợp lệ', detail: 'Yêu cầu Gemini chưa hợp lệ. Hãy kiểm tra lại key và model đang chọn.' };
+    }
+    return { label: 'Lỗi Gemini API', detail: raw && raw.length < 260 ? raw : 'Không gọi được Gemini API. Hãy kiểm tra key, model và kết nối mạng.' };
+  };
+
+  const checkGeminiKeysNow = async () => {
+    const keys = getActiveGeminiKeys();
+    setGeminiKeyCheckResults([]);
+    if (keys.length === 0) {
+      setGeminiKeyCheckResults([{ key: '', ok: false, label: 'Thiếu key', detail: 'Vui lòng dán ít nhất 1 Gemini API Key, mỗi key một dòng.' }]);
+      return;
+    }
+
+    setIsCheckingGeminiKeys(true);
+    const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
+    for (const key of keys) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: key });
+        await ai.models.generateContent({
+          model: geminiModel,
+          contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }]
+        });
+        results.push({ key, ok: true, label: 'Key hợp lệ', detail: `Dùng được model ${geminiModel}. Key độc lập với Gmail đăng nhập tool.` });
+      } catch (error: any) {
+        const info = classifyGeminiError(error);
+        results.push({ key, ok: false, label: info.label, detail: info.detail });
+      }
+      setGeminiKeyCheckResults([...results]);
+    }
+    setIsCheckingGeminiKeys(false);
+
+    const firstGood = results.find(r => r.ok);
+    if (firstGood) {
+      const idx = keys.findIndex(k => k === firstGood.key);
+      setGeminiKeyIndex(Math.max(0, idx));
+      setExhaustedGeminiKeys(prev => prev.filter(k => k !== firstGood.key));
+      exhaustedGeminiKeysRef.current = exhaustedGeminiKeysRef.current.filter(k => k !== firstGood.key);
+      setStatus(`Gemini: tìm thấy ${results.filter(r => r.ok).length}/${results.length} key hợp lệ. Tool sẽ dùng key hợp lệ để phân tích.`);
+    } else {
+      setStatus('Gemini: chưa có key hợp lệ. Xem lỗi chi tiết ở phần Check Gemini Key.');
+    }
+  };
+
   const isRotatableGeminiError = (error: any) => {
-    const raw = getApiErrorText(error);
+    const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
     const text = String(raw).toLowerCase();
     return text.includes('quota')
       || text.includes('limit')
@@ -1258,14 +1274,7 @@ export default function App() {
       || text.includes('invalid api key')
       || text.includes('api key expired')
       || text.includes('key expired')
-      || text.includes('403')
-      || text.includes('permission_denied')
-      || text.includes('denied access')
-      || text.includes('generativelanguage.googleapis.com')
-      || text.includes('not enabled')
-      || text.includes('not supported')
-      || text.includes('unsupported')
-      || text.includes('model');
+      || text.includes('403');
   };
 
   const callGeminiGenerateContent = async (prompt: string) => {
@@ -1301,7 +1310,7 @@ export default function App() {
           const nextAvailable = keys.findIndex((candidate, candidateIndex) => candidateIndex !== idx && !exhaustedGeminiKeysRef.current.includes(candidate));
           if (nextAvailable !== -1) {
             setGeminiKeyIndex(nextAvailable);
-            setStatus(`Gemini Key #${idx + 1}: ${getGeminiFriendlyError(error, geminiModel)} Đang tự chuyển sang Key #${nextAvailable + 1}...`);
+            setStatus(`Gemini Key #${idx + 1} lỗi: ${classifyGeminiError(error).label}. Đang tự chuyển sang Key #${nextAvailable + 1}...`);
             continue;
           }
         }
@@ -1309,7 +1318,7 @@ export default function App() {
       }
     }
 
-    throw new Error(`Tất cả Gemini API Key đều lỗi. ${getGeminiFriendlyError(lastError, geminiModel)}`);
+    throw new Error(`Tất cả Gemini API Key đều lỗi. ${classifyGeminiError(lastError).label}: ${classifyGeminiError(lastError).detail}`);
   };
 
   const formatVNNumber = (value: any) => {
@@ -3683,7 +3692,7 @@ JSON mẫu:
       const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${channel.snippet.country || 'N/A'} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
  Đăng ký: ${parseInt(channel.statistics.subscriberCount).toLocaleString()} | Tổng lượt xem: ${parseInt(channel.statistics.viewCount).toLocaleString()} | Video: ${channel.statistics.videoCount}
  Phân tích gần đây: ${processedVideos.length} | View/ngày: tb ${avgViews} • cao nhất ${maxViews.toLocaleString()}
- Video mới nhất: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
+ Video hàng đầu: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
 
 Thẻ hàng đầu:
 ${topTagsStr}
@@ -5668,7 +5677,7 @@ Quy tắc:
                         </div>
 
                         <div className="flex flex-wrap gap-x-2">
-                          <span className="font-bold text-red-600">Video mới nhất:</span>
+                          <span className="font-bold text-red-600">Video hàng đầu:</span>
                           {spyResult.videos[0] ? (
                             <a href={`https://youtube.com/watch?v=${spyResult.videos[0].id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-md">
                               https://youtube.com/watch?v=${spyResult.videos[0].id}
@@ -7598,20 +7607,15 @@ Quy tắc:
                       </a>
                     </div>
                   </div>
-                  <div className="relative z-10 mb-3 rounded-2xl border border-indigo-100 bg-white/80 p-3 text-[10px] font-bold text-indigo-700 leading-relaxed">
-                    <div className="flex items-start gap-2"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-green-600" /><span>Tài khoản đăng nhập tool = quản lý người dùng / PRO.</span></div>
-                    <div className="flex items-start gap-2 mt-1"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-green-600" /><span>API Key Gemini = chìa khóa gọi phân tích, độc lập với email đăng nhập.</span></div>
-                    <div className="flex items-start gap-2 mt-1"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-green-600" /><span>Có thể dùng Gemini API Key từ Gmail/dự án Google AI Studio khác, miễn key còn quota và được quyền dùng model đã chọn.</span></div>
-                  </div>
                   <div className="relative z-10">
                     <div className="relative">
                       <textarea 
                         wrap="off"
                         value={geminiApiKey}
-                        onChange={(e) => setGeminiApiKey(e.target.value)}
+                        onChange={(e) => { setGeminiApiKey(e.target.value); setGeminiKeyCheckResults([]); }}
                         className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[18px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '11px' : '13px', lineHeight: '1.45', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: '0', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
-                        placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nKey Gemini 1\nKey Gemini 2"}
+                        placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng..."}
                       />
                       <button 
                         type="button"
@@ -7621,20 +7625,40 @@ Quy tắc:
                         {showApiKeys ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    <div className={`mt-2 flex items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black ${
-                      geminiKeyFormatStatus.state === 'valid'
-                        ? 'border-green-200 bg-green-50 text-green-700'
-                        : geminiKeyFormatStatus.state === 'invalid'
-                          ? 'border-red-200 bg-red-50 text-red-700'
-                          : 'border-gray-200 bg-gray-50 text-gray-500'
-                    }`}>
-                      {geminiKeyFormatStatus.state === 'valid' ? <CheckCircle2 size={14} /> : geminiKeyFormatStatus.state === 'invalid' ? <XCircle size={14} /> : <AlertCircle size={14} />}
-                      <span>{geminiKeyFormatStatus.message}</span>
-                    </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-600">
                       <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Gemini: {getActiveGeminiKeys().length} key</span>
                       <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Đang dùng #{Math.min(geminiKeyIndex + 1, Math.max(getActiveGeminiKeys().length, 1))}</span>
                       <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Lỗi/hết quota: {exhaustedGeminiKeys.length}</span>
+                    </div>
+
+                    <div className="mt-3 flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={checkGeminiKeysNow}
+                        disabled={isCheckingGeminiKeys}
+                        className="w-fit min-w-[190px] px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-[11px] tracking-widest uppercase shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {isCheckingGeminiKeys ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                        Check Gemini Key
+                      </button>
+                      <div className="text-[10px] font-bold text-slate-500 leading-snug">
+                        Tài khoản đăng nhập tool chỉ quản lý người dùng/PRO. Gemini API Key là chìa khóa gọi phân tích và có thể lấy từ Gmail/dự án Google AI Studio khác.
+                      </div>
+                      {geminiKeyCheckResults.length > 0 && (
+                        <div className="space-y-2">
+                          {geminiKeyCheckResults.map((item, idx) => (
+                            <div key={`${item.key || 'empty'}-${idx}`} className={`rounded-2xl border px-3 py-2 text-[11px] font-bold ${item.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                              <div className="flex items-start gap-2">
+                                {item.ok ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> : <XCircle size={15} className="shrink-0 mt-0.5" />}
+                                <div>
+                                  <div className="font-black">{item.key ? maskGeminiKey(item.key) : 'Gemini key'} — {item.label}</div>
+                                  <div className="mt-0.5 leading-snug opacity-90">{item.detail}</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {/* Model Selection UI - collapsed by default */}
                     <div className="mt-4">
@@ -7773,7 +7797,7 @@ Quy tắc:
                     }
                     
                     setShowKeyInputModal(false);
-                    setStatus(`Đã cập nhật API: ${keys.length} YouTube key, ${geminiKeys.length} Gemini key. Gemini key hợp lệ sẽ có tích xanh và dùng độc lập với email đăng nhập.`);
+                    setStatus(`Đã cập nhật API: ${keys.length} YouTube key, ${geminiKeys.length} Gemini key.`);
                   }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-10 py-3 rounded-2xl font-black uppercase tracking-[0.2em] hover:scale-105 shadow-xl shadow-blue-200 active:scale-95 transition-all flex items-center gap-3 text-[12px]"
                 >
