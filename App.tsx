@@ -4665,7 +4665,7 @@ Quy tắc:
               alt="Văn Thế Web"
             />
             {isMobileViewport ? (
-              <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche Pro</span>
+              <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
             ) : (
               <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
             )}
@@ -4673,7 +4673,7 @@ Quy tắc:
 
           <div
             className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 34px 46px 34px', gap: 3, width: '100%', maxWidth: '100%', flex: '0 0 100%', alignItems: 'stretch', overflow: 'visible' } : undefined}
+            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px 66px 28px', gap: 3, width: '100%', maxWidth: '100%', flex: '0 0 100%', alignItems: 'stretch', overflow: 'visible' } : undefined}
           >
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
@@ -4714,7 +4714,7 @@ Quy tắc:
                   style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 >
                   <LogOut size={14} />
-                  <span>{isMobileViewport ? 'Thoát' : 'Đăng xuất'}</span>
+                  <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'Đăng xuất'}</span>
                 </button>
               </div>
             ) : (
@@ -4744,7 +4744,7 @@ Quy tắc:
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
-                <span>{isMobileViewport ? 'Nâng' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
+                <span>{isMobileViewport ? 'Nâng cấp' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
               </a>
             ) : (
               <button
@@ -4765,7 +4765,7 @@ Quy tắc:
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
-              <span>{isMobileViewport ? 'Mới' : 'LÀM MỚI'}</span>
+              <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'LÀM MỚI'}</span>
             </button>
           </div>
         </div>
@@ -7537,7 +7537,7 @@ Quy tắc:
                         wrap="off"
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[12px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
+                        className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[18px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
                         style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '11px' : '13px', lineHeight: '1.45', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: '0', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng...\nAIzaSy...\nAIzaSy..."}
                       />
@@ -8231,6 +8231,36 @@ Quy tắc:
             .vtw-header-icon-btn svg { width: 11px !important; height: 11px !important; flex: 0 0 auto !important; }
             .vtw-header-icon-btn span { display: block !important; font-size: 4.6px !important; line-height: 1 !important; white-space: nowrap !important; }
             textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; word-break: normal !important; overflow-wrap: normal !important; overflow-x: auto !important; }
+
+
+          /* VTW OVERRIDE: ưu tiên mobile dọc - cùng 1 hàng, nút nâng cấp luôn hiện */
+          @media (max-width: 768px) {
+            .vtw-app-header { padding: 5px 6px 7px !important; overflow: visible !important; }
+            .vtw-app-header > div { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 4px !important; }
+            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; min-width: 0 !important; margin: 0 !important; }
+            .vtw-app-title img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
+            .vtw-title-mobile { display: inline-block !important; max-width: calc(100vw - 64px) !important; font-size: 10.5px !important; line-height: 1.05 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) 28px 66px 28px !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 100% !important; gap: 3px !important; align-items: stretch !important; overflow: visible !important; }
+            .vtw-user-header-row { display: contents !important; }
+            .vtw-account-box { grid-column: 1 / 2 !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; height: 32px !important; padding: 2px 4px !important; gap: 3px !important; border-radius: 10px !important; }
+            .vtw-account-box img { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
+            .vtw-user-email { max-width: 100% !important; font-size: 6.2px !important; line-height: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+            .vtw-account-box .text-\[8px\] { font-size: 5px !important; line-height: 1 !important; }
+            .vtw-header-logout { grid-column: 2 / 3 !important; }
+            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
+            .vtw-header-refresh { grid-column: 4 / 5 !important; }
+            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { display: flex !important; visibility: visible !important; opacity: 1 !important; position: static !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 32px !important; margin: 0 !important; padding: 2px 1px !important; border-radius: 10px !important; }
+            .vtw-header-icon-btn { flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
+            .vtw-header-icon-btn svg { width: 12px !important; height: 12px !important; flex: 0 0 auto !important; }
+            .vtw-header-icon-btn span { font-size: 5.4px !important; line-height: 1 !important; white-space: nowrap !important; display: block !important; }
+            .vtw-header-logout span, .vtw-header-refresh span, .vtw-mobile-hide-label { display: none !important; }
+            .vtw-header-upgrade span { display: block !important; font-size: 5.8px !important; line-height: 1 !important; white-space: nowrap !important; }
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 18px !important; line-height: 1.45 !important; letter-spacing: 0 !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; word-break: normal !important; overflow-wrap: normal !important; overflow-x: auto !important; padding: 10px 12px !important; }
+          }
+
+          @media (min-width: 769px) {
+            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 18px !important; line-height: 1.45 !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
+          }
           }
       `}</style>
 
@@ -8325,7 +8355,7 @@ Quy tắc:
                   className="vtw-account-action vtw-account-action-logout"
                 >
                   <LogOut size={14} />
-                  <span>{isMobileViewport ? 'Thoát' : 'Đăng xuất'}</span>
+                  <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'Đăng xuất'}</span>
                 </button>
               </div>
             </motion.div>
