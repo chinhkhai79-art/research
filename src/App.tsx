@@ -8097,23 +8097,21 @@ Quy tắc:
             .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
             .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
             .vtw-gemini-keys-input { font-size: 6px !important; line-height: 1.2 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: -0.04em !important; padding: 9px 10px !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 30% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 40% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; }
             .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
-            .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
-            .vtw-niche-video-card .vtw-thumb-play svg { width: 17px !important; height: 17px !important; }
-            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 7px !important; line-height: 1.08 !important; margin-bottom: 0 !important; display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
-            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 0 !important; }
-            .vtw-niche-video-card .vtw-video-actions button { padding: 4px 2px !important; min-height: 24px !important; font-size: 6px !important; border-radius: 9px !important; gap: 2px !important; }
-            .vtw-niche-video-card .vtw-video-actions button svg { width: 9px !important; height: 9px !important; }
-            .vtw-niche-video-card .vtw-video-info { padding: 6px !important; display: flex !important; flex-direction: column !important; gap: 4px !important; }
-            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 4px !important; margin-top: auto !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 34px !important; padding: 3px 2px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; border-radius: 8px !important; gap: 2px !important; }
-            .vtw-niche-video-card .vtw-video-stat svg { width: 8px !important; height: 8px !important; }
-            .vtw-niche-video-card .vtw-video-stat span { font-size: 6px !important; line-height: 1.05 !important; text-align: center !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 0 !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 18px !important; height: 18px !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 6.4px !important; line-height: 1.05 !important; }
-            .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 5.4px !important; }
+            .vtw-niche-video-card .vtw-thumb-play span { width: 42px !important; height: 42px !important; }
+            .vtw-niche-video-card .vtw-thumb-play svg { width: 20px !important; height: 20px !important; }
+            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 8px !important; line-height: 1.08 !important; margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-actions button { padding: 5px 2px !important; min-height: 26px !important; font-size: 6.5px !important; border-radius: 10px !important; gap: 2px !important; }
+            .vtw-niche-video-card .vtw-video-actions button svg { width: 10px !important; height: 10px !important; }
+            .vtw-niche-video-card .vtw-video-info { padding: 7px !important; }
+            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 4px !important; }
+            .vtw-niche-video-card .vtw-video-stat { min-height: 25px !important; padding: 3px 4px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 8px !important; gap: 2px !important; }
+            .vtw-niche-video-card .vtw-video-stat svg { width: 9px !important; height: 9px !important; }
+            .vtw-niche-video-card .vtw-video-stat span { font-size: 6.3px !important; line-height: 1.05 !important; text-align: left !important; word-break: break-word !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 4px !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 7px !important; }
             .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
             .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
           }
