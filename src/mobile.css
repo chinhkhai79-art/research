@@ -1,0 +1,538 @@
+/* ============================================================================
+ * mobile.css — Toàn bộ CSS responsive cho YouTube Niche & Analyze Pro
+ *
+ * File này gom tất cả rule mobile/tablet vào MỘT chỗ duy nhất, thay thế khối
+ * <style>{`...`}</style> trước đây trong App.tsx. Mục tiêu:
+ *   - Dễ chỉnh: không phải tìm trong file App.tsx 8900 dòng
+ *   - Hết xung đột: chỉ 1 bộ rule cho mỗi component, không còn 7 khối @media chồng nhau
+ *   - Specificity cao: dùng selector chuỗi (.vtw-app-header .vtw-…) để thắng mọi inline style cũ
+ *
+ * Cấu trúc:
+ *   §1. Default (mọi viewport) — label visibility helpers
+ *   §2. @media (max-width: 900px) — Tablet & mobile lớn
+ *      §2.1 Header: title + 4 nút action
+ *      §2.2 Video cards (Ngách)
+ *      §2.3 Channel actions, results table card layout
+ *      §2.4 Gemini keys textarea, misc inputs
+ *   §3. @media (max-width: 430px) — Điện thoại thường
+ *   §4. @media (max-width: 400px) — Điện thoại hẹp
+ *   §5. @media (min-width: 769px) — Desktop override (font Gemini key lớn)
+ * ============================================================================ */
+
+
+/* §1 ─── Default (mọi viewport) ─────────────────────────────────────────────── */
+
+/* Upgrade button: 2 span (desktop label dài + mobile label ngắn).
+   Mặc định desktop chỉ thấy label dài, mobile media query bên dưới đảo lại. */
+.vtw-upgrade-label-mobile { display: none; }
+.vtw-upgrade-label-full   { display: inline; }
+
+
+/* §2 ─── Tablet & mobile lớn (≤ 900px) ──────────────────────────────────────── */
+@media (max-width: 900px) {
+
+  /* §2.1 ── HEADER: title trên 1 dòng riêng, actions thành grid 4 cột ─────── */
+
+  .vtw-app-header .vtw-app-header-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    row-gap: 8px !important;
+    column-gap: 6px !important;
+  }
+
+  /* Tiêu đề: chiếm 100% hàng đầu, chữ wrap tự nhiên, KHÔNG cắt ellipsis */
+  .vtw-app-header .vtw-app-title {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+  }
+  .vtw-app-header .vtw-app-title-img,
+  .vtw-app-header .vtw-app-title img {
+    width: 26px !important;
+    height: 26px !important;
+    flex: 0 0 26px !important;
+  }
+  .vtw-app-header .vtw-app-title-text {
+    display: inline-block !important;
+    flex: 1 1 auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Actions row: grid 4 cột | account (flex) | logout 38 | upgrade ≥82 | refresh 38 | */
+  .vtw-app-header .vtw-header-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 38px minmax(82px, auto) 38px !important;
+    gap: 5px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 0 100% !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+  .vtw-app-header .vtw-user-header-row {
+    display: contents !important;
+  }
+
+  /* Account box (cột 1) */
+  .vtw-app-header .vtw-account-box {
+    grid-column: 1 / 2 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 36px !important;
+    padding: 3px 6px !important;
+    gap: 5px !important;
+    border-radius: 10px !important;
+  }
+  .vtw-app-header .vtw-account-box .vtw-account-avatar,
+  .vtw-app-header .vtw-account-box img {
+    width: 22px !important;
+    height: 22px !important;
+    flex: 0 0 22px !important;
+  }
+  .vtw-app-header .vtw-account-text {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+  }
+  .vtw-app-header .vtw-user-email {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 9.5px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .vtw-app-header .vtw-account-plan {
+    font-size: 8px !important;
+    line-height: 1 !important;
+  }
+
+  /* 3 nút action: luôn hiện, cao 36px, layout hàng ngang */
+  .vtw-app-header .vtw-header-logout,
+  .vtw-app-header .vtw-header-upgrade,
+  .vtw-app-header .vtw-header-refresh {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 36px !important;
+    padding: 0 4px !important;
+    margin: 0 !important;
+    border-radius: 10px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    white-space: nowrap !important;
+  }
+  .vtw-app-header .vtw-header-logout  { grid-column: 2 / 3 !important; }
+  .vtw-app-header .vtw-header-upgrade { grid-column: 3 / 4 !important; }
+  .vtw-app-header .vtw-header-refresh { grid-column: 4 / 5 !important; }
+
+  /* Logout & Refresh: chỉ ICON (ẩn label) */
+  .vtw-app-header .vtw-logout-label,
+  .vtw-app-header .vtw-refresh-label,
+  .vtw-app-header .vtw-header-logout span,
+  .vtw-app-header .vtw-header-refresh span,
+  .vtw-app-header .vtw-mobile-hide-label {
+    display: none !important;
+  }
+  .vtw-app-header .vtw-header-logout svg,
+  .vtw-app-header .vtw-header-refresh svg {
+    width: 17px !important;
+    height: 17px !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Upgrade: ICON + "Nâng cấp" (label ngắn cho mobile) */
+  .vtw-app-header .vtw-header-upgrade {
+    padding: 0 6px !important;
+  }
+  .vtw-app-header .vtw-header-upgrade svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 auto !important;
+  }
+  .vtw-app-header .vtw-upgrade-label-full   { display: none !important; }
+  .vtw-app-header .vtw-upgrade-label-mobile {
+    display: inline !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    font-weight: 900 !important;
+    overflow: hidden !important;
+  }
+
+
+  /* §2.2 ── VIDEO CARDS (Ngách): layout 2 cột, thumb trái + content phải ─── */
+
+  .vtw-niche-content { padding: 12px !important; }
+  .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; }
+
+  .vtw-niche-video-card.vtw-square-video-card {
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: 140px minmax(0, 1fr) !important;
+    gap: 10px !important;
+    padding: 10px !important;
+    align-items: stretch !important;
+  }
+
+  /* Thumbnail: cột trái, 16:9, bo góc nhỏ */
+  .vtw-niche-video-card .vtw-video-thumb {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    border-radius: 10px !important;
+    align-self: start !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .vtw-niche-video-card .vtw-video-thumb img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    background: #000 !important;
+  }
+  /* Fallback cho card không có class vtw-video-thumb (modal trending) */
+  .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    align-self: start !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+
+  .vtw-niche-video-card .vtw-thumb-play,
+  .vtw-thumb-play * { display: none !important; }
+  .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
+  .vtw-niche-video-card .vtw-thumb-play svg  { width: 17px !important; height: 17px !important; }
+
+  /* Title: 11px, 2 dòng, cột phải */
+  .vtw-niche-video-card .vtw-video-title {
+    min-height: 0 !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    margin-bottom: 0 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  /* Action buttons trong card: 3 cột, chỉ ICON */
+  .vtw-niche-video-card .vtw-video-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    margin-bottom: 0 !important;
+  }
+  .vtw-niche-video-card .vtw-video-actions button {
+    padding: 6px 0 !important;
+    min-height: 32px !important;
+    font-size: 0 !important;
+    border-radius: 8px !important;
+    gap: 0 !important;
+    flex-direction: row !important;
+  }
+  .vtw-niche-video-card .vtw-video-actions button svg { width: 14px !important; height: 14px !important; }
+  .vtw-niche-video-card .vtw-video-actions button .vtw-btn-label { display: none !important; }
+
+  /* Info container: cột phải, padding 0 */
+  .vtw-niche-video-card .vtw-video-info {
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    min-width: 0 !important;
+  }
+  .vtw-niche-video-card > div.p-4 { padding: 0 !important; min-width: 0 !important; }
+
+  /* Stats grid: 2 cột, chữ vừa đọc */
+  .vtw-niche-video-card .vtw-video-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    padding-top: 4px !important;
+    margin-top: auto !important;
+  }
+  .vtw-niche-video-card .vtw-video-stat {
+    min-height: 28px !important;
+    padding: 4px 5px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    border-radius: 6px !important;
+    gap: 3px !important;
+  }
+  .vtw-niche-video-card .vtw-video-stat svg  { width: 11px !important; height: 11px !important; flex: 0 0 auto !important; }
+  .vtw-niche-video-card .vtw-video-stat span {
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+    text-align: left !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 0 !important; }
+  .vtw-niche-video-card .vtw-video-info > div:first-child img  { width: 18px !important; height: 18px !important; }
+  .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 9.5px !important; line-height: 1.15 !important; }
+  .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 8px !important; }
+
+
+  /* §2.3 ── CHANNEL ACTIONS & RESULTS TABLE: bảng đổi sang card grid ────── */
+
+  .vtw-channel-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  .vtw-channel-actions button {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .vtw-results-table-wrap table,
+  .vtw-results-table-wrap thead,
+  .vtw-results-table-wrap tbody,
+  .vtw-results-table-wrap th,
+  .vtw-results-table-wrap td,
+  .vtw-results-table-wrap tr  { display: block; }
+  .vtw-results-table-wrap thead { display: none; }
+  .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
+  .vtw-results-table-wrap tbody tr {
+    margin: 12px 10px !important;
+    padding: 16px !important;
+    border-radius: 18px !important;
+    background: white !important;
+    box-shadow: 0 8px 22px rgba(15,23,42,.08) !important;
+    border: 1px solid #dbeafe !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    column-gap: 14px !important;
+  }
+  .vtw-results-table-wrap tbody tr td {
+    border-right: 0 !important;
+    border-bottom: 1px dashed #e5edf7 !important;
+    padding: 10px 0 !important;
+    width: 100% !important;
+    text-align: left !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    align-items: start !important;
+    min-width: 0 !important;
+  }
+  .vtw-results-table-wrap tbody tr td:before {
+    content: '';
+    font-size: 11px;
+    font-weight: 900;
+    color: #64748b;
+    text-transform: uppercase;
+  }
+  .vtw-results-table-wrap tbody tr td:nth-child(3):before  { content: 'Tên kênh'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(4):before  { content: 'Mã kênh'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(5):before  { content: 'Từ khóa/ngách'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(6):before  { content: 'Chủ đề'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(7):before  { content: 'Thu nhập ($)'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(8):before  { content: 'URL'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(9):before  { content: 'Quốc gia'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(10):before { content: 'Ngày tạo'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(11):before { content: 'Tuổi kênh'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(12):before { content: 'Sub'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(13):before { content: 'Views'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Điểm'; }
+  .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Thao tác'; }
+
+  .vtw-results-table-wrap tbody tr td:nth-child(1),
+  .vtw-results-table-wrap tbody tr td:nth-child(2)  { grid-column: span 1 !important; }
+  .vtw-results-table-wrap tbody tr td:nth-child(3)  { grid-column: 1 / 2 !important; }
+  .vtw-results-table-wrap tbody tr td:nth-child(4)  { grid-column: 2 / 3 !important; }
+  .vtw-results-table-wrap tbody tr td:nth-child(5),
+  .vtw-results-table-wrap tbody tr td:nth-child(6),
+  .vtw-results-table-wrap tbody tr td:nth-child(7),
+  .vtw-results-table-wrap tbody tr td:nth-child(8),
+  .vtw-results-table-wrap tbody tr td:nth-child(9),
+  .vtw-results-table-wrap tbody tr td:nth-child(10),
+  .vtw-results-table-wrap tbody tr td:nth-child(11),
+  .vtw-results-table-wrap tbody tr td:nth-child(12),
+  .vtw-results-table-wrap tbody tr td:nth-child(13),
+  .vtw-results-table-wrap tbody tr td:nth-child(14),
+  .vtw-results-table-wrap tbody tr td:nth-child(15) { grid-column: span 1 !important; }
+  .vtw-results-table-wrap tbody tr td:nth-child(16) {
+    grid-column: 1 / -1 !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtw-results-table-wrap tbody tr td:nth-child(3),
+  .vtw-results-table-wrap tbody tr td:nth-child(4) {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+  .vtw-results-table-wrap tbody tr td:nth-child(3) a,
+  .vtw-results-table-wrap tbody tr td:nth-child(4) {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  .vtw-results-table-wrap .vtw-channel-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  .vtw-results-table-wrap .vtw-channel-actions button {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    padding: 6px 3px !important;
+    font-size: 9px !important;
+    border-radius: 10px !important;
+  }
+
+
+  /* §2.4 ── GEMINI KEYS TEXTAREA & MISC ───────────────────────────────────── */
+
+  textarea.vtw-gemini-keys-input,
+  .vtw-gemini-keys-input {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    white-space: pre !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    letter-spacing: 0 !important;
+    padding: 9px 10px !important;
+    font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  }
+  textarea[placeholder*='Key 1'] {
+    white-space: pre !important;
+    overflow-x: auto !important;
+    word-break: normal !important;
+    font-size: 11px !important;
+    line-height: 1.55 !important;
+  }
+
+  .api-settings-modal h1,
+  .api-modal-title,
+  [class*="api"] h1 {
+    font-size: 22px !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
+  .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
+  .vtw-spy-report { text-align: left !important; }
+  .vtw-shorts-card {
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+    background: #fff !important;
+    border-color: #e5e7eb !important;
+    color: #0f172a !important;
+  }
+  .vtw-shorts-card .vtw-shorts-thumb {
+    position: relative !important;
+    height: auto !important;
+    aspect-ratio: 9 / 16 !important;
+    max-height: 520px !important;
+    object-fit: contain !important;
+    opacity: 1 !important;
+  }
+}
+
+
+/* §3 ─── Điện thoại thường (≤ 430px) ────────────────────────────────────────── */
+@media (max-width: 430px) {
+  .vtw-app-header { padding-left: 6px !important; padding-right: 6px !important; }
+}
+
+
+/* §4 ─── Điện thoại hẹp (≤ 400px) ──────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .vtw-app-header .vtw-header-actions {
+    grid-template-columns: minmax(0, 1fr) 34px minmax(70px, auto) 34px !important;
+    gap: 3px !important;
+  }
+  .vtw-app-header .vtw-header-logout,
+  .vtw-app-header .vtw-header-upgrade,
+  .vtw-app-header .vtw-header-refresh {
+    height: 32px !important;
+  }
+  .vtw-app-header .vtw-header-upgrade { padding: 0 4px !important; }
+  .vtw-app-header .vtw-upgrade-label-mobile { font-size: 9px !important; }
+  .vtw-app-header .vtw-header-logout svg,
+  .vtw-app-header .vtw-header-refresh svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+  .vtw-app-header .vtw-account-box {
+    height: 32px !important;
+    padding: 2px 4px !important;
+    gap: 4px !important;
+  }
+  .vtw-app-header .vtw-account-box .vtw-account-avatar,
+  .vtw-app-header .vtw-account-box img {
+    width: 20px !important;
+    height: 20px !important;
+    flex: 0 0 20px !important;
+  }
+  .vtw-app-header .vtw-user-email { font-size: 9px !important; }
+  .vtw-app-header .vtw-app-title-text { font-size: 12px !important; }
+  .vtw-app-header .vtw-app-title-img,
+  .vtw-app-header .vtw-app-title img {
+    width: 22px !important;
+    height: 22px !important;
+    flex: 0 0 22px !important;
+  }
+}
+
+
+/* §5 ─── Desktop override (≥ 769px) ────────────────────────────────────────── */
+@media (min-width: 769px) {
+  textarea.vtw-gemini-keys-input,
+  .vtw-gemini-keys-input {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+    letter-spacing: 0 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  }
+}
