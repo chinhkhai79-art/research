@@ -4815,3 +4815,57 @@
     text-align: left !important;
   }
 }
+
+/* FIX: Video Trending modal shows all information on web and mobile (no square clipping). */
+.vtw-trending-video-card {
+  min-height: 0 !important;
+}
+
+.vtw-trending-video-thumb {
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 150px !important;
+}
+
+.vtw-trending-video-info h4 {
+  display: block !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
+}
+
+@media (max-width: 700px) {
+  .vtw-trending-video-card {
+    display: grid !important;
+    grid-template-columns: minmax(150px, 42%) minmax(0, 1fr) !important;
+    align-items: stretch !important;
+  }
+
+  .vtw-trending-video-thumb {
+    height: 100% !important;
+    min-height: 156px !important;
+    aspect-ratio: auto !important;
+  }
+
+  .vtw-trending-video-info {
+    padding: 12px !important;
+  }
+
+  .vtw-trending-video-info h4 {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .vtw-trending-video-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtw-trending-video-thumb {
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 9 !important;
+  }
+}

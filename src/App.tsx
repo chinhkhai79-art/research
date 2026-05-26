@@ -698,7 +698,8 @@ export default function App() {
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
-  const [geminiModel, setGeminiModel] = useState('gemini-2.5-flash');
+  const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+  const [geminiModel, setGeminiModel] = useState(DEFAULT_GEMINI_MODEL);
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
@@ -1053,8 +1054,10 @@ export default function App() {
       localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextGeminiHistory));
     }
     
-    const savedGeminiModel = localStorage.getItem('youtube_gemini_model');
-    if (savedGeminiModel) setGeminiModel(savedGeminiModel);
+    // Luôn mặc định Gemini 3 Flash Preview sau khi tải lại/làm mới trang.
+    // Người dùng vẫn có thể đổi model trong phiên hiện tại, nhưng reload sẽ quay về mặc định này.
+    localStorage.setItem('youtube_gemini_model', DEFAULT_GEMINI_MODEL);
+    setGeminiModel(DEFAULT_GEMINI_MODEL);
 
     // Khôi phục danh sách key YouTube đã hết quota trong ngày để tự động bỏ qua, không cần xóa thủ công.
     try {
@@ -8283,46 +8286,54 @@ Quy tắc:
                 {modalTrendingVideos.videos.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 font-medium italic">Không tìm thấy video nào.</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
                       <div
                         key={i}
-                        className="vtw-niche-video-card vtw-square-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group aspect-square flex flex-col"
+                        className="vtw-trending-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col"
                       >
-                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="relative h-[48%] bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
-                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
-                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                               {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : ''}
+                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="vtw-trending-video-thumb relative bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
+                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover bg-black group-hover:scale-105 transition-transform duration-500" />
+                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[11px] font-black px-2 py-1 rounded-lg shadow-lg">
+                               {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : 'N/A'}
                             </div>
                             <div className="absolute top-2 left-2 flex gap-1">
-                               <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
-                                  SCORE {v.trendScore}
+                               <div className="bg-orange-600 text-white text-[11px] font-black px-3 py-1.5 rounded-lg shadow-lg border border-orange-400">
+                                  SCORE {v.trendScore || 0}
                                </div>
                             </div>
                          </button>
-                         <div className="p-4">
-                            <h4 className="text-[10px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
-                            <div className="mt-3 bg-gray-50 p-2 rounded-lg">
-                               <div className="flex flex-col mb-2">
-                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
-                                  <span className="text-[10px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
+                         <div className="vtw-trending-video-info p-4 flex-1 min-w-0">
+                            <h4 className="text-[14px] font-black text-gray-900 leading-snug uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
+                            <div className="mt-3 bg-gray-50 p-3 rounded-xl">
+                               <div className="flex flex-col mb-3 min-w-0">
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
+                                  <span className="text-[13px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
                                </div>
-                               <div className="grid grid-cols-3 gap-2" style={isMobileViewport ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
+                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
-                                     <span className="text-[10px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
+                                     <span className="text-[13px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Likes</span>
-                                     <span className="text-[10px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Likes</span>
+                                     <span className="text-[13px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Comments</span>
-                                     <span className="text-[10px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Comments</span>
+                                     <span className="text-[13px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">VPH</span>
-                                     <span className="text-[10px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">VPH</span>
+                                     <span className="text-[13px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Trend Score</span>
+                                     <span className="text-[13px] font-black text-orange-600">{v.trendScore || 0}/100</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Ngày đăng</span>
+                                     <span className="text-[13px] font-black text-gray-800">{v.snippet.publishedAt ? new Date(v.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
                                   </div>
                                </div>
                             </div>
