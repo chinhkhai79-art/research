@@ -2759,36 +2759,47 @@ JSON mẫu:
     const channelCountry = baseChannels.find((c: any) => c?.snippet?.country)?.snippet?.country;
     const regionCode = String(channelCountry || nicheRegion || config.region || 'VN').toUpperCase();
     const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Giảm tải API riêng cho khối GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH:
+    // - Không gọi nhiều search API cùng lúc.
+    // - Chỉ dùng vài seed mạnh nhất, mỗi seed lấy ít video hơn.
+    // - Chèn delay ngẫu nhiên 300–700ms giữa các request để tránh dồn quota/rate limit.
+    const suggestionDelay = () => new Promise(resolve => setTimeout(resolve, 300 + Math.floor(Math.random() * 401)));
+    const limitedYoutubeFetch = async (endpoint: string, params: Record<string, any>) => {
+      await suggestionDelay();
+      return youtubeFetch(endpoint, params);
+    };
+
     const seedList = Array.from(new Set([
       seedKeyword,
-      ...topKeywords.slice(0, 8).map((k: any) => k.text)
-    ].map(v => cleanNichePhrase(v)).filter(Boolean))).slice(0, 6);
+      ...topKeywords.slice(0, 4).map((k: any) => k.text)
+    ].map(v => cleanNichePhrase(v)).filter(Boolean))).slice(0, 4);
 
     const fetchSuggestionVideos = async (publishedAfter?: string) => {
       let searchItems: any[] = [];
       for (const seed of seedList) {
-        const res = await youtubeFetch('search', {
+        const res = await limitedYoutubeFetch('search', {
           q: seed,
           type: 'video',
           regionCode,
           relevanceLanguage: (REGION_SEARCH_CONFIG as any)[regionCode]?.relevanceLanguage || undefined,
           publishedAfter,
-          maxResults: 20,
+          maxResults: 10,
           order: 'viewCount'
         });
         if (res?.items) searchItems = [...searchItems, ...res.items];
       }
-      const ids = Array.from(new Set(searchItems.map((item: any) => item?.id?.videoId).filter(Boolean))).slice(0, 80);
+      const ids = Array.from(new Set(searchItems.map((item: any) => item?.id?.videoId).filter(Boolean))).slice(0, 30);
       if (!ids.length) return { videos: [], channels: [] };
       let detailedVideos: any[] = [];
       for (let i = 0; i < ids.length; i += 50) {
-        const res = await youtubeFetch('videos', { id: ids.slice(i, i + 50).join(','), part: 'snippet,statistics,contentDetails' });
+        const res = await limitedYoutubeFetch('videos', { id: ids.slice(i, i + 50).join(','), part: 'snippet,statistics,contentDetails' });
         if (res?.items) detailedVideos = [...detailedVideos, ...res.items];
       }
-      const channelIds = Array.from(new Set(detailedVideos.map((v: any) => v?.snippet?.channelId).filter(Boolean)));
+      const channelIds = Array.from(new Set(detailedVideos.map((v: any) => v?.snippet?.channelId).filter(Boolean))).slice(0, 30);
       let channels: any[] = [];
       for (let i = 0; i < channelIds.length; i += 50) {
-        const res = await youtubeFetch('channels', { id: channelIds.slice(i, i + 50).join(','), part: 'snippet,statistics,topicDetails' });
+        const res = await limitedYoutubeFetch('channels', { id: channelIds.slice(i, i + 50).join(','), part: 'snippet,statistics,topicDetails' });
         if (res?.items) channels = [...channels, ...res.items];
       }
       const channelsMap = new Map(channels.map((c: any) => [c.id, c]));
