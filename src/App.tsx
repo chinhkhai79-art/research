@@ -2644,33 +2644,56 @@ JSON mẫu:
       const cleaned = cleanNichePhrase(tag.replace('#', ''));
       if (cleaned) phrases.push(cleaned);
     });
-    const seed = cleanNichePhrase(seedKeyword);
-    if (seed) phrases.push(seed);
-    return Array.from(new Set(phrases));
+    const seed = cleanNichePhrase(seedKeyword).toLowerCase();
+    return Array.from(new Set(phrases))
+      .filter((phrase) => phrase.toLowerCase() !== seed)
+      .filter((phrase) => phrase.split(/\s+/).length <= 8);
   };
 
   const buildSuggestionsFromProcessedVideos = (videos: any[], seedKeyword: string, channelList: any[] = [], metaOverride: any = {}) => {
     const channelCountry = channelList.find((c: any) => c?.snippet?.country)?.snippet?.country;
     const regionCode = String(metaOverride.regionCode || channelCountry || nicheRegion || config.region || 'VN').toUpperCase();
-    const titleTexts = videos.slice(0, 30).map((v: any) => v?.snippet?.title || '');
+    const titleTexts = videos.slice(0, 50).map((v: any) => v?.snippet?.title || '');
     const detectedLanguage = metaOverride.language || detectNicheLanguage(titleTexts);
+    const baseChannelIds = new Set((metaOverride.baseChannelIds || []).map((id: any) => String(id)));
+    const channelTitleMap = new Map(channelList.map((c: any) => [c.id, c?.snippet?.title || c.id]));
+    const seedText = cleanNichePhrase(seedKeyword).toLowerCase();
     const bucket = new Map<string, any>();
 
-    videos.forEach((video: any) => {
-      extractNicheCandidatePhrases(video, seedKeyword).forEach((phrase) => {
-        const key = phrase.toLowerCase();
-        const current = bucket.get(key) || { text: phrase, relatedVideos: [], totalViews: 0, totalVPH: 0, channels: new Set<string>() };
-        const views = Number(video?.statistics?.viewCount || 0);
-        current.relatedVideos.push(video);
-        current.totalViews += views;
-        current.totalVPH += Number(video?.vph || 0);
-        if (video?.snippet?.channelId) current.channels.add(video.snippet.channelId);
-        bucket.set(key, current);
-      });
-    });
+    videos
+      .filter((video: any) => video?.id && video?.snippet?.channelId)
+      .sort((a: any, b: any) => (Number(b.vph || 0) + Number(b.trendScore || 0) * 20) - (Number(a.vph || 0) + Number(a.trendScore || 0) * 20))
+      .forEach((video: any) => {
+        const channelId = String(video?.snippet?.channelId || '');
+        const phrases = extractNicheCandidatePhrases(video, seedKeyword)
+          .filter((phrase) => {
+            const key = phrase.toLowerCase();
+            if (!key || key === seedText) return false;
+            if (key.length < 3 || key.length > 70) return false;
+            if (/^(official|channel|shorts|video|youtube|subscribe|like|views|watch)$/i.test(key)) return false;
+            return true;
+          })
+          .slice(0, 8);
 
-    const suggestions = Array.from(bucket.values()).map((item: any) => {
+        phrases.forEach((phrase) => {
+          const key = phrase.toLowerCase();
+          const current = bucket.get(key) || { text: phrase, relatedVideos: [], totalViews: 0, totalVPH: 0, channels: new Set<string>(), externalChannels: new Set<string>() };
+          const views = Number(video?.statistics?.viewCount || 0);
+          current.relatedVideos.push(video);
+          current.totalViews += views;
+          current.totalVPH += Number(video?.vph || 0);
+          current.channels.add(channelId);
+          if (!baseChannelIds.has(channelId)) current.externalChannels.add(channelId);
+          bucket.set(key, current);
+        });
+      });
+
+    const allSuggestions = Array.from(bucket.values()).map((item: any) => {
       const uniqueVideos = Array.from(new Map(item.relatedVideos.map((v: any) => [v.id, v])).values()) as any[];
+      const sortedVideos = uniqueVideos
+        .sort((a: any, b: any) => (Number(b.trendScore || 0) + Number(b.vph || 0) / 100) - (Number(a.trendScore || 0) + Number(a.vph || 0) / 100));
+      const primaryVideo = sortedVideos.find((v: any) => !baseChannelIds.has(String(v?.snippet?.channelId || ''))) || sortedVideos[0];
+      const primaryChannelId = String(primaryVideo?.snippet?.channelId || '');
       const avgVPH = item.totalVPH / Math.max(1, uniqueVideos.length);
       const trendVideoCount = uniqueVideos.filter((v: any) => Number(v.trendScore || 0) >= 60 || Number(v.vph || 0) >= avgVPH).length;
       const channelCount = item.channels.size || 1;
@@ -2685,14 +2708,39 @@ JSON mẫu:
         trendVideoCount,
         potential,
         competition,
-        relatedVideos: uniqueVideos
-          .sort((a: any, b: any) => (Number(b.trendScore || 0) + Number(b.vph || 0) / 100) - (Number(a.trendScore || 0) + Number(a.vph || 0) / 100))
-          .slice(0, 6)
+        primaryChannelId,
+        primaryChannelTitle: primaryVideo?.snippet?.channelTitle || channelTitleMap.get(primaryChannelId) || 'Kênh liên quan',
+        isFromExternalChannel: !baseChannelIds.has(primaryChannelId),
+        relatedVideos: sortedVideos.slice(0, 6)
       };
     })
       .filter((item: any) => item.relatedVideos.length >= 1)
-      .sort((a: any, b: any) => b.score - a.score || b.avgVPH - a.avgVPH)
-      .slice(0, 20);
+      .sort((a: any, b: any) => Number(b.isFromExternalChannel) - Number(a.isFromExternalChannel) || b.score - a.score || b.avgVPH - a.avgVPH);
+
+    const selected: any[] = [];
+    const usedChannels = new Set<string>();
+    const usedKeywords = new Set<string>();
+
+    const pushUnique = (item: any, requireNewChannel: boolean) => {
+      const keywordKey = String(item.keyword || '').toLowerCase();
+      const channelKey = String(item.primaryChannelId || '');
+      if (!keywordKey || usedKeywords.has(keywordKey)) return false;
+      if (requireNewChannel && channelKey && usedChannels.has(channelKey)) return false;
+      selected.push(item);
+      usedKeywords.add(keywordKey);
+      if (channelKey) usedChannels.add(channelKey);
+      return true;
+    };
+
+    allSuggestions.filter((item: any) => item.isFromExternalChannel).forEach((item: any) => {
+      if (selected.length < 10) pushUnique(item, true);
+    });
+    allSuggestions.forEach((item: any) => {
+      if (selected.length < 10) pushUnique(item, true);
+    });
+    allSuggestions.forEach((item: any) => {
+      if (selected.length < 10) pushUnique(item, false);
+    });
 
     return {
       meta: {
@@ -2703,7 +2751,7 @@ JSON mẫu:
         timeframe: metaOverride.timeframe || '3 tháng gần nhất',
         sampleVideos: videos.length
       },
-      suggestions
+      suggestions: selected.slice(0, 10)
     };
   };
 
@@ -2774,12 +2822,12 @@ JSON mẫu:
         timeframe = 'Toàn thời gian';
       }
       if (!videos.length) {
-        return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có' });
+        return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có', baseChannelIds: baseChannels.map((c: any) => c.id) });
       }
-      return buildSuggestionsFromProcessedVideos(videos, seedKeyword, channels, { regionCode, timeframe });
+      return buildSuggestionsFromProcessedVideos(videos, seedKeyword, channels, { regionCode, timeframe, baseChannelIds: baseChannels.map((c: any) => c.id) });
     } catch (error) {
       console.warn('buildChannelTopicSuggestions fallback:', error);
-      return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có' });
+      return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có', baseChannelIds: baseChannels.map((c: any) => c.id) });
     }
   };
 
@@ -6986,103 +7034,6 @@ Quy tắc:
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
                    <div className="space-y-8">
-                      <div className="bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border border-emerald-100 rounded-3xl p-5 md:p-7 shadow-sm">
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                              <Hash size={26} strokeWidth={3} />
-                            </div>
-                            <div>
-                              <h3 className="text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-tight">GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH</h3>
-                              <p className="text-[11px] md:text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-1">Lấy chủ đề hiện tại, khu vực, ngôn ngữ và video liên quan theo dữ liệu thật.</p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[280px]">
-                            {[
-                              { label: 'Chủ đề', value: nicheResults.suggestionMeta?.currentTopic || nicheResults.summary.keyword },
-                              { label: 'Khu vực', value: nicheResults.suggestionMeta?.regionLabel || getRegionLabel(nicheRegion) },
-                              { label: 'Ngôn ngữ', value: nicheResults.suggestionMeta?.language || 'Tự động' },
-                              { label: 'Thời gian', value: nicheResults.suggestionMeta?.timeframe || '3 tháng gần nhất' },
-                            ].map((meta: any, idx: number) => (
-                              <div key={idx} className="bg-white/80 border border-emerald-100 rounded-xl px-3 py-2 shadow-sm">
-                                <div className="text-[8px] font-black uppercase text-slate-400 tracking-wider">{meta.label}</div>
-                                <div className="text-[11px] font-black text-slate-900 truncate" title={meta.value}>{meta.value}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Số ngách</div><div className="text-2xl font-black text-slate-950">{nicheResults.suggestions?.length || 0}</div></div>
-                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">VPH cao nhất</div><div className="text-2xl font-black text-blue-600">{formatVNNumber(Math.round(Math.max(0, ...(nicheResults.suggestions || []).map((x: any) => Number(x.avgVPH || 0)))))}</div></div>
-                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Tổng view mẫu</div><div className="text-2xl font-black text-slate-950">{formatVNNumber((nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + Number(x.totalViews || 0), 0))}</div></div>
-                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Video liên quan</div><div className="text-2xl font-black text-slate-950">{(nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + (x.relatedVideos?.length || 0), 0)}</div></div>
-                        </div>
-
-                        {(!nicheResults.suggestions || nicheResults.suggestions.length === 0) ? (
-                          <div className="bg-white/70 rounded-2xl border border-dashed border-emerald-200 py-10 text-center text-slate-400 font-bold">Chưa có dữ liệu gợi ý ngách phù hợp. Hãy thử tăng số lượng phân tích hoặc đổi từ khóa.</div>
-                        ) : (
-                          <div className="space-y-6">
-                            {nicheResults.suggestions.slice(0, 20).map((ngach: any, idx: number) => (
-                              <div key={`${ngach.keyword}-${idx}`} className="bg-white/90 rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
-                                <div className="p-4 md:p-5 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                                  <div className="flex items-start gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[12px] font-black shrink-0">#{idx + 1}</div>
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="text-xl md:text-2xl font-black text-slate-950 truncate" title={ngach.keyword}>{ngach.keyword}</h4>
-                                        <button onClick={() => navigator.clipboard?.writeText(ngach.keyword)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center shrink-0" title="Copy từ khóa"><Copy size={15} /></button>
-                                      </div>
-                                      <p className="text-[11px] font-bold text-slate-400 mt-1">Ngách lấy từ video/kênh liên quan cùng chủ đề.</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-black">Tiềm năng: {ngach.potential}</span>
-                                    <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-[11px] font-black">Cạnh tranh: {ngach.competition}</span>
-                                  </div>
-                                </div>
-                                <div className="px-4 md:px-5 pb-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Điểm</div><div className="text-xl font-black text-emerald-600">{ngach.score}/100</div></div>
-                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">VPH TB</div><div className="text-xl font-black text-blue-600">{formatVNNumber(Math.round(ngach.avgVPH || 0))}</div></div>
-                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Tổng view</div><div className="text-xl font-black text-slate-950">{formatVNNumber(ngach.totalViews || 0)}</div></div>
-                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Video trend</div><div className="text-xl font-black text-orange-600">{ngach.trendVideoCount || 0}</div></div>
-                                </div>
-                                <div className="border-t border-emerald-50 p-4 md:p-5 bg-emerald-50/20">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="text-[11px] font-black uppercase text-slate-400 tracking-widest">Video liên quan</div>
-                                    <div className="text-[10px] font-bold text-slate-400">Hiển thị tối đa 6 video</div>
-                                  </div>
-                                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                                    {(ngach.relatedVideos || []).map((v: any) => (
-                                      <div key={v.id} className="bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
-                                        <div className="relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
-                                          <img src={v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url} className="w-full h-full object-cover" />
-                                          <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video trực tiếp trong app"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                          <h5 className="text-[13px] font-black text-slate-950 line-clamp-2 leading-tight" title={v.snippet?.title}>{v.snippet?.title}</h5>
-                                          <div className="text-[10px] font-bold text-slate-500 mt-1 truncate">{v.snippet?.channelTitle}</div>
-                                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[10px] font-black">
-                                            <span>Views: <b>{formatVNNumber(Number(v.statistics?.viewCount || 0))}</b></span>
-                                            <span className="text-blue-600">VPH: {formatVNNumber(Math.round(v.vph || 0))}</span>
-                                            <span className={(v.trendScore || 0) >= 70 ? 'text-emerald-600' : 'text-orange-600'}>Score: {v.trendScore || 0}</span>
-                                            <span className="truncate text-slate-500">{formatDetailedDate(v.snippet?.publishedAt)}</span>
-                                          </div>
-                                          <div className="flex flex-wrap gap-2 mt-3">
-                                            <button onClick={() => setInlineVideoId(v.id)} className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-900 hover:text-white text-[10px] font-black transition-all flex items-center gap-1"><Play size={12} /> Xem</button>
-                                            <button onClick={() => analyzeVideo(v.id)} className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-[10px] font-black transition-all">Phân tích video này</button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
                       {nicheResults.channels.map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
@@ -7141,6 +7092,104 @@ Quy tắc:
                             </div>
                          </div>
                       ))}
+                      <div className="bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border border-emerald-100 rounded-3xl p-5 md:p-7 shadow-sm">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <Hash size={26} strokeWidth={3} />
+                            </div>
+                            <div>
+                              <h3 className="text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-tight">GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH</h3>
+                              <p className="text-[11px] md:text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-1">Lấy chủ đề hiện tại, khu vực, ngôn ngữ và video liên quan theo dữ liệu thật.</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[280px]">
+                            {[
+                              { label: 'Chủ đề', value: nicheResults.suggestionMeta?.currentTopic || nicheResults.summary.keyword },
+                              { label: 'Khu vực', value: nicheResults.suggestionMeta?.regionLabel || getRegionLabel(nicheRegion) },
+                              { label: 'Ngôn ngữ', value: nicheResults.suggestionMeta?.language || 'Tự động' },
+                              { label: 'Thời gian', value: nicheResults.suggestionMeta?.timeframe || '3 tháng gần nhất' },
+                            ].map((meta: any, idx: number) => (
+                              <div key={idx} className="bg-white/80 border border-emerald-100 rounded-xl px-3 py-2 shadow-sm">
+                                <div className="text-[8px] font-black uppercase text-slate-400 tracking-wider">{meta.label}</div>
+                                <div className="text-[11px] font-black text-slate-900 truncate" title={meta.value}>{meta.value}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Số ngách</div><div className="text-2xl font-black text-slate-950">{nicheResults.suggestions?.length || 0}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">VPH cao nhất</div><div className="text-2xl font-black text-blue-600">{formatVNNumber(Math.round(Math.max(0, ...(nicheResults.suggestions || []).map((x: any) => Number(x.avgVPH || 0)))))}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Tổng view mẫu</div><div className="text-2xl font-black text-slate-950">{formatVNNumber((nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + Number(x.totalViews || 0), 0))}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Video liên quan</div><div className="text-2xl font-black text-slate-950">{(nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + (x.relatedVideos?.length || 0), 0)}</div></div>
+                        </div>
+
+                        {(!nicheResults.suggestions || nicheResults.suggestions.length === 0) ? (
+                          <div className="bg-white/70 rounded-2xl border border-dashed border-emerald-200 py-10 text-center text-slate-400 font-bold">Chưa có dữ liệu gợi ý ngách phù hợp. Hãy thử tăng số lượng phân tích hoặc đổi từ khóa.</div>
+                        ) : (
+                          <div className="space-y-6">
+                            {nicheResults.suggestions.slice(0, 10).map((ngach: any, idx: number) => (
+                              <div key={`${ngach.keyword}-${idx}`} className="bg-white/90 rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
+                                <div className="p-4 md:p-5 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                  <div className="flex items-start gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[12px] font-black shrink-0">#{idx + 1}</div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-xl md:text-2xl font-black text-slate-950 truncate" title={ngach.keyword}>{ngach.keyword}</h4>
+                                        <button onClick={() => navigator.clipboard?.writeText(ngach.keyword)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center shrink-0" title="Copy từ khóa"><Copy size={15} /></button>
+                                      </div>
+                                      <p className="text-[11px] font-bold text-slate-400 mt-1">Ngách lấy ưu tiên từ kênh khác cùng chủ đề. <span className="text-blue-600">Nguồn: {ngach.primaryChannelTitle}</span></p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-black">Tiềm năng: {ngach.potential}</span>
+                                    <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-[11px] font-black">Cạnh tranh: {ngach.competition}</span>
+                                  </div>
+                                </div>
+                                <div className="px-4 md:px-5 pb-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Điểm</div><div className="text-xl font-black text-emerald-600">{ngach.score}/100</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">VPH TB</div><div className="text-xl font-black text-blue-600">{formatVNNumber(Math.round(ngach.avgVPH || 0))}</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Tổng view</div><div className="text-xl font-black text-slate-950">{formatVNNumber(ngach.totalViews || 0)}</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Video trend</div><div className="text-xl font-black text-orange-600">{ngach.trendVideoCount || 0}</div></div>
+                                </div>
+                                <div className="border-t border-emerald-50 p-4 md:p-5 bg-emerald-50/20">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="text-[11px] font-black uppercase text-slate-400 tracking-widest">Video liên quan</div>
+                                    <div className="text-[10px] font-bold text-slate-400">Hiển thị tối đa 6 video</div>
+                                  </div>
+                                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                    {(ngach.relatedVideos || []).map((v: any) => (
+                                      <div key={v.id} className="bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
+                                        <div className="relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                                          <img src={v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url} className="w-full h-full object-cover" />
+                                          <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video trực tiếp trong app"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <h5 className="text-[13px] font-black text-slate-950 line-clamp-2 leading-tight" title={v.snippet?.title}>{v.snippet?.title}</h5>
+                                          <div className="text-[10px] font-bold text-slate-500 mt-1 truncate">{v.snippet?.channelTitle}</div>
+                                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[10px] font-black">
+                                            <span>Views: <b>{formatVNNumber(Number(v.statistics?.viewCount || 0))}</b></span>
+                                            <span className="text-blue-600">VPH: {formatVNNumber(Math.round(v.vph || 0))}</span>
+                                            <span className={(v.trendScore || 0) >= 70 ? 'text-emerald-600' : 'text-orange-600'}>Score: {v.trendScore || 0}</span>
+                                            <span className="truncate text-slate-500">{formatDetailedDate(v.snippet?.publishedAt)}</span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-2 mt-3">
+                                            <button onClick={() => setInlineVideoId(v.id)} className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-900 hover:text-white text-[10px] font-black transition-all flex items-center gap-1"><Play size={12} /> Xem</button>
+                                            <button onClick={() => analyzeVideo(v.id)} className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-[10px] font-black transition-all">Phân tích video này</button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+
                    </div>
                   </div>
                 )}
