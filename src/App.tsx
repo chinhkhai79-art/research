@@ -56,7 +56,8 @@ import {
   Bot,
   Flame,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  Hash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -939,6 +940,8 @@ export default function App() {
     shorts: any[];
     channels: any[];
     thumbnails: any[];
+    suggestions?: any[];
+    suggestionMeta?: any;
   } | null>(null);
   const [nicheActiveSubTab, setNicheActiveSubTab] = useState('videos');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
@@ -2592,6 +2595,194 @@ JSON mẫu:
     }
   };
 
+  const detectNicheLanguage = (texts: string[] = []) => {
+    const sample = texts.join(' ').toLowerCase();
+    if (!sample.trim()) return 'Tự động';
+    const vietnameseMarks = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+    if (vietnameseMarks.test(sample)) return 'Tiếng Việt';
+    if (/^[\x00-\x7F\s\p{P}\p{N}]+$/u.test(sample)) return 'Tiếng Anh';
+    return 'Tự động';
+  };
+
+  const getRegionLabel = (code?: string) => {
+    const map: Record<string, string> = {
+      VN: 'Việt Nam', US: 'Hoa Kỳ', GB: 'Anh', CA: 'Canada', AU: 'Úc', IN: 'Ấn Độ', JP: 'Nhật Bản', KR: 'Hàn Quốc', TH: 'Thái Lan', ID: 'Indonesia', PH: 'Philippines', MY: 'Malaysia', SG: 'Singapore', FR: 'Pháp', DE: 'Đức', BR: 'Brazil', MX: 'Mexico'
+    };
+    const safe = String(code || nicheRegion || config.region || 'VN').toUpperCase();
+    return map[safe] || safe;
+  };
+
+  const cleanNichePhrase = (value: any) => {
+    const text = String(value || '')
+      .replace(/https?:\/\/\S+/gi, ' ')
+      .replace(/[|•]/g, ' ')
+      .replace(/[#@]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!text || text.length < 3 || text.length > 80) return '';
+    const banned = /^(the|and|for|you|your|this|that|with|from|official|video|shorts|youtube|new|full|part|clip|subscribe|like|share|kênh|chủ đề|ngách)$/i;
+    if (banned.test(text)) return '';
+    if (/^\d+$/.test(text)) return '';
+    return text;
+  };
+
+  const extractNicheCandidatePhrases = (video: any, seedKeyword: string) => {
+    const phrases: string[] = [];
+    const snippet = video?.snippet || {};
+    const title = String(snippet.title || '');
+    const tags = Array.isArray(snippet.tags) ? snippet.tags : [];
+    tags.forEach((tag: string) => {
+      const cleaned = cleanNichePhrase(tag);
+      if (cleaned) phrases.push(cleaned);
+    });
+    title.split(/[-–—:;,.!?()[\]{}]+/g).forEach(part => {
+      const cleaned = cleanNichePhrase(part);
+      if (cleaned && cleaned.split(/\s+/).length >= 2) phrases.push(cleaned);
+    });
+    const hashtagMatches = title.match(/#[\p{L}\p{N}_-]+/gu) || [];
+    hashtagMatches.forEach(tag => {
+      const cleaned = cleanNichePhrase(tag.replace('#', ''));
+      if (cleaned) phrases.push(cleaned);
+    });
+    const seed = cleanNichePhrase(seedKeyword);
+    if (seed) phrases.push(seed);
+    return Array.from(new Set(phrases));
+  };
+
+  const buildSuggestionsFromProcessedVideos = (videos: any[], seedKeyword: string, channelList: any[] = [], metaOverride: any = {}) => {
+    const channelCountry = channelList.find((c: any) => c?.snippet?.country)?.snippet?.country;
+    const regionCode = String(metaOverride.regionCode || channelCountry || nicheRegion || config.region || 'VN').toUpperCase();
+    const titleTexts = videos.slice(0, 30).map((v: any) => v?.snippet?.title || '');
+    const detectedLanguage = metaOverride.language || detectNicheLanguage(titleTexts);
+    const bucket = new Map<string, any>();
+
+    videos.forEach((video: any) => {
+      extractNicheCandidatePhrases(video, seedKeyword).forEach((phrase) => {
+        const key = phrase.toLowerCase();
+        const current = bucket.get(key) || { text: phrase, relatedVideos: [], totalViews: 0, totalVPH: 0, channels: new Set<string>() };
+        const views = Number(video?.statistics?.viewCount || 0);
+        current.relatedVideos.push(video);
+        current.totalViews += views;
+        current.totalVPH += Number(video?.vph || 0);
+        if (video?.snippet?.channelId) current.channels.add(video.snippet.channelId);
+        bucket.set(key, current);
+      });
+    });
+
+    const suggestions = Array.from(bucket.values()).map((item: any) => {
+      const uniqueVideos = Array.from(new Map(item.relatedVideos.map((v: any) => [v.id, v])).values()) as any[];
+      const avgVPH = item.totalVPH / Math.max(1, uniqueVideos.length);
+      const trendVideoCount = uniqueVideos.filter((v: any) => Number(v.trendScore || 0) >= 60 || Number(v.vph || 0) >= avgVPH).length;
+      const channelCount = item.channels.size || 1;
+      const score = Math.min(100, Math.max(1, Math.round((Math.log10(Math.max(10, item.totalViews)) * 9) + (avgVPH / 120) + (trendVideoCount * 5) + (channelCount * 3))));
+      const competition = channelCount >= 10 || uniqueVideos.length >= 16 ? 'Cao' : channelCount >= 5 || uniqueVideos.length >= 8 ? 'Trung bình' : 'Thấp';
+      const potential = score >= 80 ? 'Rất cao' : score >= 65 ? 'Cao' : score >= 45 ? 'Trung bình' : 'Thấp';
+      return {
+        keyword: item.text,
+        score,
+        avgVPH,
+        totalViews: item.totalViews,
+        trendVideoCount,
+        potential,
+        competition,
+        relatedVideos: uniqueVideos
+          .sort((a: any, b: any) => (Number(b.trendScore || 0) + Number(b.vph || 0) / 100) - (Number(a.trendScore || 0) + Number(a.vph || 0) / 100))
+          .slice(0, 6)
+      };
+    })
+      .filter((item: any) => item.relatedVideos.length >= 1)
+      .sort((a: any, b: any) => b.score - a.score || b.avgVPH - a.avgVPH)
+      .slice(0, 20);
+
+    return {
+      meta: {
+        currentTopic: cleanNichePhrase(seedKeyword) || 'Chủ đề hiện tại',
+        regionCode,
+        regionLabel: getRegionLabel(regionCode),
+        language: detectedLanguage,
+        timeframe: metaOverride.timeframe || '3 tháng gần nhất',
+        sampleVideos: videos.length
+      },
+      suggestions
+    };
+  };
+
+  const buildChannelTopicSuggestions = async (seedKeyword: string, baseVideos: any[], baseChannels: any[], topKeywords: any[]) => {
+    const channelCountry = baseChannels.find((c: any) => c?.snippet?.country)?.snippet?.country;
+    const regionCode = String(channelCountry || nicheRegion || config.region || 'VN').toUpperCase();
+    const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const seedList = Array.from(new Set([
+      seedKeyword,
+      ...topKeywords.slice(0, 8).map((k: any) => k.text)
+    ].map(v => cleanNichePhrase(v)).filter(Boolean))).slice(0, 6);
+
+    const fetchSuggestionVideos = async (publishedAfter?: string) => {
+      let searchItems: any[] = [];
+      for (const seed of seedList) {
+        const res = await youtubeFetch('search', {
+          q: seed,
+          type: 'video',
+          regionCode,
+          relevanceLanguage: (REGION_SEARCH_CONFIG as any)[regionCode]?.relevanceLanguage || undefined,
+          publishedAfter,
+          maxResults: 20,
+          order: 'viewCount'
+        });
+        if (res?.items) searchItems = [...searchItems, ...res.items];
+      }
+      const ids = Array.from(new Set(searchItems.map((item: any) => item?.id?.videoId).filter(Boolean))).slice(0, 80);
+      if (!ids.length) return { videos: [], channels: [] };
+      let detailedVideos: any[] = [];
+      for (let i = 0; i < ids.length; i += 50) {
+        const res = await youtubeFetch('videos', { id: ids.slice(i, i + 50).join(','), part: 'snippet,statistics,contentDetails' });
+        if (res?.items) detailedVideos = [...detailedVideos, ...res.items];
+      }
+      const channelIds = Array.from(new Set(detailedVideos.map((v: any) => v?.snippet?.channelId).filter(Boolean)));
+      let channels: any[] = [];
+      for (let i = 0; i < channelIds.length; i += 50) {
+        const res = await youtubeFetch('channels', { id: channelIds.slice(i, i + 50).join(','), part: 'snippet,statistics,topicDetails' });
+        if (res?.items) channels = [...channels, ...res.items];
+      }
+      const channelsMap = new Map(channels.map((c: any) => [c.id, c]));
+      const processed = detailedVideos.map((v: any) => {
+        const chan = channelsMap.get(v.snippet.channelId);
+        const stats = v.statistics || {};
+        const views = parseInt(stats.viewCount) || 0;
+        const vph = calculateVPH(views, v.snippet.publishedAt);
+        return {
+          ...v,
+          vph,
+          trendScore: calculateTrendScore(v, chan),
+          channelStats: chan?.statistics || {},
+          channelSubscriberCount: parseInt(chan?.statistics?.subscriberCount) || 0,
+          engagementRate: calculateEngagementRate(stats),
+          viewPerDay: views / Math.max(1, (Date.now() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
+        };
+      });
+      return { videos: processed, channels };
+    };
+
+    try {
+      setStatus('Đang tạo Gợi ý ngách & chủ đề kênh từ dữ liệu 3 tháng gần nhất...');
+      let { videos, channels } = await fetchSuggestionVideos(threeMonthsAgo);
+      let timeframe = '3 tháng gần nhất';
+      if (!videos.length) {
+        setStatus('3 tháng gần nhất chưa có dữ liệu phù hợp. Đang quét mở rộng toàn thời gian...');
+        const fallback = await fetchSuggestionVideos(undefined);
+        videos = fallback.videos;
+        channels = fallback.channels;
+        timeframe = 'Toàn thời gian';
+      }
+      if (!videos.length) {
+        return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có' });
+      }
+      return buildSuggestionsFromProcessedVideos(videos, seedKeyword, channels, { regionCode, timeframe });
+    } catch (error) {
+      console.warn('buildChannelTopicSuggestions fallback:', error);
+      return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có' });
+    }
+  };
+
     const runNicheResearch = async (customKeyword?: string) => {
     let kw = (customKeyword || nicheInput || '').trim();
     if (!kw) {
@@ -2678,7 +2869,7 @@ JSON mẫu:
         const chunk = channelIds.slice(i, i + 50);
         const res = await youtubeFetch('channels', {
           id: chunk.join(','),
-          part: 'snippet,statistics'
+          part: 'snippet,statistics,topicDetails'
         });
         if (res.items) allChannels = [...allChannels, ...res.items];
       }
@@ -2787,11 +2978,15 @@ JSON mẫu:
         totalViews: processedVideos.reduce((acc, curr) => acc + (parseInt(curr.statistics.viewCount) || 0), 0)
       };
 
+      const suggestionData = await buildChannelTopicSuggestions(kw, processedVideos, allChannels, topKeywords);
+
       const finalResults = {
         summary,
         keywords: topKeywords,
         videos: processedVideos,
         shorts,
+        suggestions: suggestionData.suggestions,
+        suggestionMeta: suggestionData.meta,
         channels: allChannels
           .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub || videosForProcessing.length === 0)
           .map((c: any) => {
@@ -6790,7 +6985,104 @@ Quy tắc:
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
-                   <div className="space-y-4">
+                   <div className="space-y-8">
+                      <div className="bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border border-emerald-100 rounded-3xl p-5 md:p-7 shadow-sm">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <Hash size={26} strokeWidth={3} />
+                            </div>
+                            <div>
+                              <h3 className="text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-tight">GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH</h3>
+                              <p className="text-[11px] md:text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-1">Lấy chủ đề hiện tại, khu vực, ngôn ngữ và video liên quan theo dữ liệu thật.</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[280px]">
+                            {[
+                              { label: 'Chủ đề', value: nicheResults.suggestionMeta?.currentTopic || nicheResults.summary.keyword },
+                              { label: 'Khu vực', value: nicheResults.suggestionMeta?.regionLabel || getRegionLabel(nicheRegion) },
+                              { label: 'Ngôn ngữ', value: nicheResults.suggestionMeta?.language || 'Tự động' },
+                              { label: 'Thời gian', value: nicheResults.suggestionMeta?.timeframe || '3 tháng gần nhất' },
+                            ].map((meta: any, idx: number) => (
+                              <div key={idx} className="bg-white/80 border border-emerald-100 rounded-xl px-3 py-2 shadow-sm">
+                                <div className="text-[8px] font-black uppercase text-slate-400 tracking-wider">{meta.label}</div>
+                                <div className="text-[11px] font-black text-slate-900 truncate" title={meta.value}>{meta.value}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Số ngách</div><div className="text-2xl font-black text-slate-950">{nicheResults.suggestions?.length || 0}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">VPH cao nhất</div><div className="text-2xl font-black text-blue-600">{formatVNNumber(Math.round(Math.max(0, ...(nicheResults.suggestions || []).map((x: any) => Number(x.avgVPH || 0)))))}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Tổng view mẫu</div><div className="text-2xl font-black text-slate-950">{formatVNNumber((nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + Number(x.totalViews || 0), 0))}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Video liên quan</div><div className="text-2xl font-black text-slate-950">{(nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + (x.relatedVideos?.length || 0), 0)}</div></div>
+                        </div>
+
+                        {(!nicheResults.suggestions || nicheResults.suggestions.length === 0) ? (
+                          <div className="bg-white/70 rounded-2xl border border-dashed border-emerald-200 py-10 text-center text-slate-400 font-bold">Chưa có dữ liệu gợi ý ngách phù hợp. Hãy thử tăng số lượng phân tích hoặc đổi từ khóa.</div>
+                        ) : (
+                          <div className="space-y-6">
+                            {nicheResults.suggestions.slice(0, 20).map((ngach: any, idx: number) => (
+                              <div key={`${ngach.keyword}-${idx}`} className="bg-white/90 rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
+                                <div className="p-4 md:p-5 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                  <div className="flex items-start gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[12px] font-black shrink-0">#{idx + 1}</div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-xl md:text-2xl font-black text-slate-950 truncate" title={ngach.keyword}>{ngach.keyword}</h4>
+                                        <button onClick={() => navigator.clipboard?.writeText(ngach.keyword)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center shrink-0" title="Copy từ khóa"><Copy size={15} /></button>
+                                      </div>
+                                      <p className="text-[11px] font-bold text-slate-400 mt-1">Ngách lấy từ video/kênh liên quan cùng chủ đề.</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-black">Tiềm năng: {ngach.potential}</span>
+                                    <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-[11px] font-black">Cạnh tranh: {ngach.competition}</span>
+                                  </div>
+                                </div>
+                                <div className="px-4 md:px-5 pb-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Điểm</div><div className="text-xl font-black text-emerald-600">{ngach.score}/100</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">VPH TB</div><div className="text-xl font-black text-blue-600">{formatVNNumber(Math.round(ngach.avgVPH || 0))}</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Tổng view</div><div className="text-xl font-black text-slate-950">{formatVNNumber(ngach.totalViews || 0)}</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Video trend</div><div className="text-xl font-black text-orange-600">{ngach.trendVideoCount || 0}</div></div>
+                                </div>
+                                <div className="border-t border-emerald-50 p-4 md:p-5 bg-emerald-50/20">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="text-[11px] font-black uppercase text-slate-400 tracking-widest">Video liên quan</div>
+                                    <div className="text-[10px] font-bold text-slate-400">Hiển thị tối đa 6 video</div>
+                                  </div>
+                                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                    {(ngach.relatedVideos || []).map((v: any) => (
+                                      <div key={v.id} className="bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
+                                        <div className="relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                                          <img src={v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url} className="w-full h-full object-cover" />
+                                          <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video trực tiếp trong app"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <h5 className="text-[13px] font-black text-slate-950 line-clamp-2 leading-tight" title={v.snippet?.title}>{v.snippet?.title}</h5>
+                                          <div className="text-[10px] font-bold text-slate-500 mt-1 truncate">{v.snippet?.channelTitle}</div>
+                                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[10px] font-black">
+                                            <span>Views: <b>{formatVNNumber(Number(v.statistics?.viewCount || 0))}</b></span>
+                                            <span className="text-blue-600">VPH: {formatVNNumber(Math.round(v.vph || 0))}</span>
+                                            <span className={(v.trendScore || 0) >= 70 ? 'text-emerald-600' : 'text-orange-600'}>Score: {v.trendScore || 0}</span>
+                                            <span className="truncate text-slate-500">{formatDetailedDate(v.snippet?.publishedAt)}</span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-2 mt-3">
+                                            <button onClick={() => setInlineVideoId(v.id)} className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-900 hover:text-white text-[10px] font-black transition-all flex items-center gap-1"><Play size={12} /> Xem</button>
+                                            <button onClick={() => analyzeVideo(v.id)} className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-[10px] font-black transition-all">Phân tích video này</button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {nicheResults.channels.map((c: any, i: number) => (
                          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
                             <div className="flex items-center gap-6">
