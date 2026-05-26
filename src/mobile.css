@@ -99,8 +99,9 @@
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    height: 36px !important;
-    padding: 3px 6px !important;
+    height: auto !important;
+    min-height: 36px !important;
+    padding: 4px 6px !important;
     gap: 5px !important;
     border-radius: 10px !important;
   }
@@ -115,22 +116,25 @@
     flex: 1 1 auto !important;
     overflow: hidden !important;
   }
+  /* Hiện FULL gmail: bỏ ellipsis, cho phép wrap 2 dòng */
   .vtw-app-header .vtw-user-email {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    font-size: 9.5px !important;
-    line-height: 1.1 !important;
-    white-space: nowrap !important;
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    text-overflow: clip !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
   }
   .vtw-app-header .vtw-account-plan {
     font-size: 8px !important;
     line-height: 1 !important;
   }
 
-  /* 3 nút action: luôn hiện, cao 36px, layout hàng ngang */
+  /* 3 nút action: luôn hiện, cao ≥ 36px, layout hàng ngang — stretch theo account box */
   .vtw-app-header .vtw-header-logout,
   .vtw-app-header .vtw-header-upgrade,
   .vtw-app-header .vtw-header-refresh {
@@ -141,7 +145,8 @@
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    height: 36px !important;
+    min-height: 36px !important;
+    height: auto !important;
     padding: 0 4px !important;
     margin: 0 !important;
     border-radius: 10px !important;
@@ -599,14 +604,9 @@
     border-radius: 0 !important;
   }
   /* Gradient phủ ảnh + badge SHORTS giữ ở góc trên ảnh */
+  /* ẨN gradient overlay trên mobile vì image đã object-cover sáng, không cần làm tối */
   .vtw-shorts-card > .absolute.inset-0 {
-    position: absolute !important;
-    inset: 0 !important;
-    height: auto !important;
-    aspect-ratio: 9 / 16 !important;
-    max-height: 320px !important;
-    background: linear-gradient(to top, rgba(0,0,0,.35), transparent 40%) !important;
-    pointer-events: none !important;
+    display: none !important;
   }
   .vtw-shorts-card > .absolute.top-3 {
     position: absolute !important;
@@ -675,7 +675,8 @@
   .vtw-app-header .vtw-header-logout,
   .vtw-app-header .vtw-header-upgrade,
   .vtw-app-header .vtw-header-refresh {
-    height: 32px !important;
+    min-height: 32px !important;
+    height: auto !important;
   }
   .vtw-app-header .vtw-header-upgrade { padding: 0 4px !important; }
   .vtw-app-header .vtw-upgrade-label-mobile { font-size: 9px !important; }
@@ -685,8 +686,9 @@
     height: 15px !important;
   }
   .vtw-app-header .vtw-account-box {
-    height: 32px !important;
-    padding: 2px 4px !important;
+    min-height: 32px !important;
+    height: auto !important;
+    padding: 3px 4px !important;
     gap: 4px !important;
   }
   .vtw-app-header .vtw-account-box .vtw-account-avatar,
@@ -695,7 +697,7 @@
     height: 20px !important;
     flex: 0 0 20px !important;
   }
-  .vtw-app-header .vtw-user-email { font-size: 9px !important; }
+  .vtw-app-header .vtw-user-email { font-size: 8.5px !important; line-height: 1.15 !important; }
   .vtw-app-header .vtw-app-title-text { font-size: 12px !important; }
   .vtw-app-header .vtw-app-title-img,
   .vtw-app-header .vtw-app-title img {

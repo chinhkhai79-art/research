@@ -5237,9 +5237,9 @@ Quy tắc:
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
@@ -5434,15 +5434,6 @@ Quy tắc:
 
                   {/* Group 2 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
-                    <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
-                      <input 
-                        type="number" 
-                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
-                        value={config.maxVideos}
-                        onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
-                      />
-                    </div>
                     <div className="vtw-field-row vtw-row-minsub flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</label>
                       <input
@@ -5461,6 +5452,15 @@ Quy tắc:
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxSub}
                         onChange={(e) => setConfig({ ...config, maxSub: parseRangeNumber(e.target.value, 10000000) })}
+                      />
+                    </div>
+                    <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
+                      <input 
+                        type="number" 
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
+                        value={config.maxVideos}
+                        onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
                       />
                     </div>
                   </div>
@@ -7027,7 +7027,12 @@ Quy tắc:
                                </div>
                                <h4 className="text-[10px] text-white font-bold leading-tight uppercase mb-2 line-clamp-2">{v.snippet.title}</h4>
                                <div className="flex gap-2">
-                                 <a href={`https://youtube.com/shorts/${v.id}`} target="_blank" rel="noreferrer" className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md">Phát Shorts</a>
+                                 <button
+                                    type="button"
+                                    onClick={() => setInlineVideoId(v.id)}
+                                    className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md"
+                                    title="Phát Shorts trực tiếp trong app"
+                                 >Phát Shorts</button>
                                  <button 
                                     onClick={() => analyzeVideo(v.id)}
                                     className="bg-orange-600 hover:bg-orange-700 text-white px-2 rounded-lg text-[10px] font-black uppercase transition-all"
