@@ -4841,27 +4841,20 @@ Quy tắc:
     <div className="vtw-mobile-app min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
       <div className="vtw-app-header bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0" style={isMobileViewport ? { flexBasis: '100%', width: '100%' } : undefined}>
+        <div className="flex items-center justify-between gap-3 vtw-app-header-row">
+          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
             <img
               src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
-              className="w-7 h-7 rounded-full"
+              className="w-7 h-7 rounded-full vtw-app-title-img"
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            {isMobileViewport ? (
-              <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
-            ) : (
-              <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
-            )}
+            <span className="vtw-app-title-text">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
           </h1>
 
-          <div
-            className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px 66px 28px', gap: 3, width: '100%', maxWidth: '100%', flex: '0 0 100%', alignItems: 'stretch', overflow: 'visible' } : undefined}
-          >
+          <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
             {user ? (
-              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
+              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -4869,18 +4862,17 @@ Quy tắc:
                     setShowAccountModal(true);
                   }}
                   className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
-                  style={isMobileViewport ? { gridColumn: 'auto', width: '100%', maxWidth: '100%', minWidth: 0, justifyContent: 'flex-start', paddingLeft: 3, paddingRight: 3, gap: 4 } : undefined}
                   title="Tài khoản & hạn sử dụng"
                 >
                   <img
                     src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
                     alt="avatar"
-                    className="w-6 h-6 rounded-full shadow-sm"
+                    className="w-6 h-6 rounded-full shadow-sm vtw-account-avatar"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="leading-tight text-left" style={isMobileViewport ? { minWidth: 0, flex: '1 1 auto' } : undefined}>
+                  <div className="leading-tight text-left vtw-account-text">
                     <div className="vtw-user-email text-[10px] font-black text-gray-800 whitespace-nowrap" title={user.email || user.displayName || 'Tài khoản'}>{user.email || user.displayName || 'Tài khoản'}</div>
-                    <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                    <div className={`vtw-account-plan text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
                       {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
                     </div>
                   </div>
@@ -4895,8 +4887,8 @@ Quy tắc:
                       console.error('Lỗi đăng xuất:', err);
                     }
                   }}
-                  className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
-                  style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
+                  className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase transition-all active:scale-95"
+                  title="Đăng xuất"
                 >
                   <LogOut size={14} />
                   <span className="vtw-logout-label">Đăng xuất</span>
@@ -4925,32 +4917,31 @@ Quy tắc:
                 target="_blank"
                 rel="noreferrer"
                 className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
-                style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
-                <span>{isMobileViewport ? 'Nâng cấp' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
+                <span className="vtw-upgrade-label-full">{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+                <span className="vtw-upgrade-label-mobile">Nâng cấp</span>
               </a>
             ) : (
               <button
                 onClick={() => setStatus('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
                 className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
-                style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 title="Cần đăng nhập để Nâng cấp Gói"
               >
                 <Crown size={15} />
-                <span>{isMobileViewport ? 'Nâng cấp' : 'NÂNG CẤP GÓI'}</span>
+                <span className="vtw-upgrade-label-full">NÂNG CẤP GÓI</span>
+                <span className="vtw-upgrade-label-mobile">Nâng cấp</span>
               </button>
             )}
 
             <button
               onClick={resetConfig}
               className="vtw-header-refresh vtw-header-icon-btn px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
-              style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
-              <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'LÀM MỚI'}</span>
+              <span className="vtw-refresh-label">LÀM MỚI</span>
             </button>
           </div>
         </div>
@@ -8593,45 +8584,78 @@ Quy tắc:
             }
           }
 
-          /* === FINAL MOBILE HEADER FIX 20260526: full title + all 4 action buttons visible === */
+          /* === FINAL MOBILE HEADER FIX v2 20260526: rewrite with new class names + high specificity === */
+          /* Default (any viewport): only ONE upgrade label visible based on screen size */
+          .vtw-upgrade-label-mobile { display: none; }
+          .vtw-upgrade-label-full { display: inline; }
+
           @media (max-width: 900px) {
-            /* Title: allow wrapping to fit fully, no ellipsis truncation, no whitespace-nowrap */
-            .vtw-title-mobile,
-            .vtw-title-full {
+            /* HIGHER SPECIFICITY: .vtw-app-header chained with action class ensures we beat any flat .vtw-header-actions rule */
+
+            /* Header outer row: wrap so title takes its own line */
+            .vtw-app-header .vtw-app-header-row {
+              display: flex !important;
+              flex-wrap: wrap !important;
+              align-items: center !important;
+              row-gap: 8px !important;
+              column-gap: 6px !important;
+            }
+
+            /* TITLE row: full width, text wraps naturally — NO ellipsis truncation */
+            .vtw-app-header .vtw-app-title {
+              flex: 0 0 100% !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              align-items: center !important;
+              gap: 8px !important;
+              margin: 0 !important;
+            }
+            .vtw-app-header .vtw-app-title-img,
+            .vtw-app-header .vtw-app-title img {
+              width: 26px !important;
+              height: 26px !important;
+              flex: 0 0 26px !important;
+            }
+            .vtw-app-header .vtw-app-title-text {
+              display: inline-block !important;
+              flex: 1 1 auto !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
               white-space: normal !important;
               overflow: visible !important;
               text-overflow: clip !important;
-              max-width: 100% !important;
               word-break: break-word !important;
+              overflow-wrap: anywhere !important;
               font-size: 13px !important;
-              line-height: 1.2 !important;
-              display: inline-block !important;
+              line-height: 1.25 !important;
             }
-            .vtw-app-title {
-              flex: 0 0 100% !important;
-              width: 100% !important;
-              align-items: center !important;
-              min-width: 0 !important;
-              gap: 6px !important;
-            }
-            .vtw-app-title img { width: 24px !important; height: 24px !important; flex: 0 0 24px !important; }
 
-            /* Header actions: 4-column grid → account | logout (icon) | upgrade (icon+text) | refresh (icon) */
-            .vtw-header-actions {
+            /* ACTIONS row: 4-column grid covering full width — account | logout(icon) | upgrade(icon+text) | refresh(icon) */
+            .vtw-app-header .vtw-header-actions {
               display: grid !important;
-              grid-template-columns: minmax(0, 1fr) 36px minmax(76px, auto) 36px !important;
+              grid-template-columns: minmax(0, 1fr) 38px minmax(82px, auto) 38px !important;
               gap: 5px !important;
               width: 100% !important;
               max-width: 100% !important;
+              min-width: 0 !important;
               flex: 0 0 100% !important;
               align-items: stretch !important;
+              justify-content: stretch !important;
               overflow: visible !important;
+              padding: 0 !important;
             }
-            .vtw-user-header-row { display: contents !important; }
+            .vtw-app-header .vtw-user-header-row {
+              display: contents !important;
+            }
 
-            /* Account box stretches to column 1 */
-            .vtw-account-box {
+            /* ACCOUNT BOX: fills column 1, 36px tall */
+            .vtw-app-header .vtw-account-box {
               grid-column: 1 / 2 !important;
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              justify-content: flex-start !important;
               width: 100% !important;
               max-width: 100% !important;
               min-width: 0 !important;
@@ -8639,18 +8663,37 @@ Quy tắc:
               padding: 3px 6px !important;
               gap: 5px !important;
               border-radius: 10px !important;
-              display: flex !important;
-              flex-direction: row !important;
-              justify-content: flex-start !important;
-              align-items: center !important;
             }
-            .vtw-account-box img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
-            .vtw-account-box > div { min-width: 0 !important; flex: 1 1 auto !important; }
-            .vtw-user-email { max-width: 100% !important; font-size: 9px !important; line-height: 1.1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; }
-            .vtw-account-box .text-\[8px\] { font-size: 8px !important; line-height: 1 !important; }
+            .vtw-app-header .vtw-account-box .vtw-account-avatar,
+            .vtw-app-header .vtw-account-box img {
+              width: 22px !important;
+              height: 22px !important;
+              flex: 0 0 22px !important;
+            }
+            .vtw-app-header .vtw-account-text {
+              min-width: 0 !important;
+              flex: 1 1 auto !important;
+              overflow: hidden !important;
+            }
+            .vtw-app-header .vtw-user-email {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              font-size: 9.5px !important;
+              line-height: 1.1 !important;
+              white-space: nowrap !important;
+              overflow: hidden !important;
+              text-overflow: ellipsis !important;
+            }
+            .vtw-app-header .vtw-account-plan {
+              font-size: 8px !important;
+              line-height: 1 !important;
+            }
 
-            /* All 3 action buttons: always visible, fixed height, row layout */
-            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh {
+            /* ALL 3 ACTION BUTTONS: always rendered, fixed 36px height, row layout */
+            .vtw-app-header .vtw-header-logout,
+            .vtw-app-header .vtw-header-upgrade,
+            .vtw-app-header .vtw-header-refresh {
               display: flex !important;
               visibility: visible !important;
               opacity: 1 !important;
@@ -8666,57 +8709,84 @@ Quy tắc:
               align-items: center !important;
               justify-content: center !important;
               gap: 3px !important;
+              white-space: nowrap !important;
             }
-            .vtw-header-logout { grid-column: 2 / 3 !important; }
-            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
-            .vtw-header-refresh { grid-column: 4 / 5 !important; }
+            .vtw-app-header .vtw-header-logout { grid-column: 2 / 3 !important; }
+            .vtw-app-header .vtw-header-upgrade { grid-column: 3 / 4 !important; }
+            .vtw-app-header .vtw-header-refresh { grid-column: 4 / 5 !important; }
 
-            /* Logout & Refresh: ICON-ONLY (hide labels) */
-            .vtw-header-logout span,
-            .vtw-logout-label,
-            .vtw-header-refresh span,
-            .vtw-mobile-hide-label {
+            /* LOGOUT & REFRESH: ICON ONLY — hide labels */
+            .vtw-app-header .vtw-logout-label,
+            .vtw-app-header .vtw-refresh-label,
+            .vtw-app-header .vtw-header-logout span,
+            .vtw-app-header .vtw-header-refresh span,
+            .vtw-app-header .vtw-mobile-hide-label {
               display: none !important;
             }
-            .vtw-header-logout svg,
-            .vtw-header-refresh svg {
-              width: 16px !important;
-              height: 16px !important;
+            .vtw-app-header .vtw-header-logout svg,
+            .vtw-app-header .vtw-header-refresh svg {
+              width: 17px !important;
+              height: 17px !important;
               flex: 0 0 auto !important;
             }
 
-            /* Upgrade: show ICON + "Nâng cấp" text */
-            .vtw-header-upgrade {
-              padding: 0 8px !important;
+            /* UPGRADE: ICON + "Nâng cấp" (mobile label) */
+            .vtw-app-header .vtw-header-upgrade {
+              padding: 0 6px !important;
             }
-            .vtw-header-upgrade svg {
+            .vtw-app-header .vtw-header-upgrade svg {
               width: 14px !important;
               height: 14px !important;
               flex: 0 0 auto !important;
             }
-            .vtw-header-upgrade span {
+            .vtw-app-header .vtw-upgrade-label-full { display: none !important; }
+            .vtw-app-header .vtw-upgrade-label-mobile {
               display: inline !important;
               font-size: 10px !important;
               line-height: 1 !important;
               white-space: nowrap !important;
               font-weight: 900 !important;
+              overflow: hidden !important;
             }
           }
 
-          /* Very narrow phones: shrink slightly but still show all */
+          /* Very narrow phones (≤ 400px): shrink slightly but still show ALL 4 elements */
           @media (max-width: 400px) {
-            .vtw-header-actions {
-              grid-template-columns: minmax(0, 1fr) 32px minmax(64px, auto) 32px !important;
+            .vtw-app-header .vtw-header-actions {
+              grid-template-columns: minmax(0, 1fr) 34px minmax(70px, auto) 34px !important;
               gap: 3px !important;
             }
-            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { height: 32px !important; }
-            .vtw-header-upgrade { padding: 0 5px !important; }
-            .vtw-header-upgrade span { font-size: 9px !important; }
-            .vtw-header-logout svg, .vtw-header-refresh svg { width: 14px !important; height: 14px !important; }
-            .vtw-account-box { height: 32px !important; padding: 2px 4px !important; gap: 4px !important; }
-            .vtw-account-box img { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
-            .vtw-user-email { font-size: 8.5px !important; }
-            .vtw-title-mobile, .vtw-title-full { font-size: 12px !important; line-height: 1.2 !important; }
+            .vtw-app-header .vtw-header-logout,
+            .vtw-app-header .vtw-header-upgrade,
+            .vtw-app-header .vtw-header-refresh {
+              height: 32px !important;
+            }
+            .vtw-app-header .vtw-header-upgrade { padding: 0 4px !important; }
+            .vtw-app-header .vtw-upgrade-label-mobile { font-size: 9px !important; }
+            .vtw-app-header .vtw-header-logout svg,
+            .vtw-app-header .vtw-header-refresh svg {
+              width: 15px !important;
+              height: 15px !important;
+            }
+            .vtw-app-header .vtw-account-box {
+              height: 32px !important;
+              padding: 2px 4px !important;
+              gap: 4px !important;
+            }
+            .vtw-app-header .vtw-account-box .vtw-account-avatar,
+            .vtw-app-header .vtw-account-box img {
+              width: 20px !important;
+              height: 20px !important;
+              flex: 0 0 20px !important;
+            }
+            .vtw-app-header .vtw-user-email { font-size: 9px !important; }
+            .vtw-app-header .vtw-app-title-text { font-size: 12px !important; }
+            .vtw-app-header .vtw-app-title-img,
+            .vtw-app-header .vtw-app-title img {
+              width: 22px !important;
+              height: 22px !important;
+              flex: 0 0 22px !important;
+            }
           }
 
       `}
