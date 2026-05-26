@@ -4869,3 +4869,24 @@
     aspect-ratio: 16 / 9 !important;
   }
 }
+
+/* FIX MOBILE: Spy video table labels must match its 10 real columns.
+   This keeps desktop unchanged and only corrects mobile card labels/value placement. */
+@media (max-width: 768px) {
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(1)::before { content: 'THUMB' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(2)::before { content: 'VIDEO ID' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(3)::before { content: 'PHÂN TÍCH' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(4)::before { content: 'TIÊU ĐỀ' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(5)::before { content: 'NGÀY ĐĂNG' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(6)::before { content: 'VIEWS' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(7)::before { content: 'VPH' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(8)::before { content: 'OUTLIER SCORE' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(9)::before { content: 'TĂNG VIEW/NGÀY' !important; }
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(10)::before { content: 'URL' !important; }
+
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(9),
+  .vtw-spy-videos-box .vtw-tracking-table td:nth-child(9) * {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
