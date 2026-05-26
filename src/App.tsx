@@ -890,6 +890,8 @@ export default function App() {
 
   const [showKeywordIdeas, setShowKeywordIdeas] = useState(true);
   const [showApiKeys, setShowApiKeys] = useState(true);
+  const [showGeminiApiKeys, setShowGeminiApiKeys] = useState(true);
+  const [showYoutubeApiKeys, setShowYoutubeApiKeys] = useState(true);
   const [keywordIdeas, setKeywordIdeas] = useState<KeywordIdea[]>([]);
   const [trackingChannels, setTrackingChannels] = useState<TrackingChannel[]>([]);
   const [spyInput, setSpyInput] = useState('');
@@ -4867,6 +4869,7 @@ Quy tắc:
                   className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
                   style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 >
+                  <LogOut size={14} />
                   <span className="vtw-logout-label">Đăng xuất</span>
                 </button>
               </div>
@@ -7633,7 +7636,12 @@ Quy tắc:
                     <div className="flex items-center gap-2">
                       <p className="text-[11px] font-bold opacity-80 uppercase tracking-tighter">Quản lý kết nối YouTube & Gemini AI</p>
                       <button 
-                        onClick={() => setShowApiKeys(!showApiKeys)}
+                        onClick={() => {
+                          const next = !showApiKeys;
+                          setShowApiKeys(next);
+                          setShowGeminiApiKeys(next);
+                          setShowYoutubeApiKeys(next);
+                        }}
                         className="text-[8px] bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded-full font-black border border-white/20 transition-all flex items-center gap-1 uppercase"
                       >
                         {showApiKeys ? <EyeOff size={10} /> : <Eye size={10} />}
@@ -7691,15 +7699,16 @@ Quy tắc:
                         value={geminiApiKey}
                         onChange={(e) => { setGeminiApiKey(e.target.value); setGeminiKeyCheckResults([]); }}
                         className="vtw-gemini-keys-input w-full h-28 px-4 py-3 bg-white border-2 border-indigo-200 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-[18px] shadow-inner custom-scrollbar resize-y whitespace-pre overflow-x-auto break-normal"
-                        style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '11px' : '13px', lineHeight: '1.45', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: '0', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
+                        style={{ WebkitTextSecurity: showGeminiApiKeys ? 'none' : 'disc', fontSize: isMobileViewport ? '11px' : '13px', lineHeight: '1.45', fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', letterSpacing: '0', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto', wordBreak: 'normal', overflowWrap: 'normal' } as any}
                         placeholder={"Dán nhiều Gemini API Key, mỗi key 1 dòng..."}
                       />
                       <button 
                         type="button"
-                        onClick={() => setShowApiKeys(!showApiKeys)}
+                        onClick={() => setShowGeminiApiKeys(prev => !prev)}
                         className="absolute right-3 bottom-3 p-2 text-indigo-400 hover:text-indigo-600 transition-colors"
+                        title={showGeminiApiKeys ? 'Ẩn Gemini key' : 'Hiện Gemini key'}
                       >
-                        {showApiKeys ? <EyeOff size={16} /> : <Eye size={16} />}
+                        {showGeminiApiKeys ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-600">
@@ -7826,15 +7835,16 @@ Quy tắc:
                       value={manualKeysInput}
                       onChange={(e) => setManualKeysInput(e.target.value)}
                       className={`w-full h-48 p-5 font-mono text-sm border-2 rounded-2xl focus:border-red-500 focus:ring-4 focus:ring-red-500/10 outline-none transition-all custom-scrollbar bg-white shadow-inner relative z-10 ${manualKeysInput.split('\n').map(k => k.trim()).filter(Boolean).some(k => exhaustedKeys.includes(k)) ? 'border-red-400 bg-red-50/40' : 'border-gray-100'}`}
-                      style={{ WebkitTextSecurity: showApiKeys ? 'none' : 'disc' } as any}
+                      style={{ WebkitTextSecurity: showYoutubeApiKeys ? 'none' : 'disc' } as any}
                       placeholder="Key 1&#10;Key 2&#10;Key 3..."
                     />
                     <button 
                       type="button"
-                      onClick={() => setShowApiKeys(!showApiKeys)}
+                      onClick={() => setShowYoutubeApiKeys(prev => !prev)}
                       className="absolute right-4 bottom-4 z-20 p-2 bg-white/80 backdrop-blur rounded-full shadow-md text-red-500 hover:text-red-700 transition-colors"
+                      title={showYoutubeApiKeys ? 'Ẩn YouTube key' : 'Hiện YouTube key'}
                     >
-                      {showApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
+                      {showYoutubeApiKeys ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                   <div className="mt-4 flex flex-col gap-2 relative z-10">
@@ -8545,22 +8555,7 @@ Quy tắc:
             }
           }
 
-      
-
-          /* VTW PATCH 20260525: logout button no icon, compact and aligned */
-          .vtw-header-logout > svg { display: none !important; }
-          .vtw-header-logout { gap: 0 !important; }
-          @media (min-width: 769px) {
-            .vtw-header-logout { min-height: 36px !important; height: 36px !important; padding: 7px 14px !important; border-radius: 12px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
-            .vtw-header-logout .vtw-logout-label { display: inline-block !important; font-size: 10px !important; line-height: 1 !important; white-space: nowrap !important; }
-          }
-          @media (max-width: 768px) {
-            .vtw-header-actions { grid-template-columns: minmax(0, 1fr) 52px 66px 30px !important; gap: 3px !important; }
-            .vtw-header-logout { grid-column: 2 / 3 !important; height: 32px !important; padding: 2px 3px !important; border-radius: 10px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; white-space: nowrap !important; }
-            .vtw-header-logout .vtw-logout-label { display: inline-block !important; font-size: 6.6px !important; line-height: 1 !important; white-space: nowrap !important; }
-          }
-`}
-
+      `}
 
 </style>
 
