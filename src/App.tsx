@@ -6664,7 +6664,7 @@ Quy tắc:
                                      className="w-full bg-orange-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-orange-700"
                                      title="Phân tích video"
                                   >
-                                     <Video size={12} /> Phân tích video
+                                     <Video size={12} /> <span className="vtw-btn-label">Phân tích video</span>
                                   </button>
                                   <button 
                                      type="button"
@@ -6672,14 +6672,14 @@ Quy tắc:
                                      className="w-full bg-blue-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-blue-700"
                                      title="Xem video trực tiếp trong app"
                                   >
-                                     <Play size={12} /> Xem video
+                                     <Play size={12} /> <span className="vtw-btn-label">Xem video</span>
                                   </button>
                                   <button 
                                      onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
                                      className="w-full bg-[#2c3e50] text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-[#1f2d3a]"
                                      title="Bóc tách kênh này"
                                   >
-                                     <BarChart2 size={12} /> Bóc tách kênh
+                                     <BarChart2 size={12} /> <span className="vtw-btn-label">Bóc tách kênh</span>
                                   </button>
                                </div>
                                <div className="vtw-video-stat-grid grid grid-cols-3 gap-1 border-t pt-1.5 mt-auto" style={isMobileViewport ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 4 } : undefined}>
@@ -8386,28 +8386,37 @@ Quy tắc:
             .vtw-header-icon-btn span { display: block !important; font-size: 5.4px !important; line-height: 1.05 !important; }
             .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; grid-column: auto !important; }
             .vtw-niche-content { padding: 12px !important; }
-            .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
-            .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
+            /* === MOBILE: VIDEO CARD 2-COLUMN ROW LAYOUT (thumb | content) === */
+            .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; }
+            .vtw-niche-video-card.vtw-square-video-card { aspect-ratio: auto !important; min-height: 0 !important; display: grid !important; grid-template-columns: 140px minmax(0, 1fr) !important; gap: 10px !important; padding: 10px !important; align-items: stretch !important; }
             textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; padding: 9px 10px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 25% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
-            .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
+            /* Thumbnail: left column, 16:9 ratio, no longer 25% height */
+            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9 !important; border-radius: 10px !important; align-self: start !important; position: relative !important; overflow: hidden !important; }
+            .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: cover !important; background: #000 !important; }
+            /* Modal trending video card (no vtw-video-thumb class) - first <button> child acts as thumb */
+            .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9 !important; align-self: start !important; border-radius: 10px !important; overflow: hidden !important; }
             .vtw-niche-video-card .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
             .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
             .vtw-niche-video-card .vtw-thumb-play svg { width: 17px !important; height: 17px !important; }
-            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 6.4px !important; line-height: 1.05 !important; margin-bottom: 0 !important; display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
-            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 0 !important; }
-            .vtw-niche-video-card .vtw-video-actions button { padding: 3px 2px !important; min-height: 21px !important; font-size: 5.4px !important; border-radius: 9px !important; gap: 1px !important; flex-direction: column !important; }
-            .vtw-niche-video-card .vtw-video-actions button svg { width: 9px !important; height: 9px !important; }
-            .vtw-niche-video-card .vtw-video-actions button span { line-height: 1.02 !important; }
-            .vtw-niche-video-card .vtw-video-info { padding: 5px !important; display: flex !important; flex-direction: column !important; gap: 3px !important; }
-            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 3px !important; margin-top: auto !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 24px !important; padding: 2px 3px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 8px !important; gap: 3px !important; }
-            .vtw-niche-video-card .vtw-video-stat svg { width: 8px !important; height: 8px !important; flex: 0 0 auto !important; }
-            .vtw-niche-video-card .vtw-video-stat span { font-size: 5.4px !important; line-height: 1.05 !important; text-align: left !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
+            /* Title: readable size in right column */
+            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 11px !important; line-height: 1.25 !important; margin-bottom: 0 !important; display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
+            /* Action buttons: 3 columns, ICON-ONLY (label hidden via .vtw-btn-label) */
+            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 4px !important; margin-bottom: 0 !important; }
+            .vtw-niche-video-card .vtw-video-actions button { padding: 6px 0 !important; min-height: 32px !important; font-size: 0 !important; border-radius: 8px !important; gap: 0 !important; flex-direction: row !important; }
+            .vtw-niche-video-card .vtw-video-actions button svg { width: 14px !important; height: 14px !important; }
+            .vtw-niche-video-card .vtw-video-actions button .vtw-btn-label { display: none !important; }
+            /* Info container: right column, no padding override */
+            .vtw-niche-video-card .vtw-video-info { padding: 0 !important; display: flex !important; flex-direction: column !important; gap: 5px !important; min-width: 0 !important; }
+            .vtw-niche-video-card > div.p-4 { padding: 0 !important; min-width: 0 !important; }
+            /* Stats grid: 2 columns, readable size */
+            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4px !important; padding-top: 4px !important; margin-top: auto !important; }
+            .vtw-niche-video-card .vtw-video-stat { min-height: 28px !important; padding: 4px 5px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 6px !important; gap: 3px !important; }
+            .vtw-niche-video-card .vtw-video-stat svg { width: 11px !important; height: 11px !important; flex: 0 0 auto !important; }
+            .vtw-niche-video-card .vtw-video-stat span { font-size: 9.5px !important; line-height: 1.15 !important; text-align: left !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
             .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 0 !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 16px !important; height: 16px !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 5.8px !important; line-height: 1.05 !important; }
-            .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 4.8px !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 18px !important; height: 18px !important; }
+            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 9.5px !important; line-height: 1.15 !important; }
+            .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 8px !important; }
 
             /* VTW FINAL HARD FIX 20260525: mobile portrait header one horizontal row */
             .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 7px !important; }
