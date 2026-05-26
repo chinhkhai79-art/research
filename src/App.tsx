@@ -1710,6 +1710,7 @@ export default function App() {
   const fetchDailyTrendingFromYouTube = async () => {
     if (config.apiKeys.length === 0) {
       setStatus('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -2154,7 +2155,11 @@ Rules:
       setStatus(`Đã cập nhật key cho ${regionLabel}. ${preservedCount ? `Đã giữ nguyên ${preservedCount} chủ đề đã quét bằng kính lúp, không ghi đè.` : 'Chưa có chủ đề kính lúp nào cần giữ.'}`);
     } catch (error: any) {
       console.error(error);
-      setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
+      const trendErrMsg = error?.message || 'Không xác định';
+      setStatus(`Lỗi cập nhật Trending: ${trendErrMsg}`);
+      if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(trendErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -2375,6 +2380,7 @@ JSON mẫu:
     setQuotaUsed(0);
     if (config.apiKeys.length === 0) {
       setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -2596,6 +2602,7 @@ JSON mẫu:
 
     if (config.apiKeys.length === 0) {
       setStatus('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -2808,7 +2815,12 @@ JSON mẫu:
       setStatus(`Đã phân tích xong ngách: ${kw}`);
     } catch (err) {
       console.error(err);
+      const errMsg = (err as any)?.message || '';
       setStatus('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key hoặc Quota.');
+      // Tự mở bảng nhập key khi lỗi liên quan tới key/quota để user nhập/thay key ngay
+      if (!errMsg || /api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(errMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsNicheSearching(false);
     }
@@ -2817,6 +2829,7 @@ JSON mẫu:
   const analyzeWithAI = async () => {
     if (getActiveGeminiKeys().length === 0) {
       setStatus('Lỗi: Vui lòng nhập ít nhất 1 Gemini API Key ở Cài đặt API.');
+      setShowKeyInputModal(true);
       return;
     }
     if (!nicheResults) return;
@@ -2858,8 +2871,12 @@ JSON mẫu:
       setStatus('AI đã phân tích xong. Xem báo cáo chi tiết bên dưới.');
     } catch (error: any) {
       console.error(error);
-      setStatus(`Lỗi khi gọi AI: ${error.message}`);
+      const aiErrMsg = error?.message || '';
+      setStatus(`Lỗi khi gọi AI: ${aiErrMsg}`);
       setProgress(0);
+      if (/api key|quota|key đều lỗi|gemini|forbidden|invalid|chưa có/i.test(aiErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsAiAnalyzing(false);
     }
@@ -3401,6 +3418,7 @@ JSON mẫu:
   const startHunter = async () => {
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -3606,6 +3624,9 @@ JSON mẫu:
         const errMsg = `Lỗi: ${err.message}`;
         setStatus(errMsg);
         setLastError(errMsg);
+        if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(err.message || '')) {
+          setShowKeyInputModal(true);
+        }
       }
     } finally {
       setIsHunting(false);
@@ -3804,7 +3825,11 @@ ${topKeywordsStr}`;
 
       setStatus('Phân tích đối thủ hoàn tất!');
     } catch (err: any) {
-      setStatus(`Lỗi: ${err.message}`);
+      const spyErrMsg = err?.message || '';
+      setStatus(`Lỗi: ${spyErrMsg}`);
+      if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(spyErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     }
   };
 
@@ -4472,7 +4497,11 @@ Quy tắc:
       }
     } catch (error) {
       console.error(error);
+      const videoErrMsg = (error as any)?.message || '';
       setStatus('Lỗi khi kiểm tra video.');
+      if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(videoErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsAnalyzingVideo(false);
     }
@@ -8562,6 +8591,132 @@ Quy tắc:
               letter-spacing: 0 !important;
               font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
             }
+          }
+
+          /* === FINAL MOBILE HEADER FIX 20260526: full title + all 4 action buttons visible === */
+          @media (max-width: 900px) {
+            /* Title: allow wrapping to fit fully, no ellipsis truncation, no whitespace-nowrap */
+            .vtw-title-mobile,
+            .vtw-title-full {
+              white-space: normal !important;
+              overflow: visible !important;
+              text-overflow: clip !important;
+              max-width: 100% !important;
+              word-break: break-word !important;
+              font-size: 13px !important;
+              line-height: 1.2 !important;
+              display: inline-block !important;
+            }
+            .vtw-app-title {
+              flex: 0 0 100% !important;
+              width: 100% !important;
+              align-items: center !important;
+              min-width: 0 !important;
+              gap: 6px !important;
+            }
+            .vtw-app-title img { width: 24px !important; height: 24px !important; flex: 0 0 24px !important; }
+
+            /* Header actions: 4-column grid → account | logout (icon) | upgrade (icon+text) | refresh (icon) */
+            .vtw-header-actions {
+              display: grid !important;
+              grid-template-columns: minmax(0, 1fr) 36px minmax(76px, auto) 36px !important;
+              gap: 5px !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              flex: 0 0 100% !important;
+              align-items: stretch !important;
+              overflow: visible !important;
+            }
+            .vtw-user-header-row { display: contents !important; }
+
+            /* Account box stretches to column 1 */
+            .vtw-account-box {
+              grid-column: 1 / 2 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              height: 36px !important;
+              padding: 3px 6px !important;
+              gap: 5px !important;
+              border-radius: 10px !important;
+              display: flex !important;
+              flex-direction: row !important;
+              justify-content: flex-start !important;
+              align-items: center !important;
+            }
+            .vtw-account-box img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
+            .vtw-account-box > div { min-width: 0 !important; flex: 1 1 auto !important; }
+            .vtw-user-email { max-width: 100% !important; font-size: 9px !important; line-height: 1.1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; }
+            .vtw-account-box .text-\[8px\] { font-size: 8px !important; line-height: 1 !important; }
+
+            /* All 3 action buttons: always visible, fixed height, row layout */
+            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh {
+              display: flex !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              position: static !important;
+              width: 100% !important;
+              min-width: 0 !important;
+              max-width: 100% !important;
+              height: 36px !important;
+              padding: 0 4px !important;
+              margin: 0 !important;
+              border-radius: 10px !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 3px !important;
+            }
+            .vtw-header-logout { grid-column: 2 / 3 !important; }
+            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
+            .vtw-header-refresh { grid-column: 4 / 5 !important; }
+
+            /* Logout & Refresh: ICON-ONLY (hide labels) */
+            .vtw-header-logout span,
+            .vtw-logout-label,
+            .vtw-header-refresh span,
+            .vtw-mobile-hide-label {
+              display: none !important;
+            }
+            .vtw-header-logout svg,
+            .vtw-header-refresh svg {
+              width: 16px !important;
+              height: 16px !important;
+              flex: 0 0 auto !important;
+            }
+
+            /* Upgrade: show ICON + "Nâng cấp" text */
+            .vtw-header-upgrade {
+              padding: 0 8px !important;
+            }
+            .vtw-header-upgrade svg {
+              width: 14px !important;
+              height: 14px !important;
+              flex: 0 0 auto !important;
+            }
+            .vtw-header-upgrade span {
+              display: inline !important;
+              font-size: 10px !important;
+              line-height: 1 !important;
+              white-space: nowrap !important;
+              font-weight: 900 !important;
+            }
+          }
+
+          /* Very narrow phones: shrink slightly but still show all */
+          @media (max-width: 400px) {
+            .vtw-header-actions {
+              grid-template-columns: minmax(0, 1fr) 32px minmax(64px, auto) 32px !important;
+              gap: 3px !important;
+            }
+            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { height: 32px !important; }
+            .vtw-header-upgrade { padding: 0 5px !important; }
+            .vtw-header-upgrade span { font-size: 9px !important; }
+            .vtw-header-logout svg, .vtw-header-refresh svg { width: 14px !important; height: 14px !important; }
+            .vtw-account-box { height: 32px !important; padding: 2px 4px !important; gap: 4px !important; }
+            .vtw-account-box img { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
+            .vtw-user-email { font-size: 8.5px !important; }
+            .vtw-title-mobile, .vtw-title-full { font-size: 12px !important; line-height: 1.2 !important; }
           }
 
       `}
