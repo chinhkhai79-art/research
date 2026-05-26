@@ -652,7 +652,6 @@ export default function App() {
   const [videoAuditProgress, setVideoAuditProgress] = useState(0);
   const [config, setConfig] = useState<YouTubeConfig>(DEFAULT_CONFIG);
   const [apiKeyIndex, setApiKeyIndex] = useState(0);
-  const lastSuccessfulYoutubeKeyIndexRef = useRef<number | null>(null);
   const [apiKeysHistory, setApiKeysHistory] = useState<string[]>([]);
   const [exhaustedKeys, setExhaustedKeys] = useState<string[]>([]);
   const exhaustedKeysRef = useRef<string[]>([]);
@@ -2269,7 +2268,6 @@ JSON mẫu:
     const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
     setTrendingRegion(selectedRegion);
     quotaUsedRef.current = 0;
-    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
 
     // Nút này chỉ lưu lại những chủ đề đã bấm icon kính lúp và đã quét key thật bằng YouTube Data API V3.
@@ -2372,7 +2370,6 @@ JSON mẫu:
 
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
     quotaUsedRef.current = 0;
-    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     if (config.apiKeys.length === 0) {
       setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
@@ -2601,7 +2598,6 @@ JSON mẫu:
     }
 
     quotaUsedRef.current = 0;
-    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setIsNicheSearching(true);
     setStatus(`${(customKeyword || nicheInput || '').trim() ? 'Đang nghiên cứu ngách' : 'Tự động chọn ngách theo khu vực/thời gian'}: ${kw}...`);
@@ -3038,7 +3034,6 @@ JSON mẫu:
 
         if (response.ok && !data?.error) {
           setApiKeyIndex(keyIndex);
-          lastSuccessfulYoutubeKeyIndexRef.current = keyIndex;
           setLastError(null);
           // Key gọi thành công thì bỏ khỏi danh sách lỗi đang hiển thị nếu trước đó bị đánh dấu nhầm.
           const cleanedFailed = exhaustedKeysRef.current.filter(k => k !== activeKey);
@@ -3411,7 +3406,6 @@ JSON mẫu:
     const isAutoHunt = !rawKeyword;
 
     quotaUsedRef.current = 0;
-    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setResults([]); // Xóa kết quả cũ khi tìm mới
     resultsRef.current = []; // Đồng bộ ref lập tức
@@ -3595,15 +3589,14 @@ JSON mẫu:
         }
       }
 
-      const successKeyLabel = lastSuccessfulYoutubeKeyIndexRef.current !== null ? ` (Key ${lastSuccessfulYoutubeKeyIndexRef.current + 1})` : '';
       if (resultsRef.current.length >= STOP_LIMIT) {
-        setStatus(`🎯 ĐÃ GOM ĐỦ 10 KÊNH NGON! Đã tự động dừng.${successKeyLabel}`);
+        setStatus('🎯 ĐÃ GOM ĐỦ 10 KÊNH NGON! Đã tự động dừng.');
       } else if (!isHuntingRef.current) {
         setStatus('Đã dừng bởi người dùng.');
       } else if (isAutoHunt) {
-        setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.${successKeyLabel}`);
+        setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.`);
       } else {
-        setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.${successKeyLabel}`);
+        setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.`);
       }
       setProgress(100);
     } catch (err: any) {
@@ -3664,7 +3657,6 @@ JSON mẫu:
     if (!input) return;
 
     quotaUsedRef.current = 0;
-    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setStatus('Đang phân tích đối thủ...');
     setSpyResult(null);
@@ -4347,7 +4339,6 @@ Quy tắc:
     }
     
     quotaUsedRef.current = 0;
-    lastSuccessfulYoutubeKeyIndexRef.current = null;
     setQuotaUsed(0);
     setIsAnalyzingVideo(true);
     setStatus('Đang kiểm tra thông tin video...');
