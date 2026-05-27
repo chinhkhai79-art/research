@@ -5161,11 +5161,11 @@ Quy tắc:
           <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
             <img
               src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
-              className="w-7 h-7 rounded-full vtw-app-title-img"
+              className="w-9 h-9 rounded-full vtw-app-title-img"
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            <span className="vtw-app-title-text">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+            <span className="vtw-app-title-text">YOUTUBE NICHE & ANALYZE PRO (VĂN THẾ WEB)</span>
           </h1>
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">

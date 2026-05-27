@@ -1469,3 +1469,87 @@
     font-size: 11px !important;
   }
 }
+
+
+/* PATCH 27/5 — Header desktop: logout 1 dòng + logo/title nổi rõ */
+.vtw-app-header .vtw-app-title {
+  text-transform: uppercase !important;
+  letter-spacing: -0.015em !important;
+}
+
+.vtw-app-header .vtw-app-title-text {
+  text-transform: uppercase !important;
+  font-weight: 900 !important;
+}
+
+.vtw-app-header .vtw-app-title-img {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  border-radius: 9999px !important;
+  border: 2px solid rgba(59, 130, 246, 0.25) !important;
+  box-shadow:
+    0 0 0 4px rgba(99, 102, 241, 0.08),
+    0 0 18px rgba(59, 130, 246, 0.16),
+    0 4px 10px rgba(15, 23, 42, 0.10) !important;
+  background: linear-gradient(135deg, rgba(59,130,246,.16), rgba(236,72,153,.12), rgba(16,185,129,.12)) !important;
+  padding: 2px !important;
+  object-fit: cover !important;
+}
+
+@media (min-width: 901px) {
+  body .vtw-app-header .vtw-header-logout {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    width: auto !important;
+    min-width: 112px !important;
+    max-width: none !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 14px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    line-height: 1 !important;
+  }
+
+  body .vtw-app-header .vtw-header-logout svg {
+    width: 15px !important;
+    height: 15px !important;
+    min-width: 15px !important;
+    flex: 0 0 auto !important;
+  }
+
+  body .vtw-app-header .vtw-header-logout .vtw-logout-label,
+  body .vtw-app-header .vtw-header-logout span {
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    line-height: 1 !important;
+    font-size: 11px !important;
+  }
+
+  body .vtw-app-header .vtw-app-title-text {
+    font-size: 19px !important;
+    line-height: 1.05 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body .vtw-app-header .vtw-app-title-img,
+  body .vtw-app-header .vtw-app-title > img {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    border-radius: 9999px !important;
+    border: 2px solid rgba(59, 130, 246, 0.22) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,.08), 0 0 14px rgba(59,130,246,.14) !important;
+    padding: 2px !important;
+  }
+}
