@@ -1469,3 +1469,65 @@
     font-size: 11px !important;
   }
 }
+
+
+/* PATCH 27/5: UI language switch + English pseudo-labels on mobile */
+.vtw-language-switch {
+  min-height: 34px;
+}
+.vtw-language-switch select {
+  border: 0;
+  min-width: 104px;
+}
+@media (max-width: 900px) {
+  body .vtw-app-header .vtw-language-switch {
+    order: 0 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    min-height: 34px !important;
+    padding: 5px 8px !important;
+    border-radius: 10px !important;
+  }
+  body .vtw-app-header .vtw-language-switch span {
+    display: inline !important;
+    font-size: 9px !important;
+  }
+  body .vtw-app-header .vtw-language-switch select {
+    width: auto !important;
+    min-width: 128px !important;
+    font-size: 10px !important;
+  }
+}
+@media (min-width: 901px) {
+  .vtw-language-switch {
+    flex: 0 0 auto !important;
+  }
+}
+
+/* Translate CSS-generated table labels when English UI is selected */
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(3):before  { content: 'Channel name' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(4):before  { content: 'Channel ID' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(5):before  { content: 'Keyword/Niche' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(6):before  { content: 'Topic' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(7):before  { content: 'Income ($)' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(8):before  { content: 'URL' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(9):before  { content: 'Country' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(10):before { content: 'Created date' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(11):before { content: 'Channel age' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(12):before { content: 'Subscribers' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(13):before { content: 'Views' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Score' !important; }
+body[data-ui-lang="en"] .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Actions' !important; }
+
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(1)::before { content: 'Thumb' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(2)::before { content: 'Video ID' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(3)::before { content: 'Analyze' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(4)::before { content: 'Title' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(5)::before { content: 'Published date' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(6)::before { content: 'Views' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(7)::before { content: 'VPH' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(8)::before { content: 'Outlier score' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(9)::before { content: 'View growth/day' !important; }
+body[data-ui-lang="en"] .vtw-spy-videos-box .vtw-tracking-table td:nth-child(10)::before { content: 'URL' !important; }
