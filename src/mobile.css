@@ -718,3 +718,232 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
   }
 }
+
+/* §6 ─── FIX 26/5: Mobile Kênh/Ngách Trending + Gợi ý ngách ─────────────── */
+@media (max-width: 900px) {
+  /* Dọn xung đột chữ mobile: không ép break từng ký tự trong khu vực gợi ý. */
+  .vtw-niche-suggestion-section,
+  .vtw-niche-suggestion-section * {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Card Kênh/Ngách Trending: không để chữ/nút đè nhau trên mobile. */
+  .vtw-channel-trending-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    padding: 12px !important;
+    gap: 12px !important;
+    border-radius: 18px !important;
+  }
+  .vtw-channel-trending-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+    align-items: flex-start !important;
+  }
+  .vtw-channel-trending-main img {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .vtw-channel-trending-main > div:last-child {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .vtw-channel-trending-main h5 {
+    font-size: 14px !important;
+    line-height: 1.15 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    white-space: normal !important;
+  }
+  .vtw-channel-id-pill {
+    max-width: 92px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+    font-size: 8px !important;
+    padding: 2px 5px !important;
+  }
+  .vtw-channel-trending-stats {
+    flex-wrap: wrap !important;
+    gap: 5px 8px !important;
+    margin-top: 6px !important;
+  }
+  .vtw-channel-trending-stats .w-1.h-1 {
+    display: none !important;
+  }
+  .vtw-channel-trending-stats span {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+  }
+  .vtw-channel-trending-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .vtw-channel-trending-actions > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    padding: 8px 6px !important;
+    border-radius: 12px !important;
+    font-size: 9px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  .vtw-channel-trending-actions > button:first-child {
+    flex-direction: row !important;
+    gap: 6px !important;
+  }
+  .vtw-channel-trending-actions > button:first-child span:first-child {
+    display: none !important;
+  }
+  .vtw-channel-trending-actions .w-8.h-8 {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH: tiêu đề gọn, không đè chữ. */
+  .vtw-niche-suggestion-section {
+    padding: 14px !important;
+    border-radius: 20px !important;
+    margin-top: 8px !important;
+  }
+  .vtw-niche-suggestion-section > div:first-child {
+    gap: 12px !important;
+    margin-bottom: 14px !important;
+  }
+  .vtw-niche-suggestion-section > div:first-child > div:first-child {
+    gap: 10px !important;
+  }
+  .vtw-niche-suggestion-section > div:first-child > div:first-child > div:first-child {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 14px !important;
+  }
+  .vtw-niche-suggestion-title {
+    font-size: 19px !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.03em !important;
+    white-space: normal !important;
+  }
+  .vtw-niche-suggestion-title + p {
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0 !important;
+  }
+  .vtw-niche-suggestion-meta {
+    min-width: 0 !important;
+    width: 100% !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .vtw-niche-suggestion-meta > div {
+    padding: 8px !important;
+  }
+  .vtw-niche-suggestion-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+  .vtw-niche-suggestion-summary > div {
+    padding: 10px !important;
+    border-radius: 14px !important;
+  }
+  .vtw-niche-suggestion-summary .text-2xl,
+  .vtw-niche-suggestion-summary .text-xl {
+    font-size: 20px !important;
+    line-height: 1.05 !important;
+  }
+  .vtw-niche-suggestion-item {
+    border-radius: 18px !important;
+  }
+  .vtw-niche-suggestion-item > div:first-child {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+  .vtw-niche-suggestion-item h4 {
+    font-size: 18px !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+  .vtw-niche-suggestion-item h4 + button {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .vtw-niche-suggestion-item .grid.grid-cols-2.lg\:grid-cols-4 {
+    gap: 8px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  .vtw-niche-suggestion-item .grid.grid-cols-2.lg\:grid-cols-4 > div {
+    padding: 10px !important;
+    border-radius: 14px !important;
+  }
+  .vtw-niche-suggestion-item .grid.grid-cols-2.lg\:grid-cols-4 .text-xl {
+    font-size: 18px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Video liên quan: thumbnail + info không chen, nút không mất. */
+  .vtw-niche-related-video-card {
+    gap: 10px !important;
+    padding: 10px !important;
+    border-radius: 16px !important;
+    align-items: flex-start !important;
+  }
+  .vtw-niche-related-thumb {
+    width: 108px !important;
+    min-width: 108px !important;
+    border-radius: 12px !important;
+  }
+  .vtw-niche-related-info h5 {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    -webkit-line-clamp: 2 !important;
+  }
+  .vtw-niche-related-info .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+    font-size: 9px !important;
+  }
+  .vtw-niche-related-info .flex.flex-wrap {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  .vtw-niche-related-info .flex.flex-wrap button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 7px 5px !important;
+    font-size: 9px !important;
+    border-radius: 10px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .vtw-channel-trending-actions {
+    grid-template-columns: 1fr !important;
+  }
+  .vtw-niche-related-video-card {
+    flex-direction: column !important;
+  }
+  .vtw-niche-related-thumb {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .vtw-niche-related-info {
+    width: 100% !important;
+  }
+  .vtw-niche-suggestion-summary {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}

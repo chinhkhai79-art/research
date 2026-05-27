@@ -1039,14 +1039,18 @@ export default function App() {
     const savedLastNicheKeyword = localStorage.getItem('youtube_last_niche_keyword');
     if (savedLastNicheKeyword) setNicheInput(savedLastNicheKeyword);
 
-    // Bước 76: không nạp lại dữ liệu ngách cũ trong popup gợi ý.
-    // Mỗi lần mở app dùng bộ chủ đề mới theo khu vực hiện tại để tránh sai ngôn ngữ/khu vực.
+    // Bước 76 FIX: chỉ xóa cache gợi ý cũ/giả, KHÔNG xóa dữ liệu trend hot đã bấm Lưu.
     Object.keys(localStorage).forEach((key) => {
       if (key.startsWith('youtube_suggested_niches_trending_v3_') || key.startsWith('youtube_suggested_niches_trending_v4_') || key.startsWith('youtube_suggested_niches_gemini_manual_') || key.startsWith('youtube_suggested_niches_youtube_manual_')) {
         localStorage.removeItem(key);
       }
     });
-    setSuggestedNiches(getLocalizedNicheTemplate(trendingRegion || config.region || 'VN'));
+    let initialTrendingRegion = normalizeRegionCode(config.region || 'VN');
+    try {
+      const parsedSavedConfig = savedConfig ? JSON.parse(savedConfig) : null;
+      initialTrendingRegion = normalizeRegionCode(parsedSavedConfig?.region || parsedSavedConfig?.regions?.[0] || config.region || 'VN');
+    } catch {}
+    applyTrendingRegionFromStorage(initialTrendingRegion);
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) {
@@ -2274,6 +2278,47 @@ JSON mẫu:
       source: 'gemini_region_suggestion'
     };
     return payload;
+  };
+
+  const readSavedRealTrendHot = (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    try {
+      const raw = localStorage.getItem(`youtube_real_trend_hot_${selectedRegion}`);
+      if (!raw) return null;
+      const payload = JSON.parse(raw);
+      if (!payload || !Array.isArray(payload.categories) || payload.categories.length === 0) return null;
+      return {
+        ...payload,
+        region: selectedRegion,
+        categories: payload.categories.map((cat: any) => ({
+          ...cat,
+          items: Array.isArray(cat.items) ? cat.items.slice(0, 6) : [],
+          realScanned: true,
+          source: cat.source || payload.source || 'youtube_v3_real_scan_saved'
+        }))
+      };
+    } catch (error) {
+      console.warn('Không đọc được trend hot đã lưu:', error);
+      return null;
+    }
+  };
+
+  const applyTrendingRegionFromStorage = (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    setTrendingRegion(selectedRegion);
+    const savedPayload = readSavedRealTrendHot(selectedRegion);
+    if (savedPayload) {
+      setSuggestedNiches(savedPayload.categories);
+      setTrendingCacheMeta({
+        updatedAt: savedPayload.updatedAt,
+        region: selectedRegion,
+        source: savedPayload.source || 'youtube_v3_real_scan_saved'
+      });
+      return true;
+    }
+    setSuggestedNiches(getLocalizedNicheTemplate(selectedRegion));
+    setTrendingCacheMeta(null);
+    return false;
   };
 
   const loadTrendingNicheCache = async (regionCode?: string) => {
@@ -7051,8 +7096,8 @@ Quy tắc:
                    <div className="animate-in slide-in-from-left duration-500">
                    <div className="space-y-8">
                       {nicheResults.channels.map((c: any, i: number) => (
-                         <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
-                            <div className="flex items-center gap-6">
+                         <div key={i} className="vtw-channel-trending-card bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
+                            <div className="vtw-channel-trending-main flex items-center gap-6">
                                <div className="relative">
                                   <img src={c.snippet.thumbnails.default.url} className="w-16 h-16 rounded-full border-2 border-white shadow-xl" />
                                   <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-1 border-2 border-white">
@@ -7062,9 +7107,9 @@ Quy tắc:
                                <div className="flex flex-col">
                                   <div className="flex items-center gap-2">
                                      <a href={`https://youtube.com/channel/${c.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 transition-colors"><h5 className="text-[18px] font-black text-gray-900 uppercase">{c.snippet.title}</h5></a>
-                                     <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 rounded-full uppercase tracking-tighter">ID: {c.id}</span>
+                                     <span className="vtw-channel-id-pill text-[11px] font-bold text-gray-400 bg-gray-100 px-2 rounded-full uppercase tracking-tighter" title={c.id}>ID: {c.id}</span>
                                   </div>
-                                  <div className="flex gap-4 mt-1 items-center">
+                                  <div className="vtw-channel-trending-stats flex gap-4 mt-1 items-center">
                                      <div className="flex gap-2 items-center">
                                         <Users size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.subscriberCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">subs</span></span>
@@ -7082,7 +7127,7 @@ Quy tắc:
                                   </div>
                                </div>
                             </div>
-                            <div className="flex items-center gap-10">
+                            <div className="vtw-channel-trending-actions flex items-center gap-10">
                                <button 
                                  onClick={() => setModalTrendingVideos({ title: c.snippet.title, subtitle: 'Danh sách các video của kênh này lọt top trending', videos: c.chanVideos })}
                                  className="flex flex-col items-center bg-blue-50/50 px-4 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 cursor-pointer transition-colors"
@@ -7108,18 +7153,18 @@ Quy tắc:
                             </div>
                          </div>
                       ))}
-                      <div className="bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border border-emerald-100 rounded-3xl p-5 md:p-7 shadow-sm">
+                      <div className="vtw-niche-suggestion-section bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border border-emerald-100 rounded-3xl p-5 md:p-7 shadow-sm">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
                           <div className="flex items-start gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                               <Hash size={26} strokeWidth={3} />
                             </div>
                             <div>
-                              <h3 className="text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-tight">GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH</h3>
+                              <h3 className="vtw-niche-suggestion-title text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-tight">GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH</h3>
                               <p className="text-[11px] md:text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-1">Lấy chủ đề hiện tại, khu vực, ngôn ngữ và video liên quan theo dữ liệu thật.</p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[280px]">
+                          <div className="vtw-niche-suggestion-meta grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[280px]">
                             {[
                               { label: 'Chủ đề', value: nicheResults.suggestionMeta?.currentTopic || nicheResults.summary.keyword },
                               { label: 'Khu vực', value: nicheResults.suggestionMeta?.regionLabel || getRegionLabel(nicheRegion) },
@@ -7134,7 +7179,7 @@ Quy tắc:
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                        <div className="vtw-niche-suggestion-summary grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                           <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Số ngách</div><div className="text-2xl font-black text-slate-950">{nicheResults.suggestions?.length || 0}</div></div>
                           <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">VPH cao nhất</div><div className="text-2xl font-black text-blue-600">{formatVNNumber(Math.round(Math.max(0, ...(nicheResults.suggestions || []).map((x: any) => Number(x.avgVPH || 0)))))}</div></div>
                           <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Tổng view mẫu</div><div className="text-2xl font-black text-slate-950">{formatVNNumber((nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + Number(x.totalViews || 0), 0))}</div></div>
@@ -7146,7 +7191,7 @@ Quy tắc:
                         ) : (
                           <div className="space-y-6">
                             {nicheResults.suggestions.slice(0, 10).map((ngach: any, idx: number) => (
-                              <div key={`${ngach.keyword}-${idx}`} className="bg-white/90 rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
+                              <div key={`${ngach.keyword}-${idx}`} className="vtw-niche-suggestion-item bg-white/90 rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
                                 <div className="p-4 md:p-5 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                                   <div className="flex items-start gap-3 min-w-0">
                                     <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[12px] font-black shrink-0">#{idx + 1}</div>
@@ -7176,12 +7221,12 @@ Quy tắc:
                                   </div>
                                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                                     {(ngach.relatedVideos || []).map((v: any) => (
-                                      <div key={v.id} className="bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
-                                        <div className="relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                                      <div key={v.id} className="vtw-niche-related-video-card bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
+                                        <div className="vtw-niche-related-thumb relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
                                           <img src={v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url} className="w-full h-full object-cover" />
                                           <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video trực tiếp trong app"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
                                         </div>
-                                        <div className="min-w-0 flex-1">
+                                        <div className="vtw-niche-related-info min-w-0 flex-1">
                                           <h5 className="text-[13px] font-black text-slate-950 line-clamp-2 leading-tight" title={v.snippet?.title}>{v.snippet?.title}</h5>
                                           <div className="text-[10px] font-bold text-slate-500 mt-1 truncate">{v.snippet?.channelTitle}</div>
                                           <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[10px] font-black">
@@ -8507,7 +8552,7 @@ Quy tắc:
                          <div className="relative">
                            <select
                               value={trendingRegion}
-                              onChange={(e) => { const nextRegion = e.target.value; setTrendingRegion(nextRegion); setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
+                              onChange={(e) => { const nextRegion = e.target.value; applyTrendingRegionFromStorage(nextRegion); }}
                               className="appearance-none w-full h-12 bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[12px] px-4 pr-9 rounded-xl outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.filter(r => r.code).map(r => (
