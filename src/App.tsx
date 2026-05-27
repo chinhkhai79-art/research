@@ -4454,6 +4454,44 @@ ${topKeywordsStr}`;
     return cats[id] || 'Unknown';
   };
 
+  const getCategoryNameVi = (id: string) => {
+    const cats: Record<string, string> = {
+      '1': 'Phim & Hoạt hình',
+      '2': 'Ô tô & Phương tiện',
+      '10': 'Âm nhạc',
+      '15': 'Thú cưng & Động vật',
+      '17': 'Thể thao',
+      '18': 'Phim ngắn',
+      '19': 'Du lịch & Sự kiện',
+      '20': 'Trò chơi',
+      '21': 'Video blog',
+      '22': 'Con người & Blog',
+      '23': 'Hài kịch',
+      '24': 'Giải trí',
+      '25': 'Tin tức & Chính trị',
+      '26': 'Hướng dẫn & Phong cách',
+      '27': 'Giáo dục',
+      '28': 'Khoa học & Công nghệ',
+      '29': 'Phi lợi nhuận & Hoạt động xã hội',
+      '30': 'Phim',
+      '31': 'Anime / Hoạt hình',
+      '32': 'Hành động / Phiêu lưu',
+      '33': 'Kinh điển',
+      '34': 'Hài kịch',
+      '35': 'Tài liệu',
+      '36': 'Chính kịch',
+      '37': 'Gia đình',
+      '38': 'Nước ngoài',
+      '39': 'Kinh dị',
+      '40': 'Khoa học viễn tưởng / Giả tưởng',
+      '41': 'Giật gân',
+      '42': 'Shorts',
+      '43': 'Chương trình',
+      '44': 'Trailer'
+    };
+    return cats[id] || 'Không xác định';
+  };
+
 
 
   const stripCodeFence = (text: string) => String(text || '').replace(/```json|```/g, '').trim();
@@ -7462,11 +7500,14 @@ Quy tắc:
                 <div className="space-y-6 text-gray-900 pb-20">
                   {/* Video Title Header */}
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="text-[12px] text-blue-600 font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                         <Video size={14} /> TIÊU ĐỀ VIDEO
                       </div>
-                      <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
+                      <h1
+                        className="text-xl md:text-2xl font-black text-gray-900 leading-tight truncate max-w-full"
+                        title={videoResult.snippet.title}
+                      >
                         {videoResult.snippet.title}
                       </h1>
                     </div>
@@ -7594,6 +7635,7 @@ Quy tắc:
                             ['VIDEO ID', videoResult.id],
                             ['CATEGORY ID', videoResult.snippet?.categoryId],
                             ['CATEGORY NAME', getCategoryName(videoResult.snippet?.categoryId)],
+                            ['CATEGORY TIẾNG VIỆT', getCategoryNameVi(videoResult.snippet?.categoryId)],
                             ['GIỜ UTC (GỐC)', new Date(videoResult.snippet?.publishedAt).toISOString()],
                             ['THỜI LƯỢNG', formatDuration(videoResult.contentDetails?.duration)],
                             ['GIỜ VN (GMT+7)', new Date(videoResult.snippet?.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })],
@@ -7620,7 +7662,7 @@ Quy tắc:
                         { label: 'VIDEO ID', value: videoResult.id },
                         { label: 'CATEGORY ID', value: videoResult.snippet.categoryId },
                         { label: 'CATEGORY NAME', value: getCategoryName(videoResult.snippet.categoryId) },
-                        { label: 'CATEGORY TIẾNG VIỆT', value: getCategoryName(videoResult.snippet.categoryId) }, 
+                        { label: 'CATEGORY TIẾNG VIỆT', value: getCategoryNameVi(videoResult.snippet.categoryId) }, 
                         { label: 'GIỜ UTC (GỐC)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toISOString().replace('T', ' ').split('.')[0] : 'N/A' },
                         { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration) },
                         { label: 'GIỜ VN (GMT+7)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'N/A' },
