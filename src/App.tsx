@@ -6961,7 +6961,7 @@ Quy tắc:
                             <button
                                type="button"
                                onClick={() => setInlineVideoId(v.id)}
-                               title="Bấm thumbnail để xem video trực tiếp trong app"
+                               title="Xem video"
                                className="vtw-video-thumb vtw-thumb-priority w-full h-[56%] bg-[#0b1220] overflow-hidden shrink-0 cursor-pointer block p-0 border-0"
                             >
                                <img
@@ -7006,7 +7006,7 @@ Quy tắc:
                                      type="button"
                                      onClick={() => setInlineVideoId(v.id)}
                                      className="w-full bg-blue-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-blue-700"
-                                     title="Xem video trực tiếp trong app"
+                                     title="Xem video"
                                   >
                                      <Play size={12} /> <span className="vtw-btn-label">Xem video</span>
                                   </button>
@@ -7090,7 +7090,7 @@ Quy tắc:
                                     type="button"
                                     onClick={() => setInlineVideoId(v.id)}
                                     className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md"
-                                    title="Phát Shorts trực tiếp trong app"
+                                    title="Xem video Shorts"
                                  >Phát Shorts</button>
                                  <button 
                                     onClick={() => analyzeVideo(v.id)}
@@ -7238,7 +7238,7 @@ Quy tắc:
                                       <div key={v.id} className="vtw-related-video-card bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
                                         <div className="vtw-related-video-thumb relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
                                           <img src={v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url} className="w-full h-full object-cover" />
-                                          <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video trực tiếp trong app"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
+                                          <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
                                         </div>
                                         <div className="vtw-related-video-info min-w-0 flex-1">
                                           <h5 className="text-[13px] font-black text-slate-950 line-clamp-2 leading-tight" title={v.snippet?.title}>{v.snippet?.title}</h5>
@@ -7474,7 +7474,7 @@ Quy tắc:
                       onClick={() => setInlineVideoId(videoResult.id)}
                       className="bg-red-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 active:scale-95 transition-all shadow-lg shadow-red-100 shrink-0"
                     >
-                      <Play fill="currentColor" size={18} /> XEM TRONG APP
+                      <Play fill="currentColor" size={18} /> XEM VIDEO
                     </button>
                   </div>
 
@@ -7492,8 +7492,8 @@ Quy tắc:
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setInlineVideoId(videoResult.id); }}
-                          title="Bấm vào ảnh để xem video trực tiếp trong app"
-                          aria-label="Xem video trực tiếp trong app"
+                          title="Xem video"
+                          aria-label="Xem video"
                           className="absolute inset-0 z-10 transition-colors cursor-pointer bg-transparent border-0"
                         />
 
@@ -8643,7 +8643,7 @@ Quy tắc:
               className="bg-black rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-white/10"
             >
               <div className="flex items-center justify-between bg-slate-950 text-white px-4 py-3">
-                <div className="text-[12px] font-black uppercase tracking-wide">Xem video trực tiếp trong app</div>
+                <div className="text-[12px] font-black uppercase tracking-wide">BẠN ĐANG XEM VIDEO</div>
                 <button type="button" onClick={() => setInlineVideoId(null)} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center">
                   <X size={20} />
                 </button>
@@ -8702,7 +8702,7 @@ Quy tắc:
                         key={i}
                         className="vtw-trending-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col"
                       >
-                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="vtw-trending-video-thumb relative bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
+                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Xem video" className="vtw-trending-video-thumb relative bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
                             <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover bg-black group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[11px] font-black px-2 py-1 rounded-lg shadow-lg">
                                {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : 'N/A'}
