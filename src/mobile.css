@@ -31,35 +31,61 @@
 /* §2 ─── Tablet & mobile lớn (≤ 900px) ──────────────────────────────────────── */
 @media (max-width: 900px) {
 
-  /* §2.1 ── HEADER: title trên 1 dòng riêng, actions thành grid 4 cột ─────── */
+  /* §2.1 ── HEADER MOBILE PORTRAIT: 3 hàng xếp dọc, gọn gàng, cân đối ────────
+   *
+   * LAYOUT:
+   * ┌────────────────────────────────────────────┐
+   * │ [🖼️] YouTube Niche & Analyze Pro (Văn Thế) │  row 1: title 100%
+   * ├────────────────────────────────────────────┤
+   * │ [👤] chinhkhai79@gmail.com         PRO    │  row 2: account FULL gmail
+   * ├────────────────────────────────────────────┤
+   * │ [↩ Đăng xuất][👑 Nâng cấp][🔄 Làm mới]    │  row 3: 3 buttons equal-w
+   * └────────────────────────────────────────────┘
+   *
+   * SPECIFICITY: dùng `body .vtw-app-header X` để có (0,2,1) → thắng tất cả rule
+   * mâu thuẫn trong index.css như `.vtw-header-actions > a { display:none }`
+   * (specificity 0,1,1) và `.vtw-header-actions { max-width: 130px }` (0,1,0).
+   * ──────────────────────────────────────────────────────────────────────── */
 
-  .vtw-app-header .vtw-app-header-row {
+  /* Container row chính → flex-wrap cho phép xuống dòng */
+  body .vtw-app-header .vtw-app-header-row {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
     row-gap: 8px !important;
-    column-gap: 6px !important;
+    column-gap: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  /* Tiêu đề: chiếm 100% hàng đầu, chữ wrap tự nhiên, KHÔNG cắt ellipsis */
-  .vtw-app-header .vtw-app-title {
+  /* ROW 1 — TITLE: 100% width, chữ wrap đầy đủ, không truncate */
+  body .vtw-app-header .vtw-app-title {
     flex: 0 0 100% !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     gap: 8px !important;
     margin: 0 !important;
+    padding: 0 !important;
+    font-size: 13px !important;
   }
-  .vtw-app-header .vtw-app-title-img,
-  .vtw-app-header .vtw-app-title img {
+  body .vtw-app-header .vtw-app-title-img,
+  body .vtw-app-header .vtw-app-title > img {
     width: 26px !important;
     height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
     flex: 0 0 26px !important;
+    border-radius: 9999px !important;
   }
-  .vtw-app-header .vtw-app-title-text {
+  body .vtw-app-header .vtw-app-title-text,
+  body .vtw-app-header .vtw-app-title > span {
     display: inline-block !important;
     flex: 1 1 auto !important;
+    width: auto !important;
     max-width: 100% !important;
     min-width: 0 !important;
     white-space: normal !important;
@@ -67,31 +93,38 @@
     text-overflow: clip !important;
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
-    font-size: 13px !important;
+    font-size: 13.5px !important;
     line-height: 1.25 !important;
+    font-weight: 700 !important;
   }
 
-  /* Actions row: grid 4 cột | account (flex) | logout 38 | upgrade ≥82 | refresh 38 | */
-  .vtw-app-header .vtw-header-actions {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 38px minmax(82px, auto) 38px !important;
-    gap: 5px !important;
+  /* ROW 2+3 — HEADER ACTIONS: container chính nhận 100% còn lại
+     Dùng flex-direction column để bố trí 2 hàng dọc (account, then buttons) */
+  body .vtw-app-header .vtw-header-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    flex: 0 0 100% !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    flex: 0 0 100% !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
-    overflow: visible !important;
+    gap: 6px !important;
     padding: 0 !important;
+    margin: 0 !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    overflow: visible !important;
   }
-  .vtw-app-header .vtw-user-header-row {
+
+  /* .vtw-user-header-row hiện chứa account + logout → bung ra làm sibling
+     để account đứng riêng 1 hàng, logout xuống cùng nhóm 3 nút */
+  body .vtw-app-header .vtw-user-header-row {
     display: contents !important;
   }
 
-  /* Account box (cột 1) */
-  .vtw-app-header .vtw-account-box {
-    grid-column: 1 / 2 !important;
+  /* ROW 2 — ACCOUNT BOX: full width, hiển thị FULL gmail */
+  body .vtw-app-header .vtw-account-box {
+    order: 1 !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -100,98 +133,166 @@
     max-width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: 36px !important;
-    padding: 4px 6px !important;
-    gap: 5px !important;
+    min-height: 38px !important;
+    padding: 5px 10px !important;
+    gap: 8px !important;
     border-radius: 10px !important;
   }
-  .vtw-app-header .vtw-account-box .vtw-account-avatar,
-  .vtw-app-header .vtw-account-box img {
-    width: 22px !important;
-    height: 22px !important;
-    flex: 0 0 22px !important;
+  body .vtw-app-header .vtw-account-box .vtw-account-avatar,
+  body .vtw-app-header .vtw-account-box > img {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    flex: 0 0 26px !important;
+    border-radius: 9999px !important;
   }
-  .vtw-app-header .vtw-account-text {
+  body .vtw-app-header .vtw-account-box .vtw-account-text,
+  body .vtw-app-header .vtw-account-box > div {
     min-width: 0 !important;
+    max-width: none !important;
     flex: 1 1 auto !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    text-align: left !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
   }
-  /* Hiện FULL gmail: bỏ ellipsis, cho phép wrap 2 dòng */
-  .vtw-app-header .vtw-user-email {
-    display: block !important;
-    width: 100% !important;
+  /* Gmail: HIỂN THỊ ĐẦY ĐỦ — không truncate, không ellipsis, cho phép wrap nếu cần */
+  body .vtw-app-header .vtw-account-box .vtw-user-email {
+    display: inline-block !important;
+    width: auto !important;
     max-width: 100% !important;
-    font-size: 9px !important;
-    line-height: 1.15 !important;
+    flex: 1 1 auto !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
     white-space: normal !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     text-overflow: clip !important;
     word-break: break-all !important;
     overflow-wrap: anywhere !important;
+    color: #1f2937 !important;
+    font-weight: 800 !important;
   }
-  .vtw-app-header .vtw-account-plan {
-    font-size: 8px !important;
+  body .vtw-app-header .vtw-account-box .vtw-account-plan {
+    display: inline-block !important;
+    font-size: 9px !important;
     line-height: 1 !important;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.02em !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
   }
 
-  /* 3 nút action: luôn hiện, cao ≥ 36px, layout hàng ngang — stretch theo account box */
-  .vtw-app-header .vtw-header-logout,
-  .vtw-app-header .vtw-header-upgrade,
-  .vtw-app-header .vtw-header-refresh {
+  /* ROW 3 — Hàng 3 nút action: grid 3 cột bằng nhau.
+     Vì .vtw-user-header-row dùng display:contents, account+logout là sibling
+     trực tiếp với upgrade & refresh trong .vtw-header-actions.
+     Logout/Upgrade/Refresh → order:2, account → order:1 (đã set trên). */
+
+  /* Wrapper "buttons row" — Dùng pseudo + display tricks? Không, đơn giản hơn:
+     Cả 3 nút tự nó đều có order:2, dùng flex on parent column thì
+     chúng vẫn sẽ xếp dọc. Cần wrap chúng bằng grid riêng.
+
+     CÁCH: dùng display:contents bị mất khả năng grid 3 cột.
+     → Solution: Set parent flex column với gap=6, rồi cho 3 button KHÔNG full-width
+     mà flex 1/3 mỗi cái. Nhưng nếu order=2 đồng nhau và flex-direction=column,
+     chúng vẫn xếp dọc → KHÔNG ĐƯỢC.
+
+     → Phải dùng grid cho 3 button: tạo 1 "ảo container" bằng cách... khó.
+
+     → CÁCH ĐƠN GIẢN NHẤT: thay vì display:contents trên .vtw-user-header-row,
+        ta chuyển nó về flex item bình thường và tận dụng order. Nhưng vẫn cần
+        gom 3 button thành 1 hàng.
+
+     → Giải pháp THỰC TẾ: ĐỔI flex-direction của .vtw-header-actions thành ROW WRAP,
+        rồi cho account full width (flex 0 0 100%) → tự ép xuống hàng 2.
+        Sau đó 3 button mỗi cái flex 1/3 (calc(33.333% - 4px)) → tự xếp 1 hàng. */
+
+  /* Reset: chuyển .vtw-header-actions về flex ROW + wrap */
+  body .vtw-app-header .vtw-header-actions {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Account box vẫn full width hàng 2 */
+  body .vtw-app-header .vtw-account-box {
+    flex: 0 0 100% !important;
+    order: 1 !important;
+  }
+
+  /* 3 nút: mỗi nút chiếm 1/3 (calc cho gap), order 2 → xuống hàng 3 */
+  body .vtw-app-header .vtw-header-logout,
+  body .vtw-app-header .vtw-header-upgrade,
+  body .vtw-app-header .vtw-header-refresh {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     position: static !important;
-    width: 100% !important;
+    order: 2 !important;
+    flex: 1 1 calc(33.333% - 4px) !important;
+    width: auto !important;
     min-width: 0 !important;
-    max-width: 100% !important;
-    min-height: 36px !important;
+    max-width: none !important;
+    min-height: 38px !important;
     height: auto !important;
-    padding: 0 4px !important;
+    padding: 0 6px !important;
     margin: 0 !important;
     border-radius: 10px !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 3px !important;
+    gap: 5px !important;
     white-space: nowrap !important;
-  }
-  .vtw-app-header .vtw-header-logout  { grid-column: 2 / 3 !important; }
-  .vtw-app-header .vtw-header-upgrade { grid-column: 3 / 4 !important; }
-  .vtw-app-header .vtw-header-refresh { grid-column: 4 / 5 !important; }
-
-  /* Logout & Refresh: chỉ ICON (ẩn label) */
-  .vtw-app-header .vtw-logout-label,
-  .vtw-app-header .vtw-refresh-label,
-  .vtw-app-header .vtw-header-logout span,
-  .vtw-app-header .vtw-header-refresh span,
-  .vtw-app-header .vtw-mobile-hide-label {
-    display: none !important;
-  }
-  .vtw-app-header .vtw-header-logout svg,
-  .vtw-app-header .vtw-header-refresh svg {
-    width: 17px !important;
-    height: 17px !important;
-    flex: 0 0 auto !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
   }
 
-  /* Upgrade: ICON + "Nâng cấp" (label ngắn cho mobile) */
-  .vtw-app-header .vtw-header-upgrade {
-    padding: 0 6px !important;
-  }
-  .vtw-app-header .vtw-header-upgrade svg {
+  /* Tất cả 3 nút HIỂN THỊ icon + label ngắn */
+  body .vtw-app-header .vtw-header-logout svg,
+  body .vtw-app-header .vtw-header-upgrade svg,
+  body .vtw-app-header .vtw-header-refresh svg {
     width: 14px !important;
     height: 14px !important;
-    flex: 0 0 auto !important;
+    flex: 0 0 14px !important;
   }
-  .vtw-app-header .vtw-upgrade-label-full   { display: none !important; }
-  .vtw-app-header .vtw-upgrade-label-mobile {
+  body .vtw-app-header .vtw-header-logout .vtw-logout-label,
+  body .vtw-app-header .vtw-header-refresh .vtw-refresh-label,
+  body .vtw-app-header .vtw-header-logout > span,
+  body .vtw-app-header .vtw-header-refresh > span {
     display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     font-size: 10px !important;
     line-height: 1 !important;
     white-space: nowrap !important;
-    font-weight: 900 !important;
     overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: none !important;
+    font-weight: 900 !important;
+  }
+
+  /* Upgrade: chỉ hiện label "mobile" ngắn, ẩn label "full" dài */
+  body .vtw-app-header .vtw-header-upgrade .vtw-upgrade-label-full   { display: none !important; }
+  body .vtw-app-header .vtw-header-upgrade .vtw-upgrade-label-mobile {
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: none !important;
+    font-weight: 900 !important;
   }
 
 
@@ -668,42 +769,62 @@
 
 /* §4 ─── Điện thoại hẹp (≤ 400px) ──────────────────────────────────────────── */
 @media (max-width: 400px) {
-  .vtw-app-header .vtw-header-actions {
-    grid-template-columns: minmax(0, 1fr) 34px minmax(70px, auto) 34px !important;
+  /* Buttons row: thu nhỏ chiều cao và icon */
+  body .vtw-app-header .vtw-header-logout,
+  body .vtw-app-header .vtw-header-upgrade,
+  body .vtw-app-header .vtw-header-refresh {
+    min-height: 34px !important;
+    padding: 0 4px !important;
+    font-size: 9px !important;
     gap: 3px !important;
   }
-  .vtw-app-header .vtw-header-logout,
-  .vtw-app-header .vtw-header-upgrade,
-  .vtw-app-header .vtw-header-refresh {
-    min-height: 32px !important;
-    height: auto !important;
+  body .vtw-app-header .vtw-header-logout svg,
+  body .vtw-app-header .vtw-header-upgrade svg,
+  body .vtw-app-header .vtw-header-refresh svg {
+    width: 12px !important;
+    height: 12px !important;
+    flex: 0 0 12px !important;
   }
-  .vtw-app-header .vtw-header-upgrade { padding: 0 4px !important; }
-  .vtw-app-header .vtw-upgrade-label-mobile { font-size: 9px !important; }
-  .vtw-app-header .vtw-header-logout svg,
-  .vtw-app-header .vtw-header-refresh svg {
-    width: 15px !important;
-    height: 15px !important;
+  body .vtw-app-header .vtw-header-logout > span,
+  body .vtw-app-header .vtw-header-refresh > span,
+  body .vtw-app-header .vtw-header-upgrade .vtw-upgrade-label-mobile {
+    font-size: 9px !important;
   }
-  .vtw-app-header .vtw-account-box {
-    min-height: 32px !important;
-    height: auto !important;
-    padding: 3px 4px !important;
-    gap: 4px !important;
+
+  /* Account box: thu nhỏ */
+  body .vtw-app-header .vtw-account-box {
+    min-height: 34px !important;
+    padding: 4px 8px !important;
+    gap: 6px !important;
   }
-  .vtw-app-header .vtw-account-box .vtw-account-avatar,
-  .vtw-app-header .vtw-account-box img {
-    width: 20px !important;
-    height: 20px !important;
-    flex: 0 0 20px !important;
-  }
-  .vtw-app-header .vtw-user-email { font-size: 8.5px !important; line-height: 1.15 !important; }
-  .vtw-app-header .vtw-app-title-text { font-size: 12px !important; }
-  .vtw-app-header .vtw-app-title-img,
-  .vtw-app-header .vtw-app-title img {
+  body .vtw-app-header .vtw-account-box .vtw-account-avatar,
+  body .vtw-app-header .vtw-account-box > img {
     width: 22px !important;
     height: 22px !important;
+    min-width: 22px !important;
+    max-width: 22px !important;
     flex: 0 0 22px !important;
+  }
+  body .vtw-app-header .vtw-account-box .vtw-user-email {
+    font-size: 10px !important;
+  }
+  body .vtw-app-header .vtw-account-box .vtw-account-plan {
+    font-size: 8.5px !important;
+    padding: 2px 5px !important;
+  }
+
+  /* Title: thu nhỏ một chút */
+  body .vtw-app-header .vtw-app-title-text,
+  body .vtw-app-header .vtw-app-title > span {
+    font-size: 12.5px !important;
+  }
+  body .vtw-app-header .vtw-app-title-img,
+  body .vtw-app-header .vtw-app-title > img {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    flex: 0 0 24px !important;
   }
 }
 
