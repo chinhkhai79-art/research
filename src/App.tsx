@@ -6910,8 +6910,8 @@ Quy tắc:
                             </div>
                          </div>
 
-                         <div className="overflow-x-auto">
-                            <table className="w-full text-left">
+                         <div className="vtw-keyword-table-wrap overflow-x-auto">
+                            <table className="vtw-keyword-table w-full text-left min-w-[1040px]">
                                <thead className="bg-gray-50 border-b border-gray-200">
                                   <tr>
                                      <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Từ khóa</th>

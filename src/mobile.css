@@ -1553,3 +1553,150 @@
     padding: 2px !important;
   }
 }
+
+
+/* PATCH 27/5 — Mobile dọc: bảng Từ khóa liên quan giữ dạng ngang, kéo trái/phải */
+@media (max-width: 900px) {
+  .vtw-keyword-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 8px !important;
+    border-radius: 0 0 16px 16px !important;
+  }
+
+  .vtw-keyword-table-wrap::after {
+    content: '← Kéo ngang để xem đủ →';
+    display: block !important;
+    position: sticky !important;
+    left: 0 !important;
+    width: max-content !important;
+    margin: 8px 12px 2px !important;
+    padding: 5px 10px !important;
+    border-radius: 999px !important;
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: .02em !important;
+  }
+
+  .vtw-keyword-table-wrap table,
+  .vtw-keyword-table-wrap thead,
+  .vtw-keyword-table-wrap tbody,
+  .vtw-keyword-table-wrap tr,
+  .vtw-keyword-table-wrap th,
+  .vtw-keyword-table-wrap td {
+    display: revert !important;
+  }
+
+  .vtw-keyword-table-wrap thead {
+    display: table-header-group !important;
+  }
+
+  .vtw-keyword-table-wrap tbody {
+    display: table-row-group !important;
+  }
+
+  .vtw-keyword-table-wrap tr {
+    display: table-row !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: transparent !important;
+    height: auto !important;
+  }
+
+  .vtw-keyword-table {
+    display: table !important;
+    width: max-content !important;
+    min-width: 1040px !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+  }
+
+  .vtw-keyword-table th,
+  .vtw-keyword-table td {
+    display: table-cell !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    padding: 12px 14px !important;
+    width: auto !important;
+    min-width: auto !important;
+    text-align: inherit !important;
+  }
+
+  .vtw-keyword-table th::before,
+  .vtw-keyword-table td::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .vtw-keyword-table td:first-child,
+  .vtw-keyword-table th:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 2 !important;
+    background: #fff !important;
+    min-width: 180px !important;
+    max-width: 220px !important;
+  }
+
+  .vtw-keyword-table th:first-child {
+    z-index: 4 !important;
+    background: #f8fafc !important;
+  }
+
+  .vtw-keyword-table thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 3 !important;
+    background: #f8fafc !important;
+  }
+
+  .vtw-keyword-table td:first-child span:last-of-type {
+    display: inline-block !important;
+    max-width: 140px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+  }
+
+  .vtw-keyword-table .flex {
+    flex-wrap: nowrap !important;
+  }
+
+  .vtw-keyword-table .rounded-full,
+  .vtw-keyword-table .rounded-lg {
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .vtw-keyword-table {
+    min-width: 980px !important;
+  }
+
+  .vtw-keyword-table th,
+  .vtw-keyword-table td {
+    padding: 10px 12px !important;
+    font-size: 10px !important;
+  }
+
+  .vtw-keyword-table td:first-child,
+  .vtw-keyword-table th:first-child {
+    min-width: 150px !important;
+    max-width: 180px !important;
+  }
+
+  .vtw-keyword-table td:first-child span:last-of-type {
+    max-width: 105px !important;
+  }
+}
