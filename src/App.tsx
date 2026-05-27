@@ -4992,8 +4992,7 @@ Quy tắc:
               <span className="text-blue-700 font-black text-[13px]">{Math.round(videoAuditProgress)}%</span>
             </div>
             <div className="h-2.5 rounded-full bg-blue-50 overflow-hidden border border-blue-100">
-              <div className="h-full rounded-full bg-blue-600 transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, videoAuditProgress))}%` }} />
-            </div>
+              
             <div className="mt-2 text-[11px] font-bold text-gray-500">Dữ liệu video đã hiện trước, phần phân tích sẽ tự cập nhật khi hoàn tất.</div>
           </div>
         )}
@@ -5461,7 +5460,7 @@ Quy tắc:
                             >
                               <input type="checkbox" className="vtw-region-check" checked={config.regions.includes('ALL')} readOnly /> Tất cả khu vực (Toàn cầu)
                             </div>
-                            <div className="border-t border-[#eee]"></div>
+                            
                             {REGIONS.filter(r => r.code !== '').map(r => (
                               <div 
                                 key={r.code}
@@ -5572,7 +5571,7 @@ Quy tắc:
                           <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Hệ thống API</span>
                           <div className="flex gap-1.5">
                              <div className={`w-2 h-2 rounded-full ${config.apiKeys.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
-                             <div className={`w-2 h-2 rounded-full ${geminiApiKey ? 'bg-indigo-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                             
                           </div>
                         </div>
 
@@ -6670,7 +6669,7 @@ Quy tắc:
                                <span className="text-[10px] text-gray-400 font-bold">NHU CẦU THỊ TRƯỜNG</span>
                                <span className="text-xl font-black text-gray-800">{nicheResults.summary.interest}</span>
                             </div>
-                            <div className="w-px h-10 bg-gray-100"></div>
+                            
                             <div className="flex flex-col">
                                <span className="text-[10px] text-gray-400 font-bold">MỨC ĐỘ CẠNH TRANH</span>
                                <span className="text-xl font-black text-gray-800">{nicheResults.summary.competition}</span>
@@ -6853,7 +6852,7 @@ Quy tắc:
                             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative overflow-hidden">
                                <div className="text-[12px] text-gray-400 font-bold mb-3">Tổng điểm <span className={`ml-2 px-2 py-1 rounded-lg text-[10px] ${totalScore >= 70 ? 'bg-emerald-100 text-emerald-700' : totalScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{totalScore >= 70 ? 'Cao' : totalScore >= 50 ? 'Trung bình' : 'Thấp'}</span></div>
                                <div className="text-3xl font-black text-gray-900">{totalScore}</div>
-                               <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, totalScore)}%` }}></div></div>
+                               <div className="mt-3 h-1.5 bg-gray-200 rounded-full overflow-hidden"></div>
                             </div>
                             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                                <div className="text-[12px] text-gray-400 font-bold mb-3">Khối lượng tìm kiếm <span className="ml-2 px-2 py-1 rounded-lg text-[10px] bg-emerald-100 text-emerald-700">Ước tính</span></div>
@@ -6935,7 +6934,7 @@ Quy tắc:
                                         <td className="px-6 py-4 text-center">
                                            <div className="flex flex-col items-start">
                                               <div className="w-12 bg-gray-200 h-1.5 rounded-full overflow-hidden mb-1">
-                                                 <div className="h-full bg-emerald-500" style={{ width: `${kw.score}%` }}></div>
+                                                 
                                               </div>
                                               <span className="text-[10px] font-black text-emerald-600">{kw.score}%</span>
                                            </div>
@@ -7058,7 +7057,7 @@ Quy tắc:
                       ) : nicheResults.shorts.map((v: any, i: number) => (
                          <div key={i} className="vtw-shorts-card aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
                             <img src={v.snippet.thumbnails.high.url} className="vtw-shorts-thumb w-full h-full object-contain bg-black opacity-90" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                            
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
                             <div className="absolute bottom-0 left-0 right-0 p-4">
                                <div className="flex items-center justify-between gap-2 mb-2">
@@ -7128,12 +7127,12 @@ Quy tắc:
                                         <Users size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.subscriberCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">subs</span></span>
                                      </div>
-                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                                     
                                      <div className="flex gap-2 items-center">
                                         <Video size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.videoCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">videos</span></span>
                                      </div>
-                                     <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                                     
                                      <div className="flex gap-2 items-center">
                                         <Eye size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{formatVNNumber(parseInt(c.statistics.viewCount) || 0)} <span className="font-medium text-gray-400 lowercase">views</span></span>
@@ -7842,7 +7841,7 @@ Quy tắc:
                     <PlusCircle size={18} />
                     Dùng tất cả
                   </button>
-                  <div className="w-[1px] h-8 bg-gray-300 mx-1 hidden sm:block"></div>
+                  
                   <button 
                     onClick={() => setSelectedHistoryKeys([...apiKeysHistory])}
                     className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg text-sm font-bold transition-all"
@@ -8166,9 +8165,7 @@ Quy tắc:
                         {isCheckingGeminiKeys ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                         Check Gemini Key
                       </button>
-                      <div className="text-[10px] font-bold text-slate-500 leading-snug">
-                        Gemini API Key là chìa khóa gọi phân tích. Key có thể lấy từ Gmail/dự án Google AI Studio khác nếu còn quota và được quyền dùng model đã chọn.
-                      </div>
+                      
                       {geminiKeyCheckResults.length > 0 && (
                         <div className="space-y-2">
                           <button
@@ -8296,9 +8293,7 @@ Quy tắc:
                       {isCheckingYoutubeKeys ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                       Check YouTube Key
                     </button>
-                    <div className="text-[10px] font-bold text-slate-500 leading-snug">
-                      YouTube API Key V3 dùng để gọi dữ liệu thật. Key có thể lấy từ Gmail/dự án Google Cloud khác, miễn là đã bật YouTube Data API v3 và còn quota.
-                    </div>
+                    
                     {youtubeKeyCheckResults.length > 0 && (
                       <div className="space-y-2">
                         <button
@@ -8450,7 +8445,7 @@ Quy tắc:
             </button>
           </div>
 
-          <div className="border-t border-gray-100 my-1"></div>
+          
 
           <div className="py-1">
             <button 
@@ -8679,7 +8674,7 @@ Quy tắc:
             >
               <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white flex justify-between items-center shadow-lg relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
-                   <div className="absolute rotate-45 transform bg-white w-full h-full -top-1/2 -left-1/2 animate-pulse"></div>
+                   
                 </div>
                 <div className="relative z-10 flex items-center gap-3">
                   <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
