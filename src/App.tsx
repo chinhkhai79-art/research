@@ -8282,12 +8282,6 @@ Quy tắc:
                         {showGeminiApiKeys ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-600">
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">
-                        🔄 Tự động xoay vòng key & model khi hết quota
-                      </span>
-                    </div>
-
                     <div className="mt-3 flex flex-col gap-2">
                       <button
                         type="button"
@@ -8325,8 +8319,13 @@ Quy tắc:
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-3 mb-2">
                         <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Chọn model</span>
-                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[190px]">
-                          Đang dùng: {geminiModel}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1 text-[9px] font-black text-indigo-600 whitespace-nowrap">
+                            🔄 Tự động xoay vòng key & model khi hết quota
+                          </span>
+                          <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[190px]">
+                            Đang dùng: {geminiModel}
+                          </div>
                         </div>
                       </div>
 
