@@ -279,6 +279,7 @@ function getFriendlyApiError(error: any): string {
 }
 
 const GEMINI_MODELS = [
+  { id: 'gemini-3.5-pro', name: '3.5 Pro — mạnh nhất' },
   { id: 'gemini-3.5-flash', name: '3.5 Flash — mới' },
   { id: 'gemini-2.5-flash', name: '2.5 Flash — ổn định, mạnh' },
   { id: 'gemini-2.5-flash-lite', name: '2.5 Flash-Lite — tiết kiệm quota' },
@@ -700,7 +701,7 @@ export default function App() {
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
-  const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+  const DEFAULT_GEMINI_MODEL = 'gemini-3.5-pro';
   const [geminiModel, setGeminiModel] = useState(DEFAULT_GEMINI_MODEL);
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
@@ -1099,7 +1100,7 @@ export default function App() {
       localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextGeminiHistory));
     }
     
-    // Luôn mặc định Gemini 3 Flash Preview sau khi tải lại/làm mới trang.
+    // Luôn mặc định Gemini 3.5 Pro sau khi tải lại/làm mới trang.
     // Người dùng vẫn có thể đổi model trong phiên hiện tại, nhưng reload sẽ quay về mặc định này.
     localStorage.setItem('youtube_gemini_model', DEFAULT_GEMINI_MODEL);
     setGeminiModel(DEFAULT_GEMINI_MODEL);
