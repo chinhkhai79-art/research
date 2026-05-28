@@ -3069,7 +3069,10 @@ JSON mẫu:
           .map((c: any) => c.id)
       );
       const videosForProcessing = allDetailedVideos.filter((v: any) => subLimitedChannelIds.has(v.snippet.channelId));
-      const sourceVideosForProcessing = videosForProcessing.length > 0 ? videosForProcessing : allDetailedVideos;
+      if (videosForProcessing.length === 0) {
+        setStatus(`Không tìm thấy video/kênh phù hợp trong phạm vi sub ${formatVNNumber(nicheMinSub)} → ${formatVNNumber(nicheMaxSub)}. Hãy mở rộng phạm vi Sub rồi phân tích lại.`);
+      }
+      const sourceVideosForProcessing = videosForProcessing;
       const processedVideos = sourceVideosForProcessing.map((v: any) => {
         const chan = channelsMap.get(v.snippet.channelId);
         const stats = v.statistics || {};
@@ -3173,7 +3176,7 @@ JSON mẫu:
         suggestions: suggestionData.suggestions,
         suggestionMeta: suggestionData.meta,
         channels: allChannels
-          .filter((c: any) => { const sub = parseInt(c.statistics?.subscriberCount) || 0; return (sub >= nicheMinSub && sub <= nicheMaxSub) || videosForProcessing.length === 0; })
+          .filter((c: any) => { const sub = parseInt(c.statistics?.subscriberCount) || 0; return sub >= nicheMinSub && sub <= nicheMaxSub; })
           .map((c: any) => {
           const chanVideos = processedVideos.filter(v => v.snippet.channelId === c.id);
           return {
