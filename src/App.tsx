@@ -918,10 +918,17 @@ export default function App() {
   const [nicheRegion, setNicheRegion] = useState('VN');
   const [nicheTime, setNicheTime] = useState('month');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
+  const [nicheMinSub, setNicheMinSub] = useState(0);
   const [nicheMaxSub, setNicheMaxSub] = useState(250000);
 
-  // Ô nhập Sub cho phép nhập số tự do từ 0 trở lên.
-  // Chỉ thanh kéo mới dùng bước 10 để tránh số lẻ.
+  const SUB_RANGE_MIN = 0;
+  const SUB_RANGE_MAX = 10000000;
+  const SUB_MIN_MAX = 10000000;
+  const SUB_MAX_MIN = 1;
+  const SUB_RANGE_GAP = 1;
+
+  // Phạm vi Sub: 2 ô nhập + thanh kéo 2 nút.
+  // Min: 0–10 triệu. Max: 1–10 triệu và luôn lớn hơn Min.
   const normalizeSubManualValue = (value: string | number) => {
     const raw = String(value ?? '').replace(/[^0-9]/g, '');
     if (!raw) return 0;
@@ -930,19 +937,36 @@ export default function App() {
     return Math.max(0, Math.floor(parsed));
   };
 
+  const clampSubValue = (value: number, min: number, max: number) => {
+    return Math.max(min, Math.min(max, Math.floor(value)));
+  };
+
+  const updateNicheMinSub = (value: string | number) => {
+    const parsed = clampSubValue(normalizeSubManualValue(value), SUB_RANGE_MIN, SUB_MIN_MAX);
+    const safeMin = Math.min(parsed, Math.max(SUB_RANGE_MIN, nicheMaxSub - SUB_RANGE_GAP));
+    setNicheMinSub(safeMin);
+    if (nicheMaxSub <= safeMin) setNicheMaxSub(Math.min(SUB_RANGE_MAX, safeMin + SUB_RANGE_GAP));
+  };
+
   const updateNicheMaxSubManual = (value: string | number) => {
-    setNicheMaxSub(normalizeSubManualValue(value));
+    const parsed = clampSubValue(normalizeSubManualValue(value), SUB_MAX_MIN, SUB_RANGE_MAX);
+    const safeMax = Math.max(parsed, Math.min(SUB_RANGE_MAX, nicheMinSub + SUB_RANGE_GAP));
+    setNicheMaxSub(safeMax);
+    if (nicheMinSub >= safeMax) setNicheMinSub(Math.max(SUB_RANGE_MIN, safeMax - SUB_RANGE_GAP));
+  };
+
+  const updateNicheMinSubSlider = (value: string | number) => {
+    const parsed = clampSubValue(Math.round(normalizeSubManualValue(value) / 10) * 10, SUB_RANGE_MIN, SUB_RANGE_MAX);
+    updateNicheMinSub(parsed);
   };
 
   const updateNicheMaxSubSlider = (value: string | number) => {
-    const parsed = normalizeSubManualValue(value);
-    const safeValue = Math.max(0, Math.min(10000000, Math.round(parsed / 10) * 10));
-    setNicheMaxSub(safeValue);
+    const parsed = clampSubValue(Math.round(normalizeSubManualValue(value) / 10) * 10, SUB_MAX_MIN, SUB_RANGE_MAX);
+    updateNicheMaxSubManual(parsed);
   };
 
-  const stepNicheMaxSub = (delta: number) => {
-    updateNicheMaxSubManual(nicheMaxSub + delta);
-  };
+  const subRangeLeftPercent = Math.max(0, Math.min(100, (nicheMinSub / SUB_RANGE_MAX) * 100));
+  const subRangeRightPercent = Math.max(0, Math.min(100, (nicheMaxSub / SUB_RANGE_MAX) * 100));
   const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
@@ -3041,7 +3065,7 @@ JSON mẫu:
       // 4. Process data
       const subLimitedChannelIds = new Set(
         allChannels
-          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub)
+          .filter((c: any) => { const sub = parseInt(c.statistics?.subscriberCount) || 0; return sub >= nicheMinSub && sub <= nicheMaxSub; })
           .map((c: any) => c.id)
       );
       const videosForProcessing = allDetailedVideos.filter((v: any) => subLimitedChannelIds.has(v.snippet.channelId));
@@ -3149,7 +3173,7 @@ JSON mẫu:
         suggestions: suggestionData.suggestions,
         suggestionMeta: suggestionData.meta,
         channels: allChannels
-          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub || videosForProcessing.length === 0)
+          .filter((c: any) => { const sub = parseInt(c.statistics?.subscriberCount) || 0; return (sub >= nicheMinSub && sub <= nicheMaxSub) || videosForProcessing.length === 0; })
           .map((c: any) => {
           const chanVideos = processedVideos.filter(v => v.snippet.channelId === c.id);
           return {
@@ -6614,50 +6638,68 @@ Quy tắc:
                     </div>
                   </div>
 
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-3 mt-2 vtw-sub-range-control">
                     <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center gap-2">
                       <span>Phạm vi Sub</span>
-                      <div className="flex items-center gap-2">
-                        <div className="vtw-sub-stepper flex items-center rounded-xl border border-[#4d6b87] bg-[#223548] overflow-hidden h-8 shadow-sm">
-                          <button
-                            type="button"
-                            onClick={() => stepNicheMaxSub(-10)}
-                            className="w-8 h-8 flex items-center justify-center text-white/90 hover:bg-blue-500/30 active:bg-blue-500 transition-all border-r border-[#4d6b87]"
-                            title="Giảm 10 sub"
-                          >
-                            <Minus size={14} strokeWidth={3} />
-                          </button>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={String(nicheMaxSub)}
-                            onChange={(e) => updateNicheMaxSubManual(e.target.value)}
-                            onBlur={(e) => updateNicheMaxSubManual(e.target.value)}
-                            className="w-[86px] h-8 bg-transparent px-1 text-center text-[10px] font-black text-white outline-none"
-                            title="Nhập số sub tối đa, ví dụ 100000"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => stepNicheMaxSub(10)}
-                            className="w-8 h-8 flex items-center justify-center text-white/90 hover:bg-blue-500/30 active:bg-blue-500 transition-all border-l border-[#4d6b87]"
-                            title="Tăng 10 sub"
-                          >
-                            <Plus size={14} strokeWidth={3} />
-                          </button>
-                        </div>
-                        <span>0 → {formatVNNumber(nicheMaxSub)}</span>
-                      </div>
+                      <span className="text-[9px] text-[#95a5a6] font-black">{formatVNNumber(nicheMinSub)} → {formatVNNumber(nicheMaxSub)}</span>
                     </label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={10000000}
-                      step={10}
-                      value={Math.min(nicheMaxSub, 10000000)}
-                      onChange={(e) => updateNicheMaxSubSlider(e.target.value)}
-                      className="vtw-niche-slider w-full accent-blue-500"
-                    />
+
+                    <div className="vtw-sub-range-inputs grid grid-cols-2 gap-2">
+                      <label className="vtw-sub-range-field">
+                        <span>Tối thiểu</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={String(nicheMinSub)}
+                          onChange={(e) => updateNicheMinSub(e.target.value)}
+                          onBlur={(e) => updateNicheMinSub(e.target.value)}
+                          title="Nhập Sub tối thiểu từ 0 đến 10 triệu"
+                        />
+                      </label>
+                      <label className="vtw-sub-range-field">
+                        <span>Tối đa</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={String(nicheMaxSub)}
+                          onChange={(e) => updateNicheMaxSubManual(e.target.value)}
+                          onBlur={(e) => updateNicheMaxSubManual(e.target.value)}
+                          title="Nhập Sub tối đa từ 1 đến 10 triệu và phải lớn hơn Sub tối thiểu"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      className="vtw-dual-sub-slider"
+                      style={{
+                        '--sub-left': `${subRangeLeftPercent}%`,
+                        '--sub-right': `${subRangeRightPercent}%`
+                      } as React.CSSProperties}
+                    >
+                      <div className="vtw-dual-sub-track" />
+                      <div className="vtw-dual-sub-active" />
+                      <input
+                        type="range"
+                        min={SUB_RANGE_MIN}
+                        max={SUB_RANGE_MAX}
+                        step={10}
+                        value={nicheMinSub}
+                        onChange={(e) => updateNicheMinSubSlider(e.target.value)}
+                        aria-label="Sub tối thiểu"
+                      />
+                      <input
+                        type="range"
+                        min={SUB_MAX_MIN}
+                        max={SUB_RANGE_MAX}
+                        step={10}
+                        value={nicheMaxSub}
+                        onChange={(e) => updateNicheMaxSubSlider(e.target.value)}
+                        aria-label="Sub tối đa"
+                      />
+                    </div>
+
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
                       <span style={{ left: '0%' }}>0</span>
                       <span style={{ left: '10%' }}>1M</span>
