@@ -2690,3 +2690,92 @@
     line-height: 1.22 !important;
   }
 }
+
+
+/* PATCH 27/5 — Restore cột phải Top Videos Trending về layout cũ.
+   Giữ phần cột trái mới: thumbnail + channel/time/score + title tự xuống dòng.
+   Chỉ trả lại bên phải: 3 nút dọc + 6 stats nằm gọn trong cột phải, không absolute/tràn ra ngoài. */
+@media (max-width: 900px) {
+  body .vtw-niche-video-card.vtw-square-video-card {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+    gap: 10px 12px !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions {
+    position: static !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    margin: 0 !important;
+    align-self: start !important;
+    z-index: auto !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions button {
+    min-height: 40px !important;
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-stat-grid {
+    position: static !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    grid-column: 2 !important;
+    grid-row: 2 / span 2 !important;
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-top: 0 !important;
+    align-self: start !important;
+    z-index: auto !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-stat {
+    min-height: 50px !important;
+    padding: 6px 7px !important;
+    border-radius: 11px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  body .vtw-niche-video-card .vtw-video-actions {
+    position: static !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions button {
+    min-height: 36px !important;
+    padding: 7px 8px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-stat-grid {
+    position: static !important;
+    width: 100% !important;
+    gap: 5px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-stat {
+    min-height: 48px !important;
+    padding: 5px 6px !important;
+  }
+}
