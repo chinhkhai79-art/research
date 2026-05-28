@@ -2255,15 +2255,81 @@ Rules:
   const getRealTrendHotStorageKey = (regionCode?: string) =>
     `youtube_real_trend_hot_${normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN')}`;
 
-  const getSavedRealTrendHotPayload = (regionCode?: string) => {
+  const getRegionCacheKey = (regionCode?: string) =>
+    `cache_${normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN')}`;
+
+  const normalizeTrendCachePayload = (value: any, regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    if (!value) return null;
+
+    // Shape mới: { categories: [...] }
+    if (Array.isArray(value?.categories)) {
+      return {
+        ...value,
+        region: value.region || selectedRegion,
+        updatedAt: value.updatedAt || new Date().toISOString(),
+        categories: value.categories
+      };
+    }
+
+    // Shape dự phòng: localStorage cũ chỉ lưu mảng key. Không đủ thông tin index/chủ đề,
+    // nên chỉ dùng như metadata, không ghi đè UI.
+    if (Array.isArray(value) && value.every((x: any) => typeof x === 'string')) {
+      return null;
+    }
+
+    return null;
+  };
+
+  const readTrendCachePayload = (storageKey: string, regionCode?: string) => {
     try {
-      const raw = localStorage.getItem(getRealTrendHotStorageKey(regionCode));
+      const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed?.categories) ? parsed : null;
+      return normalizeTrendCachePayload(parsed, regionCode);
     } catch {
       return null;
     }
+  };
+
+  const getSavedRealTrendHotPayload = (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+
+    // Ưu tiên cache_VN/cache_US... vì đây là cache đồng bộ trực tiếp với UI sau khi bấm kính lúp.
+    const fromRegionCache = readTrendCachePayload(getRegionCacheKey(selectedRegion), selectedRegion);
+    if (fromRegionCache) return fromRegionCache;
+
+    // Fallback: key lưu cũ.
+    const fromSavedHot = readTrendCachePayload(getRealTrendHotStorageKey(selectedRegion), selectedRegion);
+    if (fromSavedHot) return fromSavedHot;
+
+    return null;
+  };
+
+  const persistTrendHotToRegionCache = (categories: any[], regionCode?: string, source: string = 'youtube_v3_real_scan') => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    const payload = {
+      region: selectedRegion,
+      updatedAt: new Date().toISOString(),
+      source,
+      categories: (Array.isArray(categories) ? categories : [])
+        .map((item: any, index: number) => ({
+          category: item.category,
+          localCategory: item.localCategory,
+          viCategory: item.viCategory,
+          items: Array.isArray(item.items) ? item.items.slice(0, 6) : [],
+          realScanned: item.realScanned === true || item.source === 'youtube_v3_real_scan',
+          realScannedAt: item.realScannedAt || (item.realScanned ? new Date().toISOString() : undefined),
+          source: item.source,
+          index: Number.isFinite(Number(item.index)) ? Number(item.index) : index,
+          region: selectedRegion
+        }))
+        .slice(0, 15)
+    };
+
+    localStorage.setItem(getRegionCacheKey(selectedRegion), JSON.stringify(payload));
+    localStorage.setItem(getRealTrendHotStorageKey(selectedRegion), JSON.stringify(payload));
+    return payload;
   };
 
   const mergeSavedRealTrendHot = (baseCategories: any[], regionCode?: string) => {
@@ -2439,7 +2505,7 @@ JSON mẫu:
           index: item.index
         }))
       };
-      localStorage.setItem(`youtube_real_trend_hot_${selectedRegion}`, JSON.stringify(payload));
+      persistTrendHotToRegionCache(payload.categories, selectedRegion, payload.source);
       setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
       setStatus(`Đã lưu ${scannedCategories.length} chủ đề trend hot đã quét thật tại ${regionName}. Chủ đề chưa bấm kính lúp sẽ không được lưu.`);
     } catch (err: any) {
@@ -2673,18 +2739,23 @@ JSON mẫu:
       const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
 
       setSuggestedNiches(prev => {
+        const now = new Date().toISOString();
         const next = prev.map((item: any, i: number) => i === index ? {
           ...item,
           items: finalItems,
           source: 'youtube_v3_real_scan',
           realScanned: true,
-          realScannedAt: new Date().toISOString(),
-          region: selectedRegion
+          realScannedAt: now,
+          region: selectedRegion,
+          index
         } : item).slice(0, 15);
+
+        // Ghi ngay xuống cache_VN/cache_US... để UI và localStorage đồng bộ ngay sau khi bấm kính lúp.
+        const payload = persistTrendHotToRegionCache(next, selectedRegion, 'manual_region_scan');
+        setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
         return next;
       });
 
-      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
       setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
     } catch (error: any) {
       console.error(error);
