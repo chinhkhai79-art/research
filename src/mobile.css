@@ -2386,3 +2386,130 @@
     padding: 3px 4px !important;
   }
 }
+
+
+/* PATCH 27/5 bổ sung — Top Videos Trending mobile:
+   Thông tin kênh/thời lượng/score/stats nằm cột trái dưới tiêu đề.
+   Cột phải chỉ giữ 3 nút chức năng xếp dọc. */
+@media (max-width: 900px) {
+  body .vtw-niche-video-card.vtw-square-video-card {
+    grid-template-columns: minmax(0, 58%) minmax(94px, 1fr) !important;
+    grid-template-rows: auto auto auto auto !important;
+    gap: 8px 10px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-thumb {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  /* Header thông tin chuyển về cột trái, ngay dưới thumbnail */
+  body .vtw-niche-video-card .vtw-video-info > div:first-child {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-info > div:first-child > a {
+    width: 100% !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-info > div:first-child > a img {
+    width: 20px !important;
+    height: 20px !important;
+    flex: 0 0 20px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-info > div:first-child > a span {
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-info > div:first-child > div {
+    justify-content: flex-start !important;
+    gap: 5px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-info > div:first-child > div span {
+    font-size: 9px !important;
+    padding: 4px 6px !important;
+    border-radius: 7px !important;
+  }
+
+  /* Tiêu đề cũng nằm cột trái, dưới header thông tin */
+  body .vtw-niche-video-card .vtw-video-title {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    font-size: 10px !important;
+    line-height: 1.26 !important;
+    margin-top: 1px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-title button,
+  body .vtw-niche-video-card .vtw-video-title a {
+    -webkit-line-clamp: 7 !important;
+    line-height: 1.26 !important;
+  }
+
+  /* Stats nằm cột trái, dưới tiêu đề */
+  body .vtw-niche-video-card .vtw-video-stat-grid {
+    grid-column: 1 !important;
+    grid-row: 4 !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  /* Cột phải: chỉ 3 nút chức năng xếp dọc, kéo dài từ đầu card */
+  body .vtw-niche-video-card .vtw-video-actions {
+    grid-column: 2 !important;
+    grid-row: 1 / 5 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: minmax(40px, auto) !important;
+    align-content: start !important;
+    gap: 8px !important;
+    margin: 0 !important;
+    position: sticky !important;
+    top: 0 !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions button {
+    min-height: 40px !important;
+    border-radius: 11px !important;
+    padding: 7px 8px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions button svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  body .vtw-niche-video-card.vtw-square-video-card {
+    grid-template-columns: minmax(0, 60%) minmax(82px, 1fr) !important;
+    gap: 7px 8px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-title {
+    font-size: 9.5px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions {
+    gap: 6px !important;
+    grid-auto-rows: minmax(36px, auto) !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-actions button {
+    min-height: 36px !important;
+    padding: 6px !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
