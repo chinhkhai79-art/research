@@ -296,23 +296,29 @@
   }
 
 
-  /* §2.2 ── VIDEO CARDS (Ngách): layout 2 cột, thumb trái + content phải ─── */
+  /* §2.2 ── VIDEO CARDS (Ngách): layout 2 cột, TRÁI = thumb + stats, PHẢI = channel + title + buttons ─── */
 
   .vtw-niche-content { padding: 12px !important; }
   .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; }
 
-  .vtw-niche-video-card.vtw-square-video-card {
+  /* Card grid 2 cột:
+   * - TRÁI 130px: thumbnail trên + STATS (hàng 2..n) bên dưới
+   * - PHẢI 1fr: channel info → title → action buttons
+   * Dùng display:contents trên .vtw-video-info để children nhảy ra grid */
+  body .vtw-niche-video-card.vtw-square-video-card {
     aspect-ratio: auto !important;
     min-height: 0 !important;
     display: grid !important;
-    grid-template-columns: 140px minmax(0, 1fr) !important;
-    gap: 10px !important;
+    grid-template-columns: 130px minmax(0, 1fr) !important;
+    gap: 8px 10px !important;
     padding: 10px !important;
-    align-items: stretch !important;
+    align-items: start !important;
   }
 
-  /* Thumbnail: cột trái, 16:9, bo góc nhỏ */
-  .vtw-niche-video-card .vtw-video-thumb {
+  /* THUMBNAIL: cột 1 hàng 1, 16:9 cover */
+  body .vtw-niche-video-card .vtw-video-thumb {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
     width: 100% !important;
     height: auto !important;
     aspect-ratio: 16 / 9 !important;
@@ -320,43 +326,94 @@
     align-self: start !important;
     position: relative !important;
     overflow: hidden !important;
+    margin: 0 !important;
+    background: #000 !important;
   }
-  .vtw-niche-video-card .vtw-video-thumb img {
+  body .vtw-niche-video-card .vtw-video-thumb img {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+    object-position: center !important;
     background: #000 !important;
   }
-  /* Fallback cho card không có class vtw-video-thumb (modal trending) */
-  .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) {
+  /* Fallback: card không có class vtw-video-thumb (modal trending) */
+  body .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
     width: 100% !important;
     height: auto !important;
     aspect-ratio: 16 / 9 !important;
     align-self: start !important;
     border-radius: 10px !important;
     overflow: hidden !important;
+    background: #000 !important;
+  }
+  body .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
   }
 
-  .vtw-niche-video-card .vtw-thumb-play,
-  .vtw-thumb-play * { display: none !important; }
-  .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
-  .vtw-niche-video-card .vtw-thumb-play svg  { width: 17px !important; height: 17px !important; }
+  body .vtw-niche-video-card .vtw-thumb-play,
+  body .vtw-thumb-play * { display: none !important; }
 
-  /* Title: 11px, 3 dòng (mobile), cột phải — tăng từ 2 → 3 dòng để hiện đầy đủ */
-  .vtw-niche-video-card .vtw-video-title {
+  /* INFO WRAPPER: flatten — children nhảy ra làm grid item trực tiếp */
+  body .vtw-niche-video-card .vtw-video-info {
+    display: contents !important;
+  }
+  body .vtw-niche-video-card > div.p-4 {
+    display: contents !important;
+  }
+
+  /* Channel info (div đầu tiên) → cột PHẢI hàng 1 */
+  body .vtw-niche-video-card .vtw-video-info > div:first-child {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    margin: 0 !important;
+    align-self: start !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+  }
+  body .vtw-niche-video-card .vtw-video-info > div:first-child > a {
+    flex: 1 1 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+  }
+  body .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 18px !important; height: 18px !important; flex: 0 0 18px !important; }
+  body .vtw-niche-video-card .vtw-video-info > div:first-child span {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 0 !important;
+  }
+
+  /* TITLE h4 → cột PHẢI hàng 2. ALWAYS hiện đầy đủ (clamp 3 dòng) */
+  body .vtw-niche-video-card .vtw-video-title {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    margin: 0 !important;
+    padding-bottom: 2px !important;
     min-height: 0 !important;
-    font-size: 11px !important;
-    line-height: 1.25 !important;
-    margin-bottom: 0 !important;
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+    font-weight: 700 !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     word-break: break-word !important;
+    overflow-wrap: anywhere !important;
   }
-  /* Cho phép link/button bên trong title cũng wrap đầy đủ 3 dòng (không bị truncate 1 dòng) */
-  .vtw-niche-video-card .vtw-video-title a,
-  .vtw-niche-video-card .vtw-video-title button {
+  body .vtw-niche-video-card .vtw-video-title a,
+  body .vtw-niche-video-card .vtw-video-title button {
     display: -webkit-box !important;
     -webkit-line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
@@ -364,64 +421,71 @@
     white-space: normal !important;
     text-overflow: clip !important;
     word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.35 !important;
+    max-width: 100% !important;
   }
 
-  /* Action buttons trong card: 3 cột, chỉ ICON — nén nhỏ hơn để dồn chỗ cho title */
-  .vtw-niche-video-card .vtw-video-actions {
+  /* ACTIONS (3 nút icon-only) → cột PHẢI hàng 3 */
+  body .vtw-niche-video-card .vtw-video-actions {
+    grid-column: 2 !important;
+    grid-row: 3 !important;
+    display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 4px !important;
-    margin-bottom: 0 !important;
+    margin: 0 !important;
+    align-self: start !important;
   }
-  .vtw-niche-video-card .vtw-video-actions button {
+  body .vtw-niche-video-card .vtw-video-actions button {
     padding: 4px 0 !important;
-    min-height: 26px !important;
+    min-height: 28px !important;
     font-size: 0 !important;
     border-radius: 8px !important;
     gap: 0 !important;
     flex-direction: row !important;
   }
-  .vtw-niche-video-card .vtw-video-actions button svg { width: 13px !important; height: 13px !important; }
-  .vtw-niche-video-card .vtw-video-actions button .vtw-btn-label { display: none !important; }
+  body .vtw-niche-video-card .vtw-video-actions button svg { width: 13px !important; height: 13px !important; }
+  body .vtw-niche-video-card .vtw-video-actions button .vtw-btn-label { display: none !important; }
 
-  /* Info container: cột phải, padding 0 */
-  .vtw-niche-video-card .vtw-video-info {
+  /* STATS GRID → cột TRÁI hàng 2+ (dưới thumbnail), xếp dọc 1 cột */
+  body .vtw-niche-video-card .vtw-video-stat-grid {
+    grid-column: 1 !important;
+    grid-row: 2 / -1 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 3px !important;
     padding: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 5px !important;
-    min-width: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    align-self: start !important;
   }
-  .vtw-niche-video-card > div.p-4 { padding: 0 !important; min-width: 0 !important; }
-
-  /* Stats grid: 2 cột, chữ vừa đọc */
-  .vtw-niche-video-card .vtw-video-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 4px !important;
-    padding-top: 4px !important;
-    margin-top: auto !important;
-  }
-  .vtw-niche-video-card .vtw-video-stat {
-    min-height: 28px !important;
-    padding: 4px 5px !important;
+  body .vtw-niche-video-card .vtw-video-stat {
+    min-height: 24px !important;
+    padding: 3px 5px !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
     border-radius: 6px !important;
-    gap: 3px !important;
+    gap: 4px !important;
   }
-  .vtw-niche-video-card .vtw-video-stat svg  { width: 11px !important; height: 11px !important; flex: 0 0 auto !important; }
-  .vtw-niche-video-card .vtw-video-stat span {
-    font-size: 9.5px !important;
-    line-height: 1.15 !important;
+  body .vtw-niche-video-card .vtw-video-stat svg {
+    width: 11px !important;
+    height: 11px !important;
+    flex: 0 0 auto !important;
+  }
+  body .vtw-niche-video-card .vtw-video-stat span {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     text-align: left !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere !important;
   }
-  .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 0 !important; }
-  .vtw-niche-video-card .vtw-video-info > div:first-child img  { width: 18px !important; height: 18px !important; }
-  .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 9.5px !important; line-height: 1.15 !important; }
-  .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 8px !important; }
+  /* Ô ngày tháng (stat đầu) chữ dài hơn → font nhỏ */
+  body .vtw-niche-video-card .vtw-video-stat:nth-child(1) span {
+    font-size: 8.5px !important;
+  }
 
 
   /* === VIDEO TIỀM NĂNG NHẤT (.vtw-niche-top-video): stats + buttons stack đẹp === */
@@ -1951,5 +2015,147 @@
   /* Label nhỏ (TÊN KÊNH, CHANNEL ID, ...) */
   html body div[class*="grid-cols-1"][class*="md:grid-cols-2"][class*="lg:grid-cols-4"] .text-xs {
     font-size: 8.5px !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PATCH 1/6 — TOAST NOTIFICATION (mọi viewport)
+ *
+ * Hiển thị giữa trên màn hình, max-width 480px, auto-dismiss 3s.
+ * Không stack — mỗi thông báo mới thay thế cái cũ (xử lý trong App.tsx).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.vtw-toast-overlay {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 92vw;
+  width: max-content;
+  animation: vtwToastSlide 0.25s ease-out;
+}
+
+.vtw-toast-box {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #fff;
+  padding: 10px 14px 10px 12px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 600;
+  max-width: 480px;
+}
+
+.vtw-toast-icon { font-size: 14px; flex: 0 0 auto; }
+.vtw-toast-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.vtw-toast-close {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.12);
+  border: 0;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.vtw-toast-close:hover { background: rgba(255, 255, 255, 0.22); }
+
+@keyframes vtwToastSlide {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 768px) {
+  .vtw-toast-overlay {
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 88vw;
+  }
+  .vtw-toast-box { font-size: 11px; padding: 9px 12px; }
+  @keyframes vtwToastSlide {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PATCH 2/6 — REGION DROPDOWN (mobile): thu nhỏ rõ rệt
+ *
+ * Ảnh 5: dropdown chiếm gần hết khung, mỗi item to (font 16px+, padding lớn).
+ * Fix: giảm font xuống 11px, padding 6px, checkbox 14px, dropdown max-height
+ *      thấp hơn để không che hết form bên dưới.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  body .vtw-region-dropdown {
+    max-height: 240px !important;
+    font-size: 11px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+  }
+  body .vtw-region-dropdown .vtw-region-option {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+    min-height: 30px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  body .vtw-region-dropdown .vtw-region-check,
+  body .vtw-region-dropdown input[type="checkbox"] {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 14px !important;
+    margin: 0 !important;
+  }
+  body .vtw-region-button { font-size: 11px !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PATCH 3/6 — FOOTER STATUS BAR (mobile): giảm noise (toast đã thay thế)
+ *
+ * Vì toast đã hiện thông báo, footer status chỉ cần giữ thông tin quota.
+ * Thu nhỏ font + truncate text dài.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  body .vtw-footer-status {
+    padding: 4px 8px !important;
+    font-size: 9.5px !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    line-height: 1.3 !important;
+  }
+  body .vtw-footer-status > * {
+    flex: 0 0 auto !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
   }
 }

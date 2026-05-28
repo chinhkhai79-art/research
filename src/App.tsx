@@ -699,7 +699,7 @@ export default function App() {
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
-  const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+  const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
   const [geminiModel, setGeminiModel] = useState(DEFAULT_GEMINI_MODEL);
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
@@ -874,6 +874,21 @@ export default function App() {
   }, []);
 
   const [status, setStatus] = useState('Sẵn sàng.');
+  // === TOAST NOTIFICATION ===
+  // Mirror các thông báo từ setStatus thành toast nổi giữa màn hình (3s auto-dismiss).
+  // Không stack - mỗi message mới sẽ thay thế cái cũ.
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    // Bỏ qua message ban đầu "Sẵn sàng." và các message rỗng
+    if (!status || status === 'Sẵn sàng.') return;
+    setToastMsg(status);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 3000);
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, [status]);
   const [progress, setProgress] = useState(0);
   const [isHunting, setIsHunting] = useState(false);
   const [quotaUsed, setQuotaUsed] = useState(0);
@@ -1302,44 +1317,72 @@ export default function App() {
     const keys = getActiveGeminiKeys();
     if (keys.length === 0) throw new Error('Thiếu Gemini API Key. Vui lòng dán ít nhất 1 key.');
 
-    const safeIndex = Math.max(0, Math.min(geminiKeyIndex, keys.length - 1));
-    const orderedIndexes = [
-      ...keys.map((_, idx) => idx).slice(safeIndex),
-      ...keys.map((_, idx) => idx).slice(0, safeIndex)
+    // Auto-rotate ORDER: bắt đầu từ model đang chọn, rồi fallback theo thứ tự GEMINI_MODELS.
+    // Khi tất cả keys đều lỗi cho 1 model → tự chuyển sang model tiếp theo và reset exhausted keys.
+    const modelOrder = [
+      geminiModel,
+      ...GEMINI_MODELS.map(m => m.id).filter(id => id !== geminiModel)
     ];
 
     let lastError: any = null;
-    for (const idx of orderedIndexes) {
-      const key = keys[idx];
-      if (exhaustedGeminiKeysRef.current.includes(key)) continue;
-      try {
-        setGeminiKeyIndex(idx);
-        const ai = new GoogleGenAI({ apiKey: key });
-        const response = await ai.models.generateContent({
-          model: geminiModel,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-        return response;
-      } catch (error: any) {
-        lastError = error;
-        if (isRotatableGeminiError(error)) {
-          setExhaustedGeminiKeys(prev => {
-            const next = [...new Set([...prev, key])];
-            exhaustedGeminiKeysRef.current = next;
-            return next;
-          });
-          const nextAvailable = keys.findIndex((candidate, candidateIndex) => candidateIndex !== idx && !exhaustedGeminiKeysRef.current.includes(candidate));
-          if (nextAvailable !== -1) {
-            setGeminiKeyIndex(nextAvailable);
-            setStatus(`Gemini Key #${idx + 1} lỗi: ${classifyGeminiError(error).label}. Đang tự chuyển sang Key #${nextAvailable + 1}...`);
-            continue;
-          }
-        }
-        throw error;
+
+    for (let modelAttempt = 0; modelAttempt < modelOrder.length; modelAttempt++) {
+      const currentModel = modelOrder[modelAttempt];
+      if (modelAttempt > 0) {
+        // Đã thử model trước thất bại → reset exhausted keys cho model mới
+        setExhaustedGeminiKeys([]);
+        exhaustedGeminiKeysRef.current = [];
+        setGeminiModel(currentModel);
+        setStatus(`Tất cả key đã hết quota cho model trước. Đang tự chuyển sang model ${currentModel}...`);
       }
+
+      const safeIndex = Math.max(0, Math.min(geminiKeyIndex, keys.length - 1));
+      const orderedIndexes = [
+        ...keys.map((_, idx) => idx).slice(safeIndex),
+        ...keys.map((_, idx) => idx).slice(0, safeIndex)
+      ];
+
+      let allKeysExhaustedForThisModel = true;
+
+      for (const idx of orderedIndexes) {
+        const key = keys[idx];
+        if (exhaustedGeminiKeysRef.current.includes(key)) continue;
+        try {
+          setGeminiKeyIndex(idx);
+          const ai = new GoogleGenAI({ apiKey: key });
+          const response = await ai.models.generateContent({
+            model: currentModel,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          });
+          return response;
+        } catch (error: any) {
+          lastError = error;
+          if (isRotatableGeminiError(error)) {
+            setExhaustedGeminiKeys(prev => {
+              const next = [...new Set([...prev, key])];
+              exhaustedGeminiKeysRef.current = next;
+              return next;
+            });
+            const nextAvailable = keys.findIndex((candidate, candidateIndex) => candidateIndex !== idx && !exhaustedGeminiKeysRef.current.includes(candidate));
+            if (nextAvailable !== -1) {
+              setGeminiKeyIndex(nextAvailable);
+              setStatus(`Gemini Key #${idx + 1} lỗi (model ${currentModel}). Đang chuyển Key #${nextAvailable + 1}...`);
+              allKeysExhaustedForThisModel = false;
+              continue;
+            }
+            // Hết key trong model này → break để loop ngoài chuyển sang model tiếp theo
+            break;
+          }
+          // Lỗi không xoay được (vd: invalid argument) → throw ngay
+          throw error;
+        }
+      }
+
+      // Nếu vẫn còn key chưa thử trong model này nhưng không thắng → break
+      if (!allKeysExhaustedForThisModel) continue;
     }
 
-    throw new Error(`Tất cả Gemini API Key đều lỗi. ${classifyGeminiError(lastError).label}: ${classifyGeminiError(lastError).detail}`);
+    throw new Error(`Tất cả Gemini API Key & model đều lỗi. ${classifyGeminiError(lastError).label}: ${classifyGeminiError(lastError).detail}`);
   };
 
   const formatVNNumber = (value: any) => {
@@ -4714,15 +4757,17 @@ Quy tắc:
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
     if (!query || typeof query !== 'string') return;
     
+    // LUÔN chuyển sang tab KIỂM TRA LINK VIDEO khi bấm "Phân tích video" từ bất kỳ chỗ nào
     if (typeof targetId === 'string') {
       setVideoInput(targetId);
-      setActiveTab(4); // Switch to Video Analysis tab
+      setActiveTab(4); // Switch to Video Analysis tab (KIỂM TRA LINK VIDEO)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
     quotaUsedRef.current = 0;
     setQuotaUsed(0);
     setIsAnalyzingVideo(true);
-    setStatus('Đang kiểm tra thông tin video...');
+    setStatus('Đang kiểm tra video & gọi Gemini AI phân tích tự động...');
     setVideoResult(null);
     setIsVideoAuditAnalyzing(false);
     setVideoAuditProgress(0);
@@ -8193,9 +8238,9 @@ Quy tắc:
                       </button>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-600">
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Gemini: {getActiveGeminiKeys().length} key</span>
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Đang dùng #{Math.min(geminiKeyIndex + 1, Math.max(getActiveGeminiKeys().length, 1))}</span>
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Lỗi/hết quota: {exhaustedGeminiKeys.length}</span>
+                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">
+                        🔄 Tự động xoay vòng key & model khi hết quota
+                      </span>
                     </div>
 
                     <div className="mt-3 flex flex-col gap-2">
@@ -8802,6 +8847,23 @@ Quy tắc:
 
       {/* === Mobile/responsive CSS đã được tách ra ./mobile.css (import trong main.tsx) === */}
 
+      {/* === TOAST NOTIFICATION giữa màn hình — auto-dismiss 3s, không stack === */}
+      {toastMsg && (
+        <div className="vtw-toast-overlay" aria-live="polite" role="status">
+          <div className="vtw-toast-box">
+            <span className="vtw-toast-icon">ℹ️</span>
+            <span className="vtw-toast-text">{toastMsg}</span>
+            <button
+              type="button"
+              className="vtw-toast-close"
+              onClick={() => setToastMsg(null)}
+              aria-label="Đóng"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {showScrollTop && (
         <button
