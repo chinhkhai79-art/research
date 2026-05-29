@@ -5501,7 +5501,7 @@ Quy tắc:
 
                 <div className="flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm mt-4">
                   <div className="font-bold text-[12px] text-[#d35400]">☑ Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</div>
-                  <div className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_0_#a04a00]">▶ BẮT ĐẦU SĂN KÊNH</div>
+                  <div className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_0_#a04a00]">▶ BẮT ĐẦU TÌM KÊNH</div>
                 </div>
 
                 <div className="mt-4 bg-white border border-[#999] shadow-sm min-h-[450px] overflow-hidden">
@@ -5514,7 +5514,7 @@ Quy tắc:
                       <div key={i} className="px-2 py-2 border-r border-[#ddd] text-center">{h}</div>
                     ))}
                   </div>
-                  <div className="text-center py-28 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm “Bắt đầu săn kênh” để bắt đầu...</div>
+                  <div className="text-center py-28 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm “Bắt đầu tìm kênh” để bắt đầu...</div>
                 </div>
               </div>
             </div>
@@ -5825,7 +5825,7 @@ Quy tắc:
                       onClick={startHunter}
                       className="vtw-start-button min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
                     >
-                      <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : ""}
+                      <Play size={20} fill="white" /> BẮT ĐẦU TÌM KÊNH {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : ""}
                     </button>
                   ) : (
                     <button 
@@ -5985,13 +5985,13 @@ Quy tắc:
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-24">SUB</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-28">VIEWS</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-20">VIDEOS</th>
-                          <th className="px-2 py-2 font-bold text-[11px] text-center w-24 text-orange-600">★ ĐIỂM NGÁCH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-24 text-gray-900">★ ĐIỂM NGÁCH</th>
                           <th className="px-2 py-2 font-bold text-[11px] text-center min-w-[150px]">THAO TÁC</th>
                         </tr>
                       </thead>
                       <tbody>
                         {results.length === 0 && (
-                          <tr><td colSpan={16} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu săn kênh" để bắt đầu...</td></tr>
+                          <tr><td colSpan={16} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu tìm kênh" để bắt đầu...</td></tr>
                         )}
                         {results.map((r, i) => (
                           <tr 
@@ -6018,7 +6018,7 @@ Quy tắc:
                             <td className="px-2 py-1 text-right text-black font-bold">{formatVNNumber(r.subs)}</td>
                             <td className="px-2 py-1 text-right text-blue-800 font-bold">{formatVNNumber(r.views)}</td>
                             <td className="px-2 py-1 text-right text-gray-800">{formatVNNumber(r.videos)}</td>
-                            <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
+                            <td className="px-2 py-1 text-center font-black text-black text-[13px] border-r border-[#ddd]">{r.score}</td>
                             <td className="px-2 py-1 text-center">
                               <div className="vtw-channel-actions flex items-center justify-center gap-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, alignItems: 'center', width: '100%' }}>
                                 <button
