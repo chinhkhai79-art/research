@@ -1422,25 +1422,46 @@ export default function App() {
     return acc;
   }, {} as Record<string, string>);
 
+
+  const EXTRA_COUNTRY_NAME_MAP: Record<string, string> = {
+    BD: 'Bangladesh',
+    PK: 'Pakistan',
+    LK: 'Sri Lanka',
+    NP: 'Nepal',
+    KH: 'Campuchia',
+    LA: 'Lào',
+    MM: 'Myanmar',
+    CN: 'Trung Quốc',
+    TW: 'Đài Loan',
+    HK: 'Hồng Kông',
+    SA: 'Ả Rập Xê Út',
+    AE: 'Các Tiểu vương quốc Ả Rập Thống nhất',
+    TR: 'Thổ Nhĩ Kỳ',
+    IT: 'Ý',
+    NL: 'Hà Lan',
+    SE: 'Thụy Điển',
+    NO: 'Na Uy',
+    DK: 'Đan Mạch',
+    FI: 'Phần Lan',
+    PL: 'Ba Lan',
+    AR: 'Argentina',
+    CO: 'Colombia',
+    CL: 'Chile',
+    PE: 'Peru',
+    ZA: 'Nam Phi',
+    NG: 'Nigeria',
+    EG: 'Ai Cập'
+  };
+
   const getCountryFullName = (code?: string) => {
     const normalized = String(code || '').trim().toUpperCase();
     if (!normalized || normalized === 'N/A') return 'Không rõ';
-    return REGION_NAME_MAP[normalized] || normalized;
+    return REGION_NAME_MAP[normalized] || EXTRA_COUNTRY_NAME_MAP[normalized] || normalized;
   };
-
-  const getCountryFlagEmoji = (code?: string) => {
-    const normalized = String(code || '').trim().toUpperCase();
-    if (!/^[A-Z]{2}$/.test(normalized)) return '🏳️';
-    return normalized
-      .split('')
-      .map(char => String.fromCodePoint(127397 + char.charCodeAt(0)))
-      .join('');
-  };
-
   const getCountryDisplayName = (code?: string) => {
     const normalized = String(code || '').trim().toUpperCase();
-    if (!normalized || normalized === 'N/A') return '🏳️ Không rõ';
-    return `${getCountryFlagEmoji(normalized)} ${getCountryFullName(normalized)}`;
+    if (!normalized || normalized === 'N/A') return 'Không rõ';
+    return getCountryFullName(normalized);
   };
 
   const cleanTrendKeyword = (value?: string) => {
@@ -5373,13 +5394,14 @@ Quy tắc:
           </div>
         </div>
 
-        <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
-          <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
+        <div className="bg-gradient-to-br from-sky-50 via-indigo-50 to-orange-50 text-slate-900 border border-sky-100 rounded-3xl p-7 shadow-lg relative overflow-hidden text-left">
+          <div className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-blue-200/30 blur-2xl" />
+          <div className="absolute right-6 top-6 opacity-10 text-blue-500"><Star size={90} /></div>
           <div className="relative z-10">
-            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
-            <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <h2 className="text-lg xl:text-xl 2xl:text-2xl font-black leading-snug max-w-none w-full">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
             <div className="flex flex-wrap gap-2 mt-5">
-              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[10px] font-black">{badge}</span>)}
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-white/75 text-orange-700 border border-orange-200 rounded-full text-[10px] font-black shadow-sm">{badge}</span>)}
             </div>
           </div>
         </div>
