@@ -700,7 +700,7 @@ export default function App() {
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
-  const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+  const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview';
   const [geminiModel, setGeminiModel] = useState(DEFAULT_GEMINI_MODEL);
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
@@ -1426,6 +1426,21 @@ export default function App() {
     const normalized = String(code || '').trim().toUpperCase();
     if (!normalized || normalized === 'N/A') return 'Không rõ';
     return REGION_NAME_MAP[normalized] || normalized;
+  };
+
+  const getCountryFlagEmoji = (code?: string) => {
+    const normalized = String(code || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(normalized)) return '🏳️';
+    return normalized
+      .split('')
+      .map(char => String.fromCodePoint(127397 + char.charCodeAt(0)))
+      .join('');
+  };
+
+  const getCountryDisplayName = (code?: string) => {
+    const normalized = String(code || '').trim().toUpperCase();
+    if (!normalized || normalized === 'N/A') return '🏳️ Không rõ';
+    return `${getCountryFlagEmoji(normalized)} ${getCountryFullName(normalized)}`;
   };
 
   const cleanTrendKeyword = (value?: string) => {
@@ -5358,13 +5373,14 @@ Quy tắc:
           </div>
         </div>
 
-        <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
-          <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
+        <div className="bg-gradient-to-br from-sky-50 via-indigo-50 to-orange-50 text-slate-900 border border-sky-100 rounded-3xl p-7 shadow-lg relative overflow-hidden text-left">
+          <div className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-blue-200/30 blur-2xl" />
+          <div className="absolute right-6 top-6 opacity-10 text-blue-500"><Star size={90} /></div>
           <div className="relative z-10">
-            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
-            <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <h2 className="text-lg xl:text-xl 2xl:text-2xl font-black leading-snug max-w-none w-full">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
             <div className="flex flex-wrap gap-2 mt-5">
-              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[10px] font-black">{badge}</span>)}
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-white/75 text-orange-700 border border-orange-200 rounded-full text-[10px] font-black shadow-sm">{badge}</span>)}
             </div>
           </div>
         </div>
@@ -7836,7 +7852,7 @@ Quy tắc:
                             ['LINK VIDEO', `https://www.youtube.com/watch?v=${videoResult.id}`],
                             ['TÊN KÊNH', videoResult.snippet.channelTitle],
                             ['CHANNEL ID', videoResult.snippet?.channelId],
-                            ['QUỐC GIA KÊNH', videoResult._channelInfo?.snippet?.country || 'N/A'],
+                            ['QUỐC GIA KÊNH', getCountryDisplayName(videoResult._channelInfo?.snippet?.country)],
                             ['VIDEO ID', videoResult.id],
                             ['CATEGORY ID', videoResult.snippet?.categoryId],
                             ['CATEGORY NAME', getCategoryName(videoResult.snippet?.categoryId)],
@@ -7863,7 +7879,7 @@ Quy tắc:
                         { label: 'LINK VIDEO', value: `https://www.youtube.com/watch?v=${videoResult.id}`, isLink: true },
                         { label: 'TÊN KÊNH', value: videoResult.snippet.channelTitle },
                         { label: 'CHANNEL ID', value: videoResult.snippet.channelId },
-                        { label: 'QUỐC GIA KÊNH', value: videoResult._channelInfo?.snippet?.country || 'N/A' },
+                        { label: 'QUỐC GIA KÊNH', value: getCountryDisplayName(videoResult._channelInfo?.snippet?.country) },
                         { label: 'VIDEO ID', value: videoResult.id },
                         { label: 'CATEGORY ID', value: videoResult.snippet.categoryId },
                         { label: 'CATEGORY NAME', value: getCategoryName(videoResult.snippet.categoryId) },
