@@ -194,7 +194,7 @@ const DEFAULT_CONFIG: YouTubeConfig = {
   minSub: 0,
   maxSub: 100000,
   minVideo: 1,
-  maxVideo: 0,
+  maxVideo: 1000,
   minViews: 10000,
   autoNiche: true,
   deepDrillSmallTrend: false,
@@ -1033,7 +1033,7 @@ export default function App() {
         if (prev.apiKeys.length > 0 && (!parsed.apiKeys || parsed.apiKeys.length === 0)) {
           next.apiKeys = prev.apiKeys;
         }
-        return next;
+        return normalizeHunterFilterConfig(next);
       });
     }
     if (savedResults) {
@@ -1512,9 +1512,32 @@ export default function App() {
   };
 
 
-  const parseRangeNumber = (value: string, fallback = 0) => {
-    const n = Number(String(value || '').replace(/[^0-9]/g, ''));
+  const parseRangeNumber = (value: string | number, fallback = 0) => {
+    const n = Number(String(value ?? '').replace(/[^0-9]/g, ''));
     return Number.isFinite(n) ? n : fallback;
+  };
+
+  const normalizeHunterFilterConfig = (cfg: YouTubeConfig): YouTubeConfig => {
+    const minSub = Math.max(0, parseRangeNumber(cfg.minSub, 0));
+    const maxSubRaw = Math.max(1, parseRangeNumber(cfg.maxSub, 100000));
+    const maxSub = Math.max(maxSubRaw, minSub + 1);
+    const minVideo = Math.max(0, parseRangeNumber(cfg.minVideo, 1));
+    const maxVideoRaw = Math.max(1, parseRangeNumber(cfg.maxVideo, 1000));
+    const maxVideo = Math.max(maxVideoRaw, minVideo + 1);
+
+    return {
+      ...cfg,
+      minSub,
+      maxSub,
+      minVideo,
+      maxVideo,
+      maxVideos: Math.max(1, parseRangeNumber(cfg.maxVideos, 30)),
+      minViews: Math.max(0, parseRangeNumber(cfg.minViews, 0)),
+    };
+  };
+
+  const updateHunterFilters = (patch: Partial<YouTubeConfig>) => {
+    setConfig(prev => normalizeHunterFilterConfig({ ...prev, ...patch }));
   };
 
   const clampRangePair = (min: number, max: number, absoluteMin: number, absoluteMax: number): [number, number] => {
@@ -3664,8 +3687,10 @@ JSON mẫu:
     localStorage.setItem('youtube_api_keys', JSON.stringify(config.apiKeys.map(k => k.trim()).filter(Boolean)));
     setManualKeysInput(config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
     localStorage.setItem('youtube_api_keys_text_draft', config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
+    const safeConfig = normalizeHunterFilterConfig(config);
+    setConfig(safeConfig);
     localStorage.setItem('youtube_hunter_config', JSON.stringify({
-      ...config,
+      ...safeConfig,
       apiKeys: [] // Don't double save keys
     }));
     setStatus('Đã lưu cấu hình.');
@@ -3880,7 +3905,19 @@ JSON mẫu:
       return;
     }
 
-    const rawKeyword = (config.keyword || '').trim();
+    const hunterConfig = normalizeHunterFilterConfig(config);
+    if (
+      hunterConfig.minSub !== config.minSub ||
+      hunterConfig.maxSub !== config.maxSub ||
+      hunterConfig.minVideo !== config.minVideo ||
+      hunterConfig.maxVideo !== config.maxVideo ||
+      hunterConfig.maxVideos !== config.maxVideos ||
+      hunterConfig.minViews !== config.minViews
+    ) {
+      setConfig(hunterConfig);
+    }
+
+    const rawKeyword = (hunterConfig.keyword || '').trim();
     const isAutoHunt = !rawKeyword;
 
     quotaUsedRef.current = 0;
@@ -3890,7 +3927,7 @@ JSON mẫu:
     setIsHunting(true);
     isHuntingRef.current = true;
     setLastError(null);
-    setStatus(config.deepDrillSmallTrend ? 'Đang bật Deep Drill: săn kênh nhỏ/mới trend trong 30 ngày...' : (isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...'));
+    setStatus(hunterConfig.deepDrillSmallTrend ? 'Đang bật Deep Drill: săn kênh nhỏ/mới trend trong 30 ngày...' : (isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...'));
     setProgress(5);
     if (typeof AbortController !== 'undefined') {
       try {
@@ -3909,12 +3946,12 @@ JSON mẫu:
     }
 
     try {
-      const cycles = config.regions.includes('ALL')
+      const cycles = hunterConfig.regions.includes('ALL')
         ? REGIONS.map(r => r.code).filter(Boolean)
-        : config.regions;
-      const currentRegion = cycles.length > 0 ? cycles[0] : (config.region || 'VN');
+        : hunterConfig.regions;
+      const currentRegion = cycles.length > 0 ? cycles[0] : (hunterConfig.region || 'VN');
       const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
-      const effectivePublishedAfter = config.deepDrillSmallTrend ? 'month' : config.publishedAfter;
+      const effectivePublishedAfter = hunterConfig.deepDrillSmallTrend ? 'month' : hunterConfig.publishedAfter;
       const publishedAfter = getPublishedAfterDate(effectivePublishedAfter);
 
       let scanKeywords: string[] = [];
@@ -3948,7 +3985,7 @@ JSON mẫu:
           type: 'video',
           q: searchKeyword,
           regionCode: currentRegion,
-          maxResults: config.deepDrillSmallTrend ? 50 : Math.min(Math.max(config.maxVideos, 20), 50),
+          maxResults: hunterConfig.deepDrillSmallTrend ? 50 : Math.min(Math.max(hunterConfig.maxVideos, 20), 50),
           order: 'viewCount',
           publishedAfter
         });
@@ -3990,19 +4027,19 @@ JSON mẫu:
             const bestVideoViews = parseInt(video.statistics?.viewCount) || 0;
             const metrics = calculateHunterCandidateScore(video, channel, searchKeyword);
 
-            const deepDrillActive = !!config.deepDrillSmallTrend;
+            const deepDrillActive = !!hunterConfig.deepDrillSmallTrend;
             const deepDrillMaxSub = 50000;
             const hardExcludedByTopic = deepDrillActive && subs > 500000 && isBroadHighSubExcludedTopic(video, channel, searchKeyword);
-            const effectiveMinSub = deepDrillActive ? 0 : config.minSub;
-            const effectiveMaxSub = deepDrillActive ? Math.min(config.maxSub || deepDrillMaxSub, deepDrillMaxSub) : config.maxSub;
-            const effectiveMinViews = deepDrillActive ? Math.max(500, Math.floor(config.minViews / 4)) : config.minViews;
+            const effectiveMinSub = deepDrillActive ? 0 : hunterConfig.minSub;
+            const effectiveMaxSub = deepDrillActive ? Math.min(hunterConfig.maxSub || deepDrillMaxSub, deepDrillMaxSub) : hunterConfig.maxSub;
+            const effectiveMinViews = deepDrillActive ? Math.max(500, Math.floor(hunterConfig.minViews / 4)) : hunterConfig.minViews;
 
             const passed =
               !hardExcludedByTopic &&
               subs >= effectiveMinSub &&
               subs <= effectiveMaxSub &&
-              videoCount >= config.minVideo &&
-              (config.maxVideo ? videoCount <= config.maxVideo : true) &&
+              videoCount >= hunterConfig.minVideo &&
+              (hunterConfig.maxVideo ? videoCount <= hunterConfig.maxVideo : true) &&
               views >= effectiveMinViews;
 
             // Khi ô từ khóa trống hoặc Deep Drill, ưu tiên video mới có hiệu suất vượt trội hơn tổng view toàn kênh.
@@ -5620,6 +5657,12 @@ Quy tắc:
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
                         value={config.keyword}
                         onChange={(e) => setConfig({ ...config, keyword: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !isHunting) {
+                            e.preventDefault();
+                            startHunter();
+                          }
+                        }}
                         placeholder="Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI"
                       />
                     </div>
@@ -5682,7 +5725,7 @@ Quy tắc:
                         inputMode="numeric"
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minSub}
-                        onChange={(e) => setConfig({ ...config, minSub: parseRangeNumber(e.target.value, 0) })}
+                        onChange={(e) => updateHunterFilters({ minSub: parseRangeNumber(e.target.value, 0) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-maxsub flex items-center gap-2">
@@ -5692,7 +5735,7 @@ Quy tắc:
                         inputMode="numeric"
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxSub}
-                        onChange={(e) => setConfig({ ...config, maxSub: parseRangeNumber(e.target.value, 10000000) })}
+                        onChange={(e) => updateHunterFilters({ maxSub: parseRangeNumber(e.target.value, 100000) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
@@ -5701,7 +5744,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideos}
-                        onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
+                        onChange={(e) => updateHunterFilters({ maxVideos: parseRangeNumber(e.target.value, 30) })}
                       />
                     </div>
                   </div>
@@ -5714,7 +5757,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minVideo}
-                        onChange={(e) => setConfig({ ...config, minVideo: parseInt(e.target.value) })}
+                        onChange={(e) => updateHunterFilters({ minVideo: parseRangeNumber(e.target.value, 1) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-maxvideo flex items-center gap-2">
@@ -5723,7 +5766,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideo}
-                        onChange={(e) => setConfig({ ...config, maxVideo: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => updateHunterFilters({ maxVideo: parseRangeNumber(e.target.value, 1000) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-minviews flex items-center gap-2">
@@ -5732,7 +5775,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minViews}
-                        onChange={(e) => setConfig({ ...config, minViews: parseInt(e.target.value) })}
+                        onChange={(e) => updateHunterFilters({ minViews: parseRangeNumber(e.target.value, 10000) })}
                       />
                     </div>
                   </div>
