@@ -4300,7 +4300,7 @@ JSON mẫu:
       const topKeywordsStr = topKeywordsArr.map(k => `${k.text} (${k.count})`).join(', ');
       const topTagsStr = topTagsArr.map(k => `${k.text} (${k.count})`).join(', ');
 
-      const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${channel.snippet.country || 'N/A'} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
+      const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${getCountryDisplayName(channel.snippet.country)} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
  Đăng ký: ${parseInt(channel.statistics.subscriberCount).toLocaleString()} | Tổng lượt xem: ${parseInt(channel.statistics.viewCount).toLocaleString()} | Video: ${channel.statistics.videoCount}
  Phân tích gần đây: ${processedVideos.length} | View/ngày: tb ${avgViews} • cao nhất ${maxViews.toLocaleString()}
  Video mới nhất: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
@@ -4441,7 +4441,7 @@ ${topKeywordsStr}`;
         content += `【${idx + 1}】 KÊNH: ${r.name.toUpperCase()}\n`;
         content += `   ID Kênh: ${r.id}\n`;
         content += `   Đường dẫn: ${r.url}\n`;
-        content += `   Thông tin: ${r.country || 'N/A'} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
+        content += `   Thông tin: ${getCountryDisplayName(r.country)} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
         content += `   Chỉ số: ${formatVNNumber(r.subs)} Subs | ${formatVNNumber(r.views)} Views | ${formatVNNumber(r.videos)} Videos\n`;
         content += `   Từ khóa/ngách: ${getChannelTrendKeyword(r)}\n`;
         content += `   Chủ đề: ${getTopicFromKeyword(getChannelTrendKeyword(r))}\n`;
@@ -5373,14 +5373,13 @@ Quy tắc:
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-sky-50 via-indigo-50 to-orange-50 text-slate-900 border border-sky-100 rounded-3xl p-7 shadow-lg relative overflow-hidden text-left">
-          <div className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-blue-200/30 blur-2xl" />
-          <div className="absolute right-6 top-6 opacity-10 text-blue-500"><Star size={90} /></div>
+        <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
+          <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
           <div className="relative z-10">
-            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-3">KẾT LUẬN CUỐI CÙNG</div>
-            <h2 className="text-lg xl:text-xl 2xl:text-2xl font-black leading-snug max-w-none w-full">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
             <div className="flex flex-wrap gap-2 mt-5">
-              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-white/75 text-orange-700 border border-orange-200 rounded-full text-[10px] font-black shadow-sm">{badge}</span>)}
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[10px] font-black">{badge}</span>)}
             </div>
           </div>
         </div>
@@ -6071,7 +6070,7 @@ Quy tắc:
                             <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
                             <td className="px-2 py-1 text-[10px] font-black text-gray-800 whitespace-nowrap" title="Ước tính từ views thật của YouTube Data API v3 × RPM tham khảo, không phải doanh thu thật YouTube trả.">{estimateIncomeFromApiViews(r)}</td>
                             <td className="px-2 py-1 text-[9px] text-blue-600 underline hover:text-blue-800 max-w-[110px]"><a href={r.url} target="_blank" rel="noreferrer" title={r.url}>{formatChannelUrlShort(r.url, r.id)}</a></td>
-                            <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryFullName(r.country)}</td>
+                            <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryDisplayName(r.country)}</td>
                             <td className="px-2 py-1 text-center text-gray-500 whitespace-nowrap">{r.publishedAt}</td>
                             <td className="px-2 py-1 text-right text-green-700 font-medium">{formatVNNumber(r.age)}</td>
                             <td className="px-2 py-1 text-right text-black font-bold">{formatVNNumber(r.subs)}</td>
@@ -6301,7 +6300,7 @@ Quy tắc:
                       <div className="space-y-1">
                         <div className="flex flex-wrap gap-x-2">
                           <span className="font-bold">Quốc gia:</span>
-                          <span className="text-black">{spyResult.channelInfo.snippet.country || 'N/A'}</span>
+                          <span className="text-black">{getCountryDisplayName(spyResult.channelInfo.snippet.country)}</span>
                           <span className="text-gray-400">|</span>
                           <span className="font-bold">Tuổi kênh:</span>
                           <span className="text-black">{calculateChannelAge(spyResult.channelInfo.snippet.publishedAt)} ngày</span>
