@@ -2943,309 +2943,272 @@
 }
 
 
-/* PATCH 28/5 — Mobile Top Videos Trending theo mẫu mới:
-   Hàng 1: thumbnail trái + 3 nút chức năng dọc bên phải.
-   Dưới: tiêu đề full width, kênh, thời lượng/score, stats 6 ô full width.
-   Ưu tiên tiêu đề hiển thị đủ, không bị line-clamp/cắt ngang. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PATCH 29/5 v2 — Niche Video Card layout final (theo yêu cầu user)
+ *
+ *   ┌─────────────────┬──────────────┐
+ *   │                 │   [🎥]      │
+ *   │   THUMBNAIL     │              │
+ *   │   16:9 cover    │   [▶]       │  ← row 1: 3 nút icon DỌC, NGANG BẰNG thumb
+ *   │                 │              │
+ *   │                 │   [📊]      │
+ *   ├─────────────────┴──────────────┤
+ *   │ Tiêu đề video (ưu tiên trên)  │  ← row 2: title FULL WIDTH, 2 dòng
+ *   ├────────────────────────────────┤
+ *   │ Channel  |  Score 30           │  ← row 3: channel + score
+ *   ├──────────────┬─────────────────┤
+ *   │ ngày  │score │ view │ like     │
+ *   │ cmt   │vph   │                 │  ← row 4: stats 2 cột × 3 hàng (VPH nowrap)
+ *   └──────────────┴─────────────────┘
+ *
+ * VẤN ĐỀ index.css cũ: rule `.vtw-niche-content img { max-width: 96px !important }`
+ * ép thumbnail nhỏ → fix bằng `html body` boost specificity.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 @media (max-width: 900px) {
-  body .vtw-niche-video-card.vtw-square-video-card {
-    width: 100% !important;
+  /* HỦY rule legacy ép img max-width:96px trong niche/results */
+  html body .vtw-niche-content img,
+  html body .vtw-results-box img {
     max-width: 100% !important;
-    aspect-ratio: auto !important;
-    min-height: 0 !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(120px, 0.95fr) !important;
-    grid-template-areas:
-      "thumb actions"
-      "title title"
-      "meta meta"
-      "stats stats" !important;
-    gap: 10px 12px !important;
-    padding: 12px !important;
-    border-radius: 18px !important;
-    align-items: start !important;
-    overflow: visible !important;
-  }
-
-  body .vtw-niche-video-card.vtw-square-video-card > .vtw-video-thumb,
-  body .vtw-niche-video-card.vtw-square-video-card > button:first-of-type.vtw-video-thumb {
-    grid-area: thumb !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
-    width: 100% !important;
-    height: auto !important;
-    aspect-ratio: 16 / 9 !important;
-    border-radius: 13px !important;
-    overflow: hidden !important;
-    background: #0b1220 !important;
-    align-self: stretch !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-thumb img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    background: #0b1220 !important;
-  }
-
-  body .vtw-niche-video-card.vtw-square-video-card > .vtw-video-info {
-    display: contents !important;
-    padding: 0 !important;
-    min-width: 0 !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-actions {
-    grid-area: actions !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
-    position: static !important;
-    inset: auto !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    grid-auto-rows: 1fr !important;
-    gap: 7px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    align-self: stretch !important;
-    z-index: auto !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-actions button {
-    width: 100% !important;
-    min-height: 38px !important;
-    height: 100% !important;
-    padding: 7px 10px !important;
-    border-radius: 12px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 7px !important;
-    font-size: 0 !important;
-    line-height: 1.1 !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-actions button svg {
-    width: 17px !important;
-    height: 17px !important;
-    flex: 0 0 17px !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-actions button .vtw-btn-label {
-    display: none !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-title {
-    grid-area: title !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
-    width: 100% !important;
-    min-height: 0 !important;
-    margin: 4px 0 0 !important;
-    padding: 0 !important;
-    font-size: 11px !important;
-    line-height: 1.24 !important;
-    font-weight: 900 !important;
-    color: #0f172a !important;
-    text-align: left !important;
-    overflow: visible !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-title button,
-  body .vtw-niche-video-card .vtw-video-title a {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere !important;
-    -webkit-line-clamp: unset !important;
-    -webkit-box-orient: initial !important;
-    line-clamp: unset !important;
-    max-height: none !important;
-    text-align: left !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child {
-    grid-area: meta !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
-    width: 100% !important;
-    display: grid !important;
-    grid-template-columns: 1fr auto !important;
-    gap: 8px !important;
-    align-items: center !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child > a {
-    min-width: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 7px !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child > a img {
-    width: 24px !important;
-    height: 24px !important;
-    flex: 0 0 24px !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child > a span {
-    display: block !important;
-    font-size: 10px !important;
-    line-height: 1.2 !important;
-    font-weight: 900 !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child > div {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    justify-content: flex-end !important;
-    gap: 6px !important;
-    min-width: 0 !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child > div span {
-    font-size: 10px !important;
-    line-height: 1.15 !important;
-    padding: 5px 8px !important;
-    border-radius: 10px !important;
-    white-space: nowrap !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-stat-grid {
-    grid-area: stats !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
-    position: static !important;
-    inset: auto !important;
-    width: 100% !important;
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-    padding: 10px 0 0 !important;
-    margin: 0 !important;
-    border-top: 1px solid #eef2f7 !important;
-    align-self: start !important;
-    z-index: auto !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-stat {
-    min-height: 40px !important;
-    padding: 6px 8px !important;
-    border-radius: 10px !important;
-    background: #f8fafc !important;
-    border: 1px solid #eef2f7 !important;
-    display: grid !important;
-    grid-template-columns: 52px 14px minmax(0, 1fr) !important;
-    gap: 5px !important;
-    align-items: center !important;
-    justify-content: start !important;
-    overflow: visible !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-stat::before {
-    content: attr(title) !important;
-    display: block !important;
-    color: #64748b !important;
-    font-size: 7.5px !important;
-    line-height: 1.05 !important;
-    font-weight: 900 !important;
-    text-transform: uppercase !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-stat svg {
-    width: 13px !important;
-    height: 13px !important;
-    flex: 0 0 13px !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-stat span {
-    display: block !important;
-    min-width: 0 !important;
-    width: 100% !important;
-    font-size: 9.5px !important;
-    line-height: 1.15 !important;
-    font-weight: 900 !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-stat:nth-child(1) span {
-    font-size: 8px !important;
-    line-height: 1.1 !important;
+    max-height: 100% !important;
   }
 }
 
-@media (max-width: 430px) {
-  body .vtw-niche-video-card.vtw-square-video-card {
-    grid-template-columns: minmax(0, 1fr) minmax(112px, 0.9fr) !important;
-    gap: 8px 10px !important;
-    padding: 10px !important;
-    border-radius: 17px !important;
+@media (max-width: 768px) {
+  /* ── Mẫu Thumbnail (tab Ngách): ảnh card full 16:9 ────────────────────── */
+  html body .vtw-niche-content div.relative.aspect-video img,
+  html body div.relative.aspect-video.rounded-xl img,
+  html body div.relative.aspect-video img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
   }
 
-  body .vtw-niche-video-card .vtw-video-actions {
-    gap: 6px !important;
+  /* ── NICHE VIDEO CARD layout v2 ────────────────────────────────────────── */
+  /* Card grid 2 cột (50:50) × 4 hàng */
+  html body .vtw-niche-video-card.vtw-square-video-card {
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto auto auto !important;
+    gap: 6px 8px !important;
+    padding: 8px !important;
+    align-items: start !important;
   }
 
-  body .vtw-niche-video-card .vtw-video-actions button {
-    min-height: 34px !important;
-    padding: 6px 8px !important;
+  /* THUMBNAIL → col 1 row 1, 16:9 full cover */
+  html body .vtw-niche-video-card .vtw-video-thumb {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    max-height: none !important;
+    min-height: 0 !important;
     border-radius: 10px !important;
+    align-self: start !important;
+    position: relative !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #000 !important;
+    display: block !important;
+  }
+  /* IMG full - override class object-contain Tailwind */
+  html body .vtw-niche-video-card .vtw-video-thumb img.object-contain,
+  html body .vtw-niche-video-card .vtw-video-thumb img {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    background: transparent !important;
+  }
+  /* Fallback card không có vtw-video-thumb */
+  html body .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    background: #000 !important;
+    align-self: start !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+  html body .vtw-niche-video-card.vtw-square-video-card > button:first-of-type:not(.vtw-video-thumb) img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  html body .vtw-niche-video-card .vtw-thumb-play,
+  html body .vtw-thumb-play * { display: none !important; }
+
+  /* INFO wrapper flatten */
+  html body .vtw-niche-video-card .vtw-video-info {
+    display: contents !important;
+  }
+  html body .vtw-niche-video-card > div.p-4 {
+    display: contents !important;
   }
 
-  body .vtw-niche-video-card .vtw-video-title {
-    font-size: 10px !important;
-    line-height: 1.22 !important;
-  }
-
-  body .vtw-niche-video-card .vtw-video-info > div:first-child {
+  /* ACTIONS (3 nút) → col 2 row 1, XẾP DỌC, FULL WIDTH cột phải */
+  html body div.vtw-niche-video-card div.vtw-video-actions,
+  html body div.vtw-niche-video-card div.vtw-video-actions[class*="grid-cols-3"] {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: grid !important;
     grid-template-columns: 1fr !important;
-    gap: 6px !important;
+    grid-template-rows: repeat(3, 1fr) !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-actions button {
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    font-size: 0 !important;
+    border-radius: 8px !important;
+    gap: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-actions button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-actions button .vtw-btn-label {
+    display: none !important;
   }
 
-  body .vtw-niche-video-card .vtw-video-info > div:first-child > div {
+  /* TITLE → row 2, span FULL 2 cột, ưu tiên hiển thị đầy đủ 2 dòng */
+  html body .vtw-niche-video-card .vtw-video-title {
+    grid-column: 1 / 3 !important;
+    grid-row: 2 !important;
+    margin: 0 !important;
+    padding: 4px 0 0 0 !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    font-weight: 700 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    min-height: 0 !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-title a,
+  html body .vtw-niche-video-card .vtw-video-title button {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.35 !important;
+    max-width: 100% !important;
+  }
+
+  /* CHANNEL info → row 3, span FULL, channel + score 1 hàng */
+  html body .vtw-niche-video-card .vtw-video-info > div:first-child {
+    grid-column: 1 / 3 !important;
+    grid-row: 3 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
     justify-content: flex-start !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    flex-wrap: wrap !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-info > div:first-child > a {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-info > div:first-child img {
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px !important;
+    border-radius: 50% !important;
+  }
+  html body .vtw-niche-video-card .vtw-video-info > div:first-child span {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
-  body .vtw-niche-video-card .vtw-video-stat-grid {
-    gap: 5px !important;
+  /* STATS → row 4, span FULL, 2 cột × 3 hàng */
+  html body div.vtw-niche-video-card div.vtw-video-stat-grid,
+  html body div.vtw-niche-video-card div.vtw-video-stat-grid[class*="grid-cols-3"] {
+    grid-column: 1 / 3 !important;
+    grid-row: 4 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto !important;
+    gap: 4px !important;
+    padding: 6px 0 0 0 !important;
+    margin: 0 !important;
+    border-top: 1px solid #f0f0f0 !important;
+    align-self: start !important;
+    width: 100% !important;
   }
-
-  body .vtw-niche-video-card .vtw-video-stat {
-    min-height: 38px !important;
-    grid-template-columns: 48px 13px minmax(0, 1fr) !important;
-    padding: 5px 6px !important;
+  html body .vtw-niche-video-card .vtw-video-stat {
+    grid-column: auto !important;
+    min-height: 26px !important;
+    padding: 4px 6px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    border-radius: 6px !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
   }
-
-  body .vtw-niche-video-card .vtw-video-stat::before {
-    font-size: 7px !important;
+  html body .vtw-niche-video-card .vtw-video-stat svg {
+    width: 11px !important;
+    height: 11px !important;
+    flex: 0 0 11px !important;
   }
-
-  body .vtw-niche-video-card .vtw-video-stat span {
-    font-size: 8.5px !important;
+  html body .vtw-niche-video-card .vtw-video-stat span {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 0 !important;
   }
-
-  body .vtw-niche-video-card .vtw-video-stat:nth-child(1) span {
-    font-size: 7.2px !important;
+  html body .vtw-niche-video-card .vtw-video-stat:nth-child(1) span {
+    font-size: 8px !important;
+  }
+  /* VPH stat (cuối) — bảo vệ thêm để chắc chắn không xuống dòng */
+  html body .vtw-niche-video-card .vtw-video-stat:last-child,
+  html body .vtw-niche-video-card .vtw-video-stat:last-child * {
+    white-space: nowrap !important;
   }
 }
