@@ -8041,80 +8041,77 @@ Quy tắc:
                     </div>
                   </div>
 
-                  {/* Image 2: Technical Details Section */}
-                  <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-                    <div className="bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-600 rounded-xl text-white">
-                          <Settings size={20} />
+                  {/* Row 1: Technical Details + Description (web 2 cột) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                      <div className="bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-600 rounded-xl text-white">
+                            <Settings size={20} />
+                          </div>
+                          <h3 className="text-xl font-black text-gray-900 tracking-tight">CHI TIẾT NỘI DUNG KỸ THUẬT</h3>
                         </div>
-                        <h3 className="text-xl font-black text-gray-900 tracking-tight">CHI TIẾT NỘI DUNG KỸ THUẬT</h3>
+                        <button 
+                          onClick={() => {
+                            const data = [
+                              ['TIÊU ĐỀ VIDEO', videoResult.snippet.title],
+                              ['LINK VIDEO', `https://www.youtube.com/watch?v=${videoResult.id}`],
+                              ['TÊN KÊNH', videoResult.snippet.channelTitle],
+                              ['CHANNEL ID', videoResult.snippet?.channelId],
+                              ['QUỐC GIA KÊNH', getCountryDisplayName(videoResult._channelInfo?.snippet?.country)],
+                              ['VIDEO ID', videoResult.id],
+                              ['CATEGORY ID', videoResult.snippet?.categoryId],
+                              ['CATEGORY NAME', getCategoryName(videoResult.snippet?.categoryId)],
+                              ['CATEGORY TIẾNG VIỆT', getCategoryNameVi(videoResult.snippet?.categoryId)],
+                              ['GIỜ UTC (GỐC)', new Date(videoResult.snippet?.publishedAt).toISOString()],
+                              ['THỜI LƯỢNG', formatDuration(videoResult.contentDetails?.duration)],
+                              ['GIỜ VN (GMT+7)', new Date(videoResult.snippet?.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })],
+                              ['LƯỢT XEM VIDEO', videoResult.statistics?.viewCount],
+                              ['SỐ LƯỢT THÍCH', videoResult.statistics?.likeCount || '0'],
+                              ['SỐ LƯỢT BÌNH LUẬN', videoResult.statistics?.commentCount || '0'],
+                              ['THỜI GIAN CHECK', new Date().toLocaleString('vi-VN')]
+                            ];
+                            const text = data.map(([k, v]) => `${k}: ${v}`).join('\n');
+                            downloadAsTxt(text, `Technical_Details_${videoResult.id}`);
+                          }}
+                          className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-[12px] font-black flex items-center gap-2 hover:bg-black transition-all shadow-lg shadow-gray-200"
+                        >
+                          <Download size={16} /> TẢI TXT
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => {
-                          const data = [
-                            ['TIÊU ĐỀ VIDEO', videoResult.snippet.title],
-                            ['LINK VIDEO', `https://www.youtube.com/watch?v=${videoResult.id}`],
-                            ['TÊN KÊNH', videoResult.snippet.channelTitle],
-                            ['CHANNEL ID', videoResult.snippet?.channelId],
-                            ['QUỐC GIA KÊNH', getCountryDisplayName(videoResult._channelInfo?.snippet?.country)],
-                            ['VIDEO ID', videoResult.id],
-                            ['CATEGORY ID', videoResult.snippet?.categoryId],
-                            ['CATEGORY NAME', getCategoryName(videoResult.snippet?.categoryId)],
-                            ['CATEGORY TIẾNG VIỆT', getCategoryNameVi(videoResult.snippet?.categoryId)],
-                            ['GIỜ UTC (GỐC)', new Date(videoResult.snippet?.publishedAt).toISOString()],
-                            ['THỜI LƯỢNG', formatDuration(videoResult.contentDetails?.duration)],
-                            ['GIỜ VN (GMT+7)', new Date(videoResult.snippet?.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })],
-                            ['LƯỢT XEM VIDEO', videoResult.statistics?.viewCount],
-                            ['SỐ LƯỢT THÍCH', videoResult.statistics?.likeCount || '0'],
-                            ['SỐ LƯỢT BÌNH LUẬN', videoResult.statistics?.commentCount || '0'],
-                            ['THỜI GIAN CHECK', new Date().toLocaleString('vi-VN')]
-                          ];
-                          const text = data.map(([k, v]) => `${k}: ${v}`).join('\n');
-                          downloadAsTxt(text, `Technical_Details_${videoResult.id}`);
-                        }}
-                        className="bg-gray-900 text-white px-6 py-2.5 rounded-xl text-[12px] font-black flex items-center gap-2 hover:bg-black transition-all shadow-lg shadow-gray-200"
-                      >
-                        <Download size={16} /> TẢI TXT
-                      </button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-gray-100">
+                        {[
+                          { label: 'TIÊU ĐỀ VIDEO', value: videoResult.snippet.title },
+                          { label: 'LINK VIDEO', value: `https://www.youtube.com/watch?v=${videoResult.id}`, isLink: true },
+                          { label: 'TÊN KÊNH', value: videoResult.snippet.channelTitle },
+                          { label: 'CHANNEL ID', value: videoResult.snippet.channelId },
+                          { label: 'QUỐC GIA KÊNH', value: getCountryDisplayName(videoResult._channelInfo?.snippet?.country) },
+                          { label: 'VIDEO ID', value: videoResult.id },
+                          { label: 'CATEGORY ID', value: videoResult.snippet.categoryId },
+                          { label: 'CATEGORY NAME', value: getCategoryName(videoResult.snippet.categoryId) },
+                          { label: 'CATEGORY TIẾNG VIỆT', value: getCategoryNameVi(videoResult.snippet.categoryId) }, 
+                          { label: 'GIỜ UTC (GỐC)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toISOString().replace('T', ' ').split('.')[0] : 'N/A' },
+                          { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration) },
+                          { label: 'GIỜ VN (GMT+7)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'N/A' },
+                          { label: 'LƯỢT XEM VIDEO', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0' },
+                          { label: 'SỐ LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0' },
+                          { label: 'SỐ LƯỢT BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0' },
+                          { label: 'THỜI GIAN CHECK', value: new Date().toLocaleString('vi-VN') }
+                        ].map((item, i) => (
+                          <div key={i} className="p-6 bg-white hover:bg-gray-50/50 transition-colors group text-left">
+                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 group-hover:text-blue-500 transition-colors">{item.label}</div>
+                            {item.isLink ? (
+                              <div className="flex items-center gap-2">
+                                <a href={item.value} target="_blank" rel="noreferrer" className="text-[14px] font-black text-blue-600 break-all flex-1 leading-tight hover:underline">{item.value}</a>
+                                <button onClick={() => copyToClipboard(item.value)} className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"><Copy size={12}/></button>
+                              </div>
+                            ) : (
+                              <div className="text-[14px] font-black text-gray-900 break-words whitespace-normal">{item.value}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-gray-100">
-                      {[
-                        { label: 'TIÊU ĐỀ VIDEO', value: videoResult.snippet.title },
-                        { label: 'LINK VIDEO', value: `https://www.youtube.com/watch?v=${videoResult.id}`, isLink: true },
-                        { label: 'TÊN KÊNH', value: videoResult.snippet.channelTitle },
-                        { label: 'CHANNEL ID', value: videoResult.snippet.channelId },
-                        { label: 'QUỐC GIA KÊNH', value: getCountryDisplayName(videoResult._channelInfo?.snippet?.country) },
-                        { label: 'VIDEO ID', value: videoResult.id },
-                        { label: 'CATEGORY ID', value: videoResult.snippet.categoryId },
-                        { label: 'CATEGORY NAME', value: getCategoryName(videoResult.snippet.categoryId) },
-                        { label: 'CATEGORY TIẾNG VIỆT', value: getCategoryNameVi(videoResult.snippet.categoryId) }, 
-                        { label: 'GIỜ UTC (GỐC)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toISOString().replace('T', ' ').split('.')[0] : 'N/A' },
-                        { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration) },
-                        { label: 'GIỜ VN (GMT+7)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'N/A' },
-                        { label: 'LƯỢT XEM VIDEO', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0' },
-                        { label: 'SỐ LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0' },
-                        { label: 'SỐ LƯỢT BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0' },
-                        { label: 'THỜI GIAN CHECK', value: new Date().toLocaleString('vi-VN') }
-                      ].map((item, i) => (
-                        <div key={i} className="p-6 bg-white hover:bg-gray-50/50 transition-colors group text-left">
-                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 group-hover:text-blue-500 transition-colors">{item.label}</div>
-                          {item.isLink ? (
-                            <div className="flex items-center gap-2">
-                              <a href={item.value} target="_blank" rel="noreferrer" className="text-[14px] font-black text-blue-600 break-all flex-1 leading-tight hover:underline">{item.value}</a>
-                              <button onClick={() => copyToClipboard(item.value)} className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"><Copy size={12}/></button>
-                            </div>
-                          ) : (
-                            <div className="text-[14px] font-black text-gray-900 break-words whitespace-normal">{item.value}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Image 3: Description and Tags Section */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Description Column */}
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-xl flex flex-col h-[500px]">
                       <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -8145,8 +8142,10 @@ Quy tắc:
                         </pre>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Tags Column */}
+                  {/* Row 2: Tags + Comments (web 2 cột) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-xl flex flex-col h-[500px]">
                       <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -8193,56 +8192,54 @@ Quy tắc:
                         )}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Image 4: CTA & Pinned Comment Section */}
-                  <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-                    <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-pink-600 rounded-xl text-white">
-                          <MessageSquare size={20} />
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-pink-600 rounded-xl text-white">
+                            <MessageSquare size={20} />
+                          </div>
+                          <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Bình Luận</h3>
                         </div>
-                        <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Bình Luận Ghim & Bình luận khác</h3>
+                        <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[12px] font-black">
+                          <MessageSquare size={14} /> {Math.min((videoResult._comments?.length || 0), 20)} / {videoResult._comments?.length || 0} bình luận
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[12px] font-black">
-                        <MessageSquare size={14} /> {videoResult._comments?.length || 0} Bình luận
-                      </div>
-                    </div>
-                    <div className="p-8 bg-gray-50/30">
-                      <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
-                        {videoResult._comments && videoResult._comments.length > 0 ? (
-                          videoResult._comments.map((comment: any, idx: number) => (
-                            <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
-                              {idx === 0 && (
-                                <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
-                                  <Pin size={8} className="rotate-45" /> TOP/PINNED
-                                </div>
-                              )}
-                              <div className="flex gap-4">
-                                <div className="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 text-sm font-black shrink-0 uppercase">
-                                   {comment.authorDisplayName?.charAt(0) || '?'}
-                                </div>
-                                <div className="space-y-2 flex-1">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[13px] font-black text-gray-900">@{comment.authorDisplayName}</span>
-                                    <div className="flex items-center gap-3">
-                                      <div className="flex items-center gap-1 text-gray-400">
-                                        <ThumbsUp size={12} /> <span className="text-[11px] font-bold">{comment.likeCount}</span>
+                      <div className="p-8 bg-gray-50/30">
+                        <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
+                          {videoResult._comments && videoResult._comments.length > 0 ? (
+                            videoResult._comments.slice(0, 20).map((comment: any, idx: number) => (
+                              <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
+                                {idx === 0 && (
+                                  <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
+                                    <Pin size={8} className="rotate-45" /> TOP/PINNED
+                                  </div>
+                                )}
+                                <div className="flex gap-4">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 text-sm font-black shrink-0 uppercase">
+                                     {comment.authorDisplayName?.charAt(0) || '?'}
+                                  </div>
+                                  <div className="space-y-2 flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[13px] font-black text-gray-900">@{comment.authorDisplayName}</span>
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1 text-gray-400">
+                                          <ThumbsUp size={12} /> <span className="text-[11px] font-bold">{comment.likeCount}</span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                  <div className="text-[13px] font-medium text-gray-600 leading-snug whitespace-pre-wrap">
-                                    <LinkifyText text={comment.textDisplay.replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, "")} />
+                                    <div className="text-[13px] font-medium text-gray-600 leading-snug whitespace-pre-wrap">
+                                      <LinkifyText text={comment.textDisplay.replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, "")} />
+                                    </div>
                                   </div>
                                 </div>
                               </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 font-medium italic">
+                               Không tìm thấy bình luận nào hoặc video bị tắt tính năng bình luận.
                             </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 font-medium italic">
-                             Không tìm thấy bình luận nào hoặc video bị tắt tính năng bình luận.
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
