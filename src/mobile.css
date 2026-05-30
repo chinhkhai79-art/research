@@ -3269,3 +3269,106 @@
   }
 
 }
+
+
+/* §7 ─── Title Header trang KIỂM TRA VIDEO (vtw-video-title-header) ─────────
+ *
+ * DESKTOP (mặc định):
+ * ┌──────────────────────────────────────────────┐
+ * │ TIÊU ĐỀ VIDEO                                │
+ * │ Tạo Video Hot Trend ...     [▶ XEM VIDEO]    │  ⋮ ẩn
+ * └──────────────────────────────────────────────┘
+ *
+ * MOBILE (≤ 900px):
+ * ┌──────────────────────────────────────────────┐
+ * │ TIÊU ĐỀ VIDEO                                │
+ * │ Allah Tala ke madad ...      [▶ XEM] [ ⋮ ]   │
+ * │ (title hiện 3 dòng, không truncate)          │
+ * └──────────────────────────────────────────────┘
+ *
+ * Nút ⋮ mở context menu (Tải/Mở thumbnail, Copy link, Spy kênh).
+ * Desktop dùng right-click trên thumbnail → cùng menu, nên ⋮ ẩn.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+/* Default: ẩn nút ⋮ trên desktop */
+.vtw-video-menu-btn { display: none !important; }
+
+@media (max-width: 900px) {
+
+  /* Container: ép thành row để title + nút cùng hàng (mặc định JSX là
+     flex-col trên mobile, md:flex-row trên desktop — ta đảo lại) */
+  html body .vtw-video-title-header {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    padding: 14px !important;
+    gap: 10px !important;
+    border-radius: 18px !important;
+  }
+
+  /* Cụm text (label + h1) chiếm phần lớn không gian */
+  html body .vtw-video-title-header .vtw-video-title-text {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  /* Tiêu đề H1: cho hiện 3 dòng thay vì truncate 1 dòng → user thấy
+     được toàn bộ phần đầu, hashtags không bị mất */
+  html body .vtw-video-title-header .vtw-video-title-h1 {
+    font-size: 14px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+  }
+
+  /* Cụm nút bên phải: stack dọc cho gọn (XEM VIDEO trên, ⋮ dưới) */
+  html body .vtw-video-title-header .vtw-video-title-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+
+  /* Nút XEM VIDEO: thu nhỏ */
+  html body .vtw-video-title-header .vtw-video-watch-btn {
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+    border-radius: 10px !important;
+    gap: 4px !important;
+    min-height: 0 !important;
+    line-height: 1 !important;
+  }
+  html body .vtw-video-title-header .vtw-video-watch-btn svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  /* Hiện nút ⋮ trên mobile */
+  html body .vtw-video-menu-btn {
+    display: inline-flex !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 7px 10px !important;
+    border-radius: 10px !important;
+  }
+  html body .vtw-video-menu-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+}
+
+@media (max-width: 430px) {
+  /* Điện thoại hẹp: nhỏ thêm 1 chút để vừa khung 360-390px */
+  html body .vtw-video-title-header .vtw-video-title-h1 {
+    font-size: 13px !important;
+  }
+  html body .vtw-video-title-header .vtw-video-watch-btn,
+  html body .vtw-video-menu-btn {
+    padding: 6px 8px !important;
+    font-size: 10px !important;
+  }
+}

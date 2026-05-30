@@ -58,6 +58,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
+  MoreVertical,
   Hash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -809,6 +810,9 @@ export default function App() {
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   // Custom context menu state
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0, visible: false, channel: null as ChannelResult | null });
+  // Video thumbnail context menu (Kiểm Tra Video page)
+  const videoMenuRef = useRef<HTMLDivElement>(null);
+  const [videoMenuPos, setVideoMenuPos] = useState({ x: 0, y: 0, visible: false });
 
   // Click outside to close boards
   useEffect(() => {
@@ -828,10 +832,13 @@ export default function App() {
       if (menuPos.visible && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuPos(prev => ({ ...prev, visible: false }));
       }
+      if (videoMenuPos.visible && videoMenuRef.current && !videoMenuRef.current.contains(event.target as Node)) {
+        setVideoMenuPos(prev => ({ ...prev, visible: false }));
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyInputModal, showKeyHistory, showGeminiKeyHistory, menuPos.visible]);
+  }, [showRegionList, showKeyInputModal, showKeyHistory, showGeminiKeyHistory, menuPos.visible, videoMenuPos.visible]);
 
   // Đóng bảng thao tác khi cuộn/đổi màn hình để không bị dính sai kênh.
   useEffect(() => {
@@ -4571,6 +4578,74 @@ ${topKeywordsStr}`;
 
   const closeMenu = () => setMenuPos({ ...menuPos, visible: false });
 
+  // --- Video Thumbnail Context Menu Handlers (Kiểm Tra Video) ---
+  const openVideoMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    // Right-click case có clientX/Y; click trên nút ⋮ thì dùng vị trí nút.
+    const hasMouseCoords = e.clientX > 0 || e.clientY > 0;
+    if (hasMouseCoords && e.type === 'contextmenu') {
+      setVideoMenuPos({ x: e.clientX, y: e.clientY, visible: true });
+      return;
+    }
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    setVideoMenuPos({
+      x: isMobile ? Math.max(8, window.innerWidth - 270) : rect.right - 280,
+      y: isMobile ? Math.min(rect.bottom + 6, window.innerHeight - 240) : rect.bottom + 6,
+      visible: true
+    });
+  };
+  const closeVideoMenu = () => setVideoMenuPos(prev => ({ ...prev, visible: false }));
+
+  const getMaxResThumbUrl = (videoId: string) =>
+    `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+  const getHqDefaultThumbUrl = (videoId: string) =>
+    `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+  // Tải ảnh thumbnail về máy. Ưu tiên maxres; nếu video không có maxres
+  // (YouTube không upscale) thì fallback hqdefault.
+  const downloadVideoThumb = async (videoId: string) => {
+    const maxUrl = getMaxResThumbUrl(videoId);
+    const fallbackUrl = getHqDefaultThumbUrl(videoId);
+    const tryDownload = async (url: string, suffix: string) => {
+      const r = await fetch(url, { mode: 'cors' });
+      if (!r.ok) throw new Error('http ' + r.status);
+      const blob = await r.blob();
+      if (!blob || blob.size < 1000) throw new Error('blob nhỏ — có thể là placeholder 120x90');
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `thumbnail_${videoId}_${suffix}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+    };
+    try {
+      await tryDownload(maxUrl, '1280x720');
+    } catch (_) {
+      try {
+        await tryDownload(fallbackUrl, '480x360');
+      } catch (_2) {
+        // CORS chặn fetch — mở tab mới để user lưu thủ công.
+        window.open(maxUrl, '_blank');
+      }
+    }
+  };
+
+  const openVideoThumb = (videoId: string) => {
+    // Thử maxres; nếu YouTube trả 404 (video không có maxres) thì
+    // browser hiển thị ảnh nhỏ — user sẽ tự thấy. Đây là hành vi
+    // tiêu chuẩn.
+    window.open(getMaxResThumbUrl(videoId), '_blank', 'noopener,noreferrer');
+  };
+
+  const copyVideoLink = (videoId: string) => {
+    copyToClipboard(`https://www.youtube.com/watch?v=${videoId}`);
+  };
+
   const addToTracking = (channel: ChannelResult) => {
     if (trackingChannels.some(c => c.id === channel.id)) {
       setStatus('Kênh này đã có trong danh sách theo dõi.');
@@ -7745,31 +7820,42 @@ Quy tắc:
               {videoResult && (
                 <div className="space-y-6 text-gray-900 pb-20">
                   {/* Video Title Header */}
-                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex-1 min-w-0">
+                  <div className="vtw-video-title-header bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="vtw-video-title-text flex-1 min-w-0">
                       <div className="text-[12px] text-blue-600 font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                         <Video size={14} /> TIÊU ĐỀ VIDEO
                       </div>
                       <h1
-                        className="text-xl md:text-2xl font-black text-gray-900 leading-tight truncate max-w-full"
+                        className="vtw-video-title-h1 text-xl md:text-2xl font-black text-gray-900 leading-tight truncate max-w-full"
                         title={videoResult.snippet.title}
                       >
                         {videoResult.snippet.title}
                       </h1>
                     </div>
-                    <button 
-                      onClick={() => setInlineVideoId(videoResult.id)}
-                      className="bg-red-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 active:scale-95 transition-all shadow-lg shadow-red-100 shrink-0"
-                    >
-                      <Play fill="currentColor" size={18} /> XEM VIDEO
-                    </button>
+                    <div className="vtw-video-title-actions flex flex-row items-center gap-2 shrink-0">
+                      <button 
+                        onClick={() => setInlineVideoId(videoResult.id)}
+                        className="vtw-video-watch-btn bg-red-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 active:scale-95 transition-all shadow-lg shadow-red-100 shrink-0"
+                      >
+                        <Play fill="currentColor" size={18} /> <span className="vtw-video-watch-btn-label">XEM VIDEO</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => openVideoMenu(e)}
+                        className="vtw-video-menu-btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                        title="Thao tác khác"
+                        aria-label="Thao tác khác"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Image 1: Overview Summary */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column: Thumbnail and RPM */}
                     <div className="lg:col-span-4 space-y-4">
-                      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
+                      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onContextMenu={(e) => openVideoMenu(e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
                         <img 
                           src={videoResult.snippet.thumbnails.maxres?.url || videoResult.snippet.thumbnails.high?.url} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -7779,7 +7865,8 @@ Quy tắc:
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setInlineVideoId(videoResult.id); }}
-                          title="Xem video"
+                          onContextMenu={(e) => openVideoMenu(e)}
+                          title="Xem video (chuột phải để mở menu thao tác)"
                           aria-label="Xem video"
                           className="absolute inset-0 z-10 transition-colors cursor-pointer bg-transparent border-0"
                         />
@@ -8795,6 +8882,65 @@ Quy tắc:
                 <Copy size={18} className="text-gray-400" />
               </div>
               <span className="font-medium">Copy URL kênh</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Video Thumbnail Context Menu (Kiểm Tra Video) */}
+      {videoMenuPos.visible && videoResult && (
+        <div 
+          ref={videoMenuRef}
+          className="fixed z-[1000] bg-white border border-gray-200 shadow-[0_8px_24px_rgba(0,0,0,0.18)] w-[280px] text-[13px] rounded-xl overflow-hidden select-none"
+          style={{ 
+            top: Math.min(videoMenuPos.y, window.innerHeight - 240), 
+            left: Math.min(videoMenuPos.x, window.innerWidth - 296) 
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-800 text-white border-b border-white/10">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-wide text-blue-200">Thao tác video</div>
+              <div className="truncate text-[12px] font-bold">{videoResult.snippet?.title || 'Video đã chọn'}</div>
+            </div>
+            <button
+              type="button"
+              onClick={closeVideoMenu}
+              className="shrink-0 w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white text-lg leading-none flex items-center justify-center"
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+          </div>
+          <div className="py-1">
+            <button
+              onClick={() => { downloadVideoThumb(videoResult.id); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <Download size={18} className="text-blue-600 shrink-0" />
+              <span className="font-medium leading-tight">Tải ảnh thumbnail <span className="text-[10px] text-gray-400 font-normal">(gốc 1280×720)</span></span>
+            </button>
+            <button
+              onClick={() => { openVideoThumb(videoResult.id); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <Image size={18} className="text-purple-600 shrink-0" />
+              <span className="font-medium leading-tight">Mở ảnh thumbnail <span className="text-[10px] text-gray-400 font-normal">(gốc 1280×720)</span></span>
+            </button>
+            <button
+              onClick={() => { copyVideoLink(videoResult.id); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <Copy size={18} className="text-gray-500 shrink-0" />
+              <span className="font-medium">Sao chép link video</span>
+            </button>
+            <div className="border-t border-gray-100 my-1"></div>
+            <button
+              onClick={() => { goToSpy(videoResult.snippet.channelId); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <BarChart2 size={18} className="text-green-600 shrink-0" />
+              <span className="font-medium">Phân tích kênh này (Spy)</span>
             </button>
           </div>
         </div>
