@@ -4890,3 +4890,41 @@
     opacity: 1 !important;
   }
 }
+
+/* PATCH 30/5 — WEB: chỉ loang nhạt các ô NHỎ bên trong khung, không đổi nền toàn trang/khung lớn. */
+@media (min-width: 901px) {
+  html,
+  body,
+  #root,
+  body .vtw-mobile-app,
+  body .vtw-page-wrap,
+  body .vtw-main-panel {
+    background: initial !important;
+  }
+
+  /* Giữ khung lớn màu trắng sạch, không phủ loang toàn bộ card lớn. */
+  body .rounded-3xl.bg-white {
+    background: #fff !important;
+  }
+
+  /* Chỉ áp dụng loang nhẹ cho các ô/chip/card nhỏ nằm bên trong khung. */
+  body .rounded-3xl.bg-white .rounded-2xl.bg-white,
+  body .rounded-3xl.bg-white .rounded-xl.bg-white,
+  body .rounded-3xl.bg-white .rounded-full.bg-gray-50,
+  body .rounded-3xl.bg-white .rounded-full.bg-blue-50,
+  body .rounded-3xl.bg-white .rounded-full.bg-green-50,
+  body .rounded-3xl.bg-white .bg-gray-50,
+  body .rounded-3xl.bg-white .bg-slate-50,
+  body .rounded-3xl.bg-white .bg-gray-50\/30,
+  body .rounded-3xl.bg-white [class*="bg-gray-50"],
+  body .rounded-3xl.bg-white [class*="bg-blue-50"],
+  body .rounded-3xl.bg-white [class*="bg-green-50"],
+  body .rounded-3xl.bg-white [class*="bg-orange-50"],
+  body .rounded-3xl.bg-white [class*="bg-purple-50"],
+  body .rounded-3xl.bg-white [class*="bg-red-50"] {
+    background:
+      radial-gradient(circle at 0% 0%, rgba(219, 234, 254, 0.34), transparent 42%),
+      radial-gradient(circle at 100% 0%, rgba(254, 215, 170, 0.24), transparent 38%),
+      linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,252,255,0.94) 52%, rgba(255,250,245,0.92)) !important;
+  }
+}
