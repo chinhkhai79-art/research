@@ -7550,13 +7550,16 @@ Quy tắc:
                 )}
 
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
-                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in zoom-in duration-500">
-                      {nicheResults.thumbnails.map((v: any, i: number) => (
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in zoom-in duration-500">
+                      {nicheResults.thumbnails.map((v: any, i: number) => {
+                         const bestThumb = v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url;
+                         const origThumb = `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg`;
+                         return (
                          <div key={i} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
-                            <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
-                               <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                            <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-black">
+                               <img src={bestThumb} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform" onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (img.src !== v.snippet.thumbnails.high?.url) img.src = v.snippet.thumbnails.high?.url || v.snippet.thumbnails.default?.url; }} />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                  <button onClick={() => window.open(v.snippet.thumbnails.high.url, '_blank')} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Xem ảnh gốc"><Eye size={18} /></button>
+                                  <button onClick={() => { const win = window.open(origThumb, '_blank'); setTimeout(() => { try { if (win && win.document && win.document.images[0] && win.document.images[0].naturalWidth < 200) win.location.href = bestThumb; } catch (_) {} }, 1500); }} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Xem ảnh gốc (chất lượng cao nhất)"><Eye size={18} /></button>
                                   <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Mở video"><ExternalLink size={18} /></a>
                                </div>
                             </div>
@@ -7568,7 +7571,7 @@ Quy tắc:
                                </div>
                             </div>
                          </div>
-                      ))}
+                      );})}
                    </div>
                 )}
 
