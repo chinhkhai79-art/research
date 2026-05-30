@@ -7797,13 +7797,12 @@ Quy tắc:
 
                     {/* Right Column: Metrics and Channels */}
                     <div className="lg:col-span-8 flex flex-col gap-3">
-                      {/* Hàng 2: Lượt xem - Lượt thích - Bình luận - Thời lượng */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                      {/* Hàng 2: Lượt xem - Lượt thích - Bình luận */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {[
                           { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
                           { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
-                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
-                          { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
+                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' }
                         ].map((stat, i) => (
                           <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                             <div className={`p-2 rounded-lg ${stat.iconBg} ${stat.color}`}>
@@ -7815,8 +7814,16 @@ Quy tắc:
                         ))}
                       </div>
 
-                      {/* Hàng 3: VPH - Score - Giờ đăng VN - Giờ đăng Quốc tế */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                      {/* Hàng 3: Thời lượng - VPH - Score */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Thời lượng */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                            <Clock size={18} />
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">THỜI LƯỢNG</div>
+                          <div className="text-xl font-black text-gray-900">{formatDuration(videoResult.contentDetails?.duration)}</div>
+                        </div>
                         {/* VPH */}
                         <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                           <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
@@ -7852,23 +7859,29 @@ Quy tắc:
                             })()}
                           </div>
                         </div>
-                        {/* Giờ đăng VN */}
-                        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
-                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">GIỜ ĐĂNG (VIỆT NAM)</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0">VN</div>
-                            <div className="text-[12px] font-black text-gray-800 leading-snug">
-                              {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'short', timeZone: 'Asia/Ho_Chi_Minh' })}, {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} <span className="text-gray-400">(GMT+7)</span>
+                      </div>
+
+                      {/* Hàng 4: Giờ đăng VN - Giờ đăng Quốc tế */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                          <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">GIỜ ĐĂNG (VIỆT NAM)</div>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center font-black text-[14px] shrink-0">VN</div>
+                            <div className="text-left">
+                              <div className="text-[15px] font-black text-gray-800">
+                                {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'long', timeZone: 'Asia/Ho_Chi_Minh' })}, lúc {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} (GMT+7)
+                              </div>
                             </div>
                           </div>
                         </div>
-                        {/* Giờ đăng Quốc tế */}
-                        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
-                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">GIỜ ĐĂNG (QUỐC TẾ)</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0">UTC</div>
-                            <div className="text-[12px] font-black text-gray-800 leading-snug">
-                              {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'short', timeZone: 'UTC' })}, {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'UTC' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' })} <span className="text-gray-400">(UTC)</span>
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                          <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">GIỜ ĐĂNG (QUỐC TẾ)</div>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-[14px] shrink-0">UTC</div>
+                            <div className="text-left">
+                              <div className="text-[15px] font-black text-gray-800">
+                                {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'long', timeZone: 'UTC' })}, lúc {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'UTC' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' })} (UTC)
+                              </div>
                             </div>
                           </div>
                         </div>
