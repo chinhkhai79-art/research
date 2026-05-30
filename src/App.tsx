@@ -8145,58 +8145,8 @@ Quy tắc:
                   </div>
 
                   {/* Row 2: Tags + Comments (web 2 cột) */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-[500px] min-h-[500px] max-h-[500px] order-1">
-                      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-pink-600 rounded-xl text-white">
-                            <MessageSquare size={20} />
-                          </div>
-                          <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Bình Luận</h3>
-                        </div>
-                        <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[12px] font-black">
-                          <MessageSquare size={14} /> {Math.min((videoResult._comments?.length || 0), 20)} / {videoResult._comments?.length || 0} bình luận
-                        </div>
-                      </div>
-                      <div className="p-8 bg-gray-50/30 overflow-hidden flex-1 min-h-0">
-                        <div className="h-full overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
-                          {videoResult._comments && videoResult._comments.length > 0 ? (
-                            videoResult._comments.slice(0, 20).map((comment: any, idx: number) => (
-                              <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
-                                {idx === 0 && (
-                                  <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
-                                    <Pin size={8} className="rotate-45" /> TOP/PINNED
-                                  </div>
-                                )}
-                                <div className="flex gap-4">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 text-sm font-black shrink-0 uppercase">
-                                     {comment.authorDisplayName?.charAt(0) || '?'}
-                                  </div>
-                                  <div className="space-y-2 flex-1">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[13px] font-black text-gray-900">@{comment.authorDisplayName}</span>
-                                      <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1 text-gray-400">
-                                          <ThumbsUp size={12} /> <span className="text-[11px] font-bold">{comment.likeCount}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="text-[13px] font-medium text-gray-600 leading-snug whitespace-pre-wrap">
-                                      <LinkifyText text={comment.textDisplay.replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, "")} />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 font-medium italic">
-                               Không tìm thấy bình luận nào hoặc video bị tắt tính năng bình luận.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl flex flex-col h-[500px] min-h-[500px] max-h-[500px] order-2">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl flex flex-col h-[500px]">
                       <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-green-600 rounded-xl text-white">
@@ -8240,6 +8190,56 @@ Quy tắc:
                              </div>
                           </div>
                         )}
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                      <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-pink-600 rounded-xl text-white">
+                            <MessageSquare size={20} />
+                          </div>
+                          <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Bình Luận</h3>
+                        </div>
+                        <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[12px] font-black">
+                          <MessageSquare size={14} /> {Math.min((videoResult._comments?.length || 0), 20)} / {videoResult._comments?.length || 0} bình luận
+                        </div>
+                      </div>
+                      <div className="p-8 bg-gray-50/30">
+                        <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
+                          {videoResult._comments && videoResult._comments.length > 0 ? (
+                            videoResult._comments.slice(0, 20).map((comment: any, idx: number) => (
+                              <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
+                                {idx === 0 && (
+                                  <div className="absolute top-0 right-4 -translate-y-1/2 bg-blue-600 text-white px-3 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg shadow-blue-100 flex items-center gap-1">
+                                    <Pin size={8} className="rotate-45" /> TOP/PINNED
+                                  </div>
+                                )}
+                                <div className="flex gap-4">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-gray-600 text-sm font-black shrink-0 uppercase">
+                                     {comment.authorDisplayName?.charAt(0) || '?'}
+                                  </div>
+                                  <div className="space-y-2 flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[13px] font-black text-gray-900">@{comment.authorDisplayName}</span>
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1 text-gray-400">
+                                          <ThumbsUp size={12} /> <span className="text-[11px] font-bold">{comment.likeCount}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-[13px] font-medium text-gray-600 leading-snug whitespace-pre-wrap">
+                                      <LinkifyText text={comment.textDisplay.replace(/<br>/g, '\n').replace(/<\/?[^>]+(>|$)/g, "")} />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 text-gray-400 font-medium italic">
+                               Không tìm thấy bình luận nào hoặc video bị tắt tính năng bình luận.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
