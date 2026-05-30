@@ -8042,8 +8042,8 @@ Quy tắc:
                   </div>
 
                   {/* Image 2: Technical Details Section */}
-                  <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-                    <div className="bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                  <div className="vtw-technical-details-card bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                    <div className="vtw-technical-details-header bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-600 rounded-xl text-white">
                           <Settings size={20} />
@@ -8078,7 +8078,7 @@ Quy tắc:
                         <Download size={16} /> TẢI TXT
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-gray-100">
+                    <div className="vtw-technical-details-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-gray-100">
                       {[
                         { label: 'TIÊU ĐỀ VIDEO', value: videoResult.snippet.title },
                         { label: 'LINK VIDEO', value: `https://www.youtube.com/watch?v=${videoResult.id}`, isLink: true },
