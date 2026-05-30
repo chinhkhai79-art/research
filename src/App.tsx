@@ -7796,18 +7796,18 @@ Quy tắc:
                     </div>
 
                     {/* Right Column: Metrics and Channels */}
-                    <div className="lg:col-span-8 flex flex-col gap-4">
-                      {/* Metrics Card Row */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="lg:col-span-8 flex flex-col gap-3">
+                      {/* Hàng 2: Lượt xem - Lượt thích - Bình luận - Thời lượng */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
                         {[
                           { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
                           { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
                           { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
                           { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
                         ].map((stat, i) => (
-                          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                             <div className={`p-2 rounded-lg ${stat.iconBg} ${stat.color}`}>
-                              <stat.icon size={20} />
+                              <stat.icon size={18} />
                             </div>
                             <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{stat.label}</div>
                             <div className="text-xl font-black text-gray-900">{stat.value}</div>
@@ -7815,27 +7815,60 @@ Quy tắc:
                         ))}
                       </div>
 
-                      {/* Time Info Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                          <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">GIỜ ĐĂNG (VIỆT NAM)</div>
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center font-black text-[14px]">VN</div>
-                            <div className="text-left">
-                              <div className="text-[15px] font-black text-gray-800">
-                                {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'long', timeZone: 'Asia/Ho_Chi_Minh' })}, lúc {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} (GMT+7)
-                              </div>
+                      {/* Hàng 3: VPH - Score - Giờ đăng VN - Giờ đăng Quốc tế */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                        {/* VPH */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
+                            <TrendingUp size={18} />
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">VPH</div>
+                          <div className="text-xl font-black text-gray-900">
+                            {(() => { const v = parseInt(videoResult.statistics?.viewCount || '0'); const h = Math.max(1, (Date.now() - new Date(videoResult.snippet.publishedAt).getTime()) / 3600000); return Math.round(v / h).toLocaleString('vi-VN'); })()}
+                          </div>
+                        </div>
+                        {/* Score */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+                            <BarChart2 size={18} />
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">TREND SCORE</div>
+                          <div className="text-xl font-black text-gray-900">
+                            {(() => {
+                              const stats = videoResult.statistics || {};
+                              const views = parseInt(stats.viewCount) || 0;
+                              const vph = (() => { const h = Math.max(1, (Date.now() - new Date(videoResult.snippet.publishedAt).getTime()) / 3600000); return views / h; })();
+                              const ageDays = (Date.now() - new Date(videoResult.snippet.publishedAt).getTime()) / 86400000;
+                              const likes = parseInt(stats.likeCount) || 0;
+                              const comments = parseInt(stats.commentCount) || 0;
+                              const engagement = views > 0 ? ((likes + comments) / views) * 100 : 0;
+                              const viewPerDay = ageDays < 1 ? views : views / ageDays;
+                              let sc = 0;
+                              if (vph >= 100) sc += 40; else if (vph >= 50) sc += 32; else if (vph >= 20) sc += 24; else if (vph >= 10) sc += 16; else if (vph >= 1) sc += 8; else sc += 3;
+                              if (viewPerDay >= 10000) sc += 25; else if (viewPerDay >= 5000) sc += 20; else if (viewPerDay >= 1000) sc += 15; else if (viewPerDay >= 300) sc += 10; else if (viewPerDay >= 50) sc += 5; else sc += 2;
+                              if (ageDays <= 3) sc += 15; else if (ageDays <= 7) sc += 12; else if (ageDays <= 14) sc += 9; else if (ageDays <= 30) sc += 6; else if (ageDays <= 90) sc += 3; else sc += 1;
+                              if (engagement >= 5) sc += 10; else if (engagement >= 2) sc += 7; else if (engagement >= 0.5) sc += 4; else sc += 1;
+                              return `${Math.min(100, sc)}/100`;
+                            })()}
+                          </div>
+                        </div>
+                        {/* Giờ đăng VN */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">GIỜ ĐĂNG (VIỆT NAM)</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0">VN</div>
+                            <div className="text-[12px] font-black text-gray-800 leading-snug">
+                              {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'short', timeZone: 'Asia/Ho_Chi_Minh' })}, {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} <span className="text-gray-400">(GMT+7)</span>
                             </div>
                           </div>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                          <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">GIỜ ĐĂNG (QUỐC TẾ)</div>
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-[14px]">UTC</div>
-                            <div className="text-left">
-                              <div className="text-[15px] font-black text-gray-800">
-                                {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'long', timeZone: 'UTC' })}, lúc {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'UTC' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' })} (UTC)
-                              </div>
+                        {/* Giờ đăng Quốc tế */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">GIỜ ĐĂNG (QUỐC TẾ)</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-black text-[11px] shrink-0">UTC</div>
+                            <div className="text-[12px] font-black text-gray-800 leading-snug">
+                              {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'short', timeZone: 'UTC' })}, {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'UTC' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' })} <span className="text-gray-400">(UTC)</span>
                             </div>
                           </div>
                         </div>
