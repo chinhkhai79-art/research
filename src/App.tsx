@@ -8042,8 +8042,8 @@ Quy tắc:
                   </div>
 
                   {/* Row 1: Technical Details + Description (web 2 cột) */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-[500px]">
                       <div className="bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-blue-600 rounded-xl text-white">
@@ -8079,7 +8079,7 @@ Quy tắc:
                           <Download size={16} /> TẢI TXT
                         </button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-gray-100">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-gray-100 flex-1 min-h-0 auto-rows-fr overflow-hidden">
                         {[
                           { label: 'TIÊU ĐỀ VIDEO', value: videoResult.snippet.title },
                           { label: 'LINK VIDEO', value: `https://www.youtube.com/watch?v=${videoResult.id}`, isLink: true },
@@ -8136,7 +8136,7 @@ Quy tắc:
                           </button>
                         </div>
                       </div>
-                      <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-left">
+                      <div className="p-8 overflow-y-auto custom-scrollbar flex-1 min-h-0 text-left">
                         <pre className="text-[14px] font-medium text-gray-600 whitespace-pre-wrap font-sans leading-relaxed">
                           <LinkifyText text={videoResult.snippet.description} />
                         </pre>
@@ -8145,7 +8145,7 @@ Quy tắc:
                   </div>
 
                   {/* Row 2: Tags + Comments (web 2 cột) */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-xl flex flex-col h-[500px]">
                       <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -8170,7 +8170,7 @@ Quy tắc:
                           </button>
                         </div>
                       </div>
-                      <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-6 text-left">
+                      <div className="p-8 overflow-y-auto custom-scrollbar flex-1 min-h-0 space-y-6 text-left">
                         <div className="flex flex-wrap gap-2">
                           {videoResult.snippet.tags ? videoResult.snippet.tags.map((tag: string, i: number) => (
                             <div key={i} className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-[13px] font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all cursor-default">
@@ -8192,7 +8192,7 @@ Quy tắc:
                         )}
                       </div>
                     </div>
-                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden flex flex-col h-[500px]">
                       <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-pink-600 rounded-xl text-white">
@@ -8204,8 +8204,8 @@ Quy tắc:
                           <MessageSquare size={14} /> {Math.min((videoResult._comments?.length || 0), 20)} / {videoResult._comments?.length || 0} bình luận
                         </div>
                       </div>
-                      <div className="p-8 bg-gray-50/30">
-                        <div className="max-h-[600px] overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
+                      <div className="p-8 bg-gray-50/30 flex-1 min-h-0 overflow-hidden">
+                        <div className="h-full overflow-y-auto custom-scrollbar space-y-4 pr-2 pt-4">
                           {videoResult._comments && videoResult._comments.length > 0 ? (
                             videoResult._comments.slice(0, 20).map((comment: any, idx: number) => (
                               <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative text-left">
