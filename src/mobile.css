@@ -3212,3 +3212,60 @@
     white-space: nowrap !important;
   }
 }
+
+
+/* §6 ─── Mobile (≤ 639px) — Stats cards của trang KIỂM TRA VIDEO ─────────────
+ *
+ * Trên desktop & tablet (≥ 640px) Tailwind dùng `sm:grid-cols-3` → 3 cột OK.
+ * Trên mobile (< 640px) class gốc `grid-cols-1` xếp thành 1 cột mỗi card, gây
+ * cuộn dài và xấu. Block dưới ép 2 hàng stats luôn hiển thị 3 cột (3+3) và
+ * thu nhỏ padding/font icon để vừa khung điện thoại ~390-430px.
+ *
+ * Selector dùng `:has()` để chỉ bắt đúng 2 grid stats (đặc trưng bởi card
+ * con `.bg-white.p-4.rounded-2xl`), không động đến các grid Tailwind khác
+ * cùng class chain. Specificity tăng bằng `html body` để thắng utility.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 639px) {
+
+  /* ── GRID: ép 3 cột, gap nhỏ lại ───────────────────────────────────── */
+  html body .grid.grid-cols-1.sm\:grid-cols-3.gap-3:has(> .bg-white.p-4.rounded-2xl) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  /* ── CARD: padding nhỏ, gap dọc gọn, cho phép xuống dòng text dài ── */
+  html body .grid.grid-cols-1.sm\:grid-cols-3.gap-3:has(> .bg-white.p-4.rounded-2xl) > .bg-white.p-4.rounded-2xl {
+    padding: 10px 8px !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* ── ICON BOX: thu nhỏ ô bọc icon ─────────────────────────────────── */
+  html body .grid.grid-cols-1.sm\:grid-cols-3.gap-3:has(> .bg-white.p-4.rounded-2xl) > .bg-white.p-4.rounded-2xl > div:first-child {
+    padding: 5px !important;
+    border-radius: 8px !important;
+  }
+  html body .grid.grid-cols-1.sm\:grid-cols-3.gap-3:has(> .bg-white.p-4.rounded-2xl) > .bg-white.p-4.rounded-2xl > div:first-child > svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* ── LABEL (chữ in hoa tracking-widest, mặc định 10px) ─────────────── */
+  html body .grid.grid-cols-1.sm\:grid-cols-3.gap-3:has(> .bg-white.p-4.rounded-2xl) > .bg-white.p-4.rounded-2xl > .text-\[10px\] {
+    font-size: 9px !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1.2 !important;
+  }
+
+  /* ── VALUE (số to, mặc định text-xl = 20px). Cho phép break-word để
+        text dài như "2 giờ 59 phút 27 giây" không tràn ô 120px ───────── */
+  html body .grid.grid-cols-1.sm\:grid-cols-3.gap-3:has(> .bg-white.p-4.rounded-2xl) > .bg-white.p-4.rounded-2xl > .text-xl {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+}
