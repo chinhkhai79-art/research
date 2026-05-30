@@ -3373,21 +3373,53 @@
   }
 }
 
-/* PATCH 30/5 — Khung CHI TIẾT NỘI DUNG KỸ THUẬT loang nhạt nguyên khung.
-   Không tô loang từng ô nhỏ trong bảng kỹ thuật. */
-.vtw-technical-details-card {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(219, 234, 254, 0.50), transparent 34%),
-    radial-gradient(circle at 100% 0%, rgba(254, 215, 170, 0.38), transparent 32%),
-    linear-gradient(135deg, rgba(255,255,255,0.99), rgba(248,252,255,0.96) 52%, rgba(255,250,245,0.95)) !important;
+/* PATCH 30/5 — MOBILE: tiêu đề video nhỏ lại, hiển thị đủ trong khung, không tràn. */
+@media (max-width: 900px) {
+  body .vtw-video-title,
+  body .vtw-video-title button,
+  body .vtw-video-title a {
+    font-size: clamp(12px, 3.25vw, 15px) !important;
+    line-height: 1.18 !important;
+    font-weight: 900 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    max-height: none !important;
+  }
+
+  body .vtw-niche-video-card .vtw-video-title,
+  body .vtw-niche-video-card .vtw-video-title button,
+  body .vtw-niche-video-card .vtw-video-title a {
+    font-size: clamp(11px, 3vw, 14px) !important;
+    line-height: 1.16 !important;
+  }
+
+  body .vtw-video-title {
+    min-height: 0 !important;
+    padding-bottom: 2px !important;
+  }
+
+  body .vtw-niche-video-card {
+    overflow: visible !important;
+  }
 }
 
-.vtw-technical-details-card .vtw-technical-details-header,
-.vtw-technical-details-card .vtw-technical-details-grid,
-.vtw-technical-details-card .vtw-technical-details-grid > div {
-  background: transparent !important;
-}
+@media (max-width: 430px) {
+  body .vtw-video-title,
+  body .vtw-video-title button,
+  body .vtw-video-title a {
+    font-size: clamp(10px, 2.85vw, 12.5px) !important;
+    line-height: 1.15 !important;
+  }
 
-.vtw-technical-details-card .vtw-technical-details-grid > div {
-  background-image: none !important;
+  body .vtw-niche-video-card .vtw-video-title,
+  body .vtw-niche-video-card .vtw-video-title button,
+  body .vtw-niche-video-card .vtw-video-title a {
+    font-size: clamp(9.5px, 2.75vw, 12px) !important;
+    line-height: 1.14 !important;
+  }
 }
