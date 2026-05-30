@@ -4950,27 +4950,18 @@ ${topKeywordsStr}`;
       ],
       contentStyle: {
         contentBullets: [
-          'Phần mở đầu nên đi thẳng vào lời hứa chính của video, cho người xem hiểu ngay họ sẽ nhận được điều gì sau khi xem hết.',
-          'Nội dung cần bám sát chủ đề trong tiêu đề, tránh lan man sang các ý phụ không phục vụ thông điệp chính.',
-          'Nên chia nội dung thành các đoạn rõ ràng: vấn đề ban đầu, cách giải thích, ví dụ minh họa và phần kết luận/CTA.',
-          'Nếu video có hướng dẫn hoặc chia sẻ kinh nghiệm, cần đưa thêm bước thực hành cụ thể để người xem dễ áp dụng.',
-          'Các ý quan trọng nên được nhắc lại bằng câu ngắn, dễ nhớ, tránh dùng quá nhiều thuật ngữ khó hiểu.',
-          'Nên bổ sung ví dụ thực tế, tình huống cụ thể hoặc câu chuyện ngắn để nội dung có sức thuyết phục hơn.',
-          'Phần giữa video cần có điểm nhấn mới liên tục, tránh cảm giác chỉ lặp lại một thông điệp bằng nhiều cách diễn đạt.',
-          'Phần kết nên tóm tắt lợi ích chính và gợi ý người xem hành động tiếp theo một cách tự nhiên.'
+          'Nội dung cần bám sát lời hứa trong tiêu đề để giữ chân người xem.',
+          `Hiệu suất hiện tại: ${formatVNNumber(views)} views, ${formatVNNumber(likes)} likes, ${formatVNNumber(comments)} comments.`,
+          engagementRate > 1 ? 'Tỷ lệ tương tác đang có tín hiệu tốt.' : 'Tỷ lệ tương tác còn thấp, nên tăng câu hỏi/CTA trong video.',
+          'Nên đưa lợi ích chính trong 5–10 giây đầu.'
         ],
         styleBullets: [
-          'Phong cách trình bày nên rõ ràng, gần gũi và có nhịp dẫn dắt ổn định để người xem dễ theo dõi.',
-          'Nên mở đầu bằng câu hook mạnh hơn: đặt câu hỏi, nêu vấn đề đau hoặc đưa kết quả cuối cùng trước.',
-          'Giọng điệu nên giữ sự tự tin và có năng lượng, nhưng không quá vội khiến người xem khó tiếp nhận thông tin.',
-          'Nên dùng chữ nhấn mạnh, hình minh họa hoặc B-roll đúng lúc để làm rõ các ý quan trọng.',
-          'Các đoạn chuyển ý cần mượt hơn, có câu nối giữa các phần để video không bị rời rạc.',
-          'Nếu nội dung dài, nên chia thành các nhịp ngắn với điểm dừng tự nhiên để giảm cảm giác mệt khi xem.',
-          'CTA nên xuất hiện tự nhiên trong nội dung, gắn với lợi ích cụ thể thay vì chỉ kêu gọi like/sub chung chung.',
-          'Âm thanh, hình ảnh và nhịp dựng nên đồng bộ với cảm xúc chủ đề để tạo cảm giác chuyên nghiệp hơn.'
+          'Phong cách nên rõ ràng, vào thẳng vấn đề và có nhịp dựng nhanh hơn ở đoạn mở đầu.',
+          'Cần thêm pattern interrupt, chữ nhấn mạnh hoặc B-roll nếu phần trình bày dài.',
+          'Âm thanh, ánh sáng và bố cục thumbnail nên đồng bộ với tệp người xem mục tiêu.'
         ],
-        strengths: ['Nội dung có thể phát triển thành một format rõ ràng nếu phần mở đầu và cấu trúc được làm sắc hơn.', hasHashtag ? 'Có tín hiệu từ khóa/hashtag để định hướng chủ đề.' : 'Có thể bổ sung từ khóa để làm rõ chủ đề hơn.'],
-        warnings: [titleTooLong ? 'Tiêu đề dài dễ làm người xem mất trọng tâm, nên rút gọn thông điệp chính.' : 'Nên kiểm tra lại độ rõ của lời hứa nội dung trong tiêu đề và phần mở đầu.', 'Tránh để phần phân tích chỉ xoay quanh số liệu; cần ưu tiên thông điệp, cách kể và trải nghiệm xem.']
+        strengths: ['Có dữ liệu thật từ YouTube API để đối chiếu hiệu suất.', hasHashtag ? 'Có dùng từ khóa/hashtag.' : 'Có thể tối ưu thêm từ khóa.'],
+        warnings: [titleTooLong ? 'Tiêu đề dài dễ bị cắt.' : 'Cần kiểm tra CTR thực tế trong YouTube Studio.', vph < 20 ? 'VPH chưa cao, cần cải thiện hook và thumbnail.' : 'Nên nhân bản chủ đề nếu retention tốt.']
       },
       conclusion: {
         headline: vph > 100 ? 'Video có tín hiệu tốt, nên nhân bản chủ đề và tối ưu thêm để tăng chuyển đổi.' : 'Video có nền tảng dữ liệu nhưng cần tối ưu lại hook, thumbnail và CTA để tăng hiệu suất.',
@@ -5026,24 +5017,20 @@ Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, 
     {"key":"pinned","title":"BÌNH LUẬN GHIM","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]}
   ],
   "contentStyle": {
-    "contentBullets":["ít nhất 8 ý chi tiết về NỘI DUNG VIDEO: thông điệp chính, cấu trúc nội dung, hook, cách triển khai ý, mức độ rõ ràng, ví dụ minh họa, CTA, phần kết. KHÔNG liệt kê số liệu như view/like/comment/VPH."],
-    "styleBullets":["ít nhất 8 ý chi tiết về PHONG CÁCH THỂ HIỆN: nhịp dựng, giọng điệu, cách dẫn chuyện, hình ảnh minh họa, chữ trên màn hình, âm thanh, chuyển cảnh, cảm xúc người xem. KHÔNG liệt kê số liệu."],
-    "strengths":["điểm mạnh về nội dung/phong cách, không nói số liệu"],
-    "warnings":["vấn đề cần lưu ý về nội dung/phong cách, không nói số liệu"]
+    "contentBullets":["ít nhất 8 ý chi tiết, cụ thể, dựa vào title/description/comment/tags/thống kê"],
+    "styleBullets":["ít nhất 8 ý chi tiết, cụ thể, nêu rõ nhịp dựng, hook, CTA, âm thanh, hình ảnh, cách trình bày"],
+    "strengths":["..."],
+    "warnings":["..."]
   },
   "conclusion": {"headline":"...", "badges":["...", "..."]}
 }
 
 Quy tắc:
-- Chỉ dùng số liệu YouTube API cho các mục tổng quan nếu thật sự cần; KHÔNG đưa số liệu vào PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH.
-- PHÂN TÍCH NỘI DUNG phải tập trung vào nội dung video là chính: chủ đề đang nói gì, thông điệp chính, cấu trúc ý, phần mở đầu, phần thân, phần kết, mức độ dễ hiểu, ví dụ minh họa, CTA.
-- PHÂN TÍCH PHONG CÁCH phải tập trung vào cách thể hiện: nhịp dựng, giọng điệu, cách dẫn chuyện, hình ảnh minh họa, chữ trên màn hình, âm thanh, chuyển cảnh, cảm xúc người xem.
-- Không viết kiểu “video có X view, Y like, Z comment” trong hai phần contentBullets/styleBullets/strengths/warnings.
-- Không bịa view/sub/like/comment; nếu nhắc số ở mục khác phải lấy đúng từ JSON dữ liệu.
+- Không bịa view/sub/like/comment; nếu nhắc số phải lấy đúng từ JSON dữ liệu.
 - Phân tích thumbnail dựa theo tiêu đề, chủ đề và thumbnail URL, không khẳng định chi tiết hình ảnh nếu không chắc.
 - Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.
 - Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.
-- Với tags và bình luận, chỉ nhận xét khi liên quan tới nội dung/cách trình bày, không biến thành thống kê số liệu.`;
+- Với tags và bình luận, phải ưu tiên hiển thị/nhận xét từ dữ liệu YouTube API đã cung cấp.`;
 
       const response = await callGeminiGenerateContent(prompt);
       const parsed = parseGeminiJsonObject(response.text || '');
@@ -5344,6 +5331,172 @@ Quy tắc:
     };
 
     const exportAuditText = () => downloadAsTxt(buildAuditText(), `Video_Audit_${videoResult?.id || 'video'}`);
+
+    const makeSafeVietnameseFilename = (name: string) => {
+      const cleaned = String(name || 'video')
+        .normalize('NFC')
+        .replace(/[\\/:*?"<>|]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
+      return cleaned || 'video';
+    };
+
+    const downloadPlainTextFile = (text: string, filename: string) => {
+      const element = document.createElement('a');
+      const file = new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' });
+      element.href = URL.createObjectURL(file);
+      element.download = filename;
+      document.body.appendChild(element);
+      element.click();
+      URL.revokeObjectURL(element.href);
+      document.body.removeChild(element);
+    };
+
+    const buildFullVideoInfoText = () => {
+      const stats = videoResult?.statistics || {};
+      const channelInfo = videoResult?._channelInfo || {};
+      const channelStats = channelInfo?.statistics || {};
+      const snippet = videoResult?.snippet || {};
+      const description = snippet.description || '';
+      const tags = Array.isArray(snippet.tags) ? snippet.tags : [];
+      const comments = Array.isArray(videoResult?._comments) ? videoResult._comments : [];
+      const separator = '------------------------------------------------------------';
+      const lines: string[] = [];
+
+      lines.push('TOÀN BỘ THÔNG TIN VIDEO ĐÃ KIỂM TRA');
+      lines.push(separator);
+      lines.push(`Thời gian xuất file: ${new Date().toLocaleString('vi-VN')}`);
+      lines.push(`Tên video: ${snippet.title || ''}`);
+      lines.push(`Link video: https://www.youtube.com/watch?v=${videoResult?.id || ''}`);
+      lines.push(`Video ID: ${videoResult?.id || ''}`);
+      lines.push(`Kênh: ${snippet.channelTitle || ''}`);
+      lines.push(`Channel ID: ${snippet.channelId || ''}`);
+      lines.push(`Quốc gia kênh: ${getCountryDisplayName(channelInfo?.snippet?.country)}`);
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('1. THÔNG TIN KỸ THUẬT');
+      lines.push(separator);
+      lines.push(`Category ID: ${snippet.categoryId || ''}`);
+      lines.push(`Category Name: ${getCategoryName(snippet.categoryId)}`);
+      lines.push(`Category tiếng Việt: ${getCategoryNameVi(snippet.categoryId)}`);
+      lines.push(`Ngày đăng UTC: ${snippet.publishedAt ? new Date(snippet.publishedAt).toISOString() : ''}`);
+      lines.push(`Giờ Việt Nam: ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''}`);
+      lines.push(`Thời lượng: ${formatDuration(videoResult?.contentDetails?.duration)}`);
+      lines.push(`Lượt xem: ${formatVNNumber(parseInt(stats.viewCount || '0') || 0)}`);
+      lines.push(`Lượt thích: ${formatVNNumber(parseInt(stats.likeCount || '0') || 0)}`);
+      lines.push(`Bình luận: ${formatVNNumber(parseInt(stats.commentCount || '0') || 0)}`);
+      lines.push(`VPH: ${formatVNNumber(videoResult?._vph || calculateVideoVph(parseInt(stats.viewCount || '0') || 0, snippet.publishedAt))}`);
+      lines.push(`RPM ước tính: ${videoResult?._estimatedRpmRange || getVideoRpmRange(snippet.categoryId, channelInfo?.snippet?.country)}`);
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('2. THÔNG TIN KÊNH');
+      lines.push(separator);
+      lines.push(`Tên kênh: ${channelInfo?.snippet?.title || snippet.channelTitle || ''}`);
+      lines.push(`Mô tả kênh: ${cleanHtmlText(channelInfo?.snippet?.description || '')}`);
+      lines.push(`Ngày tạo kênh: ${channelInfo?.snippet?.publishedAt || ''}`);
+      lines.push(`Quốc gia: ${getCountryDisplayName(channelInfo?.snippet?.country)}`);
+      lines.push(`Subscriber: ${formatVNNumber(parseInt(channelStats.subscriberCount || '0') || 0)}`);
+      lines.push(`Tổng lượt xem kênh: ${formatVNNumber(parseInt(channelStats.viewCount || '0') || 0)}`);
+      lines.push(`Tổng video: ${formatVNNumber(parseInt(channelStats.videoCount || '0') || 0)}`);
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('3. TIÊU ĐỀ VIDEO');
+      lines.push(separator);
+      lines.push(snippet.title || '');
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('4. MÔ TẢ VIDEO');
+      lines.push(separator);
+      lines.push(description ? cleanHtmlText(description) : 'Video này không có mô tả.');
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('5. DÀN TAGS VIDEO');
+      lines.push(separator);
+      if (tags.length) {
+        tags.forEach((tag: string, index: number) => lines.push(`${index + 1}. ${tag}`));
+      } else {
+        lines.push('Video này không có tags.');
+      }
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('6. BÌNH LUẬN');
+      lines.push(separator);
+      if (comments.length) {
+        comments.slice(0, 20).forEach((comment: any, index: number) => {
+          lines.push(`${index + 1}. @${comment.authorDisplayName || ''}`);
+          lines.push(`   Like: ${comment.likeCount ?? 0}`);
+          lines.push(`   Nội dung: ${cleanHtmlText(comment.textDisplay)}`);
+          lines.push('');
+        });
+      } else {
+        lines.push('Không tìm thấy bình luận nào hoặc video bị tắt bình luận.');
+        lines.push('');
+      }
+
+      lines.push(separator);
+      lines.push('7. ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO');
+      lines.push(separator);
+      overview.forEach((item: any, index: number) => {
+        lines.push(`${index + 1}. ${item.title || item.key || 'PHÂN TÍCH'}`);
+        lines.push(`Hiện tại: ${item.current || ''}`);
+        if (item.key === 'tags' && tags.length) lines.push(`Tags API: ${tags.join(', ')}`);
+        if (item.key === 'pinned' && comments.length) {
+          comments.slice(0, 5).forEach((c: any, i: number) => lines.push(`Bình luận ${i + 1}: @${c.authorDisplayName || ''} - ${cleanHtmlText(c.textDisplay)}`));
+        }
+        lines.push(`Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`);
+        lines.push(`Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`);
+        lines.push(`Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`);
+        lines.push('');
+      });
+
+      lines.push(separator);
+      lines.push('8. PHÂN TÍCH NỘI DUNG');
+      lines.push(separator);
+      asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('9. PHÂN TÍCH PHONG CÁCH');
+      lines.push(separator);
+      asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('10. ĐIỂM MẠNH NỔI BẬT');
+      lines.push(separator);
+      asArrayText(contentStyle.strengths).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('11. VẤN ĐỀ CẦN LƯU Ý');
+      lines.push(separator);
+      asArrayText(contentStyle.warnings).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('12. KẾT LUẬN CUỐI CÙNG');
+      lines.push(separator);
+      lines.push(conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.');
+      const badges = asArrayText(conclusion.badges);
+      if (badges.length) lines.push(`Nhãn: ${badges.join(' | ')}`);
+      lines.push('');
+
+      return lines.join('\n');
+    };
+
+    const exportFullVideoInfo = () => {
+      const baseName = makeSafeVietnameseFilename(videoResult?.snippet?.title || videoResult?.id || 'video');
+      downloadPlainTextFile(buildFullVideoInfoText(), `${baseName}_Toan_bo_thong_tin.txt`);
+      setStatus('Đã tải toàn bộ thông tin video.');
+    };
+
     const copyOverviewCard = (item: any) => {
       const lines = [
         item.title || 'PHÂN TÍCH',
@@ -5536,9 +5689,17 @@ Quy tắc:
           <div className="relative z-10">
             <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-3">KẾT LUẬN CUỐI CÙNG</div>
             <h2 className="text-lg xl:text-xl 2xl:text-2xl font-black leading-snug max-w-none w-full">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
-            <div className="flex flex-wrap gap-2 mt-5">
+            <div className="flex flex-wrap gap-2 mt-5 pr-0 md:pr-64">
               {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-white/75 text-orange-700 border border-orange-200 rounded-full text-[10px] font-black shadow-sm">{badge}</span>)}
             </div>
+            <button
+              type="button"
+              onClick={exportFullVideoInfo}
+              className="mt-5 md:mt-0 md:absolute md:right-0 md:bottom-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-[12px] font-black shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+              title="Tải toàn bộ thông tin video đã kiểm tra"
+            >
+              <Download size={16} /> TẢI TOÀN BỘ THÔNG TIN
+            </button>
           </div>
         </div>
       </div>
