@@ -57,6 +57,7 @@ import {
   Flame,
   RefreshCw,
   ChevronDown,
+  ChevronUp,
   Hash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -857,11 +858,11 @@ export default function App() {
     };
   }, [menuPos.visible]);
 
-  // Chỉ bản mobile: hiện nút lên đầu trang khi đã lướt xuống.
+  // Hiện nút lên đầu trang khi đã lướt xuống (cả desktop và mobile).
   useEffect(() => {
     const handleScrollTopVisibility = () => {
       const y = window.scrollY || document.documentElement.scrollTop || 0;
-      setShowScrollTop(window.innerWidth <= 900 && y > 420);
+      setShowScrollTop(y > 300);
     };
     handleScrollTopVisibility();
     window.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
@@ -9113,12 +9114,12 @@ Quy tắc:
       {showScrollTop && (
         <button
           type="button"
-          className="vtw-scroll-top-mobile"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           aria-label="Lên đầu trang"
           title="Lên đầu trang"
+          className="fixed bottom-12 right-5 z-[4000] w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center transition-all hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-300 md:bottom-14 md:right-6 md:w-14 md:h-14"
         >
-          ↑
+          <ChevronUp size={26} strokeWidth={3} />
         </button>
       )}
 
