@@ -5491,10 +5491,179 @@ Quy tắc:
       return lines.join('\n');
     };
 
-    const exportFullVideoInfo = () => {
+    const exportFullVideoInfoTxt = () => {
       const baseName = makeSafeVietnameseFilename(videoResult?.snippet?.title || videoResult?.id || 'video');
       downloadPlainTextFile(buildFullVideoInfoText(), `${baseName}_Toan_bo_thong_tin.txt`);
-      setStatus('Đã tải toàn bộ thông tin video.');
+      setStatus('Đã tải toàn bộ thông tin video dạng TXT.');
+    };
+
+    const xmlEscape = (value: any) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+
+    const makeCrcTable = () => {
+      const table = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n] = c >>> 0;
+      }
+      return table;
+    };
+
+    const crc32 = (data: Uint8Array) => {
+      const table = makeCrcTable();
+      let crc = 0xffffffff;
+      for (let i = 0; i < data.length; i++) crc = table[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+      return (crc ^ 0xffffffff) >>> 0;
+    };
+
+    const createZipBlob = (files: Array<{ name: string; content: string }>) => {
+      const encoder = new TextEncoder();
+      const chunks: Uint8Array[] = [];
+      const central: Uint8Array[] = [];
+      let offset = 0;
+
+      const pushU16 = (arr: number[], value: number) => {
+        arr.push(value & 0xff, (value >>> 8) & 0xff);
+      };
+      const pushU32 = (arr: number[], value: number) => {
+        arr.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+      };
+      const dosTime = () => {
+        const d = new Date();
+        const time = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
+        const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+        return { time, date };
+      };
+
+      files.forEach(file => {
+        const nameBytes = encoder.encode(file.name);
+        const data = encoder.encode(file.content);
+        const crc = crc32(data);
+        const { time, date } = dosTime();
+
+        const local: number[] = [];
+        pushU32(local, 0x04034b50);
+        pushU16(local, 20);
+        pushU16(local, 0);
+        pushU16(local, 0);
+        pushU16(local, time);
+        pushU16(local, date);
+        pushU32(local, crc);
+        pushU32(local, data.length);
+        pushU32(local, data.length);
+        pushU16(local, nameBytes.length);
+        pushU16(local, 0);
+        const localBytes = new Uint8Array(local.length + nameBytes.length + data.length);
+        localBytes.set(local, 0);
+        localBytes.set(nameBytes, local.length);
+        localBytes.set(data, local.length + nameBytes.length);
+        chunks.push(localBytes);
+
+        const centralHeader: number[] = [];
+        pushU32(centralHeader, 0x02014b50);
+        pushU16(centralHeader, 20);
+        pushU16(centralHeader, 20);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, time);
+        pushU16(centralHeader, date);
+        pushU32(centralHeader, crc);
+        pushU32(centralHeader, data.length);
+        pushU32(centralHeader, data.length);
+        pushU16(centralHeader, nameBytes.length);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU32(centralHeader, 0);
+        pushU32(centralHeader, offset);
+        const centralBytes = new Uint8Array(centralHeader.length + nameBytes.length);
+        centralBytes.set(centralHeader, 0);
+        centralBytes.set(nameBytes, centralHeader.length);
+        central.push(centralBytes);
+
+        offset += localBytes.length;
+      });
+
+      const centralSize = central.reduce((sum, item) => sum + item.length, 0);
+      const end: number[] = [];
+      pushU32(end, 0x06054b50);
+      pushU16(end, 0);
+      pushU16(end, 0);
+      pushU16(end, files.length);
+      pushU16(end, files.length);
+      pushU32(end, centralSize);
+      pushU32(end, offset);
+      pushU16(end, 0);
+
+      return new Blob([...chunks, ...central, new Uint8Array(end)], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+    };
+
+    const paragraphXml = (text: string, options: { bold?: boolean; heading?: boolean; center?: boolean; size?: number } = {}) => {
+      const safe = xmlEscape(text);
+      const size = options.size || (options.heading ? 28 : 22);
+      const bold = options.bold || options.heading;
+      return `<w:p>${options.center ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : ''}<w:r><w:rPr>${bold ? '<w:b/>' : ''}<w:color w:val="111827"/><w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${safe}</w:t></w:r></w:p>`;
+    };
+
+    const buildFullVideoInfoDocxBlob = () => {
+      const lines = buildFullVideoInfoText().split('\n');
+      const body = lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return '<w:p/>';
+        if (/^-{5,}$/.test(trimmed)) return '<w:p><w:r><w:rPr><w:color w:val="CBD5E1"/></w:rPr><w:t>────────────────────────────────────────</w:t></w:r></w:p>';
+        if (index === 0) return paragraphXml(trimmed.toUpperCase(), { bold: true, center: true, size: 34 });
+        if (/^\d+\.\s/.test(trimmed) || trimmed === 'KẾT LUẬN CUỐI CÙNG') return paragraphXml(trimmed.toUpperCase(), { heading: true, size: 28 });
+        return paragraphXml(trimmed, { size: 22 });
+      }).join('');
+
+      const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${body}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+      const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+      const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+      return createZipBlob([
+        { name: '[Content_Types].xml', content: contentTypes },
+        { name: '_rels/.rels', content: rels },
+        { name: 'word/document.xml', content: documentXml }
+      ]);
+    };
+
+    const exportFullVideoInfoDocx = () => {
+      const baseName = makeSafeVietnameseFilename(videoResult?.snippet?.title || videoResult?.id || 'video');
+      const element = document.createElement('a');
+      const file = buildFullVideoInfoDocxBlob();
+      element.href = URL.createObjectURL(file);
+      element.download = `${baseName}_Toan_bo_thong_tin.docx`;
+      document.body.appendChild(element);
+      element.click();
+      URL.revokeObjectURL(element.href);
+      document.body.removeChild(element);
+      setStatus('Đã tải toàn bộ thông tin video dạng DOCX.');
     };
 
     const copyOverviewCard = (item: any) => {
@@ -5692,14 +5861,31 @@ Quy tắc:
             <div className="flex flex-wrap gap-2 mt-5 pr-0 md:pr-64">
               {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-white/75 text-orange-700 border border-orange-200 rounded-full text-[10px] font-black shadow-sm">{badge}</span>)}
             </div>
-            <button
-              type="button"
-              onClick={exportFullVideoInfo}
-              className="mt-5 md:mt-0 md:absolute md:right-0 md:bottom-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-[12px] font-black shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
-              title="Tải toàn bộ thông tin video đã kiểm tra"
-            >
-              <Download size={16} /> TẢI TOÀN BỘ THÔNG TIN
-            </button>
+            <div className="mt-5 md:mt-0 md:absolute md:right-0 md:bottom-0 group">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-[12px] font-black shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                title="Tải toàn bộ thông tin video đã kiểm tra"
+              >
+                <Download size={16} /> TẢI TOÀN BỘ THÔNG TIN
+              </button>
+              <div className="hidden group-hover:block group-focus-within:block absolute right-0 bottom-full mb-2 w-56 rounded-2xl border border-blue-100 bg-white shadow-2xl p-2 z-30">
+                <button
+                  type="button"
+                  onClick={exportFullVideoInfoTxt}
+                  className="w-full text-left px-4 py-3 rounded-xl text-[12px] font-black text-slate-800 hover:bg-blue-50 flex items-center gap-2"
+                >
+                  <Download size={15} /> Tải file TXT
+                </button>
+                <button
+                  type="button"
+                  onClick={exportFullVideoInfoDocx}
+                  className="w-full text-left px-4 py-3 rounded-xl text-[12px] font-black text-slate-800 hover:bg-purple-50 flex items-center gap-2"
+                >
+                  <FileText size={15} /> Tải file DOCX
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
