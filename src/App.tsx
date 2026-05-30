@@ -58,7 +58,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  MoreVertical,
+  Wrench,
   Hash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -864,6 +864,53 @@ export default function App() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [menuPos.visible]);
+
+  // Đóng video menu khi: cuộn ra khỏi khu vực thumbnail / title header,
+  // nhấn ESC, resize, đổi orientation. Tránh ấn nhầm khi menu fixed
+  // còn dính trên màn hình nhưng user đã cuộn xuống xa.
+  useEffect(() => {
+    if (!videoMenuPos.visible) return;
+
+    const closeVideoMenuSafe = () => {
+      setVideoMenuPos(prev => prev.visible ? ({ ...prev, visible: false }) : prev);
+    };
+
+    const closeOnScrollOut = () => {
+      // Tham chiếu: bao gồm thumbnail (vtw-video-thumb-wrapper) và title
+      // header (vtw-video-title-header). Nếu cả 2 đều ra khỏi viewport
+      // (kể cả 1 dải margin 40px) thì coi như user đã đi xa.
+      const targets = [
+        document.querySelector('.vtw-video-thumb-wrapper'),
+        document.querySelector('.vtw-video-title-header'),
+      ].filter(Boolean) as HTMLElement[];
+      if (targets.length === 0) {
+        closeVideoMenuSafe();
+        return;
+      }
+      const margin = 40;
+      const anyInView = targets.some(el => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > margin && r.top < (window.innerHeight - margin);
+      });
+      if (!anyInView) closeVideoMenuSafe();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeVideoMenuSafe();
+    };
+
+    window.addEventListener('scroll', closeOnScrollOut, { passive: true });
+    window.addEventListener('resize', closeVideoMenuSafe);
+    window.addEventListener('orientationchange', closeVideoMenuSafe);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('scroll', closeOnScrollOut);
+      window.removeEventListener('resize', closeVideoMenuSafe);
+      window.removeEventListener('orientationchange', closeVideoMenuSafe);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [videoMenuPos.visible]);
 
   // Hiện nút lên đầu trang khi đã lướt xuống (cả desktop và mobile).
   useEffect(() => {
@@ -7846,7 +7893,7 @@ Quy tắc:
                         title="Thao tác khác"
                         aria-label="Thao tác khác"
                       >
-                        <MoreVertical size={18} />
+                        <Wrench size={18} />
                       </button>
                     </div>
                   </div>
@@ -7855,7 +7902,7 @@ Quy tắc:
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column: Thumbnail and RPM */}
                     <div className="lg:col-span-4 space-y-4">
-                      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onContextMenu={(e) => openVideoMenu(e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
+                      <div className="vtw-video-thumb-wrapper relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onContextMenu={(e) => openVideoMenu(e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
                         <img 
                           src={videoResult.snippet.thumbnails.maxres?.url || videoResult.snippet.thumbnails.high?.url} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
