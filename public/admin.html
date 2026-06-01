@@ -133,6 +133,47 @@
       </div>
     </div>
 
+    <!-- BULK EXTEND CARD (cộng ngày hàng loạt cho nhiều user) -->
+    <div id="bulkPanel" class="card hidden" style="border:2px solid #f97316;">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <div>
+          <h2 style="margin:0;font-size:22px;color:#f97316;">⚡ Cộng ngày hàng loạt cho user</h2>
+          <div class="muted" style="margin-top:4px;">Dùng khi hệ thống có sự cố, cần đền bù cho khách. Thao tác này KHÔNG thể hoàn tác.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Số ngày cộng thêm</label>
+          <input id="bulkDays" type="number" value="3" min="1" max="365" />
+        </div>
+        <div class="field">
+          <label>Áp dụng cho</label>
+          <select id="bulkScope">
+            <option value="pro_active">Chỉ user PRO đang còn hạn (an toàn nhất)</option>
+            <option value="pro_all">Tất cả user PRO (kể cả đã hết hạn)</option>
+            <option value="all_users">⚠ TẤT CẢ user (kể cả trial — không khuyến nghị)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>Lý do (bắt buộc, sẽ ghi vào nhật ký)</label>
+        <textarea id="bulkReason" placeholder="VD: Hệ thống lỗi không truy cập được ngày 28-30/05/2026, cộng đền 3 ngày cho user PRO."></textarea>
+      </div>
+
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" style="background:#0ea5e9;color:#fff;" onclick="bulkExtendPreview()">🔍 Xem trước (Preview)</button>
+        <button class="btn-red" onclick="bulkExtendApply()" id="bulkApplyBtn" disabled>✅ Áp dụng cộng ngày</button>
+        <button class="btn-dark" onclick="bulkExtendClear()">Xoá</button>
+      </div>
+
+      <div id="bulkPreview" style="margin-top:14px;"></div>
+    </div>
+    <div style="margin:14px 0;text-align:center;">
+      <button class="btn-dark" id="toggleBulkBtn" onclick="toggleBulkPanel()">▼ Mở chức năng "Cộng ngày hàng loạt"</button>
+    </div>
+
     <div id="usersPanel" class="card">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
         <h2 style="margin:0;font-size:22px;">Danh sách tài khoản</h2>
@@ -233,6 +274,11 @@ function showTab(name){
   qs('actionPanel').classList.toggle('hidden', name !== 'action');
   qs('logsPanel').classList.toggle('hidden', name !== 'logs');
   qs('revenuePanel').classList.toggle('hidden', name !== 'revenue');
+  // Bulk extend panel + toggle button chỉ hiện trong tab "action"
+  const bulkBtn = document.getElementById('toggleBulkBtn');
+  const bulkPanel = qs('bulkPanel');
+  if (bulkBtn) bulkBtn.parentElement.style.display = (name === 'action') ? '' : 'none';
+  if (name !== 'action' && bulkPanel) bulkPanel.classList.add('hidden');
   qs('tabUsers').classList.toggle('active', name === 'users');
   qs('tabAction').classList.toggle('active', name === 'action');
   qs('tabLogs').classList.toggle('active', name === 'logs');
@@ -450,6 +496,117 @@ function renderIssues(issues){
       <td><div>${esc(i.reason || '')}</div>${i.ip ? `<div class="mono muted">${esc(i.ip)}</div>` : ''}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" class="muted">Không có giao dịch sai sót — tốt!</td></tr>';
+}
+
+// ===== BULK EXTEND (cộng ngày hàng loạt) =====
+let bulkPreviewData = null;
+
+function toggleBulkPanel(){
+  const panel = qs('bulkPanel');
+  const btn = qs('toggleBulkBtn');
+  const isHidden = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden');
+  btn.textContent = isHidden ? '▲ Đóng chức năng "Cộng ngày hàng loạt"' : '▼ Mở chức năng "Cộng ngày hàng loạt"';
+}
+
+function bulkExtendClear(){
+  qs('bulkDays').value = 3;
+  qs('bulkScope').value = 'pro_active';
+  qs('bulkReason').value = '';
+  qs('bulkPreview').innerHTML = '';
+  qs('bulkApplyBtn').disabled = true;
+  bulkPreviewData = null;
+}
+
+async function bulkExtendPreview(){
+  if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.','err');
+  const days = Number(qs('bulkDays').value || 0);
+  const scope = qs('bulkScope').value;
+  const reason = qs('bulkReason').value.trim();
+  if(!days || days < 1 || days > 365) return setStatus('Số ngày phải từ 1 đến 365.','err');
+
+  qs('bulkPreview').innerHTML = '<div class="muted">Đang quét danh sách user...</div>';
+  qs('bulkApplyBtn').disabled = true;
+
+  try {
+    const data = await api('/api/admin-activate-user', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'bulk_extend_preview', days, scope, reason })
+    });
+
+    bulkPreviewData = { days, scope, reason };
+    const scopeLabels = {
+      'pro_active': 'user PRO đang còn hạn',
+      'pro_all': 'tất cả user PRO (kể cả hết hạn)',
+      'all_users': 'TẤT CẢ user (kể cả trial)'
+    };
+    const sampleRows = (data.affected || []).slice(0, 20).map(u => `<tr>
+      <td>${esc(u.email || u.uid)}</td>
+      <td>${esc(u.planName || '—')}</td>
+      <td>${u.oldExpiresAt ? esc(fmtDate(u.oldExpiresAt)) : '<span class="muted">chưa có</span>'}</td>
+      <td style="color:#34d399;font-weight:700;">${esc(fmtDate(u.newExpiresAt))}</td>
+    </tr>`).join('');
+
+    qs('bulkPreview').innerHTML = `
+      <div style="background:#0e1626;border:1px solid #f97316;border-radius:12px;padding:14px;">
+        <div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:8px;">
+          🔍 Preview: sẽ cộng <span style="color:#34d399;">${days} ngày</span> cho <span style="color:#34d399;">${data.affectedCount}</span> ${scopeLabels[scope]}
+        </div>
+        ${data.skippedCount > 0 ? `<div class="muted" style="margin-bottom:8px;">${data.skippedCount} user bị bỏ qua (không khớp điều kiện scope).</div>` : ''}
+        ${data.affectedCount > 0 ? `
+          <div style="max-height:300px;overflow-y:auto;border:1px solid #1c2840;border-radius:8px;margin-top:8px;">
+            <table style="font-size:12px;">
+              <thead><tr><th>Email/UID</th><th>Gói</th><th>Hết hạn cũ</th><th>Hết hạn mới</th></tr></thead>
+              <tbody>${sampleRows}</tbody>
+            </table>
+          </div>
+          ${data.affectedCount > 20 ? `<div class="muted" style="margin-top:6px;">(chỉ hiển thị 20 dòng đầu trong tổng ${data.affectedCount})</div>` : ''}
+        ` : '<div class="muted">Không có user nào khớp điều kiện.</div>'}
+        ${data.affectedCount > 0 ? `<div style="margin-top:12px;color:#f87171;font-weight:700;">⚠ Nếu bạn xác nhận, ${data.affectedCount} user sẽ được cộng ngày NGAY LẬP TỨC, không thể hoàn tác.</div>` : ''}
+      </div>
+    `;
+
+    if(data.affectedCount > 0 && reason) {
+      qs('bulkApplyBtn').disabled = false;
+      setStatus(`Preview xong. Bấm "Áp dụng" để cộng ngày thật.`, 'ok');
+    } else if(!reason) {
+      setStatus('Cần nhập lý do trước khi áp dụng thật.','err');
+    } else {
+      setStatus('Không có user nào cần cộng.','err');
+    }
+  } catch(e) {
+    qs('bulkPreview').innerHTML = '';
+    setStatus('Lỗi preview: ' + esc(e.message), 'err');
+  }
+}
+
+async function bulkExtendApply(){
+  if(!bulkPreviewData) return setStatus('Cần Preview trước khi Áp dụng.','err');
+  const { days, scope, reason } = bulkPreviewData;
+  // Re-confirm with native browser dialog vì đây là thao tác nguy hiểm
+  const confirmMsg = `XÁC NHẬN: Bạn sắp cộng ${days} ngày cho TẤT CẢ user theo scope "${scope}". Thao tác này KHÔNG THỂ HOÀN TÁC. Tiếp tục?`;
+  if(!confirm(confirmMsg)) return;
+
+  qs('bulkApplyBtn').disabled = true;
+  setStatus('Đang cộng ngày hàng loạt... (có thể mất 5-30 giây)', '');
+
+  try {
+    const data = await api('/api/admin-activate-user', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'bulk_extend_apply', days, scope, reason })
+    });
+    setStatus(`✅ ${data.message}`, 'ok');
+    qs('bulkPreview').innerHTML += `
+      <div style="background:#064e3b;border:1px solid #34d399;border-radius:10px;padding:12px;margin-top:10px;color:#a7f3d0;font-weight:700;">
+        ✅ Đã cộng ${days} ngày cho ${data.affectedCount} user. Đã ghi log vào Admin logs.
+      </div>`;
+    bulkPreviewData = null;
+    // Refresh user list
+    if(typeof loadUsers === 'function') setTimeout(loadUsers, 1000);
+  } catch(e) {
+    setStatus('Lỗi áp dụng: ' + esc(e.message), 'err');
+    qs('bulkApplyBtn').disabled = false;
+  }
 }
 
 qs('adminSecret').value = localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || '';

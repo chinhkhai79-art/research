@@ -91,6 +91,100 @@ async function writeAdminLog(data) {
   }
 }
 
+// === Cộng ngày hàng loạt cho user PRO ===
+// Dùng khi hệ thống có sự cố, cần compensate cho tất cả khách đang dùng PRO.
+//
+// scope:
+//   'pro_active'   — chỉ user đang còn hạn PRO (mặc định, an toàn nhất)
+//   'pro_all'      — cả user PRO đã hết hạn (gia hạn thêm cho họ)
+//   'all_users'    — TẤT CẢ user kể cả trial / chưa bao giờ mua (KHÔNG khuyến nghị)
+//
+// dryRun: true → chỉ đếm số user bị ảnh hưởng, không thực sự cộng ngày.
+async function bulkExtendUsers({ days, scope = 'pro_active', dryRun = false, reason = '', adminEmail = '' }) {
+  const now = new Date();
+  const usersSnap = await db.collection('users').limit(5000).get();
+  const affected = [];
+  const skipped = [];
+
+  for (const doc of usersSnap.docs) {
+    const u = doc.data() || {};
+    const uid = doc.id;
+    const email = u.email || '';
+    const oldExpires = toDate(u.premiumExpiresAt || u.expired_at || u.expiresAt);
+    const isPremium = u.premium === true || u.account_type === 'premium' || u.isPro === true;
+    const isActive = oldExpires && oldExpires.getTime() > now.getTime();
+
+    // Filter theo scope
+    let qualifies = false;
+    if (scope === 'pro_active') {
+      qualifies = isPremium && isActive;
+    } else if (scope === 'pro_all') {
+      qualifies = isPremium;
+    } else if (scope === 'all_users') {
+      qualifies = true;
+    }
+
+    if (!qualifies) {
+      skipped.push({ uid, email, reason: scope === 'pro_active' ? (isActive ? 'not_premium' : 'expired') : 'not_premium' });
+      continue;
+    }
+
+    // Tính expiresAt mới: cộng tiếp từ ngày hết hạn cũ nếu còn hạn, hoặc từ now nếu đã hết.
+    const baseDate = oldExpires && oldExpires.getTime() > now.getTime() ? oldExpires : now;
+    const newExpires = addDays(baseDate, days);
+
+    affected.push({
+      uid,
+      email,
+      planName: u.planName || '',
+      oldExpiresAt: oldExpires ? oldExpires.toISOString() : null,
+      newExpiresAt: newExpires.toISOString(),
+      wasActive: isActive
+    });
+
+    // Nếu là dryRun thì chỉ preview, không ghi DB
+    if (dryRun) continue;
+
+    await doc.ref.set({
+      premium: true,
+      active: true,
+      premiumExpiresAt: Timestamp.fromDate(newExpires),
+      expired_at: Timestamp.fromDate(newExpires),
+      lastAdminAction: 'bulk_extend',
+      lastAdminReason: reason,
+      lastAdminDays: days,
+      bulkExtendedAt: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+
+  // Ghi log đặc biệt cho thao tác hàng loạt
+  if (!dryRun) {
+    await writeAdminLog({
+      action: 'bulk_extend',
+      targetUid: 'BULK',
+      targetEmail: `${affected.length} users`,
+      planName: `CỘNG ${days} NGÀY HÀNG LOẠT (${scope})`,
+      days,
+      affectedCount: affected.length,
+      skippedCount: skipped.length,
+      scope,
+      reason,
+      adminEmail
+    });
+  }
+
+  return {
+    dryRun,
+    scope,
+    days,
+    affectedCount: affected.length,
+    skippedCount: skipped.length,
+    affected: affected.slice(0, 100),
+    skippedSample: skipped.slice(0, 20)
+  };
+}
+
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
   if (!requireAdmin(req, res)) return;
@@ -101,6 +195,34 @@ export default async function handler(req, res) {
     }
 
     const body = req.body || {};
+    const action = String(body.action || '').trim();
+
+    // === Bulk extend (preview hoặc apply) ===
+    if (action === 'bulk_extend_preview' || action === 'bulk_extend_apply') {
+      const days = Math.max(1, Math.min(365, Number(body.days || 0)));
+      if (!days) return res.status(400).json({ success: false, error: 'Cần nhập số ngày từ 1 đến 365.' });
+      const scope = ['pro_active', 'pro_all', 'all_users'].includes(body.scope) ? body.scope : 'pro_active';
+      const reason = String(body.reason || '').trim();
+      if (action === 'bulk_extend_apply' && !reason) {
+        return res.status(400).json({ success: false, error: 'Cần nhập lý do cộng ngày hàng loạt (bắt buộc để truy vết).' });
+      }
+      const result = await bulkExtendUsers({
+        days,
+        scope,
+        reason,
+        dryRun: action === 'bulk_extend_preview',
+        adminEmail: String(body.adminEmail || '')
+      });
+      return res.status(200).json({
+        success: true,
+        message: action === 'bulk_extend_preview'
+          ? `Preview: ${result.affectedCount} user sẽ được cộng ${days} ngày.`
+          : `Đã cộng ${days} ngày cho ${result.affectedCount} user.`,
+        ...result
+      });
+    }
+
+    // === Action mặc định: kích hoạt 1 user (giữ nguyên hành vi cũ) ===
     const uidInput = String(body.uid || body.userId || '').trim();
     const email = String(body.email || '').trim().toLowerCase();
     const planKey = String(body.planId || body.plan || body.days || '90').trim();
