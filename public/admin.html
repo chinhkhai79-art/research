@@ -362,7 +362,7 @@ async function loadRevenue(){
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
     const days = qs('revenueRange').value || '30';
     setStatus('Đang tải dữ liệu doanh thu...', '');
-    const data = await api('/api/admin-revenue?days=' + encodeURIComponent(days));
+    const data = await api('/api/admin-logs?type=revenue&days=' + encodeURIComponent(days));
     renderRevenueStats(data.stats || {}, days);
     renderOrders(data.orders || []);
     renderPending(data.pending || []);
