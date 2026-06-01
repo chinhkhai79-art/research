@@ -95,12 +95,7 @@ export default async function handler(req, res) {
   try {
     const action = String(req.query?.action || req.body?.action || (req.method === 'GET' ? 'get' : 'save')).trim();
 
-    if (req.method === 'GET' || action === 'get') {
-      const settings = await getAppSettings();
-      return send(res, 200, { success: true, settings: maskSettings(settings) });
-    }
-
-    // === Mới: trả về danh sách ngân hàng ===
+    // === Mới: trả về danh sách ngân hàng (check trước nhánh GET mặc định) ===
     if (action === 'get-banks') {
       return send(res, 200, { success: true, banks: VIETNAM_BANKS });
     }
@@ -109,6 +104,11 @@ export default async function handler(req, res) {
     if (action === 'get-status') {
       const status = await getSystemStatus();
       return send(res, 200, { success: true, ...status });
+    }
+
+    if (action === 'get' || (req.method === 'GET' && !action)) {
+      const settings = await getAppSettings();
+      return send(res, 200, { success: true, settings: maskSettings(settings) });
     }
 
     if (req.method !== 'POST') return send(res, 405, { success: false, error: 'Method not allowed' });
