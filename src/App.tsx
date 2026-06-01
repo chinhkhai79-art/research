@@ -5869,20 +5869,20 @@ Quy tắc:
               >
                 <Download size={16} /> TẢI TOÀN BỘ THÔNG TIN
               </button>
-              <div className="hidden group-hover:block group-focus-within:block absolute right-0 bottom-full mb-2 w-56 rounded-2xl border border-blue-100 bg-white shadow-2xl p-2 z-30">
+              <div className="hidden group-hover:block group-focus-within:block absolute right-0 bottom-full mb-2 w-44 max-w-[calc(100vw-40px)] rounded-xl border border-blue-100 bg-white shadow-xl p-1.5 z-30">
                 <button
                   type="button"
                   onClick={exportFullVideoInfoTxt}
-                  className="w-full text-left px-4 py-3 rounded-xl text-[12px] font-black text-slate-800 hover:bg-blue-50 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-[11px] font-black text-slate-800 hover:bg-blue-50 flex items-center gap-2 whitespace-nowrap"
                 >
-                  <Download size={15} /> Tải file TXT
+                  <Download size={13} /> Tải file TXT
                 </button>
                 <button
                   type="button"
                   onClick={exportFullVideoInfoDocx}
-                  className="w-full text-left px-4 py-3 rounded-xl text-[12px] font-black text-slate-800 hover:bg-purple-50 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-[11px] font-black text-slate-800 hover:bg-purple-50 flex items-center gap-2 whitespace-nowrap"
                 >
-                  <FileText size={15} /> Tải file DOCX
+                  <FileText size={13} /> Tải file DOCX
                 </button>
               </div>
             </div>
