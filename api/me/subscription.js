@@ -189,6 +189,10 @@ export default async function handler(req, res) {
         trialStartedAt: Timestamp.fromDate(now),
         trialExpiresAt: Timestamp.fromDate(trialExpiresAt),
         created_at: FieldValue.serverTimestamp(),
+        // === FIX #6: ghi lastLoginAt + loginCount ngay khi tạo tài khoản mới ===
+        firstLoginAt: FieldValue.serverTimestamp(),
+        lastLoginAt: FieldValue.serverTimestamp(),
+        loginCount: 1,
         updated_at: FieldValue.serverTimestamp()
       };
 
@@ -199,12 +203,26 @@ export default async function handler(req, res) {
 
     const user = snap.data();
 
-    if (email || name || photoUrl) {
+    // === FIX #6: cập nhật lastLoginAt + loginCount cho user cũ ===
+    // Chỉ ghi khi đây là call "fresh" sau khi login (initTrial=1 do client truyền)
+    // hoặc khi đã >10 phút từ lần ghi cuối — tránh ghi mỗi 30s polling.
+    const lastLogin = toDate(user.lastLoginAt);
+    const shouldTouchLogin = initTrial || !lastLogin || (Date.now() - lastLogin.getTime() > 10 * 60 * 1000);
+    const loginUpdate = shouldTouchLogin
+      ? {
+          lastLoginAt: FieldValue.serverTimestamp(),
+          loginCount: FieldValue.increment(1),
+          firstLoginAt: user.firstLoginAt || user.created_at || FieldValue.serverTimestamp()
+        }
+      : {};
+
+    if (email || name || photoUrl || shouldTouchLogin) {
       await ref.set(
         {
           email: email || user.email || "",
           name: name || user.name || "",
           photoUrl: photoUrl || user.photoUrl || "",
+          ...loginUpdate,
           updated_at: FieldValue.serverTimestamp()
         },
         { merge: true }

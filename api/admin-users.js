@@ -94,7 +94,10 @@ function normalizeUser(doc) {
     manualActivation: Boolean(d.manualActivation),
     migratedTo: d.migratedTo || '',
     createdAt: toIso(d.created_at || d.createdAt),
-    updatedAt: toIso(d.updated_at || d.updatedAt)
+    updatedAt: toIso(d.updated_at || d.updatedAt),
+    firstLoginAt: toIso(d.firstLoginAt),
+    lastLoginAt: toIso(d.lastLoginAt),
+    loginCount: Number(d.loginCount || 0)
   };
 }
 

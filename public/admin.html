@@ -82,6 +82,7 @@
     <div class="tabs">
       <button id="tabUsers" class="tab active" onclick="showTab('users')">Danh sách tài khoản</button>
       <button id="tabAction" class="tab" onclick="showTab('action')">Kích hoạt / khóa PRO</button>
+      <button id="tabRevenue" class="tab" onclick="showTab('revenue'); loadRevenue()">Đơn hàng & Doanh thu</button>
       <button id="tabLogs" class="tab" onclick="showTab('logs'); loadLogs()">Admin logs</button>
     </div>
 
@@ -141,7 +142,7 @@
         <table>
           <thead>
             <tr>
-              <th>Email</th><th>UID</th><th>Trạng thái</th><th>Gói</th><th>Hết hạn</th><th>Còn lại</th><th>Đơn gần nhất</th><th>Thao tác</th>
+              <th>Email</th><th>UID</th><th>Trạng thái</th><th>Gói</th><th>Hết hạn</th><th>Còn lại</th><th>Đăng nhập cuối</th><th>Đơn gần nhất</th><th>Thao tác</th>
             </tr>
           </thead>
           <tbody id="usersBody"></tbody>
@@ -159,6 +160,56 @@
           <thead><tr><th>Thời gian</th><th>Hành động</th><th>Tài khoản</th><th>Gói/ngày</th><th>Ghi chú</th></tr></thead>
           <tbody id="logsBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <div id="revenuePanel" class="hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+          <h2 style="margin:0;font-size:22px;">Đơn hàng & Doanh thu</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="color:#9bb0c9;font-size:13px;">Khoảng thời gian:</label>
+            <select id="revenueRange" onchange="loadRevenue()" style="background:#0e1626;color:#e6edf7;border:1px solid #23314c;border-radius:8px;padding:6px 10px;">
+              <option value="7">7 ngày</option>
+              <option value="30" selected>30 ngày</option>
+              <option value="90">90 ngày</option>
+              <option value="365">365 ngày</option>
+            </select>
+            <button class="btn-dark" onclick="loadRevenue()">Tải lại</button>
+          </div>
+        </div>
+        <div id="revenueStats" class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;"></div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h2 style="margin:0 0 12px;font-size:20px;">Đơn đã thanh toán</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>Email/UID</th><th>Gói</th><th>Số tiền</th><th>Hết hạn</th></tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h2 style="margin:0 0 12px;font-size:20px;color:#fbbf24;">⚠ Đơn chờ thanh toán / sai sót</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Tạo lúc</th><th>Mã đơn</th><th>Trạng thái</th><th>Email/UID</th><th>Gói</th><th>Số tiền dự kiến</th><th>Đã nhận</th></tr></thead>
+            <tbody id="pendingBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h2 style="margin:0 0 12px;font-size:20px;color:#f87171;">⚠ Giao dịch SePay không khớp / có vấn đề</h2>
+        <div class="muted" style="margin-bottom:8px;">Bao gồm: không tìm thấy mã đơn, số tiền không đủ, token sai, webhook chưa cấu hình bảo mật.</div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Thời gian</th><th>Trạng thái</th><th>Mã đơn</th><th>Nhận / Dự kiến</th><th>Nội dung CK</th><th>Lý do / IP</th></tr></thead>
+            <tbody id="issuesBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -181,9 +232,11 @@ function showTab(name){
   qs('usersPanel').classList.toggle('hidden', name !== 'users');
   qs('actionPanel').classList.toggle('hidden', name !== 'action');
   qs('logsPanel').classList.toggle('hidden', name !== 'logs');
+  qs('revenuePanel').classList.toggle('hidden', name !== 'revenue');
   qs('tabUsers').classList.toggle('active', name === 'users');
   qs('tabAction').classList.toggle('active', name === 'action');
   qs('tabLogs').classList.toggle('active', name === 'logs');
+  qs('tabRevenue').classList.toggle('active', name === 'revenue');
 }
 function syncDaysFromPlan(){ const p=PLAN_MAP[qs('planId').value] || PLAN_MAP.custom; qs('days').value = p.days; }
 function setDays(days, planId, planName){ qs('planId').value=planId; qs('days').value=days; setStatus(`Đã chọn ${esc(planName)}.`, 'ok'); }
@@ -227,6 +280,9 @@ function renderUsers(users){
         ? '<span class="badge trial">TRIAL</span>'
         : '<span class="badge expired">HẾT HẠN</span>';
     const manual = u.manualActivation ? '<br><span class="muted">Manual/Pending</span>' : '';
+    const loginInfo = u.lastLoginAt
+      ? `<div>${esc(fmtDate(u.lastLoginAt))}</div><div class="muted">${Number(u.loginCount || 0)} lần</div>`
+      : '<span class="muted">Chưa rõ</span>';
     return `<tr>
       <td><b>${esc(u.email || '')}</b><br><span class="muted">${esc(u.name || '')}</span>${manual}</td>
       <td class="mono">${esc(u.uid || '')}</td>
@@ -234,6 +290,7 @@ function renderUsers(users){
       <td>${esc(u.planName || 'Chưa có')}</td>
       <td>${esc(fmtDate(u.expiresAt))}</td>
       <td><b>${esc(u.remainingText || '---')}</b></td>
+      <td>${loginInfo}</td>
       <td class="mono">${esc(u.lastPaymentOrderCode || '')}</td>
       <td><div class="actions">
         <button class="btn small" onclick='fillUser(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Chọn</button>
@@ -241,7 +298,7 @@ function renderUsers(users){
         <button class="btn-red small" onclick='quickDisable(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Khóa</button>
       </div></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="muted">Chưa có tài khoản.</td></tr>';
+  }).join('') || '<tr><td colspan="9" class="muted">Chưa có tài khoản.</td></tr>';
 }
 
 function fillUser(uid,email){ qs('activateUid').value=uid||''; qs('activateEmail').value=email||''; showTab('action'); window.scrollTo({top:0,behavior:'smooth'}); }
@@ -296,6 +353,103 @@ async function loadLogs(){
     </tr>`).join('') || '<tr><td colspan="5" class="muted">Chưa có log.</td></tr>';
     setStatus('Đã tải admin logs.', 'ok');
   }catch(e){ setStatus('Lỗi tải logs: '+esc(e.message), 'err'); }
+}
+
+function vnd(n){ const v = Number(n||0); return v.toLocaleString('vi-VN') + 'đ'; }
+
+async function loadRevenue(){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    const days = qs('revenueRange').value || '30';
+    setStatus('Đang tải dữ liệu doanh thu...', '');
+    const data = await api('/api/admin-revenue?days=' + encodeURIComponent(days));
+    renderRevenueStats(data.stats || {}, days);
+    renderOrders(data.orders || []);
+    renderPending(data.pending || []);
+    renderIssues(data.issues || []);
+    setStatus(`Đã tải dữ liệu doanh thu ${days} ngày gần nhất.`, 'ok');
+  }catch(e){ setStatus('Lỗi tải doanh thu: '+esc(e.message), 'err'); }
+}
+
+function statBox(label, value, hint, color){
+  const c = color || '#22d3ee';
+  return `<div style="background:#0e1626;border:1px solid #23314c;border-radius:14px;padding:14px 16px;">
+    <div class="muted" style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;">${esc(label)}</div>
+    <div style="font-size:22px;font-weight:800;color:${c};margin-top:4px;">${value}</div>
+    ${hint ? `<div class="muted" style="font-size:11px;margin-top:4px;">${esc(hint)}</div>` : ''}
+  </div>`;
+}
+
+function renderRevenueStats(s, days){
+  const planRows = Object.entries(s.planBreakdown || {})
+    .sort((a,b) => (b[1].revenue || 0) - (a[1].revenue || 0))
+    .map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1c2840;font-size:13px;">
+      <span><b>${esc(v.name || k)}</b> <span class="muted">×${v.count}</span></span>
+      <span style="color:#34d399;font-weight:700;">${vnd(v.revenue)}</span>
+    </div>`).join('');
+
+  qs('revenueStats').innerHTML =
+    statBox('Hôm nay', vnd(s.todayRevenue), `${s.todayPaid || 0} đơn`, '#34d399')
+    + statBox('7 ngày', vnd(s.weekRevenue), '', '#22d3ee')
+    + statBox('30 ngày', vnd(s.monthRevenue), '', '#22d3ee')
+    + statBox(`${days} ngày`, vnd(s.rangeRevenue), '', '#a78bfa')
+    + statBox('Tổng cộng', vnd(s.totalRevenue), `${s.totalPaid || 0} đơn`, '#fbbf24')
+    + statBox('Đang chờ', String(s.pendingCount || 0), 'đơn pending', '#9bb0c9')
+    + statBox('Có vấn đề', String(s.issueCount || 0), 'log sai sót', '#f87171')
+    + `<div style="grid-column:1/-1;background:#0e1626;border:1px solid #23314c;border-radius:14px;padding:14px 16px;">
+      <div class="muted" style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">Doanh thu theo gói</div>
+      ${planRows || '<div class="muted">Chưa có đơn nào.</div>'}
+    </div>`;
+}
+
+function renderOrders(orders){
+  qs('ordersBody').innerHTML = orders.map(o => `<tr>
+    <td>${esc(fmtDate(o.paidAt))}</td>
+    <td class="mono">${esc(o.orderCode)}</td>
+    <td><div>${esc(o.email)}</div><div class="mono muted">${esc(o.uid)}</div></td>
+    <td>${esc(o.planName || o.planId)}<br><span class="muted">${o.days||0} ngày</span></td>
+    <td style="color:#34d399;font-weight:700;">${vnd(o.amount)}</td>
+    <td>${esc(fmtDate(o.expiresAt))}</td>
+  </tr>`).join('') || '<tr><td colspan="6" class="muted">Chưa có đơn paid nào.</td></tr>';
+}
+
+function renderPending(pending){
+  qs('pendingBody').innerHTML = pending.map(p => {
+    const statusColor = p.status === 'amount_mismatch' ? '#f87171' : '#fbbf24';
+    return `<tr>
+      <td>${esc(fmtDate(p.createdAt))}</td>
+      <td class="mono">${esc(p.orderCode)}</td>
+      <td><span style="color:${statusColor};font-weight:700;">${esc(p.status)}</span></td>
+      <td><div>${esc(p.email)}</div><div class="mono muted">${esc(p.uid)}</div></td>
+      <td>${esc(p.planName || p.planId)}</td>
+      <td>${vnd(p.amount)}</td>
+      <td>${p.amountMismatchReceived ? `<span style="color:#f87171;">${vnd(p.amountMismatchReceived)}</span>` : '<span class="muted">—</span>'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">Không có đơn pending.</td></tr>';
+}
+
+function renderIssues(issues){
+  const labels = {
+    'no_order_code': 'Không tìm thấy mã đơn',
+    'reject_amount_mismatch': 'Sai số tiền',
+    'reject_missing_token': 'Thiếu token bảo mật',
+    'reject_invalid_token': 'Token bảo mật sai',
+    'warning_no_secret_configured': 'Chưa cấu hình bảo mật'
+  };
+  qs('issuesBody').innerHTML = issues.map(i => {
+    const label = labels[i.status] || i.status;
+    const amountText = i.expectedAmount
+      ? `<span style="color:#f87171;">${vnd(i.receivedAmount)}</span> / <span class="muted">${vnd(i.expectedAmount)}</span>`
+      : `<span>${vnd(i.receivedAmount)}</span>`;
+    return `<tr>
+      <td>${esc(fmtDate(i.createdAt))}</td>
+      <td><span style="color:#f87171;font-weight:700;">${esc(label)}</span></td>
+      <td class="mono">${esc(i.orderCode || '—')}</td>
+      <td>${amountText}</td>
+      <td style="max-width:280px;word-break:break-word;">${esc(i.content || '—')}</td>
+      <td><div>${esc(i.reason || '')}</div>${i.ip ? `<div class="mono muted">${esc(i.ip)}</div>` : ''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">Không có giao dịch sai sót — tốt!</td></tr>';
 }
 
 qs('adminSecret').value = localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || '';
