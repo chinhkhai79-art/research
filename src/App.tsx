@@ -4950,18 +4950,27 @@ ${topKeywordsStr}`;
       ],
       contentStyle: {
         contentBullets: [
-          'Nội dung cần bám sát lời hứa trong tiêu đề để giữ chân người xem.',
-          `Hiệu suất hiện tại: ${formatVNNumber(views)} views, ${formatVNNumber(likes)} likes, ${formatVNNumber(comments)} comments.`,
-          engagementRate > 1 ? 'Tỷ lệ tương tác đang có tín hiệu tốt.' : 'Tỷ lệ tương tác còn thấp, nên tăng câu hỏi/CTA trong video.',
-          'Nên đưa lợi ích chính trong 5–10 giây đầu.'
+          'Phần mở đầu cần làm rõ ngay nội dung chính của video để người xem hiểu video đang giải quyết vấn đề gì.',
+          'Nội dung nên đi theo mạch rõ ràng: mở vấn đề, triển khai ý chính, minh họa bằng ví dụ và chốt lại thông điệp.',
+          'Thông điệp trung tâm cần được nhấn mạnh xuyên suốt, tránh chuyển ý quá nhanh khiến người xem khó nắm trọng tâm.',
+          'Nếu video là dạng kể chuyện hoặc phân tích, nên có các mốc nội dung rõ để người xem theo dõi diễn biến dễ hơn.',
+          'Các ý quan trọng nên được diễn đạt bằng câu ngắn, dễ hiểu và có ví dụ cụ thể thay vì chỉ nêu nhận xét chung.',
+          'Nội dung cần bổ sung thêm các đoạn giải thích nguyên nhân, bối cảnh hoặc bài học rút ra để tăng chiều sâu.',
+          'Ở phần giữa video nên có điểm nhấn mới liên tục để giữ sự tò mò, tránh cảm giác lặp lại cùng một ý.',
+          'Phần kết nên tóm tắt lại giá trị chính và dẫn người xem sang hành động tiếp theo một cách tự nhiên.'
         ],
         styleBullets: [
-          'Phong cách nên rõ ràng, vào thẳng vấn đề và có nhịp dựng nhanh hơn ở đoạn mở đầu.',
-          'Cần thêm pattern interrupt, chữ nhấn mạnh hoặc B-roll nếu phần trình bày dài.',
-          'Âm thanh, ánh sáng và bố cục thumbnail nên đồng bộ với tệp người xem mục tiêu.'
+          'Phong cách thể hiện nên giữ nhịp rõ ràng, dễ nghe và có điểm nhấn ở những đoạn quan trọng.',
+          'Hook đầu video cần mạnh hơn bằng câu hỏi, tình huống gây tò mò hoặc kết quả cuối cùng để kéo người xem vào nội dung.',
+          'Cách dẫn chuyện nên có sự chuyển đoạn mượt, giúp người xem hiểu vì sao ý sau nối tiếp ý trước.',
+          'Nên dùng chữ nhấn mạnh, hình minh họa hoặc cảnh phụ trợ đúng lúc để làm rõ các ý quan trọng.',
+          'Giọng điệu cần tự tin, gần gũi và phù hợp với nhóm người xem mục tiêu của chủ đề video.',
+          'Nhịp dựng nên thay đổi theo từng đoạn: nhanh ở phần hook, ổn định ở phần giải thích và chậm hơn ở phần kết luận.',
+          'CTA nên được lồng ghép tự nhiên vào nội dung, gắn với lợi ích cụ thể thay vì chỉ kêu gọi chung chung.',
+          'Âm thanh, hình ảnh, màu sắc và nhịp cắt cần đồng bộ để tạo cảm giác chuyên nghiệp và dễ theo dõi.'
         ],
-        strengths: ['Có dữ liệu thật từ YouTube API để đối chiếu hiệu suất.', hasHashtag ? 'Có dùng từ khóa/hashtag.' : 'Có thể tối ưu thêm từ khóa.'],
-        warnings: [titleTooLong ? 'Tiêu đề dài dễ bị cắt.' : 'Cần kiểm tra CTR thực tế trong YouTube Studio.', vph < 20 ? 'VPH chưa cao, cần cải thiện hook và thumbnail.' : 'Nên nhân bản chủ đề nếu retention tốt.']
+        strengths: ['Nội dung có thể phát triển thành format rõ ràng nếu phần mở đầu, mạch kể và CTA được làm sắc hơn.', hasHashtag ? 'Có tín hiệu từ khóa/hashtag hỗ trợ định hướng nội dung.' : 'Có thể bổ sung từ khóa để làm rõ nội dung hơn.'],
+        warnings: [titleTooLong ? 'Tiêu đề dài dễ làm người xem mất trọng tâm, nên rút gọn thông điệp chính.' : 'Cần kiểm tra lại độ rõ của lời hứa nội dung trong tiêu đề và phần mở đầu.', 'Tránh để phần phân tích nội dung/phong cách biến thành liệt kê số liệu; cần tập trung vào cách kể, thông điệp và trải nghiệm xem.']
       },
       conclusion: {
         headline: vph > 100 ? 'Video có tín hiệu tốt, nên nhân bản chủ đề và tối ưu thêm để tăng chuyển đổi.' : 'Video có nền tảng dữ liệu nhưng cần tối ưu lại hook, thumbnail và CTA để tăng hiệu suất.',
@@ -5017,28 +5026,49 @@ Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, 
     {"key":"pinned","title":"BÌNH LUẬN GHIM","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]}
   ],
   "contentStyle": {
-    "contentBullets":["ít nhất 8 ý chi tiết, cụ thể, dựa vào title/description/comment/tags/thống kê"],
-    "styleBullets":["ít nhất 8 ý chi tiết, cụ thể, nêu rõ nhịp dựng, hook, CTA, âm thanh, hình ảnh, cách trình bày"],
-    "strengths":["..."],
-    "warnings":["..."]
+    "contentBullets":["ít nhất 8 ý chi tiết về NỘI DUNG VIDEO: video đang nói gì, thông điệp chính, cấu trúc mở-thân-kết, cách triển khai ý, ví dụ minh họa, độ rõ ràng, CTA, giá trị người xem nhận được. KHÔNG nhắc số liệu view/like/comment/VPH/sub/categoryId/channelCountry."],
+    "styleBullets":["ít nhất 8 ý chi tiết về PHONG CÁCH THỂ HIỆN: nhịp dựng, hook, giọng điệu, cách dẫn chuyện, hình ảnh minh họa, chữ trên màn hình, âm thanh, chuyển cảnh, cảm xúc người xem. KHÔNG nhắc số liệu view/like/comment/VPH/sub/categoryId/channelCountry."],
+    "strengths":["điểm mạnh về nội dung/phong cách, không nói số liệu"],
+    "warnings":["vấn đề cần lưu ý về nội dung/phong cách, không nói số liệu"]
   },
   "conclusion": {"headline":"...", "badges":["...", "..."]}
 }
 
 Quy tắc:
-- Không bịa view/sub/like/comment; nếu nhắc số phải lấy đúng từ JSON dữ liệu.
+- Hai phần contentStyle.contentBullets và contentStyle.styleBullets TUYỆT ĐỐI KHÔNG được nhắc số liệu hoặc trường kỹ thuật như view, like, comment, VPH, sub, categoryId, channelCountry, thời lượng, timestamps.
+- PHÂN TÍCH NỘI DUNG chỉ được phân tích nội dung video: chủ đề, thông điệp, mạch kể, cấu trúc ý, hook, phần thân, phần kết, ví dụ, CTA và giá trị người xem nhận được.
+- PHÂN TÍCH PHONG CÁCH chỉ được phân tích cách thể hiện: nhịp dựng, giọng điệu, cách dẫn chuyện, hình ảnh, text overlay, âm thanh, chuyển cảnh, cảm xúc người xem.
+- Nếu muốn dùng số liệu, chỉ dùng ở overview; không đưa vào contentBullets/styleBullets/strengths/warnings.
+- Không bịa view/sub/like/comment; nếu nhắc số ở mục khác phải lấy đúng từ JSON dữ liệu.
 - Phân tích thumbnail dựa theo tiêu đề, chủ đề và thumbnail URL, không khẳng định chi tiết hình ảnh nếu không chắc.
 - Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.
-- Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.
-- Với tags và bình luận, phải ưu tiên hiển thị/nhận xét từ dữ liệu YouTube API đã cung cấp.`;
+- Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.`;
 
       const response = await callGeminiGenerateContent(prompt);
       const parsed = parseGeminiJsonObject(response.text || '');
       if (!parsed) return fallback;
+
+      const bannedMetricPattern = /(view|views|lượt xem|like|thích|comment|bình luận|vph|sub|subscriber|đăng ký|categoryid|channelcountry|thời lượng|duration|timestamp|\d{1,2}:\d{2}|\d+[\.,]?\d*)/i;
+      const cleanContentStyleList = (items: any[], fallbackItems: string[]) => {
+        const cleaned = asArrayText(items)
+          .map(x => String(x || '').trim())
+          .filter(Boolean)
+          .filter(x => !bannedMetricPattern.test(x))
+          .slice(0, 10);
+        return cleaned.length >= 4 ? cleaned : fallbackItems;
+      };
+      const parsedContentStyle = parsed.contentStyle || {};
+      const safeContentStyle = {
+        contentBullets: cleanContentStyleList(parsedContentStyle.contentBullets, fallback.contentStyle.contentBullets),
+        styleBullets: cleanContentStyleList(parsedContentStyle.styleBullets, fallback.contentStyle.styleBullets),
+        strengths: cleanContentStyleList(parsedContentStyle.strengths, fallback.contentStyle.strengths),
+        warnings: cleanContentStyleList(parsedContentStyle.warnings, fallback.contentStyle.warnings)
+      };
+
       return {
         source: 'gemini_youtube_v3',
         overview: Array.isArray(parsed.overview) ? parsed.overview : fallback.overview,
-        contentStyle: parsed.contentStyle || fallback.contentStyle,
+        contentStyle: safeContentStyle,
         conclusion: parsed.conclusion || fallback.conclusion,
       };
     } catch (err) {
