@@ -5865,11 +5865,11 @@ Quy tắc:
               <button
                 type="button"
                 className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-[12px] font-black shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
-                title="Tải toàn bộ thông tin video đã kiểm tra"
+                title="Bấm để chọn tải TXT hoặc DOCX"
               >
                 <Download size={16} /> TẢI TOÀN BỘ THÔNG TIN
               </button>
-              <div className="hidden group-hover:block group-focus-within:block absolute right-0 bottom-full mb-2 w-44 max-w-[calc(100vw-40px)] rounded-xl border border-blue-100 bg-white shadow-xl p-1.5 z-30">
+              <div className="hidden group-focus-within:block absolute right-0 bottom-full mb-2 w-44 max-w-[calc(100vw-40px)] rounded-xl border border-blue-100 bg-white shadow-xl p-1.5 z-30">
                 <button
                   type="button"
                   onClick={exportFullVideoInfoTxt}
