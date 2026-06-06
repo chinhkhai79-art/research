@@ -970,7 +970,7 @@ export default function App() {
   const [trackingAiInput, setTrackingAiInput] = useState('');
   const [trackingAiReport, setTrackingAiReport] = useState('');
   const [trackingAiLoading, setTrackingAiLoading] = useState(false);
-  const [trackingAiMeta, setTrackingAiMeta] = useState<{ name?: string; id?: string; generatedAt?: string } | null>(null);
+  const [trackingAiMeta, setTrackingAiMeta] = useState<{ name?: string; id?: string; icon?: string; generatedAt?: string } | null>(null);
   const [spyInput, setSpyInput] = useState('');
   const [spyResult, setSpyResult] = useState<SpyResult | null>(null);
   // --- Niche Research State ---
@@ -4872,11 +4872,13 @@ ${topKeywordsStr}`;
     const viewSubRate = subs ? Math.round((avgRecentViews / subs) * 1000) / 10 : 0;
     const uploadSpanText = videos.length ? `${formatDetailedDate(videos[videos.length - 1]?.snippet?.publishedAt)} → ${formatDetailedDate(videos[0]?.snippet?.publishedAt)}` : 'Chưa có dữ liệu video gần đây';
 
-    const verdict = viewSubRate >= 30
-      ? 'CÒN TIỀM NĂNG THEO DÕI. Kênh vẫn có tín hiệu kéo view so với tệp sub hiện tại, nên bóc tách format tốt và theo dõi thêm.'
-      : viewSubRate >= 8
-        ? 'CẦN THEO DÕI THÊM. Kênh có dữ liệu hoạt động nhưng chưa đủ mạnh để kết luận là ngách đang bùng nổ.'
-        : 'BỎ QUA TẠM THỜI. Kênh chưa cho thấy lực kéo đủ tốt ở nhóm video gần đây, không nên ưu tiên nhân bản ngay.';
+    const verdict = viewSubRate >= 35 && maxRecentViews >= Math.max(5000, subs * 0.2)
+      ? '🚀 KÊNH NGON NÊN SPY. Kênh đang có lực kéo thật, có video gần đây bùng tốt và đáng bóc tách format để học cách làm nội dung.'
+      : viewSubRate >= 15 && maxRecentViews >= Math.max(2000, subs * 0.08)
+        ? '🎯 ĐÁNG BÓC TÁCH. Kênh chưa phải quá mạnh nhưng có tín hiệu đủ rõ để lấy ý tưởng tiêu đề, format và cách triển khai video.'
+        : viewSubRate >= 5
+          ? '⚠️ CẦN TEST THÊM. Kênh có tín hiệu nhưng chưa đủ chắc, chỉ nên theo dõi thêm vài video mới trước khi nhân bản.'
+          : '💀 BỎ QUA DO QUÁ NÁT. Kênh đang thiếu lực kéo rõ ràng, video gần đây không chứng minh được sức hút đủ mạnh để ưu tiên spy.';
 
     return `ĐÁNH GIÁ TỔNG QUAN:
 Kênh ${snippet.title || ''} có ${formatVNNumber(subs)} sub, ${formatVNNumber(views)} tổng lượt xem và ${formatVNNumber(videoCount)} video. Nhóm video gần đây có trung bình khoảng ${formatVNNumber(avgRecentViews)} lượt xem/video, video cao nhất đạt ${formatVNNumber(maxRecentViews)} lượt xem; giai đoạn phân tích: ${uploadSpanText}.
@@ -4964,17 +4966,19 @@ ${JSON.stringify(compactData, null, 2)}
 
 Yêu cầu trả lời bằng tiếng Việt, chỉ văn bản thuần, đúng 3 phần:
 🔘 ĐÁNH GIÁ TỔNG QUAN:
-1 đoạn ngắn 2-3 câu, nói kênh đang ở trạng thái nào.
+1 đoạn ngắn 2-3 câu. Phải nhận định rõ kênh đang tăng, đang ổn định, đang hụt hơi hay đã mất đà. Không nói chung chung.
 
 🔍 PHÂN TÍCH CHUYÊN SÂU:
-- Bắt bệnh View & Sub: ...
-- Hiệu quả Nội dung: ...
-- Tiềm năng Faceless/AI: ...
-- Rủi ro cần lưu ý: ...
+- Bắt bệnh View & Sub: nhận xét chắc chắn dựa trên view/sub và video gần đây.
+- Hiệu quả Nội dung: nói rõ kênh sống nhờ format nào, chủ đề nào, có đều phong độ không.
+- Tiềm năng Faceless/AI: kết luận có dễ tự động hóa bằng AI/stock/giọng đọc không.
+- Rủi ro cần lưu ý: nói thẳng rủi ro lớn nhất nếu spy kênh này.
 
 🎯 KẾT LUẬN CHỐT:
-1 câu thật dứt khoát, có thể dùng các nhãn như: NÊN THEO DÕI / CẦN TEST THÊM / BỎ QUA / ĐÁNG BÓC TÁCH.
-Không viết dài lan man. Không bịa số liệu ngoài dữ liệu đã cung cấp.`;
+Bắt buộc viết 1 câu IN HOA, dứt khoát, có emoji mạnh ở đầu. Chỉ chọn một trong các hướng:
+🚀 KÊNH NGON NÊN SPY / 🎯 ĐÁNG BÓC TÁCH / ⚠️ CẦN TEST THÊM / 💀 BỎ QUA DO QUÁ NÁT.
+Câu kết luận phải giống mẫu: "🚀 KÊNH NGON NÊN SPY. Kênh có phong độ ổn định, nhiều video bùng nổ và nội dung rất tiềm năng để áp dụng quy trình tự động hóa faceless."
+Không viết chung chung kiểu "đáng bóc tách để học thuật toán". Không bịa số liệu ngoài dữ liệu đã cung cấp.`;
 
         const ai = await callGeminiGenerateContent(prompt);
         report = String(ai?.text || '').trim();
@@ -4989,6 +4993,7 @@ Không viết dài lan man. Không bịa số liệu ngoài dữ liệu đã cun
       setTrackingAiMeta({
         name: channel.snippet?.title || 'Kênh YouTube',
         id: channel.id,
+        icon: channel.snippet?.thumbnails?.default?.url || channel.snippet?.thumbnails?.medium?.url || '',
         generatedAt: new Date().toLocaleString('vi-VN')
       });
       setStatus('AI đã đánh giá kênh tracking xong.');
@@ -4998,6 +5003,50 @@ Không viết dài lan man. Không bịa số liệu ngoài dữ liệu đã cun
     } finally {
       setTrackingAiLoading(false);
     }
+  };
+
+  const renderTrackingAiReport = () => {
+    if (!trackingAiReport.trim()) return null;
+
+    let conclusionNext = false;
+    return trackingAiReport.split('\n').map((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={index} className="h-3" />;
+
+      const isConclusionTitle = /kết luận chốt/i.test(trimmed);
+      if (isConclusionTitle) {
+        conclusionNext = true;
+        return (
+          <div key={index} className="mt-5 mb-2 text-[16px] font-black text-orange-700 uppercase tracking-tight">
+            {trimmed}
+          </div>
+        );
+      }
+
+      if (conclusionNext) {
+        conclusionNext = false;
+        return (
+          <div key={index} className="text-[20px] md:text-[24px] leading-snug font-black text-red-600 uppercase tracking-tight">
+            {trimmed}
+          </div>
+        );
+      }
+
+      const isMainTitle = /đánh giá tổng quan|phân tích chuyên sâu/i.test(trimmed);
+      if (isMainTitle) {
+        return (
+          <div key={index} className="mt-3 mb-2 text-[14px] font-black text-slate-700 uppercase">
+            {trimmed}
+          </div>
+        );
+      }
+
+      return (
+        <div key={index} className="text-[12px] md:text-[13px] leading-6 text-slate-700">
+          {trimmed}
+        </div>
+      );
+    });
   };
 
   const downloadTrackingAiReport = () => {
@@ -7614,15 +7663,41 @@ Quy tắc:
                   </div>
                 </div>
 
-                <div className="min-h-[190px] max-h-[320px] overflow-auto bg-white border border-gray-200 rounded p-4 text-[12px] leading-5 text-slate-700 whitespace-pre-wrap font-[Arial,Tahoma,sans-serif]">
+                {trackingAiMeta?.id && (
+                  <div className="mb-3 flex items-center justify-between gap-3 rounded border border-orange-100 bg-orange-50/70 px-3 py-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {trackingAiMeta.icon ? (
+                        <img src={trackingAiMeta.icon} alt={trackingAiMeta.name || 'Kênh'} className="w-10 h-10 rounded-full border border-orange-200 object-cover bg-white" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full border border-orange-200 bg-white flex items-center justify-center text-[12px] font-black text-orange-600">
+                          {(trackingAiMeta.name || 'K').slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-black text-slate-900 truncate">{trackingAiMeta.name}</div>
+                        <div className="text-[10px] font-bold text-slate-500 truncate">ID: {trackingAiMeta.id}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => trackingAiMeta.id && goToSpy(trackingAiMeta.id)}
+                      className="h-9 px-4 rounded bg-blue-600 text-white text-[12px] font-black hover:bg-blue-700 active:scale-95 shadow flex items-center gap-2 shrink-0"
+                      title="Chuyển sang mục SPY và phân tích kênh này"
+                    >
+                      <BarChart2 size={15} /> SPY
+                    </button>
+                  </div>
+                )}
+
+                <div className="min-h-[190px] max-h-[360px] overflow-auto bg-white border border-gray-200 rounded p-4 font-[Arial,Tahoma,sans-serif]">
                   {trackingAiLoading ? (
                     <div className="flex items-center gap-2 text-orange-600 font-bold">
                       <Loader2 size={16} className="animate-spin" /> Đang lấy số liệu YouTube API và tạo đánh giá AI...
                     </div>
                   ) : trackingAiReport ? (
-                    trackingAiReport
+                    <div>{renderTrackingAiReport()}</div>
                   ) : (
-                    <div className="text-gray-400 italic">
+                    <div className="text-gray-400 italic text-[12px]">
                       Chưa có nội dung AI đánh giá. Nhập link kênh rồi bấm “AI ĐÁNH GIÁ KÊNH”.
                     </div>
                   )}
