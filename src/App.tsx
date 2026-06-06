@@ -967,6 +967,10 @@ export default function App() {
   const [showYoutubeApiKeys, setShowYoutubeApiKeys] = useState(true);
   const [keywordIdeas, setKeywordIdeas] = useState<KeywordIdea[]>([]);
   const [trackingChannels, setTrackingChannels] = useState<TrackingChannel[]>([]);
+  const [trackingAiInput, setTrackingAiInput] = useState('');
+  const [trackingAiReport, setTrackingAiReport] = useState('');
+  const [trackingAiLoading, setTrackingAiLoading] = useState(false);
+  const [trackingAiMeta, setTrackingAiMeta] = useState<{ name?: string; id?: string; generatedAt?: string } | null>(null);
   const [spyInput, setSpyInput] = useState('');
   const [spyResult, setSpyResult] = useState<SpyResult | null>(null);
   // --- Niche Research State ---
@@ -4693,6 +4697,206 @@ ${topKeywordsStr}`;
     copyToClipboard(`https://www.youtube.com/watch?v=${videoId}`);
   };
 
+
+  const extractTrackingAiChannelQuery = (input: string) => {
+    const raw = String(input || '').trim();
+    if (!raw) return '';
+    const channelIdMatch = raw.match(/(UC[a-zA-Z0-9_-]{20,})/);
+    if (channelIdMatch) return channelIdMatch[1];
+
+    const handleMatch = raw.match(/youtube\.com\/@([^/?#\s]+)/i) || raw.match(/^@([^/?#\s]+)$/);
+    if (handleMatch) return `@${handleMatch[1]}`;
+
+    const customMatch = raw.match(/youtube\.com\/(?:c|user)\/([^/?#\s]+)/i);
+    if (customMatch) return customMatch[1];
+
+    return raw.replace(/^https?:\/\//i, '').replace(/^www\./i, '').trim();
+  };
+
+  const resolveTrackingAiChannelId = async (input: string) => {
+    const query = extractTrackingAiChannelQuery(input);
+    if (!query) throw new Error('Vui lòng nhập link kênh, @handle hoặc Channel ID.');
+
+    if (/^UC[a-zA-Z0-9_-]{20,}$/.test(query)) return query;
+
+    const search = await youtubeFetch('search', {
+      part: 'snippet',
+      q: query,
+      type: 'channel',
+      maxResults: 1
+    });
+
+    const foundId = search?.items?.[0]?.snippet?.channelId;
+    if (!foundId) throw new Error('Không tìm thấy kênh từ link/handle đã nhập.');
+    return foundId;
+  };
+
+  const buildTrackingAiFallbackReport = (channel: any, videos: any[]) => {
+    const stats = channel?.statistics || {};
+    const snippet = channel?.snippet || {};
+    const subs = Number(stats.subscriberCount || 0);
+    const views = Number(stats.viewCount || 0);
+    const videoCount = Number(stats.videoCount || 0);
+    const recentViews = videos.map(v => Number(v.statistics?.viewCount || 0));
+    const avgRecentViews = recentViews.length ? Math.round(recentViews.reduce((a, b) => a + b, 0) / recentViews.length) : 0;
+    const maxRecentViews = recentViews.length ? Math.max(...recentViews) : 0;
+    const viewSubRate = subs ? Math.round((avgRecentViews / subs) * 1000) / 10 : 0;
+    const uploadSpanText = videos.length ? `${formatDetailedDate(videos[videos.length - 1]?.snippet?.publishedAt)} → ${formatDetailedDate(videos[0]?.snippet?.publishedAt)}` : 'Chưa có dữ liệu video gần đây';
+
+    const verdict = viewSubRate >= 30
+      ? 'CÒN TIỀM NĂNG THEO DÕI. Kênh vẫn có tín hiệu kéo view so với tệp sub hiện tại, nên bóc tách format tốt và theo dõi thêm.'
+      : viewSubRate >= 8
+        ? 'CẦN THEO DÕI THÊM. Kênh có dữ liệu hoạt động nhưng chưa đủ mạnh để kết luận là ngách đang bùng nổ.'
+        : 'BỎ QUA TẠM THỜI. Kênh chưa cho thấy lực kéo đủ tốt ở nhóm video gần đây, không nên ưu tiên nhân bản ngay.';
+
+    return `ĐÁNH GIÁ TỔNG QUAN:
+Kênh ${snippet.title || ''} có ${formatVNNumber(subs)} sub, ${formatVNNumber(views)} tổng lượt xem và ${formatVNNumber(videoCount)} video. Nhóm video gần đây có trung bình khoảng ${formatVNNumber(avgRecentViews)} lượt xem/video, video cao nhất đạt ${formatVNNumber(maxRecentViews)} lượt xem; giai đoạn phân tích: ${uploadSpanText}.
+
+PHÂN TÍCH CHUYÊN SÂU:
+- Bắt bệnh View & Sub: Tỉ lệ view/sub gần đây khoảng ${viewSubRate}%, cho thấy mức độ khai thác tệp người xem hiện tại ${viewSubRate >= 30 ? 'khá tốt' : viewSubRate >= 8 ? 'trung bình' : 'còn yếu'}.
+- Hiệu quả nội dung: Nếu các video mới có xu hướng thấp hơn video cũ, kênh có dấu hiệu mất đà; nếu các video mới vẫn đều view, có thể tiếp tục theo dõi để tìm format thắng.
+- Tiềm năng faceless/AI: Chủ đề "${getTopicFromKeyword(getTrackingKeywordFromApiItem(channel, snippet.title))}" có thể khai thác bằng giọng đọc, stock footage, ảnh minh họa và kịch bản tóm tắt nếu nội dung không phụ thuộc quá nhiều vào KOL.
+- Điểm cần kiểm tra thêm: Cần xem thumbnail, tiêu đề, tần suất đăng và video top gần nhất để xác định kênh tăng nhờ chủ đề, nhờ format hay chỉ nhờ một video viral đơn lẻ.
+
+KẾT LUẬN CHỐT:
+${verdict}`;
+  };
+
+  const analyzeTrackingAiChannel = async () => {
+    if (trackingAiLoading) return;
+    setTrackingAiLoading(true);
+    setTrackingAiReport('');
+    setTrackingAiMeta(null);
+    setStatus('Đang lấy dữ liệu kênh từ YouTube API và gọi AI đánh giá...');
+
+    try {
+      const channelId = await resolveTrackingAiChannelId(trackingAiInput);
+      const channelRes = await youtubeFetch('channels', {
+        part: 'snippet,statistics,contentDetails,topicDetails',
+        id: channelId
+      });
+
+      const channel = channelRes?.items?.[0];
+      if (!channel) throw new Error('Không tìm thấy dữ liệu kênh.');
+
+      const uploadsId = channel?.contentDetails?.relatedPlaylists?.uploads;
+      let videos: any[] = [];
+      if (uploadsId) {
+        const playlistRes = await youtubeFetch('playlistItems', {
+          part: 'snippet,contentDetails',
+          playlistId: uploadsId,
+          maxResults: 15
+        });
+        const ids = (playlistRes?.items || []).map((item: any) => item?.contentDetails?.videoId).filter(Boolean);
+        if (ids.length) {
+          const videoRes = await youtubeFetch('videos', {
+            part: 'snippet,statistics,contentDetails',
+            id: ids.join(',')
+          });
+          videos = videoRes?.items || [];
+        }
+      }
+
+      const stats = channel.statistics || {};
+      const recentStats = videos.map((v: any) => ({
+        title: v.snippet?.title || '',
+        publishedAt: v.snippet?.publishedAt || '',
+        views: Number(v.statistics?.viewCount || 0),
+        likes: Number(v.statistics?.likeCount || 0),
+        comments: Number(v.statistics?.commentCount || 0),
+        duration: formatDuration(v.contentDetails?.duration),
+        vph: calculateVPH(Number(v.statistics?.viewCount || 0), v.snippet?.publishedAt)
+      }));
+
+      const compactData = {
+        channel: {
+          id: channel.id,
+          title: channel.snippet?.title,
+          description: String(channel.snippet?.description || '').slice(0, 900),
+          country: getCountryDisplayName(channel.snippet?.country),
+          publishedAt: channel.snippet?.publishedAt,
+          subscribers: Number(stats.subscriberCount || 0),
+          totalViews: Number(stats.viewCount || 0),
+          totalVideos: Number(stats.videoCount || 0),
+          topic: getTopicFromKeyword(getTrackingKeywordFromApiItem(channel, channel.snippet?.title)),
+          keyword: getTrackingKeywordFromApiItem(channel, channel.snippet?.title),
+          income: estimateIncomeFromTracking(Number(stats.viewCount || 0), channel.snippet?.country)
+        },
+        recentVideos: recentStats
+      };
+
+      let report = '';
+      try {
+        const prompt = `Bạn là chuyên gia phân tích kênh YouTube cho tool tracking đối thủ.
+Dựa HOÀN TOÀN trên số liệu YouTube API sau, hãy đánh giá kênh ngắn gọn, dứt khoát, giống mẫu:
+
+DỮ LIỆU:
+${JSON.stringify(compactData, null, 2)}
+
+Yêu cầu trả lời bằng tiếng Việt, chỉ văn bản thuần, đúng 3 phần:
+🔘 ĐÁNH GIÁ TỔNG QUAN:
+1 đoạn ngắn 2-3 câu, nói kênh đang ở trạng thái nào.
+
+🔍 PHÂN TÍCH CHUYÊN SÂU:
+- Bắt bệnh View & Sub: ...
+- Hiệu quả Nội dung: ...
+- Tiềm năng Faceless/AI: ...
+- Rủi ro cần lưu ý: ...
+
+🎯 KẾT LUẬN CHỐT:
+1 câu thật dứt khoát, có thể dùng các nhãn như: NÊN THEO DÕI / CẦN TEST THÊM / BỎ QUA / ĐÁNG BÓC TÁCH.
+Không viết dài lan man. Không bịa số liệu ngoài dữ liệu đã cung cấp.`;
+
+        const ai = await callGeminiGenerateContent(prompt);
+        report = String(ai?.text || '').trim();
+      } catch (geminiErr) {
+        console.warn('Tracking AI Gemini failed, using fallback:', geminiErr);
+        report = buildTrackingAiFallbackReport(channel, videos);
+      }
+
+      if (!report) report = buildTrackingAiFallbackReport(channel, videos);
+
+      setTrackingAiReport(report);
+      setTrackingAiMeta({
+        name: channel.snippet?.title || 'Kênh YouTube',
+        id: channel.id,
+        generatedAt: new Date().toLocaleString('vi-VN')
+      });
+      setStatus('AI đã đánh giá kênh tracking xong.');
+    } catch (err: any) {
+      const msg = err?.message || 'Không phân tích được kênh.';
+      setStatus(`Lỗi AI đánh giá kênh: ${msg}`);
+    } finally {
+      setTrackingAiLoading(false);
+    }
+  };
+
+  const downloadTrackingAiReport = () => {
+    if (!trackingAiReport.trim()) {
+      setStatus('Chưa có nội dung AI đánh giá kênh để tải.');
+      return;
+    }
+    const safeName = String(trackingAiMeta?.name || 'AI_Danh_Gia_Kenh')
+      .normalize('NFC')
+      .replace(/[\\/:*?"<>|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 100)
+      .replace(/\s+/g, '_') || 'AI_Danh_Gia_Kenh';
+    const content = [
+      'AI ĐÁNH GIÁ KÊNH YOUTUBE',
+      '==================================================',
+      `Kênh: ${trackingAiMeta?.name || ''}`,
+      `Channel ID: ${trackingAiMeta?.id || ''}`,
+      `Thời gian: ${trackingAiMeta?.generatedAt || new Date().toLocaleString('vi-VN')}`,
+      '==================================================',
+      '',
+      trackingAiReport
+    ].join('\n');
+    downloadAsTxt(content, `${safeName}_AI_Danh_Gia_Kenh`);
+  };
+
+
   const addToTracking = (channel: ChannelResult) => {
     if (trackingChannels.some(c => c.id === channel.id)) {
       setStatus('Kênh này đã có trong danh sách theo dõi.');
@@ -7219,6 +7423,82 @@ Quy tắc:
                 </table>
               </div>
             </div>
+
+              <div className="bg-white border border-[#999] shadow-sm rounded p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-[14px] font-black text-slate-800 uppercase">
+                      <Bot size={18} className="text-orange-600" /> AI ĐÁNH GIÁ KÊNH
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      Nhập link kênh / @handle / Channel ID. AI sẽ dựa trên số liệu YouTube API để đánh giá tổng quan, phân tích chuyên sâu và kết luận chốt.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadTrackingAiReport}
+                    disabled={!trackingAiReport.trim()}
+                    className={`h-9 px-4 rounded font-bold text-[12px] flex items-center gap-2 shadow transition-all ${trackingAiReport.trim() ? 'bg-green-600 text-white hover:bg-green-700 active:scale-95' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  >
+                    <Download size={15} /> Tải TXT
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-center mb-3">
+                  <div className="col-span-12 lg:col-span-8 flex items-center gap-2">
+                    <label className="text-[12px] font-bold text-slate-700 whitespace-nowrap">Link Kênh (ID hoặc @handle):</label>
+                    <input
+                      type="text"
+                      value={trackingAiInput}
+                      onChange={(e) => setTrackingAiInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !trackingAiLoading) {
+                          e.preventDefault();
+                          analyzeTrackingAiChannel();
+                        }
+                      }}
+                      placeholder="Dán link kênh, @handle hoặc UC..."
+                      className="flex-1 h-9 px-3 border border-[#aaa] rounded bg-white text-[12px] font-bold outline-none focus:border-orange-500 shadow-inner"
+                    />
+                  </div>
+                  <div className="col-span-12 lg:col-span-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={analyzeTrackingAiChannel}
+                      disabled={trackingAiLoading || !trackingAiInput.trim()}
+                      className={`h-9 px-4 rounded font-bold text-[12px] flex items-center justify-center gap-2 shadow transition-all ${trackingAiLoading || !trackingAiInput.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'}`}
+                    >
+                      {trackingAiLoading ? <Loader2 size={15} className="animate-spin" /> : <Bot size={15} />}
+                      {trackingAiLoading ? 'ĐANG ĐÁNH GIÁ...' : 'AI ĐÁNH GIÁ KÊNH'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTrackingAiInput('');
+                        setTrackingAiReport('');
+                        setTrackingAiMeta(null);
+                      }}
+                      className="h-9 px-3 rounded border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 text-[12px] font-bold"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+
+                <div className="min-h-[190px] max-h-[320px] overflow-auto bg-white border border-gray-200 rounded p-4 text-[12px] leading-5 text-slate-700 whitespace-pre-wrap font-[Arial,Tahoma,sans-serif]">
+                  {trackingAiLoading ? (
+                    <div className="flex items-center gap-2 text-orange-600 font-bold">
+                      <Loader2 size={16} className="animate-spin" /> Đang lấy số liệu YouTube API và tạo đánh giá AI...
+                    </div>
+                  ) : trackingAiReport ? (
+                    trackingAiReport
+                  ) : (
+                    <div className="text-gray-400 italic">
+                      Chưa có nội dung AI đánh giá. Nhập link kênh rồi bấm “AI ĐÁNH GIÁ KÊNH”.
+                    </div>
+                  )}
+                </div>
+              </div>
           </div>
           ) : null}
 
