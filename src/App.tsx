@@ -5934,7 +5934,7 @@ Quy tắc:
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            <span className="vtw-app-title-text">YOUTUBE NICHE & ANALYZE PRO (VĂN THẾ WEB)</span>
+            <span className="vtw-app-title-text">YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB</span>
           </h1>
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">

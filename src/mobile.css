@@ -1,5 +1,5 @@
 /* ============================================================================
- * mobile.css — Toàn bộ CSS responsive cho YouTube Niche & Analyze Pro
+ * mobile.css — Toàn bộ CSS responsive cho YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB
  *
  * File này gom tất cả rule mobile/tablet vào MỘT chỗ duy nhất, thay thế khối
  * <style>{`...`}</style> trước đây trong App.tsx. Mục tiêu:
@@ -35,7 +35,7 @@
    *
    * LAYOUT:
    * ┌────────────────────────────────────────────┐
-   * │ [🖼️] YouTube Niche & Analyze Pro (Văn Thế) │  row 1: title 100%
+   * │ [🖼️] YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB (Văn Thế) │  row 1: title 100%
    * ├────────────────────────────────────────────┤
    * │ [👤] chinhkhai79@gmail.com         PRO    │  row 2: account FULL gmail
    * ├────────────────────────────────────────────┤

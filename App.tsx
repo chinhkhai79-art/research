@@ -4821,9 +4821,9 @@ Quy tắc:
               alt="Văn Thế Web"
             />
             {isMobileViewport ? (
-              <span className="vtw-title-mobile whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+              <span className="vtw-title-mobile whitespace-nowrap">YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB</span>
             ) : (
-              <span className="vtw-title-full whitespace-nowrap">YouTube Niche & Analyze Pro (Văn Thế Web)</span>
+              <span className="vtw-title-full whitespace-nowrap">YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB</span>
             )}
           </h1>
 
