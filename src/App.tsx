@@ -5049,6 +5049,13 @@ Không viết chung chung kiểu "đáng bóc tách để học thuật toán". 
     });
   };
 
+  const scrollToTrackingAiReview = () => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('tracking-ai-review-box');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   const downloadTrackingAiReport = () => {
     if (!trackingAiReport.trim()) {
       setStatus('Chưa có nội dung AI đánh giá kênh để tải.');
@@ -7415,6 +7422,14 @@ Quy tắc:
                   >
                     <Download size={16} /> Tải TXT
                   </button>
+                  <button
+                    type="button"
+                    onClick={scrollToTrackingAiReview}
+                    className="vtw-tracking-ai-jump-btn bg-orange-500 text-white h-10 px-5 rounded font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-orange-600 active:scale-95 shadow whitespace-nowrap transition-all"
+                    title="Chuyển xuống phần AI đánh giá kênh"
+                  >
+                    <Bot size={16} /> AI ĐÁNH GIÁ KÊNH
+                  </button>
                   <div className="ml-2 h-10 px-4 bg-white border border-blue-200 rounded shadow-inner flex items-center gap-3 shrink-0">
                     <BarChart2 size={16} className="text-blue-600" />
                     <span className="text-[12px] font-black text-gray-700 whitespace-nowrap uppercase">
@@ -7602,7 +7617,7 @@ Quy tắc:
               </div>
             </div>
 
-              <div className="bg-white border border-[#999] shadow-sm rounded p-4">
+              <div id="tracking-ai-review-box" className="bg-white border border-[#999] shadow-sm rounded p-4 scroll-mt-24">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>
                     <div className="flex items-center gap-2 text-[14px] font-black text-slate-800 uppercase">
@@ -7616,9 +7631,10 @@ Quy tắc:
                     type="button"
                     onClick={downloadTrackingAiReport}
                     disabled={!trackingAiReport.trim()}
-                    className={`h-9 px-4 rounded font-bold text-[12px] flex items-center gap-2 shadow transition-all ${trackingAiReport.trim() ? 'bg-green-600 text-white hover:bg-green-700 active:scale-95' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    className={`vtw-tracking-ai-download-btn h-9 px-4 rounded font-bold text-[12px] flex items-center gap-2 shadow transition-all ${trackingAiReport.trim() ? 'bg-green-600 text-white hover:bg-green-700 active:scale-95' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    title="Tải TXT nội dung AI đánh giá kênh"
                   >
-                    <Download size={15} /> Tải TXT
+                    <Download size={15} /> <span className="vtw-tracking-ai-download-label">Tải TXT</span>
                   </button>
                 </div>
 

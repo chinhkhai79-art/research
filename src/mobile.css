@@ -1,5 +1,5 @@
 /* ============================================================================
- * mobile.css — Toàn bộ CSS responsive cho YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB
+ * mobile.css — Toàn bộ CSS responsive cho YouTube Niche & Analyze Pro
  *
  * File này gom tất cả rule mobile/tablet vào MỘT chỗ duy nhất, thay thế khối
  * <style>{`...`}</style> trước đây trong App.tsx. Mục tiêu:
@@ -35,7 +35,7 @@
    *
    * LAYOUT:
    * ┌────────────────────────────────────────────┐
-   * │ [🖼️] YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB (Văn Thế) │  row 1: title 100%
+   * │ [🖼️] YouTube Niche & Analyze Pro (Văn Thế) │  row 1: title 100%
    * ├────────────────────────────────────────────┤
    * │ [👤] chinhkhai79@gmail.com         PRO    │  row 2: account FULL gmail
    * ├────────────────────────────────────────────┤
@@ -3421,5 +3421,41 @@
   body .vtw-niche-video-card .vtw-video-title a {
     font-size: clamp(9.5px, 2.75vw, 12px) !important;
     line-height: 1.14 !important;
+  }
+}
+
+/* PATCH 06/06 — Mobile Tracking: nút TXT trong AI đánh giá kênh chỉ còn icon, thêm nút nhảy AI gọn. */
+@media (max-width: 900px) {
+  body .vtw-tracking-ai-download-btn {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  body .vtw-tracking-ai-download-btn svg {
+    width: 17px !important;
+    height: 17px !important;
+    margin: 0 !important;
+  }
+
+  body .vtw-tracking-ai-download-label {
+    display: none !important;
+  }
+
+  body .vtw-tracking-ai-jump-btn {
+    width: 100% !important;
+    height: 46px !important;
+    margin-top: 0 !important;
+    justify-content: center !important;
+  }
+
+  body #tracking-ai-review-box {
+    scroll-margin-top: 18px !important;
   }
 }
