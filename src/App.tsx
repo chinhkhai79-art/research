@@ -3993,6 +3993,116 @@ JSON mẫu:
     return /(giai tri|entertainment|am thuc|food|cooking|nau an|mukbang|suc khoe|health|fitness|lam dep|beauty)/i.test(text);
   };
 
+
+  const buildKeywordPhrasesFromTitle = (title: string, baseKeyword: string) => {
+    const clean = String(title || '')
+      .replace(/[|()[\]{}"“”'’.,!?;:]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!clean) return [];
+
+    const lowerBase = normalizeHunterKeyword(baseKeyword);
+    const words = clean.split(' ').filter(w => w && w.length > 1);
+    const phrases: string[] = [];
+
+    // Ưu tiên cụm có chứa từ khóa gốc hoặc các từ gần từ khóa gốc.
+    for (let size = 2; size <= 5; size++) {
+      for (let i = 0; i <= words.length - size; i++) {
+        const phrase = words.slice(i, i + size).join(' ').trim();
+        const normalizedPhrase = normalizeHunterKeyword(phrase);
+        if (!normalizedPhrase || normalizedPhrase.length < 4) continue;
+        if (normalizedPhrase.includes(lowerBase) || lowerBase.split(' ').some(w => w.length > 2 && normalizedPhrase.includes(w))) {
+          phrases.push(phrase);
+        }
+      }
+    }
+
+    // Nếu tiêu đề không có cụm rõ, lấy 4-5 từ đầu làm key phụ.
+    if (phrases.length === 0 && words.length >= 3) {
+      phrases.push(words.slice(0, Math.min(5, words.length)).join(' '));
+    }
+
+    return phrases;
+  };
+
+  const fetchYoutubeV3RelatedKeywordsForAutoSwitch = async (baseKeyword: string, regionCode: string, publishedAfter?: string) => {
+    const relatedMap = new Map<string, { text: string; score: number; source: string }>();
+    const addKeyword = (text: string, score: number, source: string) => {
+      const cleaned = String(text || '')
+        .replace(/^#/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const normalized = normalizeHunterKeyword(cleaned);
+      if (!cleaned || normalized.length < 3) return;
+      if (cleaned.length > 70) return;
+      if (/^(http|www\.|youtube|shorts|video|official)$/i.test(cleaned)) return;
+      const old = relatedMap.get(normalized);
+      if (!old || score > old.score) relatedMap.set(normalized, { text: cleaned, score, source });
+    };
+
+    addKeyword(baseKeyword, 999, 'base');
+
+    const seedQueries = Array.from(new Set([
+      baseKeyword,
+      `${baseKeyword} hôm nay`,
+      `${baseKeyword} mới nhất`,
+      `${baseKeyword} 2026`,
+      `${baseKeyword} tin tức`,
+      `${baseKeyword} phân tích`
+    ].map(x => x.trim()).filter(Boolean)));
+
+    for (const seed of seedQueries.slice(0, 6)) {
+      if (!isHuntingRef.current) break;
+
+      const searchRes = await youtubeFetch('search', {
+        part: 'snippet',
+        type: 'video',
+        q: seed,
+        regionCode,
+        maxResults: 10,
+        order: 'relevance',
+        ...(publishedAfter ? { publishedAfter } : {})
+      });
+
+      const videoIds = (searchRes.items || [])
+        .map((item: any) => item?.id?.videoId)
+        .filter(Boolean)
+        .slice(0, 10);
+
+      if (!videoIds.length) continue;
+
+      const videoRes = await youtubeFetch('videos', {
+        part: 'snippet,statistics',
+        id: videoIds.join(',')
+      });
+
+      (videoRes.items || []).forEach((video: any) => {
+        const views = Number(video?.statistics?.viewCount || 0);
+        const likes = Number(video?.statistics?.likeCount || 0);
+        const baseScore = Math.log10(Math.max(10, views)) + (likes / Math.max(1, views)) * 10;
+
+        buildKeywordPhrasesFromTitle(video?.snippet?.title || '', baseKeyword).forEach((phrase, idx) => {
+          addKeyword(phrase, baseScore - idx * 0.05, 'title');
+        });
+
+        (video?.snippet?.tags || []).slice(0, 12).forEach((tag: string, idx: number) => {
+          addKeyword(tag, baseScore + 1 - idx * 0.03, 'tag');
+        });
+
+        const channelTitle = video?.snippet?.channelTitle || '';
+        if (channelTitle && normalizeHunterKeyword(channelTitle).includes(normalizeHunterKeyword(baseKeyword).split(' ')[0] || '')) {
+          addKeyword(channelTitle, baseScore - 0.5, 'channel');
+        }
+      });
+    }
+
+    return Array.from(relatedMap.values())
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.text)
+      .slice(0, 24);
+  };
+
+
   const startHunter = async () => {
     if (config.apiKeys.length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
@@ -4050,6 +4160,7 @@ JSON mẫu:
       const publishedAfter = getPublishedAfterDate(effectivePublishedAfter);
 
       let scanKeywords: string[] = [];
+      const shouldAutoSwitchKeywords = !!hunterConfig.autoNiche;
       if (isAutoHunt) {
         scanKeywords = diversifySeedsByTopic(shuffleList(getAutoHuntSeeds(currentRegion))).slice(0, 16);
       } else {
@@ -4058,7 +4169,20 @@ JSON mẫu:
           const targetLang = getLanguageForRegion(currentRegion);
           searchKeyword = translateKeywordSimple(rawKeyword, targetLang);
         }
-        scanKeywords = [searchKeyword];
+
+        if (shouldAutoSwitchKeywords) {
+          setStatus(`Đang tạo danh sách từ khóa liên quan bằng YouTube API V3 cho "${rawKeyword}"...`);
+          const relatedKeywords = await fetchYoutubeV3RelatedKeywordsForAutoSwitch(searchKeyword, currentRegion, publishedAfter);
+          scanKeywords = Array.from(new Set([searchKeyword, rawKeyword, ...relatedKeywords].map(k => String(k || '').trim()).filter(Boolean))).slice(0, 24);
+          setKeywordIdeas(scanKeywords.map((text, idx) => ({
+            text,
+            competition: idx === 0 ? 'Từ khóa chính' : 'Tự động từ API V3',
+            score: idx === 0 ? '10/10' : 'Đang quét',
+            status: 'idle'
+          })));
+        } else {
+          scanKeywords = [searchKeyword];
+        }
       }
 
       const addedChannelIds = new Set<string>(resultsRef.current.map(r => r.id));
@@ -4067,12 +4191,15 @@ JSON mẫu:
       for (let k = 0; k < scanKeywords.length; k++) {
         if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
         const searchKeyword = scanKeywords[k];
-        const shownKeyword = isAutoHunt ? `tự động: ${searchKeyword}` : rawKeyword;
+        const shownKeyword = isAutoHunt ? `tự động: ${searchKeyword}` : searchKeyword;
+        const autoSwitchMode = !isAutoHunt && !!hunterConfig.autoNiche && scanKeywords.length > 1;
 
         setStatus(
           isAutoHunt
             ? `Tự động lọc kênh hot ${regionTag}: cụm "${searchKeyword}" (${resultsRef.current.length}/${STOP_LIMIT})`
-            : `Đang quét: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
+            : autoSwitchMode
+              ? `Tự động chuyển từ khóa bằng YouTube API V3: "${searchKeyword}" (${k + 1}/${scanKeywords.length}) — đã có ${resultsRef.current.length}/${STOP_LIMIT} kênh${regionTag}`
+              : `Đang quét: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
         );
 
         const searchRes = await youtubeFetch('search', {
@@ -4155,7 +4282,7 @@ JSON mẫu:
           })
           .filter(Boolean)
           .sort((a: any, b: any) => b.rankScore - a.rankScore)
-          .slice(0, isAutoHunt ? 4 : STOP_LIMIT);
+          .slice(0, (isAutoHunt || (!isAutoHunt && hunterConfig.autoNiche)) ? 4 : STOP_LIMIT);
 
         for (const candidate of candidates as any[]) {
           if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
@@ -4184,7 +4311,7 @@ JSON mẫu:
             score: scoreText,
             keywordTitle: isAutoHunt
               ? `Auto ${currentRegion || 'Global'} · ${searchKeyword} · VPH ${Math.round(candidate.metrics.vph).toLocaleString('vi-VN')}`
-              : rawKeyword,
+              : (hunterConfig.autoNiche && searchKeyword !== rawKeyword ? `${rawKeyword} → ${searchKeyword}` : rawKeyword),
             lastVideoId: candidate.video.id
           };
 
@@ -4205,6 +4332,8 @@ JSON mẫu:
         setStatus('Đã dừng bởi người dùng.');
       } else if (isAutoHunt) {
         setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.`);
+      } else if (hunterConfig.autoNiche && scanKeywords.length > 1) {
+        setStatus(`Đã quét hết danh sách từ khóa liên quan bằng YouTube API V3. Tìm được ${resultsRef.current.length}/${STOP_LIMIT} kênh đạt điều kiện.`);
       } else {
         setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.`);
       }
