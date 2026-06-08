@@ -287,6 +287,36 @@ const GEMINI_MODELS = [
   { id: 'gemini-2.5-flash-lite', name: '2.5 Flash-Lite — tiết kiệm quota' },
 ];
 
+const GEMINI_FALLBACK_MODEL_IDS = [
+  'gemini-3.5-flash',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-pro',
+  'gemini-3.1-pro-preview',
+];
+
+const getGeminiModelName = (modelId: string) => GEMINI_MODELS.find(model => model.id === modelId)?.name || modelId;
+
+const getOrderedGeminiModels = (selectedModel: string) => [
+  selectedModel,
+  ...GEMINI_FALLBACK_MODEL_IDS.filter(model => model !== selectedModel)
+];
+
+const isTemporaryGeminiDemandError = (error: any) => {
+  const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
+  const status = String(error?.status || error?.error?.status || '').toUpperCase();
+  const code = String(error?.code || error?.error?.code || '').toLowerCase();
+  const text = `${raw} ${status} ${code}`.toLowerCase();
+  return text.includes('503')
+    || text.includes('unavailable')
+    || text.includes('high demand')
+    || text.includes('overloaded')
+    || text.includes('please try again later')
+    || text.includes('service unavailable');
+};
+
 const SUGGESTED_NICHES = [
   { category: 'PHÁT TRIỂN BẢN THÂN', items: ['vượt qua trì hoãn', 'kỷ luật bản thân', 'thói quen thành công', 'quản lý thời gian', 'tư duy tích cực', 'năng suất cá nhân'] },
   { category: 'SỨC KHỎE & LÀM ĐẸP', items: ['giảm cân tại nhà', 'yoga tại nhà', 'skincare cơ bản', 'ăn sạch sống khỏe', 'bài tập giảm mỡ', 'chăm sóc tóc'] },
@@ -1220,6 +1250,9 @@ export default function App() {
     if (text.includes('generative language api has not been used') || text.includes('service_disabled') || text.includes('api has not been used') || text.includes('not enabled') || text.includes('enable it')) {
       return { label: 'Chưa bật Generative Language API', detail: 'Project tạo key chưa bật Generative Language API. Vào Google Cloud/API Library bật Generative Language API rồi thử lại.' };
     }
+    if (isTemporaryGeminiDemandError(error)) {
+      return { label: 'Model đang quá tải', detail: `Model ${geminiModel} đang quá tải hoặc Google trả 503 tạm thời. Đây không phải lỗi key. Tool sẽ tự thử model dự phòng.` };
+    }
     if (text.includes('quota') || text.includes('rate limit') || text.includes('ratelimit') || text.includes('resource_exhausted') || text.includes('too many requests') || text.includes('429')) {
       return { label: 'Hết quota', detail: 'Key/project đã hết quota hoặc vượt giới hạn tốc độ. Tool sẽ tự xoay sang key khác nếu có.' };
     }
@@ -1246,16 +1279,38 @@ export default function App() {
 
     setIsCheckingGeminiKeys(true);
     const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
+    const modelOrder = getOrderedGeminiModels(geminiModel);
     for (const key of keys) {
-      try {
-        const ai = new GoogleGenAI({ apiKey: key });
-        await ai.models.generateContent({
-          model: geminiModel,
-          contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }]
-        });
-        results.push({ key, ok: true, label: 'Key hợp lệ', detail: `Dùng được model ${geminiModel}.` });
-      } catch (error: any) {
-        const info = classifyGeminiError(error);
+      let keyPassed = false;
+      let lastError: any = null;
+      for (const modelId of modelOrder) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: key });
+          await ai.models.generateContent({
+            model: modelId,
+            contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }]
+          });
+          keyPassed = true;
+          if (modelId !== geminiModel) {
+            setGeminiModel(modelId);
+            localStorage.setItem('youtube_gemini_model', modelId);
+            results.push({ key, ok: true, label: 'Key hợp lệ', detail: `Model đang chọn bị quá tải/từ chối tạm thời, đã tự chuyển sang ${getGeminiModelName(modelId)}.` });
+          } else {
+            results.push({ key, ok: true, label: 'Key hợp lệ', detail: `Dùng được model ${getGeminiModelName(modelId)}.` });
+          }
+          break;
+        } catch (error: any) {
+          lastError = error;
+          const info = classifyGeminiError(error);
+          const canTryNextModel = isTemporaryGeminiDemandError(error)
+            || info.label === 'Hết quota'
+            || info.label === 'Model không được hỗ trợ'
+            || info.label === 'Project chưa có quyền model';
+          if (!canTryNextModel) break;
+        }
+      }
+      if (!keyPassed) {
+        const info = classifyGeminiError(lastError);
         results.push({ key, ok: false, label: info.label, detail: info.detail });
       }
       setGeminiKeyCheckResults([...results]);
@@ -1277,7 +1332,8 @@ export default function App() {
   const isRotatableGeminiError = (error: any) => {
     const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
     const text = String(raw).toLowerCase();
-    return text.includes('quota')
+    return isTemporaryGeminiDemandError(error)
+      || text.includes('quota')
       || text.includes('limit')
       || text.includes('exceeded')
       || text.includes('resource_exhausted')
@@ -1301,33 +1357,46 @@ export default function App() {
     ];
 
     let lastError: any = null;
-    for (const idx of orderedIndexes) {
-      const key = keys[idx];
-      if (exhaustedGeminiKeysRef.current.includes(key)) continue;
-      try {
-        setGeminiKeyIndex(idx);
-        const ai = new GoogleGenAI({ apiKey: key });
-        const response = await ai.models.generateContent({
-          model: geminiModel,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-        return response;
-      } catch (error: any) {
-        lastError = error;
-        if (isRotatableGeminiError(error)) {
-          setExhaustedGeminiKeys(prev => {
-            const next = [...new Set([...prev, key])];
-            exhaustedGeminiKeysRef.current = next;
-            return next;
+    const modelOrder = getOrderedGeminiModels(geminiModel);
+    for (const modelId of modelOrder) {
+      for (const idx of orderedIndexes) {
+        const key = keys[idx];
+        if (exhaustedGeminiKeysRef.current.includes(key)) continue;
+        try {
+          setGeminiKeyIndex(idx);
+          const ai = new GoogleGenAI({ apiKey: key });
+          const response = await ai.models.generateContent({
+            model: modelId,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
           });
-          const nextAvailable = keys.findIndex((candidate, candidateIndex) => candidateIndex !== idx && !exhaustedGeminiKeysRef.current.includes(candidate));
-          if (nextAvailable !== -1) {
-            setGeminiKeyIndex(nextAvailable);
-            setStatus(`Gemini Key #${idx + 1} lỗi: ${classifyGeminiError(error).label}. Đang tự chuyển sang Key #${nextAvailable + 1}...`);
+          if (modelId !== geminiModel) {
+            setGeminiModel(modelId);
+            localStorage.setItem('youtube_gemini_model', modelId);
+            setStatus(`Gemini model đang chọn bị quá tải/lỗi tạm thời. Đã tự chuyển sang ${getGeminiModelName(modelId)} và dùng Key #${idx + 1}.`);
+          }
+          return response;
+        } catch (error: any) {
+          lastError = error;
+          const info = classifyGeminiError(error);
+          if (info.label === 'Key sai') {
+            setExhaustedGeminiKeys(prev => {
+              const next = [...new Set([...prev, key])];
+              exhaustedGeminiKeysRef.current = next;
+              return next;
+            });
+          }
+          if (isRotatableGeminiError(error)) {
+            const nextAvailable = keys.findIndex((candidate, candidateIndex) => candidateIndex !== idx && !exhaustedGeminiKeysRef.current.includes(candidate));
+            if (nextAvailable !== -1) {
+              setGeminiKeyIndex(nextAvailable);
+              setStatus(`Gemini Key #${idx + 1} / ${getGeminiModelName(modelId)} lỗi: ${info.label}. Đang thử Key #${nextAvailable + 1} hoặc model dự phòng...`);
+            } else {
+              setStatus(`${getGeminiModelName(modelId)} lỗi: ${info.label}. Đang thử model dự phòng nếu có...`);
+            }
             continue;
           }
+          throw error;
         }
-        throw error;
       }
     }
 
