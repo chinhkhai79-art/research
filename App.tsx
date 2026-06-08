@@ -278,13 +278,13 @@ function getFriendlyApiError(error: any): string {
 }
 
 const GEMINI_MODELS = [
+  { id: 'gemini-3.5-flash', name: '3.5 Flash — mới nhất, ổn định' },
+  { id: 'gemini-3.1-pro-preview', name: '3.1 Pro Preview — Pro mới nhất' },
+  { id: 'gemini-3-flash-preview', name: '3 Flash Preview — phân tích sâu' },
+  { id: 'gemini-3.1-flash-lite', name: '3.1 Flash-Lite — mới, tiết kiệm' },
+  { id: 'gemini-2.5-pro', name: '2.5 Pro — phân tích sâu' },
   { id: 'gemini-2.5-flash', name: '2.5 Flash — ổn định, mạnh' },
   { id: 'gemini-2.5-flash-lite', name: '2.5 Flash-Lite — tiết kiệm quota' },
-  { id: 'gemini-3.1-flash-lite-preview', name: '3.1 Flash-Lite Preview — mới, nhanh' },
-  { id: 'gemini-3-flash-preview', name: '3 Flash Preview — phân tích sâu' },
-  { id: 'gemini-flash-latest', name: 'Flash Latest — tự động' },
-  { id: 'gemini-2.0-flash-lite', name: '2.0 Flash Lite — dự phòng' },
-  { id: 'gemini-2.0-flash', name: '2.0 Flash — dự phòng' },
 ];
 
 const SUGGESTED_NICHES = [
