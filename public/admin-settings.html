@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Cấu hình thanh toán & SMTP</title>
   <style>
     :root {
@@ -188,11 +191,11 @@
       <div class="body">
         <table class="plans-table">
           <thead><tr><th>Mã</th><th>Tên gói</th><th>Số ngày</th><th>Giá (VNĐ)</th><th>Bật bán</th></tr></thead>
-          <tbody>
-            <tr data-plan="1m"><td>1m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
-            <tr data-plan="3m"><td>3m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
-            <tr data-plan="6m"><td>6m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
-            <tr data-plan="12m"><td>12m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
+          <tbody id="plansBody">
+            <tr data-plan="1m"><td>1m</td><td><input class="plan-name" value="GÓI 1 THÁNG" /></td><td><input class="plan-days" type="number" min="1" step="1" value="30" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" value="299000" /></td><td><input class="plan-enabled" type="checkbox" checked /></td></tr>
+            <tr data-plan="3m"><td>3m</td><td><input class="plan-name" value="GÓI 3 THÁNG" /></td><td><input class="plan-days" type="number" min="1" step="1" value="90" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" value="699000" /></td><td><input class="plan-enabled" type="checkbox" checked /></td></tr>
+            <tr data-plan="6m"><td>6m</td><td><input class="plan-name" value="GÓI 6 THÁNG" /></td><td><input class="plan-days" type="number" min="1" step="1" value="180" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" value="1199000" /></td><td><input class="plan-enabled" type="checkbox" checked /></td></tr>
+            <tr data-plan="12m"><td>12m</td><td><input class="plan-name" value="GÓI 1 NĂM" /></td><td><input class="plan-days" type="number" min="1" step="1" value="365" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" value="1999000" /></td><td><input class="plan-enabled" type="checkbox" checked /></td></tr>
           </tbody>
         </table>
         <div class="actions">
@@ -221,6 +224,13 @@
     const apiUrl = '/api/admin-settings';
     const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút
     const state = { loaded: false, banks: [], originalBank: null };
+    const PLAN_DEFAULTS = {
+      '1m':  { id:'1m',  name:'GÓI 1 THÁNG', days:30,  amount:299000,  enabled:true },
+      '3m':  { id:'3m',  name:'GÓI 3 THÁNG', days:90,  amount:699000,  enabled:true },
+      '6m':  { id:'6m',  name:'GÓI 6 THÁNG', days:180, amount:1199000, enabled:true },
+      '12m': { id:'12m', name:'GÓI 1 NĂM',   days:365, amount:1999000, enabled:true }
+    };
+    const PLAN_IDS = Object.keys(PLAN_DEFAULTS);
     let sessionTimer = null;
 
     function toast(text, type='ok'){
@@ -287,6 +297,26 @@
       if (code) setVal('bankName', code);
     }
 
+    function createPlanRow(id){
+      const p = PLAN_DEFAULTS[id];
+      const row = document.createElement('tr');
+      row.dataset.plan = id;
+      row.innerHTML = `<td>${id}</td><td><input class="plan-name" value="${p.name}" /></td><td><input class="plan-days" type="number" min="1" step="1" value="${p.days}" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" value="${p.amount}" /></td><td><input class="plan-enabled" type="checkbox" checked /></td>`;
+      return row;
+    }
+    function ensurePlanRows(){
+      const body = $('plansBody') || document.querySelector('table.plans-table tbody');
+      if (!body) return;
+      PLAN_IDS.forEach(id => {
+        let row = body.querySelector(`tr[data-plan="${id}"]`);
+        if (!row) row = createPlanRow(id);
+        body.appendChild(row);
+      });
+      body.querySelectorAll('tr[data-plan]').forEach(row => {
+        if (!PLAN_DEFAULTS[row.dataset.plan]) row.remove();
+      });
+    }
+
     function fill(data){
       data = data || {};
       const payment = data.payment || data.sepay || {};
@@ -321,15 +351,16 @@
       setVal('senderName', smtp.senderName || smtp.fromName || 'Văn Thế Web');
       setVal('emailBaseUrl', smtp.emailBaseUrl || smtp.baseUrl || currentOrigin());
 
-      // Fill plans
+      // Fill plans. Luôn bảo đảm đủ cả 4 gói, kể cả Firestore cũ thiếu gói 1 tháng.
+      ensurePlanRows();
       const plans = payment.plans || {};
-      ['1m','3m','6m','12m'].forEach(id => {
+      PLAN_IDS.forEach(id => {
         const row = document.querySelector(`tr[data-plan="${id}"]`);
         if (!row) return;
-        const p = plans[id] || {};
-        row.querySelector('.plan-name').value = p.name || '';
-        row.querySelector('.plan-days').value = p.days || '';
-        row.querySelector('.plan-amount').value = p.amount || '';
+        const p = { ...PLAN_DEFAULTS[id], ...(plans[id] || {}) };
+        row.querySelector('.plan-name').value = p.name;
+        row.querySelector('.plan-days').value = p.days;
+        row.querySelector('.plan-amount').value = p.amount;
         row.querySelector('.plan-enabled').checked = p.enabled !== false;
       });
     }
@@ -346,8 +377,9 @@
       }};
     }
     function plansPayload(){
+      ensurePlanRows();
       const out = {};
-      ['1m','3m','6m','12m'].forEach(id => {
+      PLAN_IDS.forEach(id => {
         const row = document.querySelector(`tr[data-plan="${id}"]`);
         if (!row) return;
         out[id] = {
@@ -496,6 +528,7 @@
     $('bankSelect').addEventListener('change', syncBankFromSelect);
 
     window.addEventListener('load', ()=>{
+      ensurePlanRows();
       // Check session expiry on load (FIX #8)
       const loginAt = Number(localStorage.getItem('admin_settings_login_at') || 0);
       if (loginAt && (Date.now() - loginAt) > SESSION_TIMEOUT_MS) {
