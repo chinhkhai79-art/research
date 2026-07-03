@@ -146,7 +146,7 @@
               <div class="hint">Hoặc gõ mã ngân hàng tuỳ chỉnh ở ô bên dưới (chỉ dùng nếu ngân hàng không có trong danh sách).</div>
             </div>
             <div class="field"><label>Mã ngân hàng (tự nhập, ưu tiên dropdown)</label><input id="bankName" placeholder="Ví dụ: ACB" /></div>
-            <div class="field"><label>Số tài khoản</label><input id="bankAccount" placeholder="Ví dụ: 13131447" /></div>
+            <div class="field"><label>Số tài khoản</label><input id="bankAccount" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="50" placeholder="Ví dụ: LOCSPAY000339358" /></div>
             <div class="field"><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH" /></div>
             <div class="field full">
               <label>Webhook URL copy vào SePay</label>
@@ -365,8 +365,11 @@
       });
     }
     function paymentPayload(){
+      const bankAccount = val('bankAccount').trim();
+      if (!bankAccount) throw new Error('Vui lòng nhập số tài khoản.');
+      if (!/^[A-Za-z0-9]+$/.test(bankAccount)) throw new Error('Số tài khoản chỉ được gồm chữ và số, không có khoảng trắng hoặc ký tự đặc biệt.');
       return { payment: {
-        sepaySecret: val('sepaySecret'), bankOwner: val('bankOwner'), bankName: val('bankName'), bankAccount: val('bankAccount'),
+        sepaySecret: val('sepaySecret'), bankOwner: val('bankOwner'), bankName: val('bankName'), bankAccount,
         paymentPrefix: val('paymentPrefix'), baseUrl: val('baseUrl') || currentOrigin(), webhookUrl: val('webhookUrl')
       }};
     }

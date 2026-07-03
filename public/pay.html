@@ -452,7 +452,7 @@ let pollStartedAt = Date.now();
 let lastStatusRequest = 0;
 
 function clean(v){ return String(v || '').trim(); }
-function digits(v){ return clean(v).replace(/\D/g,''); }
+function cleanAccount(v){ return clean(v).replace(/[^A-Za-z0-9]/g,''); }
 function bankId(v){
   v = clean(v);
   if (/^\d{6}$/.test(v)) return v;
@@ -483,7 +483,7 @@ function normalizePayment(raw){
   const p = raw.payment && typeof raw.payment === 'object' ? raw.payment : raw;
   const code = clean(p.bankCode || p.bankName || p.bank || 'ACB');
   const bId = bankId(p.bankId || p.bankBin || p.bankCode || p.bankName || p.bank || code);
-  const acc = digits(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
+  const acc = cleanAccount(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
   const owner = clean(p.accountName || p.accountOwner || p.beneficiaryName || p.ownerName || DEFAULT_PAYMENT.accountName);
   const prefix = clean(p.transferPrefix || p.transferContentPrefix || p.paymentPrefix || p.prefix || p.contentPrefix || DEFAULT_PAYMENT.transferPrefix).replace(/[^a-zA-Z0-9]/g,'').toUpperCase() || 'RESEARCH';
   return {
