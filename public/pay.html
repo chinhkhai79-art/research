@@ -132,9 +132,11 @@
     .note{
       color:#c1d6f2;
       margin:0 0 12px;
-      font-size:13px;
+      font-size:clamp(8.5px,1.05vw,12px);
       line-height:1.45;
       font-weight:400;
+      white-space:nowrap;
+      letter-spacing:-.1px;
     }
     .qrbox{
       background:#fff;
@@ -346,7 +348,7 @@
     <div class="main">
       <section class="card">
         <h2 class="section-title">Nâng cấp gói PRO</h2>
-        <p class="note">Quét mã QR bên dưới để chuyển khoản. Vui lòng chuyển đúng số tiền và đúng nội dung.</p>
+        <p class="note">Quét mã QR bên dưới để chuyển khoản. Vui lòng chuyển đúng số tiền và nội dung.</p>
         <div class="qrbox"><img id="qr" alt="QR thanh toán" loading="eager" decoding="async" fetchpriority="high" /></div>
         <div class="amount" id="amountText">Đang tạo mã...</div>
         <div id="successBox" class="success">✅ Thanh toán thành công!<br>Tài khoản đã được nâng cấp PRO.<br>Đang quay lại công cụ...</div>
