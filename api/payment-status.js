@@ -13,7 +13,9 @@ export default async function handler(req,res){
       const paidSnap = await db.collection('paid_orders').doc(orderCode).get();
       if(paidSnap.exists) data = { ...(data || {}), ...paidSnap.data(), paid:true, status:'paid' };
     }
-    if(!data || !data.paid) return res.status(200).json({ success:true, paid:false, status:'pending', orderCode });
-    return res.status(200).json({ success:true, paid:true, status:data.status || 'paid', orderCode, amount:data.amount || 0, planId:data.planId || '1m', planName:data.planName || 'GÓI 1 THÁNG', expiresAt:iso(data.expiresAt), paidAt:iso(data.paidAt) });
+    if(!data) return res.status(200).json({ success:true, paid:false, status:'pending', orderCode });
+    const common = { orderCode, amount:Number(data.amount || 0), planId:data.planId || '1m', planName:data.planName || 'GÓI 1 THÁNG', days:Number(data.days || 0) };
+    if(!data.paid) return res.status(200).json({ success:true, paid:false, status:data.status || 'pending', ...common });
+    return res.status(200).json({ success:true, paid:true, status:data.status || 'paid', ...common, expiresAt:iso(data.expiresAt), paidAt:iso(data.paidAt) });
   }catch(e){ console.error('payment-status error:', e); return res.status(200).json({ success:true, paid:false, status:'pending', warning:e.message }); }
 }

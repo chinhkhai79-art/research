@@ -8,9 +8,8 @@ import { getAppSettings } from '../lib/appSettings.js';
  *    được cấu hình, request KHÔNG có token đúng sẽ bị reject (401). Trước đó code
  *    "Nếu SePay có gửi token thì kiểm tra. Nếu không gửi token vẫn xử lý..." cho phép
  *    bất kỳ ai POST body giả mạo để kích hoạt PRO miễn phí.
- * 2. CHECK AMOUNT khớp với đơn: tiền chuyển vào phải >= amount đã ghi trong
- *    payments/{orderCode}. Nếu thiếu, đơn vẫn ghi log nhưng KHÔNG activate.
- *    Cho phép tolerance 1% để bù sai số nhỏ (ví dụ phí ngân hàng).
+ * 2. CHECK AMOUNT khớp tuyệt đối với đơn đã tạo trong payments/{orderCode}.
+ *    Không nhận giá do trình duyệt gửi và không kích hoạt đơn không tồn tại.
  */
 
 function cors(req, res) {
@@ -132,12 +131,19 @@ export default async function handler(req, res) {
 
     const ref = db.collection('payments').doc(orderCode);
     const snap = await ref.get();
-    const payment = snap.exists ? snap.data() : { orderCode, amount, planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 };
+    if (!snap.exists) {
+      await db.collection('sepay_logs').add({
+        status: 'reject_unknown_order',
+        orderCode, amount, content, body,
+        createdAt: FieldValue.serverTimestamp()
+      });
+      return res.status(200).json({ success: true, updated: false, paid: false, orderCode, error: 'Unknown order', message: 'Không tìm thấy đơn thanh toán đã được tạo trên hệ thống.' });
+    }
+    const payment = snap.data();
 
-    // === FIX #3: CHECK AMOUNT khớp với đơn ===
+    // Đối chiếu đúng số tiền đã được server chốt tại thời điểm tạo đơn.
     const expectedAmount = Number(payment.amount || 0);
-    const minRequired = Math.floor(expectedAmount * 0.99);
-    const amountOk = !expectedAmount || amount >= minRequired;
+    const amountOk = expectedAmount > 0 && Number(amount) === expectedAmount;
 
     if (!amountOk) {
       await db.collection('sepay_logs').add({
@@ -145,8 +151,7 @@ export default async function handler(req, res) {
         orderCode,
         receivedAmount: amount,
         expectedAmount,
-        minRequired,
-        diff: expectedAmount - amount,
+        diff: amount - expectedAmount,
         content, body,
         createdAt: FieldValue.serverTimestamp()
       });
@@ -159,7 +164,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true, updated: false, paid: false, orderCode,
         error: 'Amount mismatch', received: amount, expected: expectedAmount,
-        message: `Số tiền chuyển (${amount.toLocaleString('vi-VN')}đ) thấp hơn đơn (${expectedAmount.toLocaleString('vi-VN')}đ). Đã ghi log, không kích hoạt PRO.`
+        message: `Số tiền chuyển (${amount.toLocaleString('vi-VN')} VND) không khớp đơn (${expectedAmount.toLocaleString('vi-VN')} VND). Đã ghi log, không kích hoạt PRO.`
       });
     }
 
@@ -180,8 +185,8 @@ export default async function handler(req, res) {
       expectedAmount,
       content, rawBody: body,
       planId: payment.planId || '1m',
-      planName: payment.planName || 'GÓI 3 THÁNG',
-      days: payment.days || 90,
+      planName: payment.planName || 'GÓI PRO',
+      days: payment.days || 30,
       email: payment.email || payment.userEmail || body.email || '',
       uid: payment.uid || payment.userId || body.uid || body.userId || '',
       expiresAt,

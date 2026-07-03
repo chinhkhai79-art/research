@@ -189,9 +189,10 @@
         <table class="plans-table">
           <thead><tr><th>Mã</th><th>Tên gói</th><th>Số ngày</th><th>Giá (VNĐ)</th><th>Bật bán</th></tr></thead>
           <tbody>
-            <tr data-plan="3m"><td>3m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" /></td><td><input class="plan-amount" type="number" min="0" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
-            <tr data-plan="6m"><td>6m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" /></td><td><input class="plan-amount" type="number" min="0" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
-            <tr data-plan="12m"><td>12m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" /></td><td><input class="plan-amount" type="number" min="0" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
+            <tr data-plan="1m"><td>1m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
+            <tr data-plan="3m"><td>3m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
+            <tr data-plan="6m"><td>6m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
+            <tr data-plan="12m"><td>12m</td><td><input class="plan-name" /></td><td><input class="plan-days" type="number" min="1" step="1" /></td><td><input class="plan-amount" type="number" min="1000" step="1000" /></td><td><input class="plan-enabled" type="checkbox" /></td></tr>
           </tbody>
         </table>
         <div class="actions">
@@ -322,7 +323,7 @@
 
       // Fill plans
       const plans = payment.plans || {};
-      ['3m','6m','12m'].forEach(id => {
+      ['1m','3m','6m','12m'].forEach(id => {
         const row = document.querySelector(`tr[data-plan="${id}"]`);
         if (!row) return;
         const p = plans[id] || {};
@@ -346,7 +347,7 @@
     }
     function plansPayload(){
       const out = {};
-      ['3m','6m','12m'].forEach(id => {
+      ['1m','3m','6m','12m'].forEach(id => {
         const row = document.querySelector(`tr[data-plan="${id}"]`);
         if (!row) return;
         out[id] = {
@@ -457,7 +458,7 @@
     async function savePlans(){
       if(!adminPassword()) return msg('plansMsg','Vui lòng nhập mật khẩu quản trị.','warn');
       const btn=$('savePlansBtn'); setBusy(btn,true,'Đang lưu...');
-      try{ await request('save-plans', plansPayload()); msg('plansMsg','Đã lưu cấu hình các gói PRO.','ok'); toast('Đã lưu gói.','ok'); }
+      try{ const data = await request('save-plans', plansPayload()); fill(data.settings || {}); msg('plansMsg', data.message || 'Đã lưu giá các gói PRO.','ok'); toast('Đã lưu giá gói PRO.','ok'); }
       catch(e){ msg('plansMsg', e.message, 'err'); toast(e.message,'err'); }
       finally{ setBusy(btn,false); }
     }

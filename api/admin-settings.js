@@ -1,4 +1,4 @@
-import { getAppSettings, saveAppSettings, maskSettings, requireAdmin, normalizeSettings, diffSettings, VIETNAM_BANKS } from '../lib/appSettings.js';
+import { getAppSettings, saveAppSettings, maskSettings, requireAdmin, normalizeSettings, diffSettings, VIETNAM_BANKS, PLAN_IDS, PRICING_VERSION } from '../lib/appSettings.js';
 
 function cors(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -130,18 +130,39 @@ export default async function handler(req, res) {
       return send(res, 200, { success: true, message: 'Đã lưu cấu hình SMTP.', settings: maskSettings(next), changes });
     }
 
-    // === Mới: lưu riêng các gói (giá + ngày + bật/tắt) ===
+    // Lưu riêng các gói (giá + ngày + bật/tắt). Giá này là nguồn chuẩn phía server.
     if (action === 'save-plans') {
       const current = await getAppSettings();
       const incomingPlans = req.body?.plans || {};
       const mergedPlans = { ...(current.payment.plans || {}) };
-      for (const id of Object.keys(incomingPlans)) {
-        mergedPlans[id] = { ...mergedPlans[id], ...incomingPlans[id], id };
+
+      for (const id of PLAN_IDS) {
+        const incoming = incomingPlans[id];
+        if (!incoming) continue;
+        const name = String(incoming.name || '').trim().replace(/premium/gi, 'PRO').toUpperCase();
+        const days = Number(incoming.days);
+        const amount = Number(incoming.amount);
+        if (!name) throw new Error(`Tên gói ${id} không được để trống.`);
+        if (!Number.isInteger(days) || days < 1) throw new Error(`Số ngày của gói ${id} phải là số nguyên lớn hơn 0.`);
+        if (!Number.isInteger(amount) || amount < 1000) throw new Error(`Giá của gói ${id} phải là số nguyên từ 1.000 VND trở lên.`);
+        mergedPlans[id] = { id, name, days, amount, enabled: incoming.enabled !== false };
       }
-      const next = await saveAppSettings({ payment: { ...(current.payment || {}), plans: mergedPlans } });
+
+      if (!PLAN_IDS.some(id => mergedPlans[id]?.enabled !== false)) {
+        throw new Error('Phải bật bán ít nhất một gói PRO.');
+      }
+
+      const next = await saveAppSettings({
+        payment: {
+          ...(current.payment || {}),
+          pricingVersion: PRICING_VERSION,
+          plansManaged: true,
+          plans: mergedPlans
+        }
+      });
       const changes = diffSettings(current, next);
       await logSettingsChange({ action: 'update_plans', changes, ip, reason: req.body?.reason });
-      return send(res, 200, { success: true, message: 'Đã lưu cấu hình các gói PRO.', settings: maskSettings(next), changes });
+      return send(res, 200, { success: true, message: 'Đã lưu giá và thời hạn các gói PRO.', settings: maskSettings(next), changes });
     }
 
     if (action === 'test-webhook') {
