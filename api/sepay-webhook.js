@@ -132,7 +132,7 @@ export default async function handler(req, res) {
 
     const ref = db.collection('payments').doc(orderCode);
     const snap = await ref.get();
-    const payment = snap.exists ? snap.data() : { orderCode, amount, planId: '3m', planName: 'GÓI 3 THÁNG', days: 90 };
+    const payment = snap.exists ? snap.data() : { orderCode, amount, planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 };
 
     // === FIX #3: CHECK AMOUNT khớp với đơn ===
     const expectedAmount = Number(payment.amount || 0);
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
       amount: amount || payment.amount || 0,
       expectedAmount,
       content, rawBody: body,
-      planId: payment.planId || '3m',
+      planId: payment.planId || '1m',
       planName: payment.planName || 'GÓI 3 THÁNG',
       days: payment.days || 90,
       email: payment.email || payment.userEmail || body.email || '',

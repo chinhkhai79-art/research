@@ -362,9 +362,10 @@ const DEFAULT_PAYMENT = {
 };
 
 const DEFAULT_PLANS = {
-  "3m":  { id:"3m",  name:"GÓI 3 THÁNG", amount:180000, days:90 },
-  "6m":  { id:"6m",  name:"GÓI 6 THÁNG", amount:300000, days:180 },
-  "12m": { id:"12m", name:"GÓI 1 NĂM",   amount:500000, days:365 }
+  "1m":  { id:"1m",  name:"GÓI 1 THÁNG", amount:299000, days:30 },
+  "3m":  { id:"3m",  name:"GÓI 3 THÁNG", amount:699000, days:90 },
+  "6m":  { id:"6m",  name:"GÓI 6 THÁNG", amount:1199000, days:180 },
+  "12m": { id:"12m", name:"GÓI 1 NĂM",   amount:1999000, days:365 }
 };
 
 const BANK_CODE_MAP = {
@@ -379,9 +380,8 @@ const BANK_CODE_MAP = {
 const params = new URLSearchParams(location.search);
 let plans = { ...DEFAULT_PLANS };
 let payment = { ...DEFAULT_PAYMENT };
-let currentPlan = params.get('plan') || '3m';
+let currentPlan = params.get('plan') || '1m';
 if (currentPlan === '1y') currentPlan = '12m';
-if (currentPlan === '1m') currentPlan = '3m';
 
 let currentContent = params.get('content') || params.get('orderCode') || '';
 let currentAmount = Number(params.get('amount') || 0);
@@ -417,7 +417,6 @@ function setMsg(html, ready=false){
 function normalizePlanId(id){
   id = String(id || '').trim().toLowerCase();
   if (id === '1y' || id === 'year' || id === '12month') return '12m';
-  if (id === '1m') return '';
   return id;
 }
 function normalizePayment(raw){
@@ -445,13 +444,13 @@ function normalizePlans(raw){
   const out = {};
   const addPlan = (id,p)=>{
     id = normalizePlanId(id || p?.id);
-    if (!id || id === '1m' || !p || p.enabled === false) return;
+    if (!id || !p || p.enabled === false) return;
     const amount = Number(p.amount || 0);
     const days = Number(p.days || 0);
     if (!amount || !days) return;
     out[id] = {
       id,
-      name:String(p.name || (id === '3m' ? 'GÓI 3 THÁNG' : id === '6m' ? 'GÓI 6 THÁNG' : 'GÓI 1 NĂM')).replace(/premium/gi,'PRO').toUpperCase(),
+      name:String(p.name || (id === '1m' ? 'GÓI 1 THÁNG' : id === '3m' ? 'GÓI 3 THÁNG' : id === '6m' ? 'GÓI 6 THÁNG' : 'GÓI 1 NĂM')).replace(/premium/gi,'PRO').toUpperCase(),
       amount,
       days
     };
@@ -459,7 +458,7 @@ function normalizePlans(raw){
   if (Array.isArray(src)) src.forEach(p=>addPlan(p.id,p));
   else if (typeof src === 'object') Object.entries(src).forEach(([id,p])=>addPlan(id,p));
   const ordered = {};
-  ['3m','6m','12m'].forEach(id=>{ if(out[id]) ordered[id]=out[id]; });
+  ['1m','3m','6m','12m'].forEach(id=>{ if(out[id]) ordered[id]=out[id]; });
   return Object.keys(ordered).length ? ordered : DEFAULT_PLANS;
 }
 async function safeJson(res){
@@ -487,10 +486,10 @@ function renderPlans(){
     div.innerHTML = `<div class="plan-label">GÓI</div><div class="plan-name">${p.name}</div><div class="plan-price">${formatVnd(p.amount)}</div>`;
     box.appendChild(div);
   });
-  if (!plans[currentPlan]) currentPlan = Object.keys(plans)[0] || '3m';
+  if (!plans[currentPlan]) currentPlan = Object.keys(plans)[0] || '1m';
 }
 function renderPayment(apiQr){
-  if (!plans[currentPlan]) currentPlan = Object.keys(plans)[0] || '3m';
+  if (!plans[currentPlan]) currentPlan = Object.keys(plans)[0] || '1m';
   const plan = plans[currentPlan];
   const amount = currentAmount > 0 ? currentAmount : plan.amount;
 
@@ -528,7 +527,7 @@ async function loadConfigFast(){
   }
 }
 async function createPayment(planId){
-  if (!plans[planId]) planId = Object.keys(plans)[0] || '3m';
+  if (!plans[planId]) planId = Object.keys(plans)[0] || '1m';
   const plan = plans[planId];
 
   setMsg('Đang tạo mã thanh toán...', true);
@@ -578,7 +577,7 @@ function copyContent(){ navigator.clipboard.writeText(currentContent || ''); toa
 function copyAccount(){ navigator.clipboard.writeText(payment.accountNo || ''); toast('Đã copy số tài khoản.'); }
 function activatePro(data){
   if (pollTimer) clearTimeout(pollTimer);
-  const plan = plans[currentPlan] || plans['3m'];
+  const plan = plans[currentPlan] || plans['1m'];
   localStorage.setItem('RESEARCH_TOOL_PRO', JSON.stringify({
     isPro:true,
     planId:data.planId || currentPlan,

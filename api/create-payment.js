@@ -13,11 +13,12 @@ export default async function handler(req,res){
     const body = req.body || {};
     const settings = await getAppSettings();
     const plans = getEnabledPlans(settings);
-    const planId = normalizePlanId(body.planId || body.plan || '3m', settings);
+    const planId = normalizePlanId(body.planId || body.plan || '1m', settings);
     const plan = plans[planId];
     const payment = settings.payment;
     const orderCode = safe(body.content || body.orderCode) || makeOrder(payment.paymentPrefix || payment.orderPrefix || 'RESEARCH');
-    const amount = Number(body.amount || plan.amount);
+    // Luôn lấy giá từ cấu hình máy chủ, không tin số tiền gửi từ trình duyệt.
+    const amount = Number(plan.amount);
     const uid = safe(body.uid || body.userId || body.user_id);
     const email = safe(body.email || body.userEmail || '');
     const returnUrl = safe(body.returnUrl || body.return || '/');

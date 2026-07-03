@@ -2,7 +2,8 @@ import { db, FieldValue, Timestamp } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
 
 const PLAN_MAP = {
-  '30': { planId: 'manual_30d', planName: 'KÍCH HOẠT THỦ CÔNG 30 NGÀY', days: 30 },
+  '30': { planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 },
+  '1m': { planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 },
   '90': { planId: '3m', planName: 'GÓI 3 THÁNG', days: 90 },
   '180': { planId: '6m', planName: 'GÓI 6 THÁNG', days: 180 },
   '365': { planId: '12m', planName: 'GÓI 1 NĂM', days: 365 },

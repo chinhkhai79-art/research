@@ -14,6 +14,6 @@ export default async function handler(req,res){
       if(paidSnap.exists) data = { ...(data || {}), ...paidSnap.data(), paid:true, status:'paid' };
     }
     if(!data || !data.paid) return res.status(200).json({ success:true, paid:false, status:'pending', orderCode });
-    return res.status(200).json({ success:true, paid:true, status:data.status || 'paid', orderCode, amount:data.amount || 0, planId:data.planId || '3m', planName:data.planName || 'GÓI 3 THÁNG', expiresAt:iso(data.expiresAt), paidAt:iso(data.paidAt) });
+    return res.status(200).json({ success:true, paid:true, status:data.status || 'paid', orderCode, amount:data.amount || 0, planId:data.planId || '1m', planName:data.planName || 'GÓI 1 THÁNG', expiresAt:iso(data.expiresAt), paidAt:iso(data.paidAt) });
   }catch(e){ console.error('payment-status error:', e); return res.status(200).json({ success:true, paid:false, status:'pending', warning:e.message }); }
 }
