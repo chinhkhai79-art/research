@@ -32,6 +32,11 @@
     .note{background:#eff8ff;border:1px solid #bfdbfe;color:#245078;border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
     .frame-card{background:#ffffff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,.08)}
     iframe{display:block;width:100%;border:0;background:transparent;min-height:1200px}
+    .shared-secret{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);padding:16px;margin:12px 0 16px}
+    .shared-grid{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:12px;align-items:end}
+    .shared-field label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px;font-weight:400}
+    .secret-wrap{display:flex}.secret-wrap input{width:100%;border:1px solid #cbd5e1;border-radius:12px 0 0 12px;background:#fff;padding:12px 14px;font-size:15px;outline:none}.eye{width:48px;border:1px solid #cbd5e1;border-left:0;border-radius:0 12px 12px 0;background:#fff;cursor:pointer}.admin-btn{border:0;border-radius:12px;padding:12px 18px;font-size:14px;cursor:pointer;white-space:nowrap;background:#22d3ee;color:#00111f}.admin-btn.gray{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}.shared-note{margin-top:10px;color:var(--muted);font-size:13px}
+    @media(max-width:750px){.shared-grid{grid-template-columns:1fr}.admin-btn{width:100%}}
     .hidden{display:none!important}
     @media(max-width:750px){.top{flex-direction:column}.wrap{width:100%;padding:16px 8px 28px}h1{font-size:24px}.tab{flex:1;min-width:150px}.frame-card{border-radius:16px}iframe{min-height:1500px}}
   </style>
@@ -46,26 +51,84 @@
       <a class="back" href="https://www.tubekey.vn/">← Về tool</a>
     </div>
 
+    <div class="shared-secret">
+      <div class="shared-grid">
+        <div class="shared-field">
+          <label>Mật khẩu quản trị dùng chung</label>
+          <div class="secret-wrap"><input id="sharedAdminSecret" type="password" value="123456" autocomplete="current-password" /><button id="toggleSharedSecret" class="eye" type="button">👁</button></div>
+        </div>
+        <button id="saveSharedSecret" class="admin-btn" type="button">Lưu mật khẩu</button>
+        <button id="refreshActivePanel" class="admin-btn gray" type="button">Làm mới trang hiện tại</button>
+      </div>
+      <div id="sharedSecretNote" class="shared-note">Mật khẩu này được dùng chung cho Quản lý tài khoản và Thanh toán & SMTP.</div>
+    </div>
+
     <div class="tabs">
       <button id="tabAccounts" class="tab active" type="button" onclick="showAdminPanel('accounts')">Quản lý tài khoản</button>
       <button id="tabSettings" class="tab" type="button" onclick="showAdminPanel('settings')">Thanh toán & SMTP</button>
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" src="/admin-account-panel.html" title="Quản lý tài khoản" onload="resizeFrame(this)"></iframe>
+      <iframe id="accountsFrame" src="/admin-account-panel.html" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" data-src="/admin-settings-panel.html" title="Thanh toán và SMTP" onload="resizeFrame(this)"></iframe>
+      <iframe id="settingsFrame" data-src="/admin-settings-panel.html" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
   </div>
 
   <script>
+    var DEFAULT_ADMIN_SECRET = '123456';
+    function getSharedSecret(){
+      return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_ADMIN_SECRET).trim();
+    }
+    function saveSharedSecret(){
+      var input = document.getElementById('sharedAdminSecret');
+      var value = String((input && input.value) || DEFAULT_ADMIN_SECRET).trim() || DEFAULT_ADMIN_SECRET;
+      if (input) input.value = value;
+      localStorage.setItem('ADMIN_SHARED_SECRET', value);
+      localStorage.setItem('ADMIN_SECRET_RESEARCH', value);
+      localStorage.setItem('ADMIN_SECRET', value);
+      localStorage.setItem('admin_settings_password', value);
+      localStorage.setItem('admin_settings_login_at', Date.now().toString());
+      var note = document.getElementById('sharedSecretNote');
+      if (note) note.textContent = 'Đã lưu mật khẩu quản trị dùng chung cho cả hai trang.';
+      syncSharedSecretToFrames();
+    }
+    function syncSharedSecretToFrame(frame){
+      try {
+        var win = frame.contentWindow;
+        if (!win) return;
+        var value = getSharedSecret();
+        if (typeof win.syncSharedAdminSecret === 'function') win.syncSharedAdminSecret(value);
+        else win.postMessage({ type: 'ADMIN_SHARED_SECRET', value: value }, location.origin);
+      } catch (_) {}
+    }
+    function syncSharedSecretToFrames(){
+      syncSharedSecretToFrame(document.getElementById('accountsFrame'));
+      syncSharedSecretToFrame(document.getElementById('settingsFrame'));
+    }
+    function refreshActivePanel(){
+      saveSharedSecret();
+      var isSettings = !document.getElementById('settingsCard').classList.contains('hidden');
+      var frame = isSettings ? document.getElementById('settingsFrame') : document.getElementById('accountsFrame');
+      try {
+        var win = frame.contentWindow;
+        if (isSettings && typeof win.loadConfig === 'function') win.loadConfig();
+        else if (!isSettings && typeof win.loadUsers === 'function') win.loadUsers(win.currentUsersPage || 1, true);
+      } catch (_) {}
+      setTimeout(function(){ resizeFrame(frame); }, 600);
+    }
     function resizeFrame(frame){
       try {
         var doc = frame.contentDocument || frame.contentWindow.document;
-        var h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight, 900);
-        frame.style.height = (h + 40) + 'px';
+        var h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight, 760);
+        frame.style.height = (h + 20) + 'px';
       } catch (_) {}
+    }
+    function handleFrameLoad(frame, name){
+      saveSharedSecret();
+      syncSharedSecretToFrame(frame);
+      setTimeout(function(){ resizeFrame(frame); }, name === 'settings' ? 900 : 450);
     }
     function showAdminPanel(name){
       var isSettings = name === 'settings';
@@ -81,6 +144,16 @@
       }, 600);
     }
     window.addEventListener('load', function(){
+      var input = document.getElementById('sharedAdminSecret');
+      if (input) input.value = getSharedSecret();
+      saveSharedSecret();
+      document.getElementById('saveSharedSecret').addEventListener('click', saveSharedSecret);
+      document.getElementById('refreshActivePanel').addEventListener('click', refreshActivePanel);
+      document.getElementById('toggleSharedSecret').addEventListener('click', function(){
+        var i = document.getElementById('sharedAdminSecret');
+        i.type = i.type === 'password' ? 'text' : 'password';
+      });
+      document.getElementById('sharedAdminSecret').addEventListener('input', saveSharedSecret);
       if (location.hash === '#settings') showAdminPanel('settings');
       setInterval(function(){
         var active = document.getElementById('settingsCard').classList.contains('hidden') ? document.getElementById('accountsFrame') : document.getElementById('settingsFrame');

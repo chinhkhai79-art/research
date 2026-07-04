@@ -96,6 +96,7 @@
 
     /* Toàn bộ trang quản trị dùng nét chữ thường, không in đậm. */
     body, body *{font-weight:400 !important}
+    section.login{display:none!important}
   </style>
 </head>
 <body>
@@ -249,6 +250,7 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const apiUrl = '/api/admin-settings';
+    const DEFAULT_ADMIN_SECRET = '123456';
     const CANONICAL_BASE_URL = 'https://www.tubekey.vn';
     const LEGACY_RESEARCH_HOST = ['research','vanthemmo','com'].join('.');
     const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút
@@ -274,7 +276,32 @@
       el.textContent = text;
       if(text) setTimeout(()=>{ el.className='msg'; el.textContent=''; }, 4000);
     }
-    function adminPassword(){ return $('adminPassword').value.trim(); }
+    function getSharedAdminSecret(){
+      return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_ADMIN_SECRET).trim();
+    }
+    function persistSharedAdminSecret(value){
+      const v = String(value || DEFAULT_ADMIN_SECRET).trim() || DEFAULT_ADMIN_SECRET;
+      localStorage.setItem('ADMIN_SHARED_SECRET', v);
+      localStorage.setItem('ADMIN_SECRET_RESEARCH', v);
+      localStorage.setItem('ADMIN_SECRET', v);
+      localStorage.setItem('admin_settings_password', v);
+      localStorage.setItem('admin_settings_login_at', Date.now().toString());
+      return v;
+    }
+    function syncSharedAdminSecret(value){
+      const v = persistSharedAdminSecret(value || getSharedAdminSecret());
+      setVal('adminPassword', v);
+      return v;
+    }
+    window.syncSharedAdminSecret = syncSharedAdminSecret;
+    window.addEventListener('message', function(event){
+      if (event.origin !== location.origin) return;
+      if (event.data && event.data.type === 'ADMIN_SHARED_SECRET') syncSharedAdminSecret(event.data.value);
+    });
+    function adminPassword(){
+      const current = $('adminPassword') ? $('adminPassword').value.trim() : '';
+      return syncSharedAdminSecret(current || getSharedAdminSecret());
+    }
     function authHeaders(){ return { 'Content-Type':'application/json', 'x-admin-password': adminPassword() }; }
     function setBusy(btn, busy, text){ if(!btn)return; if(busy){ btn.dataset.old=btn.textContent; btn.textContent=text||'Đang xử lý...'; btn.disabled=true; } else { btn.textContent=btn.dataset.old||btn.textContent; btn.disabled=false; } }
     function val(id, fallback=''){ const el=$(id); return el ? (el.value || fallback).trim() : fallback; }
@@ -603,9 +630,10 @@
         localStorage.removeItem('admin_settings_password');
         localStorage.removeItem('admin_settings_login_at');
       }
-      const saved = localStorage.getItem('admin_settings_password');
-      if(saved) setVal('adminPassword', saved);
+      const saved = getSharedAdminSecret();
+      syncSharedAdminSecret(saved);
       fill({ payment:{ baseUrl: currentOrigin() }, smtp:{ emailBaseUrl: currentOrigin() }});
+      setTimeout(function(){ loadConfig(); }, 80);
     });
   </script>
 </body>
