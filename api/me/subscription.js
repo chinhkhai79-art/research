@@ -5,6 +5,7 @@ import {
   findUsersByEmail as sbFindUsersByEmail,
   upsertUser as sbUpsertUser
 } from "../../lib/supabaseAdmin.js";
+import { getAppSettings } from "../../lib/appSettings.js";
 
 const MEMORY_CACHE_TTL_MS = 10 * 60 * 1000;
 const MEMORY_STALE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -19,6 +20,19 @@ function toDate(value) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 function addHours(date, hours) { return new Date(date.getTime() + Number(hours) * 60 * 60 * 1000); }
+function trialPlanFromSettings(settings) {
+  const account = settings?.account || {};
+  const value = Math.max(1, Math.round(Number(account.trialDurationValue || 1)));
+  const unit = account.trialDurationUnit === 'days' ? 'days' : 'hours';
+  const hours = unit === 'days' ? value * 24 : value;
+  return {
+    value,
+    unit,
+    hours,
+    planId: `trial_${value}${unit === 'days' ? 'd' : 'h'}`,
+    planName: `Dùng thử ${value} ${unit === 'days' ? 'ngày' : 'giờ'}`
+  };
+}
 function getRemainingText(expiresAt) {
   if (!expiresAt) return "---";
   const diff = expiresAt.getTime() - Date.now();
@@ -157,7 +171,9 @@ async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initT
       return response;
     }
     const now = new Date();
-    const trialExpiresAt = addHours(now, 1);
+    const settings = await getAppSettings().catch(() => null);
+    const trialPlan = trialPlanFromSettings(settings);
+    const trialExpiresAt = addHours(now, trialPlan.hours);
     const trialData = {
       userId,
       email,
@@ -166,8 +182,8 @@ async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initT
       account_type: "trial",
       premium: false,
       active: true,
-      planId: "trial_1h",
-      planName: "Dùng thử 1 giờ",
+      planId: trialPlan.planId,
+      planName: trialPlan.planName,
       trialStartedAt: now.toISOString(),
       trialExpiresAt: trialExpiresAt.toISOString(),
       created_at: now.toISOString(),

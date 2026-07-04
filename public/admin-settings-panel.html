@@ -91,6 +91,8 @@
     .modal .diff .old{color:var(--red);text-decoration:line-through}
     .modal .diff .new{color:var(--green);font-weight:900}
     .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+    body.modal-open{overflow:hidden}
+    .page{padding-bottom:18px}
 
     /* Toàn bộ trang quản trị dùng nét chữ thường, không in đậm. */
     body, body *{font-weight:400 !important}
@@ -501,8 +503,9 @@
       const diffEl = $('confirmDiff');
       diffEl.innerHTML = changes.map(c => `<div><b>${c.label}:</b> <span class="old">${c.old || '(rỗng)'}</span> → <span class="new">${c.new || '(rỗng)'}</span></div>`).join('');
       $('confirmModal').classList.add('show');
+      document.body.classList.add('modal-open');
       const ok = $('confirmOkBtn'), cancel = $('confirmCancelBtn');
-      const close = () => { $('confirmModal').classList.remove('show'); ok.onclick = null; cancel.onclick = null; };
+      const close = () => { $('confirmModal').classList.remove('show'); document.body.classList.remove('modal-open'); ok.onclick = null; cancel.onclick = null; };
       ok.onclick = () => { close(); onConfirm(); };
       cancel.onclick = close;
     }

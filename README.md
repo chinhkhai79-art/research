@@ -1,20 +1,6 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# tubekeyvn v25
 
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/396ac7ee-3c0f-4973-919d-65e5f70d1255
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- Admin kích hoạt PRO: thêm cấu hình thời gian dùng thử cho tài khoản mới đăng ký, chọn theo giờ/ngày, mặc định 1 giờ.
+- API subscription tạo trial mới theo cấu hình Supabase/Postgres trong app_settings.
+- Trang cấu hình thanh toán/SMTP khóa cuộn nền khi mở popup xác nhận đổi tài khoản nhận tiền, giảm khoảng trống/cuộn thừa.
+- Tiếp tục giữ Firebase chỉ cho Google Auth; dữ liệu app dùng Supabase/Postgres.

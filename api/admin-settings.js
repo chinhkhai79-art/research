@@ -128,6 +128,15 @@ export default async function handler(req, res) {
       return send(res, 200, { success: true, message: 'Đã lưu cấu hình SMTP.', settings: maskSettings(next), changes });
     }
 
+    if (action === 'save-trial') {
+      const current = await getAppSettings();
+      const incoming = req.body?.account || req.body?.trial || req.body || {};
+      const next = await saveAppSettings({ account: { ...(current.account || {}), ...incoming } });
+      const changes = diffSettings(current, next);
+      await logSettingsChange({ action: 'update_trial_settings', changes, ip, reason: req.body?.reason || 'Đổi thời gian dùng thử tài khoản mới' });
+      return send(res, 200, { success: true, message: 'Đã lưu thời gian dùng thử cho tài khoản mới.', settings: maskSettings(next), changes });
+    }
+
     // Lưu riêng các gói (giá + ngày + bật/tắt). Giá này là nguồn chuẩn phía server.
     if (action === 'save-plans') {
       const current = await getAppSettings();

@@ -149,38 +149,69 @@
     </div>
 
     <div id="actionPanel" class="hidden">
-      <div class="card">
-        <h2 style="margin:0 0 14px;font-size:22px;">Kích hoạt thủ công / Cộng ngày</h2>
-        <div class="row">
-          <div class="field"><label>Email khách</label><input id="activateEmail" placeholder="email@gmail.com" /></div>
-          <div class="field"><label>UID đăng nhập nếu có</label><input id="activateUid" placeholder="UID tài khoản đăng nhập" /></div>
-        </div>
-
-        <div class="quick">
-          <button onclick="setDays(30,'manual_30d','KÍCH HOẠT THỦ CÔNG 30 NGÀY')">+30 ngày</button>
-          <button onclick="setDays(90,'3m','GÓI 3 THÁNG')">+90 ngày</button>
-          <button onclick="setDays(180,'6m','GÓI 6 THÁNG')">+180 ngày</button>
-          <button onclick="setDays(365,'12m','GÓI 1 NĂM')">+365 ngày</button>
-        </div>
-
-        <div class="row" style="margin-top:12px;">
-          <div class="field">
-            <label>Gói</label>
-            <select id="planId" onchange="syncDaysFromPlan()">
-              <option value="manual_30d">KÍCH HOẠT THỦ CÔNG 30 NGÀY</option>
-              <option value="3m">GÓI 3 THÁNG - 90 NGÀY</option>
-              <option value="6m">GÓI 6 THÁNG - 180 NGÀY</option>
-              <option value="12m">GÓI 1 NĂM - 365 NGÀY</option>
-              <option value="custom">TÙY NHẬP SỐ NGÀY</option>
-            </select>
+      <div class="grid2">
+        <div class="card">
+          <h2 style="margin:0 0 14px;font-size:22px;">Kích hoạt thủ công / Cộng ngày</h2>
+          <div class="row">
+            <div class="field"><label>Email khách</label><input id="activateEmail" placeholder="email@gmail.com" /></div>
+            <div class="field"><label>UID đăng nhập nếu có</label><input id="activateUid" placeholder="UID tài khoản đăng nhập" /></div>
           </div>
-          <div class="field"><label>Số ngày cộng thêm</label><input id="days" type="number" value="30" min="1" /></div>
+
+          <div class="quick">
+            <button onclick="setDays(30,'manual_30d','KÍCH HOẠT THỦ CÔNG 30 NGÀY')">+30 ngày</button>
+            <button onclick="setDays(90,'3m','GÓI 3 THÁNG')">+90 ngày</button>
+            <button onclick="setDays(180,'6m','GÓI 6 THÁNG')">+180 ngày</button>
+            <button onclick="setDays(365,'12m','GÓI 1 NĂM')">+365 ngày</button>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <div class="field">
+              <label>Gói</label>
+              <select id="planId" onchange="syncDaysFromPlan()">
+                <option value="manual_30d">KÍCH HOẠT THỦ CÔNG 30 NGÀY</option>
+                <option value="3m">GÓI 3 THÁNG - 90 NGÀY</option>
+                <option value="6m">GÓI 6 THÁNG - 180 NGÀY</option>
+                <option value="12m">GÓI 1 NĂM - 365 NGÀY</option>
+                <option value="custom">TÙY NHẬP SỐ NGÀY</option>
+              </select>
+            </div>
+            <div class="field"><label>Số ngày cộng thêm</label><input id="days" type="number" value="30" min="1" /></div>
+          </div>
+          <div class="field" style="margin-top:12px;"><label>Ghi chú</label><textarea id="reason" placeholder="VD: Khách chuyển khoản sai nội dung, kích hoạt thủ công."></textarea></div>
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn-green" onclick="activateUser()">Kích hoạt / cộng ngày</button>
+            <button class="btn-red" onclick="disableUser()">Khóa / hủy PRO</button>
+            <button class="btn-dark" onclick="clearForm()">Xóa ô nhập</button>
+          </div>
         </div>
-        <div class="field" style="margin-top:12px;"><label>Ghi chú</label><textarea id="reason" placeholder="VD: Khách chuyển khoản sai nội dung, kích hoạt thủ công."></textarea></div>
-        <div class="actions" style="margin-top:12px;">
-          <button class="btn-green" onclick="activateUser()">Kích hoạt / cộng ngày</button>
-          <button class="btn-red" onclick="disableUser()">Khóa / hủy PRO</button>
-          <button class="btn-dark" onclick="clearForm()">Xóa ô nhập</button>
+
+        <div class="card">
+          <h2 style="margin:0 0 14px;font-size:22px;">Cài đặt dùng thử tài khoản mới</h2>
+          <div class="muted" style="margin-bottom:12px;line-height:1.5;">Áp dụng cho email/UID đăng nhập lần đầu. Không thay đổi thời hạn của tài khoản đã được tạo trước đó.</div>
+          <div class="row">
+            <div class="field">
+              <label>Thời lượng dùng thử</label>
+              <input id="trialDurationValue" type="number" min="1" max="3650" value="1" />
+            </div>
+            <div class="field">
+              <label>Đơn vị</label>
+              <select id="trialDurationUnit">
+                <option value="hours">Giờ</option>
+                <option value="days">Ngày</option>
+              </select>
+            </div>
+          </div>
+          <div class="quick" style="grid-template-columns:repeat(4,1fr);">
+            <button onclick="setTrialQuick(1,'hours')">1 giờ</button>
+            <button onclick="setTrialQuick(6,'hours')">6 giờ</button>
+            <button onclick="setTrialQuick(1,'days')">1 ngày</button>
+            <button onclick="setTrialQuick(3,'days')">3 ngày</button>
+          </div>
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn" onclick="saveTrialSettings()">Lưu thời gian dùng thử</button>
+            <button class="btn-dark" onclick="loadTrialSettings(true)">Tải lại</button>
+          </div>
+          <div id="trialSettingsMsg" class="status" style="margin-top:12px;">Mặc định hiện tại: 1 giờ dùng thử.</div>
         </div>
       </div>
     </div>
@@ -344,6 +375,55 @@ function showTab(name){
   qs('tabAction').classList.toggle('active', name === 'action');
   qs('tabLogs').classList.toggle('active', name === 'logs');
   qs('tabRevenue').classList.toggle('active', name === 'revenue');
+  if (name === 'action') loadTrialSettings(false);
+}
+let trialSettingsLoaded = false;
+function setTrialStatus(msg, type=''){
+  const el = qs('trialSettingsMsg');
+  if(!el) return;
+  el.className = 'status ' + type;
+  el.innerHTML = msg;
+}
+function setTrialQuick(value, unit){
+  qs('trialDurationValue').value = value;
+  qs('trialDurationUnit').value = unit;
+}
+function trialLabel(value, unit){
+  return `${value} ${unit === 'days' ? 'ngày' : 'giờ'}`;
+}
+async function loadTrialSettings(force=false){
+  if(!qs('trialDurationValue') || !secret()) return;
+  if(trialSettingsLoaded && !force) return;
+  try{
+    setTrialStatus('Đang tải cấu hình dùng thử...', '');
+    const data = await api('/api/admin-settings?action=get');
+    const account = (data.settings && data.settings.account) || {};
+    const value = Math.max(1, Math.round(Number(account.trialDurationValue || 1)));
+    const unit = account.trialDurationUnit === 'days' ? 'days' : 'hours';
+    qs('trialDurationValue').value = value;
+    qs('trialDurationUnit').value = unit;
+    trialSettingsLoaded = true;
+    setTrialStatus(`Đang áp dụng: tài khoản mới được dùng thử <b>${trialLabel(value, unit)}</b>.`, 'ok');
+  }catch(e){
+    setTrialStatus('Lỗi tải cấu hình dùng thử: ' + esc(e.message), 'err');
+  }
+}
+async function saveTrialSettings(){
+  try{
+    if(!secret()) return setTrialStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    const value = Math.max(1, Math.round(Number(qs('trialDurationValue').value || 1)));
+    const unit = qs('trialDurationUnit').value === 'days' ? 'days' : 'hours';
+    setTrialStatus('Đang lưu thời gian dùng thử...', '');
+    const data = await api('/api/admin-settings?action=save-trial', {
+      method:'POST',
+      body: JSON.stringify({ account: { trialDurationValue: value, trialDurationUnit: unit } })
+    });
+    trialSettingsLoaded = true;
+    setTrialStatus((data.message || 'Đã lưu.') + ` Tài khoản mới sẽ dùng thử <b>${trialLabel(value, unit)}</b>.`, 'ok');
+    setStatus(`Đã lưu thời gian dùng thử tài khoản mới: ${trialLabel(value, unit)}.`, 'ok');
+  }catch(e){
+    setTrialStatus('Lỗi lưu cấu hình dùng thử: ' + esc(e.message), 'err');
+  }
 }
 function syncDaysFromPlan(){ const p=PLAN_MAP[qs('planId').value] || PLAN_MAP.custom; qs('days').value = p.days; }
 function setDays(days, planId, planName){ qs('planId').value=planId; qs('days').value=days; setStatus(`Đã chọn ${esc(planName)}.`, 'ok'); }

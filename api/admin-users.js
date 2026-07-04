@@ -51,7 +51,7 @@ function normalizeSupabaseUser(item) {
     active: Boolean(premiumActive || trialActive),
     premium: Boolean(premiumActive),
     planId: d.planId || '',
-    planName: premiumActive ? (d.planName || 'GÓI PRO') : trialActive ? 'Dùng thử 1 giờ' : (d.planName || ''),
+    planName: premiumActive ? (d.planName || 'GÓI PRO') : trialActive ? (d.planName || 'Dùng thử') : (d.planName || ''),
     premiumStartedAt: toIso(d.premiumStartedAt || d.started_at),
     trialStartedAt: toIso(d.trialStartedAt),
     expiresAt,
