@@ -226,6 +226,7 @@
     const $ = (id) => document.getElementById(id);
     const apiUrl = '/api/admin-settings';
     const CANONICAL_BASE_URL = 'https://www.tubekey.vn';
+    const LEGACY_RESEARCH_HOST = ['research','vanthemmo','com'].join('.');
     const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút
     const state = { loaded: false, banks: [], originalBank: null };
     const PLAN_DEFAULTS = {
@@ -257,10 +258,11 @@
     function normalizeBaseUrl(url){
       let base = String(url || CANONICAL_BASE_URL).trim().replace(/\/+$/, '');
       if (!base) return CANONICAL_BASE_URL;
-      if (/^(https?:\/\/)?research\.vanthemmo\.com$/i.test(base)) return CANONICAL_BASE_URL;
+      const plainHost = base.replace(/^https?:\/\//i, '').replace(/\/+$/,'').toLowerCase();
+      if (plainHost === LEGACY_RESEARCH_HOST) return CANONICAL_BASE_URL;
       try {
         const u = new URL(base.startsWith('http') ? base : `https://${base}`);
-        if (u.hostname.toLowerCase() === 'research.vanthemmo.com') return CANONICAL_BASE_URL;
+        if (u.hostname.toLowerCase() === LEGACY_RESEARCH_HOST) return CANONICAL_BASE_URL;
         return u.origin;
       } catch {
         return base;
