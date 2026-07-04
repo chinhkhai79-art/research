@@ -118,14 +118,14 @@
         </div>
         <div class="field">
           <label>Tìm email / UID / tên</label>
-          <input id="searchText" placeholder="VD: user@gmail.com hoặc UID Firebase" onkeydown="if(event.key==='Enter') loadUsers()" />
+          <input id="searchText" placeholder="VD: user@gmail.com hoặc UID đăng nhập" onkeydown="if(event.key==='Enter') loadUsers(1, true)" />
         </div>
         <div class="actions">
           <button class="btn" onclick="saveSecretOnly()">Lưu mật khẩu</button>
-          <button class="btn-dark" onclick="loadUsers()">Tải 20 tài khoản</button>
+          <button class="btn-dark" onclick="loadUsers(currentUsersPage, true)">Làm mới danh sách</button>
         </div>
       </div>
-      <div id="status" class="status">Nhập mật khẩu quản trị rồi bấm “Lưu mật khẩu”. Chỉ bấm tải danh sách khi cần để giảm lượt đọc Supabase.</div>
+      <div id="status" class="status">Nhập mật khẩu quản trị rồi bấm “Lưu mật khẩu”. Danh sách Supabase sẽ hiển thị 50 tài khoản mỗi trang.</div>
     </div>
 
     <div class="tabs">
@@ -140,7 +140,7 @@
         <h2 style="margin:0 0 14px;font-size:22px;">Kích hoạt thủ công / Cộng ngày</h2>
         <div class="row">
           <div class="field"><label>Email khách</label><input id="activateEmail" placeholder="email@gmail.com" /></div>
-          <div class="field"><label>UID Google nếu có</label><input id="activateUid" placeholder="UID Firebase Auth" /></div>
+          <div class="field"><label>UID đăng nhập nếu có</label><input id="activateUid" placeholder="UID tài khoản đăng nhập" /></div>
         </div>
 
         <div class="quick">
@@ -228,6 +228,11 @@
         <h2 style="margin:0;font-size:22px;">Danh sách tài khoản</h2>
         <div class="muted" id="countText">0 tài khoản</div>
       </div>
+      <div class="actions" id="usersPager" style="justify-content:flex-end;margin-top:10px;gap:8px;">
+        <button class="btn-dark small" id="prevUsersPage" onclick="changeUsersPage(-1)">← Trang trước</button>
+        <span class="muted" id="usersPageText">Trang 1 · 50 tài khoản/trang</span>
+        <button class="btn-dark small" id="nextUsersPage" onclick="changeUsersPage(1)">Trang sau →</button>
+      </div>
       <div class="scroll">
         <table>
           <thead>
@@ -310,6 +315,10 @@
   </div>
 
 <script>
+const USERS_PAGE_SIZE = 50;
+let currentUsersPage = 1;
+let currentUsersHasNext = false;
+
 const PLAN_MAP = {
   'manual_30d': { name: 'KÍCH HOẠT THỦ CÔNG 30 NGÀY', days: 30 },
   '3m': { name: 'GÓI 3 THÁNG', days: 90 },
@@ -357,26 +366,51 @@ async function api(path, opts={}){
   return data;
 }
 
-function saveSecretOnly(){ localStorage.setItem('ADMIN_SECRET_RESEARCH', secret()); setStatus('Đã lưu mật khẩu quản trị trên trình duyệt. Bấm “Tải 20 tài khoản” hoặc nhập email/UID rồi Enter khi cần.', 'ok'); }
+function saveSecretOnly(){
+  localStorage.setItem('ADMIN_SECRET_RESEARCH', secret());
+  setStatus('Đã lưu mật khẩu quản trị trên trình duyệt. Danh sách Supabase sẽ tự tải 50 tài khoản mỗi trang.', 'ok');
+  loadUsers(1, true);
+}
 
-async function loadUsers(){
+function updateUsersPager(data){
+  currentUsersPage = Number(data.page || currentUsersPage || 1);
+  currentUsersHasNext = Boolean(data.hasNext);
+  const prevBtn = qs('prevUsersPage');
+  const nextBtn = qs('nextUsersPage');
+  const pageText = qs('usersPageText');
+  if(prevBtn) prevBtn.disabled = currentUsersPage <= 1;
+  if(nextBtn) nextBtn.disabled = !currentUsersHasNext;
+  if(pageText) pageText.textContent = `Trang ${currentUsersPage} · 50 tài khoản/trang`;
+}
+function changeUsersPage(delta){
+  const next = Math.max(1, currentUsersPage + Number(delta || 0));
+  if(next === currentUsersPage) return;
+  loadUsers(next, false);
+}
+
+async function loadUsers(page = 1, force = false){
   try{
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
     const q = qs('searchText').value.trim();
-    setStatus('Đang tải danh sách...', '');
-    const data = await api('/api/admin-users?limit=20' + (q ? '&q='+encodeURIComponent(q) : ''));
-    renderUsers(data.users || []);
+    currentUsersPage = Math.max(1, Number(page || 1));
+    setStatus('Đang tải danh sách Supabase...', '');
+    const url = '/api/admin-users?limit=' + USERS_PAGE_SIZE + '&page=' + currentUsersPage + (force ? '&force=1' : '') + (q ? '&q='+encodeURIComponent(q) : '');
+    const data = await api(url);
+    renderUsers(data.users || [], data);
+    updateUsersPager(data);
     if(data.warning){
       setStatus(esc(data.warning), 'err');
     } else {
-      setStatus(data.fromMemoryCache ? 'Đã tải từ cache admin, không đọc thêm Supabase.' : 'Đã tải danh sách tài khoản. Hệ thống chỉ đọc tối đa 20 tài khoản/lượt để giảm tải Supabase.', 'ok');
+      const suffix = data.hasNext ? 'Có thể bấm Trang sau để xem tiếp.' : 'Đây là trang cuối.';
+      setStatus(data.fromMemoryCache ? `Đã tải trang ${currentUsersPage} từ cache admin.` : `Đã tải trang ${currentUsersPage} từ Supabase/Postgres. ${suffix}`, 'ok');
     }
     showTab('users');
   }catch(e){ setStatus('Lỗi tải danh sách: '+esc(e.message), 'err'); }
 }
 
-function renderUsers(users){
-  qs('countText').textContent = `${users.length} tài khoản`;
+function renderUsers(users, meta={}){
+  const page = Number(meta.page || currentUsersPage || 1);
+  qs('countText').textContent = `${users.length} tài khoản · trang ${page}`;
   qs('usersBody').innerHTML = users.map(u=>{
     const badge = u.status === 'PRO'
       ? '<span class="badge pro">PRO</span>'
@@ -428,7 +462,8 @@ async function activateUser(){
     if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
     setStatus('Đang kích hoạt/cộng ngày...', '');
     const data = await api('/api/admin-activate-user', { method:'POST', body: JSON.stringify(body) });
-    setStatus(`Đã kích hoạt/cộng ngày PRO. Hết hạn mới: <b>${esc(fmtDate(data.expiresAt))}</b>. Bấm “Tải 20 tài khoản” nếu cần làm mới bảng.`, 'ok');
+    await loadUsers(currentUsersPage, true);
+    setStatus(`Đã kích hoạt/cộng ngày PRO cho <b>${esc(data.email || body.email || body.uid)}</b>. Hết hạn mới: <b>${esc(fmtDate(data.expiresAt))}</b>.`, 'ok');
   }catch(e){ setStatus('Lỗi kích hoạt: '+esc(e.message), 'err'); }
 }
 
@@ -440,7 +475,8 @@ async function disableUser(){
     if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
     setStatus('Đang khóa/hủy PRO...', '');
     const data = await api('/api/admin-disable-user', { method:'POST', body: JSON.stringify(body) });
-    setStatus(`Đã khóa/hủy PRO. Số tài khoản ảnh hưởng: <b>${esc(data.affectedCount || 0)}</b>. Bấm “Tải 20 tài khoản” nếu cần làm mới bảng.`, 'ok');
+    await loadUsers(currentUsersPage, true);
+    setStatus(`Đã khóa/hủy PRO. Số tài khoản ảnh hưởng: <b>${esc(data.affectedCount || 0)}</b>.`, 'ok');
   }catch(e){ setStatus('Lỗi khóa tài khoản: '+esc(e.message), 'err'); }
 }
 
@@ -693,7 +729,10 @@ async function bulkExtendApply(){
 
 qs('adminSecret').value = localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || '';
 syncDaysFromPlan();
-if(qs('adminSecret').value) setStatus('Đã có mật khẩu quản trị đã lưu. Bấm “Tải 20 tài khoản” hoặc tìm email/UID khi cần để giảm lượt đọc Supabase.', 'ok');
+if(qs('adminSecret').value) {
+  setStatus('Đã có mật khẩu quản trị đã lưu. Đang tải danh sách Supabase/Postgres 50 tài khoản mỗi trang...', 'ok');
+  loadUsers(1, false);
+}
 </script>
 </body>
 </html>

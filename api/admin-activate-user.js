@@ -3,12 +3,15 @@ import {
   isSupabaseConfigured,
   getUserByUid as sbGetUserByUid,
   findUsersByEmail as sbFindUsersByEmail,
+  pickBestUserByEmail as sbPickBestUserByEmail,
+  isRealUserItem as sbIsRealUserItem,
   upsertUser as sbUpsertUser,
   addAdminLog as sbAddAdminLog,
   listUsersForBulk as sbListUsersForBulk
 } from '../lib/supabaseAdmin.js';
 
 const PLAN_MAP = {
+  'manual_30d': { planId: 'manual_30d', planName: 'KÍCH HOẠT THỦ CÔNG 30 NGÀY', days: 30 },
   '30': { planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 },
   '1m': { planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 },
   '90': { planId: '3m', planName: 'GÓI 3 THÁNG', days: 90 },
@@ -29,9 +32,16 @@ function toDate(value) { if (!value) return null; if (value instanceof Date) ret
 function addDays(date, days) { return new Date(date.getTime() + Number(days) * 86400000); }
 function compactEmail(email) { return String(email || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 120); }
 async function findSupabaseUser({ uid, email }) {
-  if (uid) { const item = await sbGetUserByUid(uid); return { uid, data: item?.data || {}, exists: Boolean(item) }; }
-  if (email) { const found = await sbFindUsersByEmail(email, 5); if (found.length) return { uid: found[0].row.uid, data: found[0].data || {}, exists: true }; }
-  return { uid: `manual_${compactEmail(email) || Date.now()}`, data: {}, exists: false, manual: true };
+  if (uid) {
+    const item = await sbGetUserByUid(uid);
+    return { uid, data: item?.data || {}, exists: Boolean(item), emailMatches: [] };
+  }
+  if (email) {
+    const found = await sbFindUsersByEmail(email, 50);
+    const best = sbPickBestUserByEmail(found);
+    if (best) return { uid: best.row.uid, data: best.data || {}, exists: true, emailMatches: found };
+  }
+  return { uid: `manual_${compactEmail(email) || Date.now()}`, data: {}, exists: false, manual: true, emailMatches: [] };
 }
 async function activateSupabaseUser({ uidInput, email, body, days, planId, planName, reason }) {
   const found = await findSupabaseUser({ uid: uidInput, email });
@@ -51,13 +61,31 @@ async function activateSupabaseUser({ uidInput, email, body, days, planId, planN
     planId, planName,
     premiumStartedAt: current.premiumStartedAt || now.toISOString(),
     premiumExpiresAt: expiresAt.toISOString(), expired_at: expiresAt.toISOString(), expiresAt: expiresAt.toISOString(),
-    manualActivation: Boolean(found.manual || current.manualActivation),
+    manualActivation: Boolean(found.manual && !found.exists),
     lastAdminAction: 'activate_or_extend', lastAdminReason: reason, lastAdminDays: days,
     updated_at: now.toISOString(), created_at: current.created_at || now.toISOString()
   };
   await sbUpsertUser(uid, data);
+
+  // Nếu trước đó đã có bản ghi manual cùng email, đánh dấu đã gộp để app/admin không dùng nhầm bản ghi cũ.
+  const matches = Array.isArray(found.emailMatches) ? found.emailMatches : [];
+  await Promise.all(matches
+    .filter(item => item?.row?.uid && item.row.uid !== uid && !sbIsRealUserItem(item))
+    .map(item => sbUpsertUser(item.row.uid, {
+      ...(item.data || {}),
+      migratedTo: uid,
+      migratedAt: now.toISOString(),
+      active: false,
+      premium: false,
+      isPro: false,
+      pro: false,
+      account_type: 'expired',
+      updated_at: now.toISOString()
+    }).catch(() => null))
+  );
+
   await sbAddAdminLog({ action: 'activate_or_extend', targetUid: uid, targetEmail: data.email, planId, planName, days, oldExpiresAt: oldExpiresAt ? oldExpiresAt.toISOString() : null, newExpiresAt: expiresAt.toISOString(), cumulative: Boolean(oldExpiresAt && oldExpiresAt.getTime() > now.getTime()), reason });
-  return { uid, email: data.email, expiresAt };
+  return { uid, email: data.email, expiresAt, matchedExisting: found.exists, manual: Boolean(found.manual && !found.exists) };
 }
 async function bulkExtendUsers({ days, scope = 'pro_active', dryRun = false, reason = '', adminEmail = '' }) {
   const now = new Date();

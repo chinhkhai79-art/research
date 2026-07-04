@@ -6,7 +6,8 @@ import {
   upsertUser as sbUpsertUser,
   addSepayLog as sbAddSepayLog,
   getUserByUid as sbGetUserByUid,
-  findUsersByEmail as sbFindUsersByEmail
+  findUsersByEmail as sbFindUsersByEmail,
+  pickBestUserByEmail as sbPickBestUserByEmail
 } from '../lib/supabaseAdmin.js';
 
 function cors(req, res) {
@@ -36,18 +37,21 @@ async function activateSubscription({ payment, orderCode, body }) {
   const planName = payment.planName || 'GÓI PRO';
   const planId = payment.planId || 'pro';
   let current = null;
+  let targetUid = uid;
   if (uid) current = (await sbGetUserByUid(uid))?.data || null;
   if (!current && email) {
-    const byEmail = await sbFindUsersByEmail(email, 1);
-    current = byEmail[0]?.data || null;
+    const byEmail = await sbFindUsersByEmail(email, 50);
+    const best = sbPickBestUserByEmail(byEmail);
+    current = best?.data || null;
+    targetUid = best?.row?.uid || targetUid;
   }
   const currentExpires = toDate(current?.premiumExpiresAt || current?.expired_at || current?.expiresAt || current?.subscriptionInfo?.expiresAt);
   const base = currentExpires && currentExpires > now ? currentExpires : now;
   const expiresAt = addDays(base, days || 30);
   const data = {
     ...(current || {}),
-    uid: uid || current?.uid || current?.userId || `manual_${email || orderCode}`,
-    userId: uid || current?.userId || current?.uid || `manual_${email || orderCode}`,
+    uid: targetUid || current?.uid || current?.userId || `manual_${email || orderCode}`,
+    userId: targetUid || current?.userId || current?.uid || `manual_${email || orderCode}`,
     email: email || current?.email || '',
     active: true,
     premium: true,

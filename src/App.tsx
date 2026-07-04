@@ -6629,6 +6629,7 @@ Quy tắc:
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowAccountModal(true);
+                    refreshSubscription(user, true, true);
                   }}
                   className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
                   title="Tài khoản & hạn sử dụng"
@@ -6847,15 +6848,25 @@ Quy tắc:
             <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
               Tài khoản Google mới được dùng thử 1 giờ. Vui lòng nâng cấp gói để tiếp tục sử dụng công cụ.
             </p>
-            <a
-              href={buildPaymentUrl(user)}
-              target="_blank"
-              rel="noreferrer"
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 inline-flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
-            >
-              <Crown size={20} />
-              <span>NÂNG CẤP GÓI</span>
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={buildPaymentUrl(user)}
+                target="_blank"
+                rel="noreferrer"
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 inline-flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+              >
+                <Crown size={20} />
+                <span>NÂNG CẤP GÓI</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => user && refreshSubscription(user, true, true)}
+                className="px-7 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+              >
+                <RefreshCw size={18} />
+                <span>Kiểm tra lại PRO</span>
+              </button>
+            </div>
           </div>
         ) : (
           <>

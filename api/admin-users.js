@@ -79,13 +79,15 @@ export default async function handler(req, res) {
     if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
     if (!isSupabaseConfigured()) return res.status(200).json({ success:false, code:'SUPABASE_NOT_CONFIGURED', error:'Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY trên Vercel. Danh sách tài khoản đã chuyển sang Supabase, không còn đọc Firestore.' });
     const q = String(req.query.q || req.body?.q || '').trim().toLowerCase();
-    const limit = Math.min(Math.max(Number(req.query.limit || req.body?.limit || 20) || 20, 1), 50);
+    const limit = Math.min(Math.max(Number(req.query.limit || req.body?.limit || 50) || 50, 1), 50);
+    const page = Math.max(Number(req.query.page || req.body?.page || 1) || 1, 1);
+    const offset = (page - 1) * limit;
     const force = String(req.query.force || req.body?.force || '0') === '1';
-    const cacheKey = `${q || '_recent'}:${limit}`;
+    const cacheKey = `${q || '_recent'}:${limit}:${page}`;
     if (!force) { const cached = cacheGet(cacheKey); if (cached) return res.status(200).json({ ...cached, fromMemoryCache:true }); }
-    const rows = await sbListUsers({ q, limit });
+    const rows = await sbListUsers({ q, limit, page, offset });
     const users = rows.map(normalizeSupabaseUser);
-    const response = { success: true, users, count: users.length, limit, nextCursor: null, exhausted: users.length < limit, source: 'supabase' };
+    const response = { success: true, users, count: users.length, limit, page, pageSize: limit, offset, hasPrev: page > 1, hasNext: users.length === limit, nextPage: users.length === limit ? page + 1 : null, prevPage: page > 1 ? page - 1 : null, nextCursor: null, exhausted: users.length < limit, source: 'supabase' };
     cacheSet(cacheKey, response);
     return res.status(200).json(response);
   } catch (error) {
