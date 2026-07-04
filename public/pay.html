@@ -556,10 +556,7 @@ function normalizePayment(raw){
   const code = clean(p.bankCode || p.bankName || p.bank || 'ACB');
   const bId = bankId(p.bankId || p.bankBin || p.bankCode || p.bankName || p.bank || code);
   let acc = cleanAccount(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
-  const isLegacyDefaultAccount = acc === ['1313','1447'].join('');
-  if (isLegacyDefaultAccount) acc = DEFAULT_PAYMENT.accountNo;
   let owner = clean(p.accountName || p.accountOwner || p.beneficiaryName || p.ownerName || DEFAULT_PAYMENT.accountName);
-  if (isLegacyDefaultAccount || (acc === DEFAULT_PAYMENT.accountNo && owner.toUpperCase() === ['LE','VAN','KHAI'].join(' '))) owner = DEFAULT_PAYMENT.accountName;
   const prefix = clean(p.transferPrefix || p.transferContentPrefix || p.paymentPrefix || p.prefix || p.contentPrefix || DEFAULT_PAYMENT.transferPrefix).replace(/[^a-zA-Z0-9]/g,'').toUpperCase() || 'TUBEKEY';
   return {
     bankId:bId,

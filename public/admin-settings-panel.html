@@ -543,10 +543,31 @@
     }
     async function testWebhook(){
       if(!adminPassword()) return msg('paymentMsg','Vui lòng nhập mật khẩu quản trị.','warn');
-      const btn=$('testWebhookBtn'); setBusy(btn,true,'Đang kiểm tra...');
-      try{ const data = await request('test-webhook', paymentPayload()); msg('paymentMsg', data.message || 'Webhook hoạt động.', 'ok'); toast('Webhook hoạt động.','ok'); }
-      catch(e){ msg('paymentMsg', e.message, 'err'); toast(e.message,'err'); }
-      finally{ setBusy(btn,false); }
+      const sensitive = detectSensitiveBankChange();
+      const doTest = async () => {
+        const btn=$('testWebhookBtn'); setBusy(btn,true,'Đang lưu & kiểm tra...');
+        try{
+          const data = await request('test-webhook', paymentPayload());
+          if (data.payment) {
+            const p = data.payment;
+            setVal('sepaySecret', p.sepaySecret || val('sepaySecret'));
+            setVal('bankOwner', p.bankOwner || p.accountName || val('bankOwner'));
+            setVal('bankName', p.bankName || p.bankCode || val('bankName'));
+            setVal('bankAccount', p.bankAccount || p.accountNumber || p.accountNo || val('bankAccount'));
+            setVal('paymentPrefix', p.paymentPrefix || p.transferPrefix || val('paymentPrefix'));
+            setVal('baseUrl', normalizeBaseUrl(p.baseUrl || val('baseUrl') || currentOrigin()));
+            updateWebhookUrl();
+          }
+          state.originalBank = { bankOwner: val('bankOwner'), bankName: val('bankName'), bankAccount: val('bankAccount') };
+          msg('paymentMsg', data.message || 'Đã lưu và kiểm tra webhook hoạt động.', 'ok');
+          toast('Webhook hoạt động.','ok');
+          await loadStatus();
+        }
+        catch(e){ msg('paymentMsg', e.message, 'err'); toast(e.message,'err'); }
+        finally{ setBusy(btn,false); }
+      };
+      if (sensitive) showConfirmModal(sensitive, doTest);
+      else doTest();
     }
     async function testEmail(){
       if(!adminPassword()) return msg('smtpMsg','Vui lòng nhập mật khẩu quản trị.','warn');

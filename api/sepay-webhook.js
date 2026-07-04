@@ -96,6 +96,19 @@ export default async function handler(req, res) {
       await safeLog({ status:'warning_no_secret_configured', reason:'Webhook chưa cấu hình SEPAY_API_KEY/sepaySecret. Vui lòng đặt để bật xác thực.', raw:req.body || {} });
     }
     const body = req.body || {};
+    if (body.__healthCheck === true || body.healthCheck === true || body.type === 'health_check') {
+      return res.status(200).json({
+        success: true,
+        ok: true,
+        healthCheck: true,
+        message: 'Webhook SePay nhận POST thành công và token khớp cấu hình đang lưu.',
+        paymentPrefix: settings.payment.paymentPrefix,
+        bankAccount: settings.payment.bankAccount,
+        bankOwner: settings.payment.bankOwner,
+        bankName: settings.payment.bankName,
+        dataSource: 'supabase'
+      });
+    }
     const transferType = typeOf(body);
     const amount = amountOf(body);
     const content = contentOf(body);

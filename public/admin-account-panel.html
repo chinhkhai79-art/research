@@ -214,6 +214,43 @@
           <div id="trialSettingsMsg" class="status" style="margin-top:12px;">Mặc định hiện tại: 1 giờ dùng thử.</div>
         </div>
       </div>
+      <!-- BULK EXTEND CARD (đặt dưới phần Kích hoạt / khóa PRO) -->
+          <div id="bulkPanel" class="card hidden" style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+              <div>
+                <h2 style="margin:0;font-size:22px;">Cộng ngày hàng loạt cho user</h2>
+                <div class="muted" style="margin-top:4px;">Dùng khi hệ thống có sự cố, cần đền bù cho khách. Thao tác này sẽ được ghi vào Admin logs.</div>
+              </div>
+            </div>
+      
+            <div class="row">
+              <div class="field">
+                <label>Số ngày cộng thêm</label>
+                <input id="bulkDays" type="number" value="3" min="1" max="365" />
+              </div>
+              <div class="field">
+                <label>Áp dụng cho</label>
+                <select id="bulkScope">
+                  <option value="pro_active">Chỉ user PRO đang còn hạn (an toàn nhất)</option>
+                  <option value="pro_all">Tất cả user PRO (kể cả đã hết hạn)</option>
+                  <option value="all_users">⚠ TẤT CẢ user (kể cả trial — không khuyến nghị)</option>
+                </select>
+              </div>
+            </div>
+      
+            <div class="field" style="margin-top:12px;">
+              <label>Lý do (bắt buộc, sẽ ghi vào nhật ký)</label>
+              <textarea id="bulkReason" placeholder="VD: Hệ thống lỗi không truy cập được ngày 28-30/05/2026, cộng đền 3 ngày cho user PRO."></textarea>
+            </div>
+      
+            <div class="actions" style="margin-top:12px;">
+              <button class="btn" style="background:#0ea5e9;color:#fff;" onclick="bulkExtendPreview()">🔍 Xem trước (Preview)</button>
+              <button class="btn-red" onclick="bulkExtendApply()" id="bulkApplyBtn" disabled>✅ Áp dụng cộng ngày</button>
+              <button class="btn-dark" onclick="bulkExtendClear()">Xoá</button>
+            </div>
+      
+            <div id="bulkPreview" style="margin-top:14px;"></div>
+          </div>
     </div>
 
     <div id="usersPanel" class="card">
@@ -252,44 +289,6 @@
           <tbody id="logsBody"></tbody>
         </table>
       </div>
-    </div>
-
-    <!-- BULK EXTEND CARD (đặt cuối tab Admin logs) -->
-    <div id="bulkPanel" class="card hidden" style="margin-top:14px;">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-        <div>
-          <h2 style="margin:0;font-size:22px;">Cộng ngày hàng loạt cho user</h2>
-          <div class="muted" style="margin-top:4px;">Dùng khi hệ thống có sự cố, cần đền bù cho khách. Thao tác này sẽ được ghi vào Admin logs.</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label>Số ngày cộng thêm</label>
-          <input id="bulkDays" type="number" value="3" min="1" max="365" />
-        </div>
-        <div class="field">
-          <label>Áp dụng cho</label>
-          <select id="bulkScope">
-            <option value="pro_active">Chỉ user PRO đang còn hạn (an toàn nhất)</option>
-            <option value="pro_all">Tất cả user PRO (kể cả đã hết hạn)</option>
-            <option value="all_users">⚠ TẤT CẢ user (kể cả trial — không khuyến nghị)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <label>Lý do (bắt buộc, sẽ ghi vào nhật ký)</label>
-        <textarea id="bulkReason" placeholder="VD: Hệ thống lỗi không truy cập được ngày 28-30/05/2026, cộng đền 3 ngày cho user PRO."></textarea>
-      </div>
-
-      <div class="actions" style="margin-top:12px;">
-        <button class="btn" style="background:#0ea5e9;color:#fff;" onclick="bulkExtendPreview()">🔍 Xem trước (Preview)</button>
-        <button class="btn-red" onclick="bulkExtendApply()" id="bulkApplyBtn" disabled>✅ Áp dụng cộng ngày</button>
-        <button class="btn-dark" onclick="bulkExtendClear()">Xoá</button>
-      </div>
-
-      <div id="bulkPreview" style="margin-top:14px;"></div>
     </div>
 
     <div id="revenuePanel" class="hidden">
@@ -368,9 +367,9 @@ function showTab(name){
   qs('actionPanel').classList.toggle('hidden', name !== 'action');
   qs('logsPanel').classList.toggle('hidden', name !== 'logs');
   qs('revenuePanel').classList.toggle('hidden', name !== 'revenue');
-  // Cộng ngày hàng loạt nằm ngay sau bảng Admin logs
+  // Cộng ngày hàng loạt nằm ngay dưới phần Kích hoạt thủ công / Cộng ngày
   const bulkPanel = qs('bulkPanel');
-  if (bulkPanel) bulkPanel.classList.toggle('hidden', name !== 'logs');
+  if (bulkPanel) bulkPanel.classList.toggle('hidden', name !== 'action');
   qs('tabUsers').classList.toggle('active', name === 'users');
   qs('tabAction').classList.toggle('active', name === 'action');
   qs('tabLogs').classList.toggle('active', name === 'logs');

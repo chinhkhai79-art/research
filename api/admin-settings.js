@@ -173,11 +173,56 @@ export default async function handler(req, res) {
     }
 
     if (action === 'test-webhook') {
-      const settings = normalizeSettings({ ...(await getAppSettings()), payment: { ...(req.body?.payment || {}) } });
+      const current = await getAppSettings();
+      const incoming = req.body?.payment || req.body || {};
+      const next = await saveAppSettings({ payment: { ...(current.payment || {}), ...incoming } });
+      const changes = diffSettings(current, next);
+      await logSettingsChange({ action: 'test_and_save_payment_webhook', changes, ip, reason: req.body?.reason || 'Kiểm tra webhook SePay và đồng bộ cấu hình thanh toán' });
+
+      const settings = normalizeSettings(next);
       if (!settings.payment.bankAccount) throw new Error('Thiếu số tài khoản.');
       if (!settings.payment.paymentPrefix) throw new Error('Thiếu tiền tố nội dung chuyển khoản.');
       if (!settings.payment.webhookUrl) throw new Error('Thiếu Webhook URL.');
-      return send(res, 200, { success: true, message: 'Webhook OK. Copy URL này dán vào SePay.', webhookUrl: settings.payment.webhookUrl });
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 7000);
+      let hookData = null;
+      try {
+        const hookRes = await fetch(settings.payment.webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(settings.payment.sepaySecret ? {
+              Authorization: `Bearer ${settings.payment.sepaySecret}`,
+              'x-api-key': settings.payment.sepaySecret
+            } : {})
+          },
+          body: JSON.stringify({
+            __healthCheck: true,
+            type: 'health_check',
+            content: `${settings.payment.paymentPrefix}TESTWEBHOOK`,
+            transferAmount: 0,
+            transferType: 'in',
+            source: 'admin-settings'
+          }),
+          signal: controller.signal
+        });
+        const raw = await hookRes.text();
+        try { hookData = raw ? JSON.parse(raw) : {}; } catch { hookData = { success:false, error: raw || hookRes.statusText }; }
+        if (!hookRes.ok || hookData.success === false) {
+          throw new Error(hookData.error || hookData.message || `Webhook trả HTTP ${hookRes.status}`);
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+
+      return send(res, 200, {
+        success: true,
+        message: `Đã lưu cấu hình và kiểm tra webhook OK. STK đang dùng: ${settings.payment.bankAccount}. Chủ TK: ${settings.payment.bankOwner}.`,
+        webhookUrl: settings.payment.webhookUrl,
+        payment: maskSettings(settings).payment,
+        hook: hookData
+      });
     }
 
     if (action === 'test-email') {
