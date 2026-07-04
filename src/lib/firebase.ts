@@ -16,20 +16,41 @@ type FirebaseConfigWithDb = {
 const env = import.meta.env;
 const fallbackConfig = fileFirebaseConfig as FirebaseConfigWithDb;
 
-const clean = (value: unknown) => String(value || '').trim();
+const clean = (value: unknown) => String(value || '').trim().replace(/^\"|\"$/g, '').replace(/^'|'$/g, '');
 const isPlaceholder = (value: string) => {
   const v = value.toLowerCase();
   return !value || v.includes('nhập key') || v.includes('your_') || v.includes('my_') || v.includes('firebase_api_key');
 };
 
-export const firebaseConfig: FirebaseConfigWithDb = {
-  apiKey: clean(env.VITE_FIREBASE_API_KEY) || clean(fallbackConfig.apiKey),
-  authDomain: clean(env.VITE_FIREBASE_AUTH_DOMAIN) || clean(fallbackConfig.authDomain),
-  projectId: clean(env.VITE_FIREBASE_PROJECT_ID) || clean(fallbackConfig.projectId),
-  storageBucket: clean(env.VITE_FIREBASE_STORAGE_BUCKET) || clean(fallbackConfig.storageBucket),
-  messagingSenderId: clean(env.VITE_FIREBASE_MESSAGING_SENDER_ID) || clean(fallbackConfig.messagingSenderId),
-  appId: clean(env.VITE_FIREBASE_APP_ID) || clean(fallbackConfig.appId),
-  firestoreDatabaseId: clean(env.VITE_FIRESTORE_DATABASE_ID) || clean(fallbackConfig.firestoreDatabaseId) || '(default)'
+export const envFirebaseConfig: FirebaseConfigWithDb = {
+  apiKey: clean(env.VITE_FIREBASE_API_KEY),
+  authDomain: clean(env.VITE_FIREBASE_AUTH_DOMAIN),
+  projectId: clean(env.VITE_FIREBASE_PROJECT_ID),
+  storageBucket: clean(env.VITE_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: clean(env.VITE_FIREBASE_MESSAGING_SENDER_ID),
+  appId: clean(env.VITE_FIREBASE_APP_ID),
+  firestoreDatabaseId: clean(env.VITE_FIRESTORE_DATABASE_ID)
+};
+
+const hasValidEnvFirebaseConfig = Boolean(
+  envFirebaseConfig.apiKey &&
+  envFirebaseConfig.apiKey.startsWith('AIza') &&
+  envFirebaseConfig.authDomain &&
+  envFirebaseConfig.projectId &&
+  envFirebaseConfig.appId &&
+  !isPlaceholder(String(envFirebaseConfig.apiKey))
+);
+
+const baseFirebaseConfig = hasValidEnvFirebaseConfig ? envFirebaseConfig : fallbackConfig;
+
+const firebaseConfig: FirebaseConfigWithDb = {
+  apiKey: clean(baseFirebaseConfig.apiKey),
+  authDomain: clean(baseFirebaseConfig.authDomain),
+  projectId: clean(baseFirebaseConfig.projectId),
+  storageBucket: clean(baseFirebaseConfig.storageBucket),
+  messagingSenderId: clean(baseFirebaseConfig.messagingSenderId),
+  appId: clean(baseFirebaseConfig.appId),
+  firestoreDatabaseId: clean(baseFirebaseConfig.firestoreDatabaseId) || '(default)'
 };
 
 export const firebaseConfigReady = Boolean(
@@ -66,7 +87,8 @@ export const loginWithGoogle = async () => {
       projectId: firebaseConfig.projectId,
       authDomain: firebaseConfig.authDomain,
       appId: firebaseConfig.appId,
-      hasApiKey: Boolean(firebaseConfig.apiKey && !isPlaceholder(String(firebaseConfig.apiKey)))
+      hasApiKey: Boolean(firebaseConfig.apiKey && !isPlaceholder(String(firebaseConfig.apiKey))),
+      usingEnvConfig: hasValidEnvFirebaseConfig
     });
     throw error;
   }
