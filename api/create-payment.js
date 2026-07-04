@@ -32,6 +32,7 @@ export default async function handler(req,res){
     const plan = plans[planId];
     const payment = settings.payment;
     const { db, FieldValue } = await getDb();
+    const pendingExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     // Luôn lấy giá từ cấu hình máy chủ, không tin số tiền gửi từ trình duyệt.
     const amount = Number(plan.amount);
     const uid = safe(body.uid || body.userId || body.user_id);
@@ -52,7 +53,7 @@ export default async function handler(req,res){
           orderCode:candidate, status:'pending', paid:false, planId, planName:plan.name, amount, days:plan.days,
           uid, userId:uid, email, userEmail:email, returnUrl,
           bankName:payment.bankName, bankId:payment.bankId, accountNo:payment.accountNo, accountName:payment.accountName,
-          qrUrl:candidateUrl, createdAt:FieldValue.serverTimestamp(), updatedAt:FieldValue.serverTimestamp()
+          qrUrl:candidateUrl, expiresAt:pendingExpiresAt, pendingExpiresAt, createdAt:FieldValue.serverTimestamp(), updatedAt:FieldValue.serverTimestamp()
         });
         orderCode = candidate;
         url = candidateUrl;
@@ -64,7 +65,7 @@ export default async function handler(req,res){
     }
     if (!orderCode) throw new Error('Không tạo được mã chuyển khoản duy nhất. Vui lòng thử lại.');
 
-    return res.status(200).json({ success:true, orderCode, paymentCode:orderCode, content:orderCode, planId, planName:plan.name, amount, days:plan.days, qrUrl:url, qrImageUrl:url, bankName:payment.bankName, bankId:payment.bankId, accountNo:payment.accountNo, accountNumber:payment.accountNo, accountName:payment.accountName, transferPrefix:payment.paymentPrefix });
+    return res.status(200).json({ success:true, orderCode, paymentCode:orderCode, content:orderCode, planId, planName:plan.name, amount, days:plan.days, qrUrl:url, qrImageUrl:url, bankName:payment.bankName, bankId:payment.bankId, accountNo:payment.accountNo, accountNumber:payment.accountNo, accountName:payment.accountName, transferPrefix:payment.paymentPrefix, pendingExpiresAt:pendingExpiresAt.toISOString(), expiresAt:pendingExpiresAt.toISOString() });
   }catch(e){
     console.error('create-payment error:', e);
     return res.status(500).json({ success:false, error:e.message || 'Server error' });

@@ -494,6 +494,8 @@ let returnUrl = normalizeReturnUrl(params.get('returnUrl') || '/?paid=success');
 let pollTimer = null;
 let pollStartedAt = Date.now();
 let lastStatusRequest = 0;
+let isAutoRefreshingPayment = false;
+const PAYMENT_PENDING_TTL_MS = 5 * 60 * 1000;
 
 function clean(v){ return String(v || '').trim(); }
 function cleanAccount(v){ return clean(v).replace(/[^A-Za-z0-9]/g,''); }
@@ -659,6 +661,7 @@ async function loadConfigFast(){
   }
 }
 async function createPayment(planId){
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   if (!plans[planId]) planId = Object.keys(plans)[0] || '1m';
   const plan = plans[planId];
 
@@ -695,6 +698,8 @@ async function createPayment(planId){
   currentPlan = plans[serverPlanId] ? serverPlanId : planId;
   currentContent = data.orderCode || data.paymentCode || currentContent;
   currentAmount = Number(data.amount || plans[currentPlan]?.amount || plan.amount);
+  pollStartedAt = Date.now();
+  isAutoRefreshingPayment = false;
   renderPlans();
 
   history.replaceState({}, document.title,
@@ -721,6 +726,7 @@ async function hydrateExistingPayment(){
   const res = await fetch('/api/payment-status?orderCode=' + encodeURIComponent(currentContent) + '&_=' + Date.now(), { cache:'no-store' });
   const data = await safeJson(res);
   if (!data.success) throw new Error(data.error || 'Không đọc được đơn thanh toán.');
+  if (data.expired || data.status === 'expired') return false;
   if (!data.paid && !Number(data.amount || 0)) return false;
   const serverPlanId = normalizePlanId(data.planId || currentPlan);
   if (serverPlanId && data.amount) {
@@ -762,12 +768,14 @@ function activatePro(data){
 async function checkPaymentStatus(){
   if (!currentContent) return scheduleNextPoll();
   const now = Date.now();
-  if (now - lastStatusRequest < 550) return scheduleNextPoll();
+  if (now - pollStartedAt >= PAYMENT_PENDING_TTL_MS) return refreshExpiredPayment();
+  if (now - lastStatusRequest < 3000) return scheduleNextPoll();
   lastStatusRequest = now;
   try {
     const res = await fetch('/api/payment-status?orderCode=' + encodeURIComponent(currentContent) + '&_=' + Date.now(), { cache:'no-store' });
     const data = await safeJson(res);
     if (data.success && data.paid) { activatePro(data); return; }
+    if (data.expired || data.status === 'expired') { await refreshExpiredPayment(); return; }
   } catch(e) {
     console.warn('payment-status:', e.message || e);
   }
@@ -775,14 +783,35 @@ async function checkPaymentStatus(){
 }
 function scheduleNextPoll(){
   const elapsed = Date.now() - pollStartedAt;
-  const delay = elapsed < 45000 ? 800 : 1500;
+  if (elapsed >= PAYMENT_PENDING_TTL_MS) { refreshExpiredPayment(); return; }
+  // Giảm Firestore read: không poll 0.8s nữa. Quét QR thường cần vài giây để SePay bắn webhook.
+  const delay = elapsed < 60000 ? 5000 : elapsed < 180000 ? 10000 : 15000;
   pollTimer = setTimeout(checkPaymentStatus, delay);
+}
+async function refreshExpiredPayment(){
+  if (isAutoRefreshingPayment) return;
+  isAutoRefreshingPayment = true;
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  setMsg(waitingMarkup('Mã thanh toán đã chờ quá 5 phút. Hệ thống đang hủy lệnh cũ và tạo mã mới...'), false);
+  const oldContent = currentContent;
+  currentContent = '';
+  currentAmount = 0;
+  try {
+    if (oldContent) {
+      fetch('/api/payment-status?expire=1&orderCode=' + encodeURIComponent(oldContent) + '&_=' + Date.now(), { cache:'no-store' }).catch(()=>{});
+    }
+    await createPayment(currentPlan);
+    toast('Đã làm mới mã thanh toán.');
+  } catch(e) {
+    isAutoRefreshingPayment = false;
+    setMsg('<span class="err">⚠️ Không tạo được mã mới: ' + e.message + '</span>');
+  }
 }
 function startFastPolling(){
   if (pollTimer) clearTimeout(pollTimer);
   pollStartedAt = Date.now();
   lastStatusRequest = 0;
-  checkPaymentStatus();
+  scheduleNextPoll();
 }
 (async function init(){
   renderPlans();

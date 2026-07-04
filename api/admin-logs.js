@@ -54,6 +54,7 @@ function toIso(v) {
   return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
 }
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function isQuotaError(error) { const text = String(error?.message || error?.details || error?.code || '').toLowerCase(); return error?.code === 8 || text.includes('resource_exhausted') || text.includes('quota') || text.includes('free daily read units'); }
 
 function getResetRef() {
   return db.collection('app_settings').doc('admin_history_reset');
@@ -128,7 +129,7 @@ async function handleResetHistory(req, res) {
 
 // ============== HANDLER: admin logs (cũ) ==============
 async function handleAdminLogs(req, res) {
-  const limit = Math.min(Number(req.query.limit || 100) || 100, 300);
+  const limit = Math.min(Number(req.query.limit || 50) || 50, 80);
   const resetAt = await getHistoryResetAt();
   const snap = await db.collection('admin_logs').limit(limit).get();
   const logs = snap.docs
@@ -150,13 +151,13 @@ async function handleAdminLogs(req, res) {
 // ============== HANDLER: revenue (mới — gộp vào đây) ==============
 async function handleRevenue(req, res) {
   const rangeDays = Math.min(Math.max(Number(req.query.days || 30) || 30, 1), 365);
-  const limit = Math.min(Math.max(Number(req.query.limit || 500) || 500, 50), 2000);
+  const limit = Math.min(Math.max(Number(req.query.limit || 150) || 150, 30), 500);
   const resetAt = await getHistoryResetAt();
 
   const [paidSnap, pendingSnap, logsSnap] = await Promise.all([
     db.collection('paid_orders').limit(limit).get(),
     db.collection('payments').limit(limit).get(),
-    db.collection('sepay_logs').limit(300).get()
+    db.collection('sepay_logs').limit(80).get()
   ]);
 
   // Paid orders
@@ -281,8 +282,8 @@ async function handleRevenue(req, res) {
       issueCount: issues.length,
       planBreakdown, dailyRevenue
     },
-    orders: orders.slice(0, 200),
-    pending: pending.slice(0, 100),
+    orders: orders.slice(0, 80),
+    pending: pending.slice(0, 50),
     issues
   });
 }
@@ -304,6 +305,18 @@ export default async function handler(req, res) {
     return await handleAdminLogs(req, res);
   } catch (error) {
     console.error('admin-logs error:', error);
-    return res.status(500).json({ success: false, error: error.message || 'Không tải được dữ liệu.' });
+    if (isQuotaError(error)) {
+      const type = String(req.query.type || '').trim().toLowerCase();
+      if (type === 'revenue') {
+        return res.status(200).json({
+          success: true,
+          warning: 'Firestore đã hết quota đọc miễn phí trong ngày. Tạm dừng tải doanh thu để tránh lỗi trang admin.',
+          stats: { totalPaid:0,totalRevenue:0,todayPaid:0,todayRevenue:0,weekRevenue:0,monthRevenue:0,rangeRevenue:0,pendingCount:0,issueCount:0,planBreakdown:{},dailyRevenue:{} },
+          orders: [], pending: [], issues: []
+        });
+      }
+      return res.status(200).json({ success:true, warning:'Firestore đã hết quota đọc miễn phí trong ngày. Tạm dừng tải logs để tránh lỗi trang admin.', logs: [] });
+    }
+    return res.status(200).json({ success: false, error: error.message || 'Không tải được dữ liệu.' });
   }
 }

@@ -1,6 +1,12 @@
 import { db, FieldValue, Timestamp } from "../../lib/firebaseAdmin.js";
 import { setCors } from "../../lib/cors.js";
 
+const MEMORY_CACHE_TTL_MS = 10 * 60 * 1000;
+const MEMORY_STALE_TTL_MS = 24 * 60 * 60 * 1000;
+const INIT_CACHE_TTL_MS = 5 * 60 * 1000;
+const subscriptionMemoryCache = globalThis.__vtwSubscriptionMemoryCache || new Map();
+globalThis.__vtwSubscriptionMemoryCache = subscriptionMemoryCache;
+
 function toDate(value) {
   return value?.toDate?.() || (value ? new Date(value) : null);
 }
@@ -44,28 +50,52 @@ function emptyResponse(userId, accountType = "none") {
 }
 
 function buildResponse(userId, data) {
-  const premiumExpiresAt = toDate(data.premiumExpiresAt) || toDate(data.expired_at);
-  const trialExpiresAt = toDate(data.trialExpiresAt);
-  const premiumStartedAt = toDate(data.premiumStartedAt) || toDate(data.started_at);
-  const trialStartedAt = toDate(data.trialStartedAt);
+  const sub = data?.subscriptionInfo || data?.subscription || {};
+  const premiumExpiresAt =
+    toDate(data.premiumExpiresAt) ||
+    toDate(data.expired_at) ||
+    toDate(data.expiresAt) ||
+    toDate(data.proUntil) ||
+    toDate(sub.expiresAt) ||
+    toDate(sub.premiumExpiresAt);
+  const trialExpiresAt = toDate(data.trialExpiresAt) || toDate(sub.trialExpiresAt);
+  const premiumStartedAt =
+    toDate(data.premiumStartedAt) ||
+    toDate(data.started_at) ||
+    toDate(data.activatedAt) ||
+    toDate(sub.startedAt) ||
+    toDate(sub.activatedAt);
+  const trialStartedAt = toDate(data.trialStartedAt) || toDate(sub.trialStartedAt);
 
   const now = Date.now();
-  const premiumActive = Boolean(data.premium || data.account_type === "premium") && premiumExpiresAt && premiumExpiresAt.getTime() > now;
+  const premiumFlag = Boolean(
+    data.premium ||
+    data.isPro ||
+    data.pro ||
+    data.account_type === "premium" ||
+    String(data.status || "").toUpperCase() === "PRO" ||
+    sub.premium ||
+    sub.isPro ||
+    String(sub.status || "").toUpperCase() === "PRO"
+  );
+  const premiumActive = premiumFlag && premiumExpiresAt && premiumExpiresAt.getTime() > now;
   const trialActive = !premiumActive && Boolean(data.account_type === "trial") && trialExpiresAt && trialExpiresAt.getTime() > now;
 
   const active = Boolean(premiumActive || trialActive);
-  const accountType = premiumActive ? "premium" : trialActive ? "trial" : (data.account_type || "expired");
+  const accountType = premiumActive ? "premium" : trialActive ? "trial" : (data.account_type || (premiumFlag ? "expired" : "expired"));
   const expiresAt = premiumActive ? premiumExpiresAt : trialActive ? trialExpiresAt : (premiumExpiresAt || trialExpiresAt);
   const startedAt = premiumActive ? premiumStartedAt : trialActive ? trialStartedAt : (premiumStartedAt || trialStartedAt);
+  const planId = data.planId || sub.planId || null;
+  const planName = data.planName || sub.planName || null;
 
   return {
     success: true,
     active,
     premium: Boolean(premiumActive),
     accountType,
-    plan: data.planId || null,
-    planId: data.planId || null,
-    planName: premiumActive ? (data.planName || "Gói PRO") : trialActive ? "Dùng thử 1 giờ" : (data.planName || null),
+    plan: planId,
+    planId,
+    planName: premiumActive ? (planName || "Gói PRO") : trialActive ? "Dùng thử 1 giờ" : (planName || null),
     startedAt: startedAt ? startedAt.toISOString() : null,
     expiresAt: expiresAt ? expiresAt.toISOString() : null,
     remainingMs: expiresAt ? Math.max(0, expiresAt.getTime() - now) : 0,
@@ -74,9 +104,44 @@ function buildResponse(userId, data) {
   };
 }
 
+function cacheKey(userId) {
+  return String(userId || "").trim();
+}
+
+function readMemoryCache(userId, maxAgeMs = MEMORY_CACHE_TTL_MS) {
+  const item = subscriptionMemoryCache.get(cacheKey(userId));
+  if (!item || !item.data || !item.cachedAt) return null;
+  if (Date.now() - item.cachedAt > maxAgeMs) return null;
+  const data = { ...item.data };
+  if (data.expiresAt) {
+    const exp = new Date(data.expiresAt);
+    data.remainingMs = Number.isNaN(exp.getTime()) ? 0 : Math.max(0, exp.getTime() - Date.now());
+    data.remainingText = Number.isNaN(exp.getTime()) ? "---" : getRemainingText(exp);
+    if (data.remainingMs <= 0) {
+      data.active = false;
+      data.premium = false;
+      data.accountType = data.accountType === "trial" ? "expired" : (data.accountType || "expired");
+    }
+  }
+  return { ...data, fromMemoryCache: true };
+}
+
+function saveMemoryCache(userId, data) {
+  if (!userId || !data || data.success === false) return;
+  subscriptionMemoryCache.set(cacheKey(userId), { cachedAt: Date.now(), data: { ...data } });
+  if (subscriptionMemoryCache.size > 2000) {
+    const firstKey = subscriptionMemoryCache.keys().next().value;
+    if (firstKey) subscriptionMemoryCache.delete(firstKey);
+  }
+}
+
 function isPremiumData(data) {
-  const exp = toDate(data?.premiumExpiresAt) || toDate(data?.expired_at);
-  return Boolean(data?.premium || data?.account_type === "premium") && exp && exp.getTime() > Date.now();
+  const exp =
+    toDate(data?.premiumExpiresAt) ||
+    toDate(data?.expired_at) ||
+    toDate(data?.expiresAt) ||
+    toDate(data?.subscriptionInfo?.expiresAt);
+  return Boolean(data?.premium || data?.isPro || data?.pro || data?.account_type === "premium" || String(data?.status || "").toUpperCase() === "PRO") && exp && exp.getTime() > Date.now();
 }
 
 function isQuotaError(error) {
@@ -96,8 +161,8 @@ async function findPendingEmailActivation(email, userId) {
     .filter(item => item.data?.manualActivation || isPremiumData(item.data));
 
   docs.sort((a, b) => {
-    const ae = toDate(a.data.premiumExpiresAt || a.data.expired_at)?.getTime() || 0;
-    const be = toDate(b.data.premiumExpiresAt || b.data.expired_at)?.getTime() || 0;
+    const ae = toDate(a.data.premiumExpiresAt || a.data.expired_at || a.data.expiresAt || a.data.subscriptionInfo?.expiresAt)?.getTime() || 0;
+    const be = toDate(b.data.premiumExpiresAt || b.data.expired_at || b.data.expiresAt || b.data.subscriptionInfo?.expiresAt)?.getTime() || 0;
     return be - ae;
   });
 
@@ -111,8 +176,8 @@ async function mergePendingEmailActivation({ email, userId, name, photoUrl, uidR
   const currentData = current || {};
   const pendingData = pending.data || {};
 
-  const currentExp = toDate(currentData.premiumExpiresAt || currentData.expired_at);
-  const pendingExp = toDate(pendingData.premiumExpiresAt || pendingData.expired_at);
+  const currentExp = toDate(currentData.premiumExpiresAt || currentData.expired_at || currentData.expiresAt || currentData.subscriptionInfo?.expiresAt);
+  const pendingExp = toDate(pendingData.premiumExpiresAt || pendingData.expired_at || pendingData.expiresAt || pendingData.subscriptionInfo?.expiresAt);
   const usePendingPremium = pendingExp && (!currentExp || pendingExp.getTime() > currentExp.getTime());
 
   const merged = {
@@ -128,12 +193,16 @@ async function mergePendingEmailActivation({ email, userId, name, photoUrl, uidR
   if (usePendingPremium) {
     merged.account_type = "premium";
     merged.premium = true;
+    merged.isPro = true;
+    merged.pro = true;
     merged.active = true;
+    merged.status = "PRO";
     merged.planId = pendingData.planId || currentData.planId || "manual";
     merged.planName = pendingData.planName || currentData.planName || "GÓI PRO";
     merged.premiumStartedAt = pendingData.premiumStartedAt || currentData.premiumStartedAt || FieldValue.serverTimestamp();
-    merged.premiumExpiresAt = pendingData.premiumExpiresAt || pendingData.expired_at;
-    merged.expired_at = pendingData.expired_at || pendingData.premiumExpiresAt;
+    merged.premiumExpiresAt = pendingData.premiumExpiresAt || pendingData.expired_at || pendingData.expiresAt || pendingData.subscriptionInfo?.expiresAt;
+    merged.expired_at = pendingData.expired_at || pendingData.premiumExpiresAt || pendingData.expiresAt || pendingData.subscriptionInfo?.expiresAt;
+    merged.expiresAt = pendingData.expiresAt || pendingData.premiumExpiresAt || pendingData.expired_at || pendingData.subscriptionInfo?.expiresAt;
     merged.lastAdminAction = pendingData.lastAdminAction || currentData.lastAdminAction || "email_activation_migrated";
   }
 
@@ -163,6 +232,7 @@ export default async function handler(req, res) {
     const name = String(source.name || "").trim();
     const photoUrl = String(source.photoUrl || "").trim();
     const initTrial = String(source.initTrial || "0") === "1";
+    const force = String(source.force || "0") === "1";
 
     if (!userId) {
       return res.status(400).json({
@@ -171,12 +241,17 @@ export default async function handler(req, res) {
       });
     }
 
+    const cached = !force ? readMemoryCache(userId, initTrial ? INIT_CACHE_TTL_MS : MEMORY_CACHE_TTL_MS) : null;
+    if (cached && (!initTrial || cached.active)) {
+      return res.status(200).json(cached);
+    }
+
     const ref = db.collection("users").doc(userId);
     const snap = await ref.get();
     const user = snap.exists ? (snap.data() || {}) : null;
 
     // Chỉ tìm bản ghi kích hoạt thủ công theo email ở lần đăng nhập đầu tiên.
-    // Trước đây mỗi lần poll đều query theo email, dễ tốn quota Firestore và gây lỗi 500.
+    // Các lần kiểm tra sau dùng cache/memory cache, không query email để giảm quota đọc Firestore.
     if (initTrial && email && (!snap.exists || !isPremiumData(user))) {
       const migrated = await mergePendingEmailActivation({
         email,
@@ -188,13 +263,17 @@ export default async function handler(req, res) {
         current: user || {}
       });
       if (migrated) {
-        return res.status(200).json(buildResponse(userId, migrated));
+        const response = buildResponse(userId, migrated);
+        saveMemoryCache(userId, response);
+        return res.status(200).json(response);
       }
     }
 
     if (!snap.exists) {
       if (!initTrial) {
-        return res.status(200).json(emptyResponse(userId));
+        const response = emptyResponse(userId);
+        saveMemoryCache(userId, response);
+        return res.status(200).json(response);
       }
 
       const now = new Date();
@@ -221,14 +300,16 @@ export default async function handler(req, res) {
 
       await ref.set(trialData, { merge: true });
 
-      return res.status(200).json(buildResponse(userId, trialData));
+      const response = buildResponse(userId, trialData);
+      saveMemoryCache(userId, response);
+      return res.status(200).json(response);
     }
 
     // Các lượt kiểm tra định kỳ chỉ đọc trạng thái, không ghi loginCount/updated_at liên tục.
-    // Chỉ cập nhật thông tin đăng nhập ở lần initTrial và tối đa 1 lần/12 giờ để giảm read/write quota.
+    // Chỉ cập nhật thông tin đăng nhập ở lần initTrial và tối đa 1 lần/24 giờ để giảm quota.
     if (initTrial) {
       const lastLogin = toDate(user.lastLoginAt);
-      const shouldTouchLogin = !lastLogin || (Date.now() - lastLogin.getTime() > 12 * 60 * 60 * 1000);
+      const shouldTouchLogin = !lastLogin || (Date.now() - lastLogin.getTime() > 24 * 60 * 60 * 1000);
       const profileChanged =
         (email && email !== (user.email || "")) ||
         (name && name !== (user.name || "")) ||
@@ -252,9 +333,21 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json(buildResponse(userId, user));
+    const response = buildResponse(userId, user);
+    saveMemoryCache(userId, response);
+    return res.status(200).json(response);
   } catch (error) {
+    const source = req.method === "POST" ? (req.body || {}) : (req.query || {});
+    const userId = String(source.userId || source.uid || "").trim();
     const quota = isQuotaError(error);
+    const stale = userId ? readMemoryCache(userId, MEMORY_STALE_TTL_MS) : null;
+    if (quota && stale) {
+      return res.status(200).json({
+        ...stale,
+        success: true,
+        warning: "Firestore đã hết quota đọc miễn phí trong ngày. Hệ thống đang dùng tạm cache server để tránh treo trang."
+      });
+    }
     return res.status(quota ? 200 : 500).json({
       success: false,
       code: quota ? "FIRESTORE_QUOTA_EXHAUSTED" : "SUBSCRIPTION_SERVER_ERROR",

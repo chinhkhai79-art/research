@@ -52,13 +52,30 @@ async function activateSubscription({ db, FieldValue, payment, orderCode, body }
   let currentExpires = null;
   if (uid) {
     const u = await db.collection('users').doc(uid).get();
-    currentExpires = toDate(u.data()?.subscriptionInfo?.expiresAt || u.data()?.expiresAt);
+    currentExpires = toDate(u.data()?.premiumExpiresAt || u.data()?.expired_at || u.data()?.expiresAt || u.data()?.subscriptionInfo?.expiresAt);
   }
   const base = currentExpires && currentExpires > now ? currentExpires : now;
   const expiresAt = addDays(base, days || 30);
-  const data = { active: true, isPro: true, status: 'PRO', planId, planName, expiresAt, updatedAt: FieldValue.serverTimestamp(), lastPaymentOrderCode: orderCode, email };
+  const data = {
+    active: true,
+    premium: true,
+    isPro: true,
+    pro: true,
+    status: 'PRO',
+    account_type: 'premium',
+    planId,
+    planName,
+    expiresAt,
+    premiumExpiresAt: expiresAt,
+    expired_at: expiresAt,
+    premiumStartedAt: now,
+    updatedAt: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp(),
+    lastPaymentOrderCode: orderCode,
+    email
+  };
   if (uid) {
-    await db.collection('users').doc(uid).set({ uid, email, isPro: true, pro: true, subscriptionInfo: data, planId, planName, expiresAt, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await db.collection('users').doc(uid).set({ uid, userId: uid, email, ...data, subscriptionInfo: data }, { merge: true });
     await db.collection('subscriptions').doc(uid).set({ uid, ...data }, { merge: true });
   }
   if (email) {

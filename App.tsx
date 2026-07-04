@@ -572,6 +572,16 @@ function canonicalAppReturnUrl() {
   return `${CANONICAL_APP_BASE_URL}${path}`;
 }
 
+function shouldForceSubscriptionRefresh() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    return params.get('paid') === 'success' || params.get('refreshSubscription') === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
 export default function App() {
   // --- State ---
   const [user, setUser] = useState<User | null>(null);
@@ -619,9 +629,25 @@ export default function App() {
       const cachedAt = Number(parsed?.cachedAt || 0);
       const data = parsed?.data;
       if (!data || data.userId !== uid) return null;
-      // Cache chỉ dùng để chống treo khi API/Firebase lỗi tạm thời, không dùng quá 6 giờ.
-      if (!cachedAt || Date.now() - cachedAt > 6 * 60 * 60 * 1000) return null;
-      return data as SubscriptionInfo;
+      // Dùng cache trình duyệt để giảm Firestore read khi reload/focus trang.
+      // PRO cache tối đa 6 giờ, trial cache tối đa 45 phút, dữ liệu hết hạn sẽ tự chuyển inactive.
+      const maxAge = data.premium || data.accountType === 'premium' ? 6 * 60 * 60 * 1000 : 45 * 60 * 1000;
+      if (!cachedAt || Date.now() - cachedAt > maxAge) return null;
+      const next = { ...data } as SubscriptionInfo;
+      if (next.expiresAt) {
+        const exp = new Date(next.expiresAt).getTime();
+        if (!Number.isNaN(exp)) {
+          const remainingMs = Math.max(0, exp - Date.now());
+          (next as any).remainingMs = remainingMs;
+          if (remainingMs <= 0) {
+            next.active = false;
+            next.premium = false;
+            next.accountType = 'expired';
+            (next as any).remainingText = 'Đã hết hạn';
+          }
+        }
+      }
+      return next;
     } catch (_) {
       return null;
     }
@@ -633,11 +659,20 @@ export default function App() {
     } catch (_) {}
   };
 
-  const refreshSubscription = async (targetUser = user, initTrial = false) => {
+  const refreshSubscription = async (targetUser = user, initTrial = false, force = false) => {
     if (!targetUser) {
       setSubscriptionInfo(null);
       setSubscriptionError(null);
       return null;
+    }
+
+    if (!force) {
+      const cached = readCachedSubscription(targetUser.uid);
+      if (cached && cached.active) {
+        setSubscriptionInfo(cached);
+        setSubscriptionError(null);
+        return cached;
+      }
     }
 
     const controller = new AbortController();
@@ -654,7 +689,8 @@ export default function App() {
         `&email=${encodeURIComponent(targetUser.email || '')}` +
         `&name=${encodeURIComponent(targetUser.displayName || '')}` +
         `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
-        `&initTrial=${initTrial ? '1' : '0'}`;
+        `&initTrial=${initTrial ? '1' : '0'}` +
+        `&force=${force ? '1' : '0'}`;
 
       const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
       const raw = await res.text();
@@ -709,7 +745,14 @@ export default function App() {
       setUser(currentUser);
 
       if (currentUser) {
-        await refreshSubscription(currentUser, true);
+        const force = shouldForceSubscriptionRefresh();
+        const cached = !force ? readCachedSubscription(currentUser.uid) : null;
+        if (cached && cached.active) {
+          setSubscriptionInfo(cached);
+          setSubscriptionError(null);
+        } else {
+          await refreshSubscription(currentUser, true, force);
+        }
       } else {
         setSubscriptionInfo(null);
         setSubscriptionError(null);
@@ -728,10 +771,11 @@ export default function App() {
       setSubscriptionTick(Date.now());
       lastCheck = Date.now();
       refreshSubscription(user, false);
-    }, 10 * 60 * 1000);
+    }, 30 * 60 * 1000);
 
     const onFocus = () => {
-      if (Date.now() - lastCheck < 60 * 1000) return;
+      setSubscriptionTick(Date.now());
+      if (Date.now() - lastCheck < 15 * 60 * 1000) return;
       lastCheck = Date.now();
       refreshSubscription(user, false);
     };
@@ -5258,7 +5302,7 @@ Quy tắc:
             <p className="text-gray-500 mb-6 max-w-md mx-auto text-[14px]">{subscriptionError}</p>
             <button
               type="button"
-              onClick={() => user && refreshSubscription(user, true)}
+              onClick={() => user && refreshSubscription(user, true, true)}
               className="px-7 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
             >
               <RefreshCw size={18} />

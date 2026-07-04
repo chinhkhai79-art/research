@@ -1,6 +1,12 @@
 import { db, authAdmin } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
 
+const ADMIN_USERS_CACHE_TTL_MS = 2 * 60 * 1000;
+const adminUsersMemoryCache = globalThis.__vtwAdminUsersMemoryCache || new Map();
+globalThis.__vtwAdminUsersMemoryCache = adminUsersMemoryCache;
+function cacheGet(key){ const item = adminUsersMemoryCache.get(key); if(!item || Date.now() - item.cachedAt > ADMIN_USERS_CACHE_TTL_MS) return null; return item.data; }
+function cacheSet(key,data){ adminUsersMemoryCache.set(key,{cachedAt:Date.now(),data}); if(adminUsersMemoryCache.size > 200){ const first = adminUsersMemoryCache.keys().next().value; if(first) adminUsersMemoryCache.delete(first); } }
+
 function getAdminToken(req) {
   return String(
     req.headers['x-admin-secret'] ||
@@ -156,7 +162,7 @@ async function listUsersFromFirestore({ q, limit }) {
     // Nếu người quản trị gõ một phần email/tên thì chỉ đọc tối đa 100 bản ghi gần nhất để lọc,
     // không quét 500-1000 tài khoản như trước để tránh hết quota.
     if (docs.size === 0 && q.length >= 3) {
-      const sample = await db.collection('users').limit(Math.min(100, Math.max(limit, 50))).get();
+      const sample = await db.collection('users').limit(Math.min(25, Math.max(limit, 20))).get();
       sample.docs.forEach(doc => docs.set(doc.id, doc));
     }
   } else {
@@ -209,10 +215,16 @@ export default async function handler(req, res) {
     }
 
     const q = String(req.query.q || req.body?.q || '').trim().toLowerCase();
-    const limit = Math.min(Math.max(Number(req.query.limit || req.body?.limit || 50) || 50, 1), 100);
+    const limit = Math.min(Math.max(Number(req.query.limit || req.body?.limit || 20) || 20, 1), 50);
+    const force = String(req.query.force || req.body?.force || '0') === '1';
+    const cacheKey = `${q || '_recent'}:${limit}`;
+    if (!force) {
+      const cached = cacheGet(cacheKey);
+      if (cached) return res.status(200).json({ ...cached, fromMemoryCache:true });
+    }
     try {
       const result = await listUsersFromFirestore({ q, limit });
-      return res.status(200).json({
+      const response = {
         success: true,
         users: result.users,
         count: result.users.length,
@@ -220,12 +232,14 @@ export default async function handler(req, res) {
         nextCursor: result.nextCursor,
         exhausted: result.exhausted,
         source: 'firestore'
-      });
+      };
+      cacheSet(cacheKey, response);
+      return res.status(200).json(response);
     } catch (error) {
       if (!isQuotaError(error)) throw error;
 
       const users = await listUsersFromAuthFallback({ q, limit });
-      return res.status(200).json({
+      const response = {
         success: true,
         users,
         count: users.length,
@@ -234,7 +248,9 @@ export default async function handler(req, res) {
         exhausted: true,
         source: 'firebase_auth_fallback',
         warning: 'Firestore đã hết quota đọc miễn phí trong ngày nên đang hiển thị tạm danh sách từ Firebase Authentication. Trạng thái PRO/Trial sẽ đọc lại khi quota Firestore được reset hoặc bật billing.'
-      });
+      };
+      cacheSet(cacheKey, response);
+      return res.status(200).json(response);
     }
   } catch (error) {
     return res.status(200).json({
