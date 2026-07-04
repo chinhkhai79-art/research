@@ -57,6 +57,31 @@
     .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
     .quick button{padding:10px;font-size:12px;background:#0b1526;color:#cfe4ff;border:1px solid var(--line)}
     @media(max-width:950px){.top,.grid,.grid2,.row,.quick{grid-template-columns:1fr;display:grid}.links{justify-content:flex-start}.title h1{font-size:25px}table{white-space:nowrap}}
+  
+    /* Giao diện sáng cho trang quản trị chung */
+    :root {
+      --bg:#f4f8fd; --card:#ffffff; --card2:#f8fbff; --line:#d8e3ef;
+      --text:#0f172a; --muted:#64748b; --cyan:#22d3ee; --green:#16a34a;
+      --red:#ef4444; --orange:#f97316; --blue:#2563eb;
+    }
+    body{background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);color:var(--text)}
+    .top a{color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe}
+    .card{background:#ffffff;border-color:var(--line);box-shadow:0 16px 42px rgba(15,23,42,.08)}
+    .field label{color:#64748b}
+    input,select,textarea{background:#ffffff;color:#0f172a;border-color:#cbd5e1}
+    input:focus,select:focus,textarea:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+    .btn-dark{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+    .status{background:#eff8ff;border-color:#bfdbfe;color:#245078}
+    .status.ok{background:#ecfdf5;border-color:#86efac;color:#166534}
+    .status.err{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+    table{border-radius:16px;overflow:hidden}
+    th,td{border-bottom:1px solid #e6edf6}
+    th{color:#64748b;background:#f8fbff}
+    tr:hover td{background:#f8fbff}
+    .tab{background:#ffffff;color:#334155;border:1px solid var(--line)}
+    .tab.active{background:#22d3ee;color:#00111f}
+    .quick button{background:#ffffff;color:#334155;border:1px solid var(--line)}
+  
   </style>
 </head>
 <body>

@@ -108,7 +108,8 @@
       min-height:0;
       flex:1 1 auto;
       display:grid;
-      grid-template-columns:.95fr 1.05fr;
+      grid-template-columns:1fr 1fr;
+      align-items:stretch;
       gap:16px;
     }
     .card{
@@ -121,6 +122,7 @@
       display:flex;
       flex-direction:column;
       overflow:hidden;
+      height:100%;
     }
     .section-title{
       font-size:27px;
@@ -142,8 +144,9 @@
       background:#fff;
       border-radius:18px;
       padding:12px;
-      flex:1 1 auto;
-      min-height:260px;
+      flex:0 0 auto;
+      min-height:320px;
+      height:clamp(320px,42vh,520px);
       display:flex;
       align-items:center;
       justify-content:center;
@@ -271,10 +274,34 @@
       color:#fde68a;
       border-radius:14px;
       padding:12px 14px;
-      font-size:13px;
-      line-height:1.4;
+      font-size:clamp(11px,1.08vw,13px);
+      line-height:1.2;
       font-weight:400;
+      white-space:nowrap;
+      overflow:hidden;
     }
+    .checking-line{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      white-space:nowrap;
+      overflow:hidden;
+    }
+    .spin-icon{
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      border:2px solid rgba(253,230,138,.35);
+      border-top-color:#fde68a;
+      display:inline-block;
+      flex:0 0 auto;
+      animation:spin .8s linear infinite;
+    }
+    .checking.ready .spin-icon{
+      border-color:rgba(199,221,246,.35);
+      border-top-color:#c7ddf6;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
     .checking.ready{
       border-color:#1f4967;
       background:#10253a;
@@ -337,7 +364,7 @@
         white-space:nowrap;
       }
       .main,.info-grid{grid-template-columns:1fr}
-      .qrbox{min-height:320px}
+      .qrbox{min-height:0;height:auto}
     }
     @media(max-height:760px) and (min-width:901px){
       body{overflow:auto}
@@ -355,63 +382,16 @@
       .amount{font-size:29px;margin-top:9px}
       .checking{font-size:12px;padding:10px 12px}
     }
-  
 
-    /* Giao diện sáng đồng bộ trang quản trị cấu hình */
-    body{
-      background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);
-      color:#07111f;
+    /* Tinh chỉnh giao diện thanh toán: nền tối, 2 khung dưới bằng nhau, QR vừa đủ */
+    .payment-card{justify-content:flex-start}
+    .payment-card .qrbox{margin-bottom:12px}
+    .info-card{justify-content:flex-start}
+    .value-line{align-items:center}
+    .content-value{color:#fff}
+    @media(min-width:901px){
+      .main > .card{min-height:100%}
     }
-    .wrap{gap:12px}
-    h1,.section-title,.plan-name,.value{color:#07111f}
-    .plan{
-      background:#ffffff;
-      border-color:#d4e2f1;
-      box-shadow:0 10px 30px rgba(15,23,42,.06);
-    }
-    .plan:hover{border-color:#22c7e8;box-shadow:0 14px 34px rgba(14,165,233,.12)}
-    .plan.active{
-      border-color:#16c7ea;
-      background:#eefbff;
-      box-shadow:0 0 0 4px rgba(34,211,238,.14),0 14px 34px rgba(14,165,233,.14);
-    }
-    .plan-price,.amount{color:#06b6d4}
-    .card{
-      background:#ffffff;
-      border-color:#d9e5f2;
-      box-shadow:0 18px 48px rgba(15,23,42,.08);
-    }
-    .note{color:#42566f}
-    .row{
-      background:#f8fbff;
-      border-color:#d7e4f2;
-    }
-    .label{color:#58708f}
-    .content-value{color:#07111f}
-    .copy-icon{
-      background:#eaf8ff;
-      border-color:#b8d9ee;
-      color:#0284c7;
-    }
-    .copy-icon:hover{background:#dff4ff;border-color:#0ea5e9}
-    .checking{
-      background:#fff7df;
-      border-color:#f4c15d;
-      color:#8a5700;
-    }
-    .checking.ready{
-      background:#eff8ff;
-      border-color:#bfdbfe;
-      color:#245078;
-    }
-    .success,.toast{
-      background:#ecfdf5;
-      border-color:#22c55e;
-      color:#166534;
-      box-shadow:0 18px 46px rgba(15,23,42,.12);
-    }
-    .back{color:#2563eb}
-    .err{color:#b91c1c}
   </style>
 </head>
 <body>
@@ -425,7 +405,7 @@
     <div class="plans" id="plansBox"></div>
 
     <div class="main">
-      <section class="card">
+      <section class="card payment-card">
         <h2 class="section-title">Nâng cấp gói PRO</h2>
         <p class="note">Quét mã QR bên dưới để chuyển khoản. Vui lòng chuyển đúng số tiền và nội dung.</p>
         <div class="qrbox"><img id="qr" alt="QR thanh toán" loading="eager" decoding="async" fetchpriority="high" /></div>
@@ -459,7 +439,7 @@
           </div>
         </div>
 
-        <div id="checkingBox" class="checking">🔄 Đang tạo mã thanh toán...</div>
+        <div id="checkingBox" class="checking"><span class="checking-line"><span class="spin-icon" aria-hidden="true"></span><span>Đang tạo mã thanh toán...</span></span></div>
         <a class="back" href="https://www.tubekey.vn/">← Quay lại công cụ</a>
       </section>
     </div>
@@ -561,6 +541,9 @@ function setMsg(html, ready=false){
   el.innerHTML = html;
   el.classList.toggle('ready', !!ready);
 }
+function waitingMarkup(text){
+  return '<span class="checking-line"><span class="spin-icon" aria-hidden="true"></span><span>' + text + '</span></span>';
+}
 function normalizePlanId(id){
   id = String(id || '').trim().toLowerCase();
   if (id === '1y' || id === 'year' || id === '12month') return '12m';
@@ -661,7 +644,7 @@ function renderPayment(apiQr){
   document.getElementById('accountNameText').textContent = payment.accountName || '---';
 
   if (currentContent) {
-    setMsg('Đang chờ SePay xác nhận. Vui lòng chuyển đúng số tiền và nội dung.', false);
+    setMsg(waitingMarkup('Đang chờ SePay xác nhận. Vui lòng chuyển đúng số tiền và nội dung.'), false);
   }
 }
 async function loadConfigFast(){
@@ -680,7 +663,7 @@ async function createPayment(planId){
   if (!plans[planId]) planId = Object.keys(plans)[0] || '1m';
   const plan = plans[planId];
 
-  setMsg('Đang tạo mã thanh toán...', true);
+  setMsg(waitingMarkup('Đang tạo mã thanh toán...'), true);
   document.getElementById('amountText').textContent = 'Đang tạo mã...';
   document.getElementById('contentText').textContent = 'Đang tạo...';
 
