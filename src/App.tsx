@@ -2764,47 +2764,6 @@ JSON mẫu:
     return [...new Set(queries)].slice(0, 8);
   };
 
-
-
-  const getCategoryExpansionQueries = (category: string, index: number, regionCode: string, currentItems: string[]) => {
-    const regionCfg = REGION_YT_CONFIG[regionCode] || REGION_YT_CONFIG.VN;
-    const localCategory = String((suggestedNiches[index] as any)?.localCategory || category).replace(/\(.+\)/g, '').trim();
-    const viCategory = String((suggestedNiches[index] as any)?.viCategory || CATEGORY_VI_TITLES[index] || category).trim();
-    const categorySeed = categoryTitleToSearchSeed(category);
-    const baseItems = getCategoryFallbackItems(index, regionCode);
-    const normalizedTitle = String(`${category} ${localCategory} ${viCategory}`).toUpperCase();
-    const vnRelated: Record<string, string[]> = {
-      self: ['kỷ luật bản thân', 'thói quen tốt', 'quản lý thời gian', 'vượt trì hoãn', 'năng suất cá nhân', 'tư duy tích cực', 'động lực mỗi ngày', 'mục tiêu cuộc sống', 'minimalism productivity', 'atomic habits'],
-      health: ['skincare routine', 'giảm cân tại nhà', 'yoga cho người mới', 'ăn sạch', 'chăm sóc da', 'tập bụng', 'detox cơ thể', 'healthy routine'],
-      tech: ['công cụ AI mới', 'ứng dụng AI', 'ChatGPT automation', 'Gemini AI', 'AI tạo video', 'AI kiếm tiền', 'AI productivity', 'no code automation'],
-      education: ['tự học tiếng anh', 'study with me', 'mẹo học tập', 'học ielts', 'ôn thi hiệu quả', 'kỹ năng học nhanh', 'notion học tập'],
-      food: ['món ngon gia đình', 'cơm nhà', 'nấu ăn đơn giản', 'meal prep', 'món ăn healthy', 'nồi chiên không dầu', 'công thức nhanh'],
-      travel: ['du lịch tự túc', 'địa điểm đẹp', 'travel vlog', 'du lịch tiết kiệm', 'camping cuối tuần', 'review homestay', 'ẩm thực địa phương'],
-      sport: ['bóng đá hôm nay', 'highlight bóng đá', 'gym tại nhà', 'workout routine', 'chạy bộ', 'cầu lông', 'fitness motivation'],
-      money: ['tài chính cá nhân', 'kiếm tiền online', 'side hustle', 'affiliate marketing', 'đầu tư cho người mới', 'tiết kiệm tiền']
-    };
-    let extra: string[] = [];
-    if (/PHÁT TRIỂN|SELF|MOTIVATION|HABIT|PRODUCTIVITY/i.test(normalizedTitle)) extra = vnRelated.self;
-    else if (/SỨC KHỎE|HEALTH|BEAUTY|FITNESS/i.test(normalizedTitle)) extra = vnRelated.health;
-    else if (/CÔNG NGHỆ|TECH|AI|CHATGPT/i.test(normalizedTitle)) extra = vnRelated.tech;
-    else if (/GIÁO DỤC|EDUCATION|STUDY|LEARN/i.test(normalizedTitle)) extra = vnRelated.education;
-    else if (/ẨM THỰC|FOOD|COOK|RECIPE/i.test(normalizedTitle)) extra = vnRelated.food;
-    else if (/DU LỊCH|TRAVEL/i.test(normalizedTitle)) extra = vnRelated.travel;
-    else if (/THỂ THAO|BÓNG ĐÁ|SPORT|FOOTBALL|FITNESS/i.test(normalizedTitle)) extra = vnRelated.sport;
-    else if (/TÀI CHÍNH|KIẾM TIỀN|FINANCE|MONEY/i.test(normalizedTitle)) extra = vnRelated.money;
-    else extra = [...baseItems, categorySeed].filter(Boolean);
-
-    const recentHint = regionCode === 'VN' ? '7 ngày gần đây xu hướng mới' : 'last 7 days trending new';
-    const queries = [
-      `${localCategory} ${recentHint}`,
-      `${viCategory} ${recentHint}`,
-      `${categorySeed} ${regionCfg.seed} ${recentHint}`,
-      ...extra.map(seed => `${seed} ${recentHint}`),
-      ...currentItems.slice(0, 6).map(seed => `${seed} ${localCategory} ${recentHint}`),
-    ].map(q => String(q || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
-    return [...new Set(queries)].slice(0, 14);
-  };
-
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
     quotaUsedRef.current = 0;
     setQuotaUsed(0);
@@ -2818,11 +2777,7 @@ JSON mẫu:
     const regionCfg = REGION_YT_CONFIG[selectedRegion] || REGION_YT_CONFIG.VN;
     const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
     const currentItems = suggestedNiches[index]?.items || [];
-    const scanHistoryKey = `youtube_category_scan_history_v2_${selectedRegion}_${index}_${String(category || '').replace(/[^a-zA-Z0-9]+/g, '_')}`;
-    let scannedHistory: string[] = [];
-    try { scannedHistory = JSON.parse(localStorage.getItem(scanHistoryKey) || '[]'); } catch (_) { scannedHistory = []; }
-    const wasAlreadyScanned = suggestedNiches[index]?.realScanned === true || suggestedNiches[index]?.source === 'youtube_v3_real_scan' || scannedHistory.length > 0;
-    const publishedAfter = getPublishedAfterDate(wasAlreadyScanned ? 'week' : 'month');
+    const publishedAfter = getPublishedAfterDate('month');
     const scanningKey = `${category}-${index}`;
 
     const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
@@ -2877,43 +2832,12 @@ JSON mẫu:
       }
     };
 
-
-    const keywordKey = (value: string) => cleanKeyword(value)
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/[^a-z0-9]+/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    const allDisplayedKeywords = (Array.isArray(suggestedNiches) ? suggestedNiches : [])
-      .flatMap((cat: any) => Array.isArray(cat?.items) ? cat.items : []);
-    const knownKeywordKeys = new Set<string>(
-      (wasAlreadyScanned ? [...currentItems, ...scannedHistory, ...allDisplayedKeywords] : [])
-        .map(keywordKey)
-        .filter(Boolean)
-    );
-    const isKnownKeyword = (keyword: string) => knownKeywordKeys.has(keywordKey(keyword));
-    const rememberScannedKeywords = (items: string[]) => {
-      const merged = [...scannedHistory, ...currentItems, ...items]
-        .map(item => cleanKeyword(item))
-        .filter(Boolean)
-        .filter((item, idx, arr) => arr.findIndex(x => keywordKey(x) === keywordKey(item)) === idx)
-        .slice(-120);
-      localStorage.setItem(scanHistoryKey, JSON.stringify(merged));
-    };
-
     try {
       setScanningNicheCategory(scanningKey);
       setIsFetchingDailyTrending(true);
-      setStatus(wasAlreadyScanned
-        ? `Đang quét vòng mới ${category} tại ${regionName}: ưu tiên 7 ngày gần nhất, mở rộng chủ đề tương tự và loại trùng key đã có...`
-        : `Đang quét ${category} tại ${regionName}: ưu tiên video 30 ngày, VPH/View cao...`
-      );
+      setStatus(`Đang quét ${category} tại ${regionName}: ưu tiên video 30 ngày, VPH/View cao...`);
 
-      const baseSeedQueries = getCategorySeedQueries(category, index, selectedRegion, currentItems);
-      const expandedSeedQueries = wasAlreadyScanned ? getCategoryExpansionQueries(category, index, selectedRegion, currentItems) : [];
-      const seedQueries = [...new Set([...baseSeedQueries, ...expandedSeedQueries])];
+      const seedQueries = getCategorySeedQueries(category, index, selectedRegion, currentItems);
       const scores = new Map<string, number>();
       let totalVideos = 0;
 
@@ -2938,9 +2862,8 @@ JSON mẫu:
         effectiveVideoIds.push(...ids);
       }
 
-      // Lần quét tiếp theo: ưu tiên nghiêm ngặt 7 ngày gần nhất và mở rộng bằng chủ đề tương tự.
-      // Lần đầu: vẫn giữ logic 30 ngày, nếu thiếu mới mở rộng toàn thời gian như cũ.
-      if (!wasAlreadyScanned && effectiveVideoIds.length < 8) {
+      // Nếu 30 ngày không đủ dữ liệu, mở rộng toàn thời gian nhưng vẫn giữ regionCode + relevanceLanguage.
+      if (effectiveVideoIds.length < 8) {
         for (const query of seedQueries.slice(0, 5)) {
           if (effectiveVideoIds.length >= 45) break;
           const ids = await runSearch(query, false).catch(() => []);
@@ -2986,58 +2909,35 @@ JSON mẫu:
             .filter(k => k.length >= 3 && k.length <= 52)
             .filter(languageLooksOk)
             .filter(k => !isBadKeyword(k))
-            .filter(k => !wasAlreadyScanned || !isKnownKeyword(k))
             .forEach(k => scores.set(k, (scores.get(k) || 0) + baseScore));
         });
       }
 
       // Bơm thêm seed đúng chủ đề/khu vực để luôn có key liên quan nếu YouTube trả ít tag/title tách được.
-      const expansionFallbacks = [...getCategoryExpansionQueries(category, index, selectedRegion, currentItems), ...getCategoryFallbackItems(index, selectedRegion)]
-        .flatMap(q => q.split(/\s+(?:7 ngày gần đây|xu hướng mới|last 7 days|trending new)\s*/i))
-        .map(cleanKeyword)
-        .filter(Boolean);
-      expansionFallbacks.forEach((keyword, idx) => {
-        if (languageLooksOk(keyword) && !isBadKeyword(keyword) && (!wasAlreadyScanned || !isKnownKeyword(keyword))) {
-          scores.set(cleanKeyword(keyword), (scores.get(cleanKeyword(keyword)) || 0) + 25 - Math.min(idx, 20));
+      getCategoryFallbackItems(index, selectedRegion).forEach((keyword, idx) => {
+        if (languageLooksOk(keyword) && !isBadKeyword(keyword)) {
+          scores.set(cleanKeyword(keyword), (scores.get(cleanKeyword(keyword)) || 0) + 25 - idx);
         }
       });
 
       const nextItems = [...scores.entries()]
         .sort((a, b) => b[1] - a[1])
         .map(([keyword]) => keyword)
-        .filter((keyword, idx, arr) => arr.findIndex(x => keywordKey(x) === keywordKey(keyword)) === idx)
-        .filter(keyword => !wasAlreadyScanned || !isKnownKeyword(keyword))
+        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
         .slice(0, 6);
 
-      let finalItems = nextItems;
-      if (finalItems.length < 6) {
-        const filler = expansionFallbacks
-          .filter(keyword => languageLooksOk(keyword) && !isBadKeyword(keyword))
-          .filter(keyword => !finalItems.some(item => keywordKey(item) === keywordKey(keyword)))
-          .filter(keyword => !wasAlreadyScanned || !isKnownKeyword(keyword))
-          .slice(0, 6 - finalItems.length);
-        finalItems = [...finalItems, ...filler];
-      }
-      if (finalItems.length === 0) {
-        finalItems = getCategoryFallbackItems(index, selectedRegion)
-          .filter(keyword => !wasAlreadyScanned || !isKnownKeyword(keyword))
-          .slice(0, 6);
-      }
-      if (finalItems.length === 0) finalItems = getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
-
-      rememberScannedKeywords(finalItems);
+      const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
 
       setSuggestedNiches(prev => {
         const now = new Date().toISOString();
         const next = prev.map((item: any, i: number) => i === index ? {
           ...item,
           items: finalItems,
-          source: wasAlreadyScanned ? 'youtube_v3_real_scan_next_7d' : 'youtube_v3_real_scan',
+          source: 'youtube_v3_real_scan',
           realScanned: true,
           realScannedAt: now,
           region: selectedRegion,
-          index,
-          scanMode: wasAlreadyScanned ? 'next_7d_no_duplicate' : 'first_scan'
+          index
         } : item).slice(0, 15);
 
         // Ghi ngay xuống cache_VN/cache_US... để UI và localStorage đồng bộ ngay sau khi bấm kính lúp.
@@ -3046,10 +2946,7 @@ JSON mẫu:
         return next;
       });
 
-      setStatus(wasAlreadyScanned
-        ? `Đã quét vòng mới ${category} tại ${regionName}: lấy ${finalItems.length} key mới, ưu tiên 7 ngày gần nhất, không trùng key đã có/đã quét.`
-        : `Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`
-      );
+      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
