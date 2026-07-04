@@ -355,6 +355,63 @@
       .amount{font-size:29px;margin-top:9px}
       .checking{font-size:12px;padding:10px 12px}
     }
+  
+
+    /* Giao diện sáng đồng bộ trang quản trị cấu hình */
+    body{
+      background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);
+      color:#07111f;
+    }
+    .wrap{gap:12px}
+    h1,.section-title,.plan-name,.value{color:#07111f}
+    .plan{
+      background:#ffffff;
+      border-color:#d4e2f1;
+      box-shadow:0 10px 30px rgba(15,23,42,.06);
+    }
+    .plan:hover{border-color:#22c7e8;box-shadow:0 14px 34px rgba(14,165,233,.12)}
+    .plan.active{
+      border-color:#16c7ea;
+      background:#eefbff;
+      box-shadow:0 0 0 4px rgba(34,211,238,.14),0 14px 34px rgba(14,165,233,.14);
+    }
+    .plan-price,.amount{color:#06b6d4}
+    .card{
+      background:#ffffff;
+      border-color:#d9e5f2;
+      box-shadow:0 18px 48px rgba(15,23,42,.08);
+    }
+    .note{color:#42566f}
+    .row{
+      background:#f8fbff;
+      border-color:#d7e4f2;
+    }
+    .label{color:#58708f}
+    .content-value{color:#07111f}
+    .copy-icon{
+      background:#eaf8ff;
+      border-color:#b8d9ee;
+      color:#0284c7;
+    }
+    .copy-icon:hover{background:#dff4ff;border-color:#0ea5e9}
+    .checking{
+      background:#fff7df;
+      border-color:#f4c15d;
+      color:#8a5700;
+    }
+    .checking.ready{
+      background:#eff8ff;
+      border-color:#bfdbfe;
+      color:#245078;
+    }
+    .success,.toast{
+      background:#ecfdf5;
+      border-color:#22c55e;
+      color:#166534;
+      box-shadow:0 18px 46px rgba(15,23,42,.12);
+    }
+    .back{color:#2563eb}
+    .err{color:#b91c1c}
   </style>
 </head>
 <body>
@@ -382,13 +439,13 @@
           <div class="row">
             <div class="label">Số tài khoản</div>
             <div class="value-line">
-              <div class="value" id="accountText">13131447</div>
+              <div class="value" id="accountText">LOCSPAY000339358</div>
               <button type="button" class="copy-icon" onclick="copyAccount()" aria-label="Sao chép số tài khoản" title="Sao chép số tài khoản">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
               </button>
             </div>
           </div>
-          <div class="row"><div class="label">Tên thụ hưởng</div><div class="value" id="accountNameText">LE VAN KHAI</div></div>
+          <div class="row"><div class="label">Tên thụ hưởng</div><div class="value" id="accountNameText">NGUYEN VAN THE</div></div>
           <div class="row"><div class="label">Gói dịch vụ</div><div class="value" id="planName">---</div></div>
           <div class="row wide"><div class="label">Email</div><div class="value" id="emailText">---</div></div>
           <div class="row wide">
@@ -420,9 +477,9 @@ const DEFAULT_PAYMENT = {
   bankId:'970416',
   bankCode:'ACB',
   bankName:'ACB',
-  accountNo:'13131447',
-  accountNumber:'13131447',
-  accountName:'LE VAN KHAI',
+  accountNo:'LOCSPAY000339358',
+  accountNumber:'LOCSPAY000339358',
+  accountName:'NGUYEN VAN THE',
   transferPrefix:'TUBEKEY'
 };
 
@@ -448,7 +505,8 @@ let payment = { ...DEFAULT_PAYMENT };
 let currentPlan = params.get('plan') || '1m';
 if (currentPlan === '1y') currentPlan = '12m';
 
-let currentContent = params.get('content') || params.get('orderCode') || '';
+const requestedContent = params.get('content') || params.get('orderCode') || '';
+let currentContent = isDateOrderCode(requestedContent) ? requestedContent.trim().toUpperCase() : '';
 // Không lấy số tiền từ URL/trình duyệt. Số tiền chỉ được nhận từ API phía server.
 let currentAmount = 0;
 let currentEmail = params.get('email') || '';
@@ -460,6 +518,17 @@ let lastStatusRequest = 0;
 
 function clean(v){ return String(v || '').trim(); }
 function cleanAccount(v){ return clean(v).replace(/[^A-Za-z0-9]/g,''); }
+function isDateOrderCode(v){
+  const m = clean(v).toUpperCase().match(/^([A-Z0-9]*?)(\d{12})(\d*)$/);
+  if (!m) return false;
+  const d = m[2];
+  const day = Number(d.slice(0,2));
+  const month = Number(d.slice(2,4));
+  const hour = Number(d.slice(6,8));
+  const minute = Number(d.slice(8,10));
+  const second = Number(d.slice(10,12));
+  return day >= 1 && day <= 31 && month >= 1 && month <= 12 && hour <= 23 && minute <= 59 && second <= 59;
+}
 function normalizeReturnUrl(v){
   try {
     const u = new URL(clean(v) || '/?paid=success', CANONICAL_BASE_URL);
@@ -502,8 +571,11 @@ function normalizePayment(raw){
   const p = raw.payment && typeof raw.payment === 'object' ? raw.payment : raw;
   const code = clean(p.bankCode || p.bankName || p.bank || 'ACB');
   const bId = bankId(p.bankId || p.bankBin || p.bankCode || p.bankName || p.bank || code);
-  const acc = cleanAccount(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
-  const owner = clean(p.accountName || p.accountOwner || p.beneficiaryName || p.ownerName || DEFAULT_PAYMENT.accountName);
+  let acc = cleanAccount(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
+  const isLegacyDefaultAccount = acc === ['1313','1447'].join('');
+  if (isLegacyDefaultAccount) acc = DEFAULT_PAYMENT.accountNo;
+  let owner = clean(p.accountName || p.accountOwner || p.beneficiaryName || p.ownerName || DEFAULT_PAYMENT.accountName);
+  if (isLegacyDefaultAccount || (acc === DEFAULT_PAYMENT.accountNo && owner.toUpperCase() === ['LE','VAN','KHAI'].join(' '))) owner = DEFAULT_PAYMENT.accountName;
   const prefix = clean(p.transferPrefix || p.transferContentPrefix || p.paymentPrefix || p.prefix || p.contentPrefix || DEFAULT_PAYMENT.transferPrefix).replace(/[^a-zA-Z0-9]/g,'').toUpperCase() || 'TUBEKEY';
   return {
     bankId:bId,
@@ -620,7 +692,8 @@ async function createPayment(planId){
       planId,
       userId:currentUserId,
       uid:currentUserId,
-      email:currentEmail
+      email:currentEmail,
+      returnUrl
     })
   });
   const data = await safeJson(res);
@@ -666,6 +739,7 @@ async function hydrateExistingPayment(){
   const res = await fetch('/api/payment-status?orderCode=' + encodeURIComponent(currentContent) + '&_=' + Date.now(), { cache:'no-store' });
   const data = await safeJson(res);
   if (!data.success) throw new Error(data.error || 'Không đọc được đơn thanh toán.');
+  if (!data.paid && !Number(data.amount || 0)) return false;
   const serverPlanId = normalizePlanId(data.planId || currentPlan);
   if (serverPlanId && data.amount) {
     const fallback = plans[serverPlanId] || DEFAULT_PLANS[serverPlanId] || DEFAULT_PLANS['1m'];
@@ -681,6 +755,7 @@ async function hydrateExistingPayment(){
     renderPlans();
   }
   if (data.paid) activatePro(data);
+  return true;
 }
 function copyContent(){ navigator.clipboard.writeText(currentContent || ''); toast('Đã copy nội dung chuyển khoản.'); }
 function copyAccount(){ navigator.clipboard.writeText(payment.accountNo || ''); toast('Đã copy số tài khoản.'); }
@@ -732,11 +807,19 @@ function startFastPolling(){
   await loadConfigFast();
 
   if (currentContent) {
-    try { await hydrateExistingPayment(); }
-    catch(e) { console.warn('hydrate payment:', e.message || e); }
-    renderPayment();
-    startFastPolling();
-    return;
+    try {
+      const hydrated = await hydrateExistingPayment();
+      if (hydrated) {
+        renderPayment();
+        startFastPolling();
+        return;
+      }
+    } catch(e) {
+      console.warn('hydrate payment:', e.message || e);
+    }
+    currentContent = '';
+    currentAmount = 0;
+    history.replaceState({}, document.title, `/pay.html?plan=${encodeURIComponent(currentPlan)}&uid=${encodeURIComponent(currentUserId)}&userId=${encodeURIComponent(currentUserId)}&email=${encodeURIComponent(currentEmail)}&returnUrl=${encodeURIComponent(returnUrl)}`);
   }
 
   try { await createPayment(currentPlan); }

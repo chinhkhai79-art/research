@@ -37,7 +37,7 @@ function toDate(v) { try { return v?.toDate?.() || (v ? new Date(v) : null); } c
 function findOrderCode(text, prefix) {
   const c = compact(text);
   const p = compact(prefix || 'TUBEKEY');
-  const re = new RegExp(p + '\\d{8,}');
+  const re = new RegExp(p + '\\d{12,}(?:\\d+)?');
   const m = c.match(re);
   return m ? m[0] : '';
 }
