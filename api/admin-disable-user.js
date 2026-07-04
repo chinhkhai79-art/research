@@ -1,5 +1,6 @@
 import { db, FieldValue, Timestamp } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
+import { isSupabaseConfigured, findUserTargets as sbFindUserTargets, upsertUser as sbUpsertUser, addAdminLog as sbAddAdminLog } from '../lib/supabaseAdmin.js';
 
 function getAdminToken(req) {
   return String(
@@ -85,6 +86,43 @@ export default async function handler(req, res) {
 
     if (!uid && !email) {
       return res.status(400).json({ success: false, error: 'Cần nhập UID hoặc email.' });
+    }
+
+    if (isSupabaseConfigured()) {
+      const targets = await sbFindUserTargets({ uid, email });
+      if (!targets.length) {
+        return res.status(404).json({ success: false, error: 'Không tìm thấy tài khoản cần khóa.' });
+      }
+      const now = new Date();
+      await Promise.all(targets.map(t => sbUpsertUser(t.uid, {
+        ...t.data,
+        account_type: 'expired',
+        premium: false,
+        isPro: false,
+        pro: false,
+        active: false,
+        disabledByAdmin: true,
+        disabledAt: now.toISOString(),
+        premiumExpiresAt: now.toISOString(),
+        expired_at: now.toISOString(),
+        expiresAt: now.toISOString(),
+        lastAdminAction: 'disable_pro',
+        lastAdminReason: reason,
+        updated_at: now.toISOString()
+      })));
+      await sbAddAdminLog({
+        action: 'disable_pro',
+        targetUid: uid || targets.map(t => t.uid).join(','),
+        targetEmail: email,
+        affectedCount: targets.length,
+        reason
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Đã khóa/hủy PRO tài khoản.',
+        affectedCount: targets.length,
+        dataSource: 'supabase'
+      });
     }
 
     const targets = await findTargets({ uid, email });

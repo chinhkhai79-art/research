@@ -1,4 +1,5 @@
 import { getAppSettings, saveAppSettings, maskSettings, requireAdmin, normalizeSettings, diffSettings, VIETNAM_BANKS, PLAN_IDS, PRICING_VERSION } from '../lib/appSettings.js';
+import { isSupabaseConfigured, addAdminLog as sbAddAdminLog, getAppSettingsRow as sbGetAppSettingsRow } from '../lib/supabaseAdmin.js';
 
 function cors(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,6 +23,17 @@ async function getDb() {
 async function logSettingsChange({ action, changes, ip, reason }) {
   if (!changes || changes.length === 0) return;
   try {
+    if (isSupabaseConfigured()) {
+      await sbAddAdminLog({
+        action,
+        targetUid: 'app_settings',
+        targetEmail: 'research_config',
+        changes,
+        ip: ip || '',
+        reason: reason || `Đổi ${changes.length} mục`
+      });
+      return;
+    }
     const { db, FieldValue } = await getDb();
     await db.collection('admin_logs').add({
       app: 'research',
@@ -68,16 +80,21 @@ async function getSystemStatus() {
   const hasPaymentPrefix = Boolean(p.paymentPrefix);
   const hasSmtp = Boolean(s.smtpUser && s.smtpHost);
 
-  // Check Firebase
-  let firebaseOk = false;
+  // Check database
+  let databaseOk = false;
   try {
-    const { db } = await getDb();
-    await db.collection('app_settings').limit(1).get();
-    firebaseOk = true;
-  } catch (_) { firebaseOk = false; }
+    if (isSupabaseConfigured()) {
+      await sbGetAppSettingsRow();
+      databaseOk = true;
+    } else {
+      const { db } = await getDb();
+      await db.collection('app_settings').limit(1).get();
+      databaseOk = true;
+    }
+  } catch (_) { databaseOk = false; }
 
   const checks = [
-    { key: 'firebase', label: 'Firebase Admin SDK kết nối', ok: firebaseOk, critical: true },
+    { key: 'database', label: isSupabaseConfigured() ? 'Supabase Postgres kết nối' : 'Firebase Admin SDK kết nối', ok: databaseOk, critical: true },
     { key: 'adminSecret', label: 'Mật khẩu quản trị (ADMIN_SECRET)', ok: hasAdminSecret, critical: true, hint: hasAdminSecret ? '' : 'Bạn đang dùng mật khẩu mặc định không an toàn. Vào Vercel Env đặt ADMIN_SECRET.' },
     { key: 'sepaySecret', label: 'API Key bảo vệ SePay webhook', ok: hasSepaySecret, critical: true, hint: hasSepaySecret ? '' : 'Webhook đang mở, kẻ tấn công có thể giả mạo. Đặt API Key SePay ngay.' },
     { key: 'bankInfo', label: 'Thông tin tài khoản ngân hàng', ok: hasBankInfo, critical: true },

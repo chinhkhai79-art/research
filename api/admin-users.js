@@ -1,5 +1,6 @@
 import { db, authAdmin } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
+import { isSupabaseConfigured, listUsers as sbListUsers } from '../lib/supabaseAdmin.js';
 
 const ADMIN_USERS_CACHE_TTL_MS = 2 * 60 * 1000;
 const adminUsersMemoryCache = globalThis.__vtwAdminUsersMemoryCache || new Map();
@@ -141,6 +142,47 @@ function normalizeAuthUser(u) {
   };
 }
 
+function normalizeSupabaseUser(item) {
+  const d = item.data || {};
+  const uid = d.userId || item.row?.uid || d.uid || '';
+  const premiumExpiresAt = toIso(d.premiumExpiresAt || d.expired_at || d.expiresAt || d.proUntil);
+  const trialExpiresAt = toIso(d.trialExpiresAt);
+  const premiumActive = Boolean(d.premium || d.isPro || d.pro || d.account_type === 'premium') && premiumExpiresAt && new Date(premiumExpiresAt).getTime() > Date.now();
+  const trialActive = !premiumActive && d.account_type === 'trial' && trialExpiresAt && new Date(trialExpiresAt).getTime() > Date.now();
+  const status = premiumActive ? 'PRO' : trialActive ? 'TRIAL' : 'HẾT HẠN';
+  const expiresAt = premiumActive ? premiumExpiresAt : (premiumExpiresAt || trialExpiresAt);
+  return {
+    uid,
+    userId: uid,
+    email: d.email || '',
+    name: d.name || d.displayName || '',
+    photoUrl: d.photoUrl || '',
+    accountType: premiumActive ? 'premium' : trialActive ? 'trial' : (d.account_type || 'expired'),
+    status,
+    active: Boolean(premiumActive || trialActive),
+    premium: Boolean(premiumActive),
+    planId: d.planId || '',
+    planName: premiumActive ? (d.planName || 'GÓI PRO') : trialActive ? 'Dùng thử 1 giờ' : (d.planName || ''),
+    premiumStartedAt: toIso(d.premiumStartedAt || d.started_at),
+    trialStartedAt: toIso(d.trialStartedAt),
+    expiresAt,
+    premiumExpiresAt,
+    trialExpiresAt,
+    remainingText: remainText(expiresAt),
+    lastPaymentOrderCode: d.lastPaymentOrderCode || d.lastOrderCode || '',
+    lastPaymentAmount: d.lastPaymentAmount || 0,
+    disabledByAdmin: Boolean(d.disabledByAdmin),
+    manualActivation: Boolean(d.manualActivation),
+    migratedTo: d.migratedTo || '',
+    createdAt: toIso(d.created_at || d.createdAt),
+    updatedAt: toIso(d.updated_at || d.updatedAt),
+    firstLoginAt: toIso(d.firstLoginAt),
+    lastLoginAt: toIso(d.lastLoginAt),
+    loginCount: Number(d.loginCount || 0),
+    source: 'supabase'
+  };
+}
+
 function isQuotaError(error) {
   const text = String(error?.message || error?.details || error?.code || '').toLowerCase();
   return error?.code === 8 || text.includes('resource_exhausted') || text.includes('quota') || text.includes('free daily read units');
@@ -222,6 +264,22 @@ export default async function handler(req, res) {
       const cached = cacheGet(cacheKey);
       if (cached) return res.status(200).json({ ...cached, fromMemoryCache:true });
     }
+    if (isSupabaseConfigured()) {
+      const rows = await sbListUsers({ q, limit });
+      const users = rows.map(normalizeSupabaseUser);
+      const response = {
+        success: true,
+        users,
+        count: users.length,
+        limit,
+        nextCursor: null,
+        exhausted: users.length < limit,
+        source: 'supabase'
+      };
+      cacheSet(cacheKey, response);
+      return res.status(200).json(response);
+    }
+
     try {
       const result = await listUsersFromFirestore({ q, limit });
       const response = {

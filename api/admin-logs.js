@@ -1,5 +1,6 @@
 import { db } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
+import { isSupabaseConfigured, listAdminLogs as sbListAdminLogs, listPayments as sbListPayments, listSepayLogs as sbListSepayLogs } from '../lib/supabaseAdmin.js';
 
 /**
  * Admin logs + Revenue endpoint (gộp 2 chức năng vào 1 function để không
@@ -95,6 +96,9 @@ async function deleteCollection(collectionName, batchSize = 250, maxRounds = 80)
 }
 
 async function handleResetHistory(req, res) {
+  if (isSupabaseConfigured()) {
+    return res.status(200).json({ success:false, error:'Reset lịch sử Supabase chưa bật trong bản này để tránh xóa nhầm dữ liệu. Có thể xóa bằng SQL riêng khi cần.' });
+  }
   if (req.method !== 'POST') {
     return res.status(405).json({ success:false, error:'Method not allowed. Use POST.' });
   }
@@ -130,6 +134,10 @@ async function handleResetHistory(req, res) {
 // ============== HANDLER: admin logs (cũ) ==============
 async function handleAdminLogs(req, res) {
   const limit = Math.min(Number(req.query.limit || 50) || 50, 80);
+  if (isSupabaseConfigured()) {
+    const logs = await sbListAdminLogs(limit);
+    return res.status(200).json({ success: true, logs, resetAt: null, source: 'supabase' });
+  }
   const resetAt = await getHistoryResetAt();
   const snap = await db.collection('admin_logs').limit(limit).get();
   const logs = snap.docs
@@ -152,6 +160,73 @@ async function handleAdminLogs(req, res) {
 async function handleRevenue(req, res) {
   const rangeDays = Math.min(Math.max(Number(req.query.days || 30) || 30, 1), 365);
   const limit = Math.min(Math.max(Number(req.query.limit || 150) || 150, 30), 500);
+  if (isSupabaseConfigured()) {
+    const [paymentRows, logRows] = await Promise.all([
+      sbListPayments({ limit }),
+      sbListSepayLogs(80)
+    ]);
+    const orders = (paymentRows || []).filter(p => p.paid === true || p.status === 'paid').map(p => ({
+      orderCode: p.order_code,
+      email: p.email || '',
+      uid: p.uid || p.user_id || '',
+      planId: p.plan_id || '',
+      planName: p.plan_name || '',
+      days: Number(p.days || 0),
+      amount: Number(p.amount || p.expected_amount || 0),
+      expectedAmount: Number(p.expected_amount || p.amount || 0),
+      content: p.content || p.order_code || '',
+      paidAt: p.paid_at || p.updated_at || p.created_at,
+      expiresAt: p.expires_at || null,
+      createdAt: p.created_at
+    })).sort((a,b)=>new Date(b.paidAt||0)-new Date(a.paidAt||0));
+    const pending = (paymentRows || []).filter(p => !(p.paid === true || p.status === 'paid')).map(p => ({
+      orderCode: p.order_code,
+      status: p.status || 'pending',
+      paid: false,
+      email: p.email || '',
+      uid: p.uid || p.user_id || '',
+      planId: p.plan_id || '',
+      planName: p.plan_name || '',
+      amount: Number(p.amount || p.expected_amount || 0),
+      amountMismatchReceived: Number(p.amount_mismatch_received || 0),
+      createdAt: p.created_at,
+      updatedAt: p.updated_at
+    }));
+    const issueStatuses = new Set(['no_order_code','reject_amount_mismatch','reject_missing_token','reject_invalid_token','warning_no_secret_configured']);
+    const issues = (logRows || []).map(l => ({
+      id: l.id,
+      status: l.status || '',
+      reason: l.reason || '',
+      orderCode: l.order_code || '',
+      receivedAmount: Number(l.received_amount || l.amount || 0),
+      expectedAmount: Number(l.expected_amount || 0),
+      diff: Number(l.diff || 0),
+      content: l.content || '',
+      ip: l.ip || '',
+      createdAt: l.created_at
+    })).filter(x=>issueStatuses.has(x.status));
+    const now = new Date();
+    const startToday = startOfDay(now);
+    const startWeek = new Date(now.getTime() - 7 * 86400000);
+    const startMonth = new Date(now.getTime() - 30 * 86400000);
+    const startRange = new Date(now.getTime() - rangeDays * 86400000);
+    let totalPaid = orders.length, totalRevenue = 0, todayPaid = 0, todayRevenue = 0, weekRevenue = 0, monthRevenue = 0, rangeRevenue = 0;
+    const planBreakdown = {}, dailyRevenue = {};
+    for (const o of orders) {
+      totalRevenue += o.amount;
+      const paidAt = o.paidAt ? new Date(o.paidAt) : null;
+      if (paidAt) {
+        if (paidAt >= startToday) { todayPaid++; todayRevenue += o.amount; }
+        if (paidAt >= startWeek) weekRevenue += o.amount;
+        if (paidAt >= startMonth) monthRevenue += o.amount;
+        if (paidAt >= startRange) { rangeRevenue += o.amount; const dayKey = paidAt.toISOString().slice(0,10); dailyRevenue[dayKey] = (dailyRevenue[dayKey] || 0) + o.amount; }
+      }
+      const planKey = o.planId || 'unknown';
+      if (!planBreakdown[planKey]) planBreakdown[planKey] = { count:0, revenue:0, name:o.planName || planKey };
+      planBreakdown[planKey].count++; planBreakdown[planKey].revenue += o.amount;
+    }
+    return res.status(200).json({ success:true, rangeDays, resetAt:null, source:'supabase', stats:{ totalPaid,totalRevenue,todayPaid,todayRevenue,weekRevenue,monthRevenue,rangeRevenue,pendingCount:pending.length,issueCount:issues.length,planBreakdown,dailyRevenue }, orders:orders.slice(0,80), pending:pending.slice(0,50), issues });
+  }
   const resetAt = await getHistoryResetAt();
 
   const [paidSnap, pendingSnap, logsSnap] = await Promise.all([

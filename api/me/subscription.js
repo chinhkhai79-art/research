@@ -1,5 +1,6 @@
 import { db, FieldValue, Timestamp } from "../../lib/firebaseAdmin.js";
 import { setCors } from "../../lib/cors.js";
+import { isSupabaseConfigured, getUserByUid as sbGetUserByUid, findUsersByEmail as sbFindUsersByEmail, upsertUser as sbUpsertUser } from "../../lib/supabaseAdmin.js";
 
 const MEMORY_CACHE_TTL_MS = 10 * 60 * 1000;
 const MEMORY_STALE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -218,6 +219,130 @@ async function mergePendingEmailActivation({ email, userId, name, photoUrl, uidR
   return merged;
 }
 
+
+async function findPendingEmailActivationSupabase(email, userId) {
+  if (!email) return null;
+  const items = await sbFindUsersByEmail(email, 10);
+  const docs = items
+    .filter(item => item.row?.uid !== userId)
+    .filter(item => item.data?.manualActivation || isPremiumData(item.data));
+  docs.sort((a, b) => {
+    const ae = toDate(a.data.premiumExpiresAt || a.data.expired_at || a.data.expiresAt || a.data.subscriptionInfo?.expiresAt)?.getTime() || 0;
+    const be = toDate(b.data.premiumExpiresAt || b.data.expired_at || b.data.expiresAt || b.data.subscriptionInfo?.expiresAt)?.getTime() || 0;
+    return be - ae;
+  });
+  return docs[0] || null;
+}
+
+async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initTrial, force }) {
+  const cached = !force ? readMemoryCache(userId, initTrial ? INIT_CACHE_TTL_MS : MEMORY_CACHE_TTL_MS) : null;
+  if (cached && (!initTrial || cached.active)) return cached;
+
+  const existing = await sbGetUserByUid(userId);
+  let user = existing?.data || null;
+
+  if (initTrial && email && (!user || !isPremiumData(user))) {
+    const pending = await findPendingEmailActivationSupabase(email, userId);
+    if (pending) {
+      const currentData = user || {};
+      const pendingData = pending.data || {};
+      const currentExp = toDate(currentData.premiumExpiresAt || currentData.expired_at || currentData.expiresAt || currentData.subscriptionInfo?.expiresAt);
+      const pendingExp = toDate(pendingData.premiumExpiresAt || pendingData.expired_at || pendingData.expiresAt || pendingData.subscriptionInfo?.expiresAt);
+      const usePendingPremium = pendingExp && (!currentExp || pendingExp.getTime() > currentExp.getTime());
+      const merged = {
+        ...currentData,
+        userId,
+        email: email || currentData.email || pendingData.email || '',
+        name: name || currentData.name || pendingData.name || pendingData.displayName || '',
+        photoUrl: photoUrl || currentData.photoUrl || pendingData.photoUrl || '',
+        migratedFrom: pending.row.uid,
+        updated_at: new Date().toISOString()
+      };
+      if (usePendingPremium) {
+        Object.assign(merged, {
+          account_type: 'premium',
+          premium: true,
+          isPro: true,
+          pro: true,
+          active: true,
+          status: 'PRO',
+          planId: pendingData.planId || currentData.planId || 'manual',
+          planName: pendingData.planName || currentData.planName || 'GÓI PRO',
+          premiumStartedAt: pendingData.premiumStartedAt || currentData.premiumStartedAt || new Date().toISOString(),
+          premiumExpiresAt: pendingData.premiumExpiresAt || pendingData.expired_at || pendingData.expiresAt || pendingData.subscriptionInfo?.expiresAt,
+          expired_at: pendingData.expired_at || pendingData.premiumExpiresAt || pendingData.expiresAt || pendingData.subscriptionInfo?.expiresAt,
+          expiresAt: pendingData.expiresAt || pendingData.premiumExpiresAt || pendingData.expired_at || pendingData.subscriptionInfo?.expiresAt,
+          lastAdminAction: pendingData.lastAdminAction || currentData.lastAdminAction || 'email_activation_migrated'
+        });
+      }
+      const saved = await sbUpsertUser(userId, merged);
+      await sbUpsertUser(pending.row.uid, { ...pendingData, migratedTo: userId, migratedAt: new Date().toISOString() });
+      const response = buildResponse(userId, saved.data);
+      saveMemoryCache(userId, response);
+      return response;
+    }
+  }
+
+  if (!user) {
+    if (!initTrial) {
+      const response = emptyResponse(userId);
+      saveMemoryCache(userId, response);
+      return response;
+    }
+    const now = new Date();
+    const trialExpiresAt = addHours(now, 1);
+    const trialData = {
+      userId,
+      email,
+      name,
+      photoUrl,
+      account_type: 'trial',
+      premium: false,
+      active: true,
+      planId: 'trial_1h',
+      planName: 'Dùng thử 1 giờ',
+      trialStartedAt: now.toISOString(),
+      trialExpiresAt: trialExpiresAt.toISOString(),
+      created_at: now.toISOString(),
+      firstLoginAt: now.toISOString(),
+      lastLoginAt: now.toISOString(),
+      loginCount: 1,
+      updated_at: now.toISOString()
+    };
+    const saved = await sbUpsertUser(userId, trialData);
+    const response = buildResponse(userId, saved.data);
+    saveMemoryCache(userId, response);
+    return response;
+  }
+
+  if (initTrial) {
+    const lastLogin = toDate(user.lastLoginAt);
+    const shouldTouchLogin = !lastLogin || (Date.now() - lastLogin.getTime() > 24 * 60 * 60 * 1000);
+    const profileChanged =
+      (email && email !== (user.email || '')) ||
+      (name && name !== (user.name || '')) ||
+      (photoUrl && photoUrl !== (user.photoUrl || ''));
+    if (profileChanged || shouldTouchLogin) {
+      const saved = await sbUpsertUser(userId, {
+        ...user,
+        email: email || user.email || '',
+        name: name || user.name || '',
+        photoUrl: photoUrl || user.photoUrl || '',
+        ...(shouldTouchLogin ? {
+          lastLoginAt: new Date().toISOString(),
+          loginCount: Number(user.loginCount || 0) + 1,
+          firstLoginAt: user.firstLoginAt || user.created_at || new Date().toISOString()
+        } : {})
+      });
+      user = saved.data;
+    }
+  }
+
+  const response = buildResponse(userId, user);
+  saveMemoryCache(userId, response);
+  return response;
+}
+
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
 
@@ -239,6 +364,11 @@ export default async function handler(req, res) {
         success: false,
         error: "Missing userId"
       });
+    }
+
+    if (isSupabaseConfigured()) {
+      const response = await handleSubscriptionSupabase({ userId, email, name, photoUrl, initTrial, force });
+      return res.status(200).json({ ...response, dataSource: "supabase" });
     }
 
     const cached = !force ? readMemoryCache(userId, initTrial ? INIT_CACHE_TTL_MS : MEMORY_CACHE_TTL_MS) : null;

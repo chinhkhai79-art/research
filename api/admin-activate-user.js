@@ -1,5 +1,6 @@
 import { db, FieldValue, Timestamp } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
+import { isSupabaseConfigured, getUserByUid as sbGetUserByUid, findUsersByEmail as sbFindUsersByEmail, upsertUser as sbUpsertUser, addAdminLog as sbAddAdminLog } from '../lib/supabaseAdmin.js';
 
 const PLAN_MAP = {
   '30': { planId: '1m', planName: 'GÓI 1 THÁNG', days: 30 },
@@ -90,6 +91,66 @@ async function writeAdminLog(data) {
   } catch (error) {
     console.error('WRITE ADMIN LOG ERROR:', error);
   }
+}
+
+
+async function findSupabaseUser({ uid, email }) {
+  if (uid) {
+    const item = await sbGetUserByUid(uid);
+    return { uid, data: item?.data || {}, exists: Boolean(item) };
+  }
+  if (email) {
+    const found = await sbFindUsersByEmail(email, 5);
+    if (found.length) return { uid: found[0].row.uid, data: found[0].data || {}, exists: true };
+  }
+  return { uid: `manual_${compactEmail(email) || Date.now()}`, data: {}, exists: false, manual: true };
+}
+
+async function activateSupabaseUser({ uidInput, email, body, selected, days, planId, planName, reason }) {
+  const found = await findSupabaseUser({ uid: uidInput, email });
+  const uid = found.uid;
+  const current = found.data || {};
+  const now = new Date();
+  const oldExpiresAt = toDate(current.premiumExpiresAt || current.expired_at || current.expiresAt);
+  const baseDate = oldExpiresAt && oldExpiresAt.getTime() > now.getTime() ? oldExpiresAt : now;
+  const expiresAt = addDays(baseDate, days);
+  const data = {
+    ...current,
+    userId: uid,
+    email: email || current.email || '',
+    name: body.name || current.name || current.displayName || '',
+    account_type: 'premium',
+    premium: true,
+    isPro: true,
+    pro: true,
+    active: true,
+    planId,
+    planName,
+    premiumStartedAt: current.premiumStartedAt || now.toISOString(),
+    premiumExpiresAt: expiresAt.toISOString(),
+    expired_at: expiresAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    manualActivation: Boolean(found.manual || current.manualActivation),
+    lastAdminAction: 'activate_or_extend',
+    lastAdminReason: reason,
+    lastAdminDays: days,
+    updated_at: now.toISOString(),
+    created_at: current.created_at || now.toISOString()
+  };
+  await sbUpsertUser(uid, data);
+  await sbAddAdminLog({
+    action: 'activate_or_extend',
+    targetUid: uid,
+    targetEmail: data.email,
+    planId,
+    planName,
+    days,
+    oldExpiresAt: oldExpiresAt ? oldExpiresAt.toISOString() : null,
+    newExpiresAt: expiresAt.toISOString(),
+    cumulative: Boolean(oldExpiresAt && oldExpiresAt.getTime() > now.getTime()),
+    reason
+  });
+  return { uid, email: data.email, expiresAt };
 }
 
 // === Cộng ngày hàng loạt cho user PRO ===
@@ -235,6 +296,21 @@ export default async function handler(req, res) {
 
     if (!uidInput && !email) {
       return res.status(400).json({ success: false, error: 'Cần nhập UID hoặc email.' });
+    }
+
+    if (isSupabaseConfigured()) {
+      const result = await activateSupabaseUser({ uidInput, email, body, selected, days, planId, planName, reason });
+      return res.status(200).json({
+        success: true,
+        message: 'Đã kích hoạt/cộng ngày PRO.',
+        uid: result.uid,
+        email: result.email,
+        planId,
+        planName,
+        days,
+        expiresAt: result.expiresAt.toISOString(),
+        dataSource: 'supabase'
+      });
     }
 
     const { ref, snap, uid, manual } = await findUserDoc({ uid: uidInput, email });
