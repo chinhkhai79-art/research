@@ -143,15 +143,24 @@
         if (!doc) return;
         var main = doc.querySelector('.wrap') || doc.querySelector('.page') || doc.body;
         if (!main) return;
-        try { doc.documentElement.style.minHeight = '0'; doc.body.style.minHeight = '0'; } catch (_) {}
-        var rect = main.getBoundingClientRect ? main.getBoundingClientRect() : null;
-        var h = Math.max(
-          rect && rect.height ? rect.height : 0,
-          main.offsetHeight || 0,
-          main.scrollHeight || 0,
-          420
-        );
-        h = Math.min(Math.ceil(h + 4), 2600);
+        try {
+          doc.documentElement.style.minHeight = '0';
+          doc.body.style.minHeight = '0';
+          doc.documentElement.style.overflow = 'visible';
+          doc.body.style.overflow = 'visible';
+        } catch (_) {}
+        var top = main.getBoundingClientRect ? main.getBoundingClientRect().top : 0;
+        var maxBottom = 0;
+        var nodes = main.querySelectorAll ? main.querySelectorAll('.card:not(.hidden), .tabs, .status:not(.hidden), .grid:not(.hidden), .top:not(.hidden)') : [];
+        for (var i = 0; i < nodes.length; i++) {
+          var el = nodes[i];
+          if (!el || el.offsetParent === null) continue;
+          var r = el.getBoundingClientRect();
+          if (r && r.bottom) maxBottom = Math.max(maxBottom, r.bottom - top);
+        }
+        var fallback = main.offsetHeight || 0;
+        var h = Math.max(maxBottom || fallback || 0, 420);
+        h = Math.ceil(h + 28);
         if (Math.abs((parseInt(frame.style.height, 10) || 0) - h) > 6) frame.style.height = h + 'px';
       } catch (_) {}
     }

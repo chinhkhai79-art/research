@@ -21,6 +21,7 @@ const PLAN_MAP = {
   '6m': { planId: '6m', planName: 'GÓI 6 THÁNG', days: 180 },
   '12m': { planId: '12m', planName: 'GÓI 1 NĂM', days: 365 }
 };
+const DEFAULT_BULK_REASON = 'Cộng ngày hàng loạt từ admin';
 function getAdminToken(req) { return String(req.headers['x-admin-secret'] || req.headers['x-admin-key'] || req.headers.authorization || req.query.password || req.query.adminSecret || req.query.adminKey || req.body?.password || req.body?.adminSecret || req.body?.adminKey || '').replace(/^Bearer\s+/i, '').trim(); }
 function requireAdmin(req, res) {
   const expected = String(process.env.ADMIN_SECRET || process.env.ADMIN_SETTINGS_PASSWORD || process.env.ADMIN_PASSWORD || process.env.ADMIN_SETTINGS_KEY || '').trim();
@@ -88,6 +89,7 @@ async function activateSupabaseUser({ uidInput, email, body, days, planId, planN
   return { uid, email: data.email, expiresAt, matchedExisting: found.exists, manual: Boolean(found.manual && !found.exists) };
 }
 async function bulkExtendUsers({ days, scope = 'pro_active', dryRun = false, reason = '', adminEmail = '' }) {
+  reason = String(reason || DEFAULT_BULK_REASON).trim() || DEFAULT_BULK_REASON;
   const now = new Date();
   const rows = await sbListUsersForBulk({ limit: 5000 });
   const affected = [];
@@ -96,8 +98,10 @@ async function bulkExtendUsers({ days, scope = 'pro_active', dryRun = false, rea
     const u = item.data || {};
     const uid = item.row?.uid || u.uid || u.userId;
     const email = u.email || '';
-    const oldExpires = toDate(u.premiumExpiresAt || u.expired_at || u.expiresAt);
-    const isPremium = u.premium === true || u.isPro === true || u.pro === true || u.account_type === 'premium';
+    if (!uid) { skipped.push({ uid: '', email, reason: 'missing_uid' }); continue; }
+    if (u.migratedTo || item.row?.migrated_to) { skipped.push({ uid, email, reason: 'migrated' }); continue; }
+    const oldExpires = toDate(u.premiumExpiresAt || u.expired_at || u.expiresAt || item.row?.premium_expires_at || item.row?.trial_expires_at);
+    const isPremium = u.premium === true || u.isPro === true || u.pro === true || u.account_type === 'premium' || item.row?.account_type === 'premium' || item.row?.premium === true;
     const isActive = oldExpires && oldExpires.getTime() > now.getTime();
     let qualifies = false;
     if (scope === 'pro_active') qualifies = isPremium && isActive;
@@ -128,8 +132,7 @@ export default async function handler(req, res) {
       if (!days) return res.status(400).json({ success: false, error: 'Cần nhập số ngày từ 1 đến 365.' });
       const scope = ['pro_active', 'pro_all', 'all_users'].includes(body.scope) ? body.scope : 'pro_active';
       const reason = String(body.reason || '').trim();
-      if (action === 'bulk_extend_apply' && !reason) return res.status(400).json({ success: false, error: 'Cần nhập lý do cộng ngày hàng loạt (bắt buộc để truy vết).' });
-      const result = await bulkExtendUsers({ days, scope, reason, dryRun: action === 'bulk_extend_preview', adminEmail: String(body.adminEmail || '') });
+      const result = await bulkExtendUsers({ days, scope, reason: reason || DEFAULT_BULK_REASON, dryRun: action === 'bulk_extend_preview', adminEmail: String(body.adminEmail || '') });
       return res.status(200).json({ success: true, message: action === 'bulk_extend_preview' ? `Preview: ${result.affectedCount} user sẽ được cộng ${days} ngày.` : `Đã cộng ${days} ngày cho ${result.affectedCount} user.`, ...result, dataSource:'supabase' });
     }
     const uidInput = String(body.uid || body.userId || '').trim();

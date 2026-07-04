@@ -134,6 +134,29 @@
     .card h2{border-left:4px solid #22d3ee;padding-left:10px}
     #revenuePanel h2,#logsPanel h2,#usersPanel h2{color:#0f3b66 !important}
 
+
+    /* v32: bảng tài khoản gọn, chữ nhỏ, hạn chế xuống dòng */
+    .users-table{table-layout:fixed;width:100%}
+    .users-table th{font-size:10.5px;line-height:1.15;padding:9px 6px;white-space:normal;color:#000!important}
+    .users-table td{font-size:12px;line-height:1.25;padding:10px 6px;color:#000!important;vertical-align:middle}
+    .users-table th:nth-child(1),.users-table td:nth-child(1){width:42px;text-align:center}
+    .users-table th:nth-child(2),.users-table td:nth-child(2){width:210px}
+    .users-table th:nth-child(3),.users-table td:nth-child(3){width:190px}
+    .users-table th:nth-child(4),.users-table td:nth-child(4){width:98px}
+    .users-table th:nth-child(5),.users-table td:nth-child(5){width:170px}
+    .users-table th:nth-child(6),.users-table td:nth-child(6){width:120px}
+    .users-table th:nth-child(7),.users-table td:nth-child(7){width:118px}
+    .users-table th:nth-child(8),.users-table td:nth-child(8){width:126px}
+    .users-table th:nth-child(9),.users-table td:nth-child(9){width:160px}
+    .users-table th:nth-child(10),.users-table td:nth-child(10){width:205px}
+    .cell2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;max-height:2.55em}
+    .one-line{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;word-break:normal}
+    .users-table .mono{font-size:11px;line-height:1.2;word-break:normal}
+    .users-table .badge{font-size:10.5px;padding:5px 8px;white-space:nowrap}
+    .users-table .row-actions{gap:5px;justify-content:flex-start}
+    .users-table .row-actions .small{height:32px;min-width:48px;padding:0 10px;font-size:11px}
+    .users-table .muted{font-size:11.5px;line-height:1.2}
+
   </style>
 </head>
 <body>
@@ -360,6 +383,7 @@ const USERS_PAGE_SIZE = 50;
 let currentUsersPage = 1;
 let currentUsersHasNext = false;
 
+const BULK_DEFAULT_REASON = 'Cộng ngày hàng loạt từ admin';
 const PLAN_MAP = {
   'manual_30d': { name: 'KÍCH HOẠT THỦ CÔNG 30 NGÀY', days: 30 },
   '3m': { name: 'GÓI 3 THÁNG', days: 90 },
@@ -543,14 +567,14 @@ function renderUsers(users, meta={}){
     const stt = ((page - 1) * USERS_PAGE_SIZE) + index + 1;
     return `<tr>
       <td class="stt-col">${stt}</td>
-      <td><b>${esc(u.email || '')}</b><br><span class="muted">${esc(u.name || '')}</span>${manual}${sourceNote}</td>
-      <td class="mono">${esc(u.uid || '')}</td>
+      <td><div class="cell2"><span>${esc(u.email || '')}</span><br><span class="muted">${esc(u.name || '')}</span>${manual}${sourceNote}</div></td>
+      <td><span class="mono one-line" title="${esc(u.uid || '')}">${esc(u.uid || '')}</span></td>
       <td>${badge}</td>
-      <td>${esc(u.planName || 'Chưa có')}</td>
-      <td>${esc(fmtDate(u.expiresAt))}</td>
-      <td><b>${esc(u.remainingText || '---')}</b></td>
-      <td>${loginInfo}</td>
-      <td class="mono">${esc(u.lastPaymentOrderCode || '')}</td>
+      <td><span class="cell2">${esc(u.planName || 'Chưa có')}</span></td>
+      <td><span class="cell2">${esc(fmtDate(u.expiresAt))}</span></td>
+      <td><span class="cell2">${esc(u.remainingText || '---')}</span></td>
+      <td><span class="cell2">${loginInfo}</span></td>
+      <td><span class="mono one-line" title="${esc(u.lastPaymentOrderCode || '')}">${esc(u.lastPaymentOrderCode || '')}</span></td>
       <td><div class="row-actions">
         <button class="btn small" onclick='fillUser(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Chọn</button>
         <button class="btn-green small" onclick='quickAdd(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')}, 30)'>+30</button>
@@ -751,7 +775,8 @@ async function bulkExtendPreview(){
   if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.','err');
   const days = Number(qs('bulkDays').value || 0);
   const scope = qs('bulkScope').value;
-  const reason = qs('bulkReason').value.trim();
+  let reason = qs('bulkReason').value.trim();
+  if(!reason){ reason = BULK_DEFAULT_REASON; qs('bulkReason').value = reason; }
   if(!days || days < 1 || days > 365) return setStatus('Số ngày phải từ 1 đến 365.','err');
 
   qs('bulkPreview').innerHTML = '<div class="muted">Đang quét danh sách user...</div>';
@@ -795,13 +820,11 @@ async function bulkExtendPreview(){
       </div>
     `;
 
-    if(data.affectedCount > 0 && reason) {
+    if(data.affectedCount > 0) {
       qs('bulkApplyBtn').disabled = false;
       setStatus(`Preview xong. Bấm "Áp dụng" để cộng ngày thật.`, 'ok');
-    } else if(!reason) {
-      setStatus('Cần nhập lý do trước khi áp dụng thật.','err');
     } else {
-      setStatus('Không có user nào cần cộng.','err');
+      setStatus('Không có user nào cần cộng.', 'err');
     }
   } catch(e) {
     qs('bulkPreview').innerHTML = '';
@@ -830,6 +853,7 @@ async function bulkExtendApply(){
         ✅ Đã cộng ${days} ngày cho ${data.affectedCount} user. Đã ghi log vào Admin logs.
       </div>`;
     bulkPreviewData = null;
+    await loadUsers(currentUsersPage, true);
     if(!qs('logsPanel').classList.contains('hidden')) loadLogs();
   } catch(e) {
     setStatus('Lỗi áp dụng: ' + esc(e.message), 'err');
