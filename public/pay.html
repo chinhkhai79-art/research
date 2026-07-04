@@ -427,7 +427,6 @@
           </div>
           <div class="row"><div class="label">Tên thụ hưởng</div><div class="value" id="accountNameText">NGUYEN VAN THE</div></div>
           <div class="row"><div class="label">Gói dịch vụ</div><div class="value" id="planName">---</div></div>
-          <div class="row wide"><div class="label">Email</div><div class="value" id="emailText">---</div></div>
           <div class="row wide">
             <div class="label">Nội dung chuyển khoản</div>
             <div class="value-line">
@@ -638,7 +637,7 @@ function renderPayment(apiQr){
   document.getElementById('amountText').textContent = amount.toLocaleString('vi-VN') + ' VND';
   document.getElementById('planName').textContent = String(plan.name || '').replace(/premium/gi,'PRO').toUpperCase();
   document.getElementById('contentText').textContent = currentContent || '---';
-  document.getElementById('emailText').textContent = currentEmail || '---';
+  const emailEl = document.getElementById('emailText'); if (emailEl) emailEl.textContent = currentEmail || '---';
   document.getElementById('bankText').textContent = payment.bankName || payment.bankCode || 'ACB';
   document.getElementById('accountText').textContent = payment.accountNo || '---';
   document.getElementById('accountNameText').textContent = payment.accountName || '---';

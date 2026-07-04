@@ -82,6 +82,20 @@
     .tab.active{background:#22d3ee;color:#00111f}
     .quick button{background:#ffffff;color:#334155;border:1px solid var(--line)}
   
+  
+    /* Đồng bộ font/giao diện sáng, hạn chế xuống dòng, không in đậm */
+    body, body *{font-family:Arial,"Helvetica Neue",sans-serif;font-weight:400!important}
+    .title h1,.field label,th,.badge,button,.tab,.top a{font-weight:400!important}
+    .title h1{font-size:32px}
+    .field label{text-transform:none;letter-spacing:0;font-size:13px}
+    .actions,.tabs,.links,.quick{align-items:center}
+    .actions button,.tabs button,.quick button,.top a{white-space:nowrap;flex:0 0 auto}
+    .tabs{flex-wrap:wrap}
+    .grid{align-items:end}
+    .status b,.card b{font-weight:400!important}
+    .mono{font-family:Consolas,"Courier New",monospace!important}
+    @media(max-width:950px){.actions button,.tabs button,.quick button{width:auto}}
+
   </style>
 </head>
 <body>
