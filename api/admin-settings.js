@@ -267,7 +267,7 @@ export default async function handler(req, res) {
       const { sendPaymentSuccessEmail } = await import('../lib/mailer.js');
       await sendPaymentSuccessEmail({
         email: to,
-        userName: 'Khách hàng',
+        userName: '',
         orderCode: 'TUBEKEY040726100259',
         planName: 'GÓI 1 THÁNG',
         amount: 299000,

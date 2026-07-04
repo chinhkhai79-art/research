@@ -20,7 +20,7 @@
   <style>
     :root{--bg:#f4f8fd;--card:#ffffff;--card2:#eef5fc;--line:#d8e3ef;--text:#0f172a;--muted:#64748b;--cyan:#22d3ee;--cyan2:#0ea5e9}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);color:var(--text);min-height:100vh}
+    body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);color:var(--text);min-height:100vh;overflow-x:hidden}
     .wrap{width:96%;max-width:1480px;margin:0 auto;padding:24px 0 38px}
     .top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
     h1{margin:0;font-size:32px;letter-spacing:-.4px;font-weight:400}
@@ -43,6 +43,10 @@
     body,.sub,.shared-field label,.shared-note,.tab,.back,.admin-btn.gray,input{color:#000 !important}
     h1{color:#000 !important}
     .tab.active,.admin-btn{color:#000 !important}
+
+    /* v31: tiêu đề dùng màu riêng để dễ phân biệt, nội dung vẫn đen */
+    h1,.title h1{color:#0f3b66 !important}
+    .tab.active{box-shadow:0 8px 22px rgba(34,211,238,.22)}
 
   </style>
 </head>
@@ -138,13 +142,17 @@
         var doc = frame.contentDocument || frame.contentWindow.document;
         if (!doc) return;
         var main = doc.querySelector('.wrap') || doc.querySelector('.page') || doc.body;
+        if (!main) return;
+        try { doc.documentElement.style.minHeight = '0'; doc.body.style.minHeight = '0'; } catch (_) {}
+        var rect = main.getBoundingClientRect ? main.getBoundingClientRect() : null;
         var h = Math.max(
-          main ? main.scrollHeight : 0,
-          main ? main.offsetHeight : 0,
-          doc.documentElement ? doc.documentElement.clientHeight : 0,
-          520
+          rect && rect.height ? rect.height : 0,
+          main.offsetHeight || 0,
+          main.scrollHeight || 0,
+          420
         );
-        frame.style.height = Math.ceil(h + 8) + 'px';
+        h = Math.min(Math.ceil(h + 4), 2600);
+        if (Math.abs((parseInt(frame.style.height, 10) || 0) - h) > 6) frame.style.height = h + 'px';
       } catch (_) {}
     }
     function handleFrameLoad(frame, name){

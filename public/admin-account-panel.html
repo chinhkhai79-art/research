@@ -22,7 +22,7 @@
       --red:#ef4444; --orange:#f97316; --blue:#2563eb;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;background:radial-gradient(circle at top,#10213a,#07111f 55%);color:var(--text);min-height:100vh}
+    body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;background:radial-gradient(circle at top,#10213a,#07111f 55%);color:var(--text);min-height:0;overflow:visible}
     .wrap{width:96%;max-width:1380px;margin:0 auto;padding:26px 0 50px}
     .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
     .title h1{margin:0;font-size:32px;font-weight:900;letter-spacing:-.4px}
@@ -64,7 +64,7 @@
       --text:#0f172a; --muted:#64748b; --cyan:#22d3ee; --green:#16a34a;
       --red:#ef4444; --orange:#f97316; --blue:#2563eb;
     }
-    body{background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);color:var(--text)}
+    body{background:linear-gradient(180deg,#f6f9fe 0%,#eef4fb 100%);color:var(--text);min-height:0;overflow:visible}
     .top a{color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe}
     .card{background:#ffffff;border-color:var(--line);box-shadow:0 16px 42px rgba(15,23,42,.08)}
     .field label{color:#64748b}
@@ -127,6 +127,12 @@
     .tab.active,.btn,.btn-green,.admin-btn{color:#000 !important}
     .btn-red{color:#fff !important}
     .status a{color:#000 !important;text-decoration:underline}
+
+    /* v31: tiêu đề có màu riêng, nội dung giữ đen 100% */
+    html,body{min-height:0!important;overflow:visible!important}
+    h1,h2,h3,.title h1,.card h2{color:#0f3b66 !important}
+    .card h2{border-left:4px solid #22d3ee;padding-left:10px}
+    #revenuePanel h2,#logsPanel h2,#usersPanel h2{color:#0f3b66 !important}
 
   </style>
 </head>
