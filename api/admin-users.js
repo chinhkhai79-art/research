@@ -1,4 +1,4 @@
-import { db } from '../lib/firebaseAdmin.js';
+import { db, authAdmin } from '../lib/firebaseAdmin.js';
 import { setCors } from '../lib/cors.js';
 
 function getAdminToken(req) {
@@ -97,8 +97,106 @@ function normalizeUser(doc) {
     updatedAt: toIso(d.updated_at || d.updatedAt),
     firstLoginAt: toIso(d.firstLoginAt),
     lastLoginAt: toIso(d.lastLoginAt),
-    loginCount: Number(d.loginCount || 0)
+    loginCount: Number(d.loginCount || 0),
+    source: 'firestore'
   };
+}
+
+function normalizeAuthUser(u) {
+  return {
+    uid: u.uid,
+    userId: u.uid,
+    email: u.email || '',
+    name: u.displayName || '',
+    photoUrl: u.photoURL || '',
+    accountType: 'unknown',
+    status: 'CHƯA KIỂM TRA',
+    active: false,
+    premium: false,
+    planId: '',
+    planName: 'Chưa đọc được Firestore',
+    premiumStartedAt: null,
+    trialStartedAt: null,
+    expiresAt: null,
+    premiumExpiresAt: null,
+    trialExpiresAt: null,
+    remainingText: '---',
+    lastPaymentOrderCode: '',
+    lastPaymentAmount: 0,
+    disabledByAdmin: Boolean(u.disabled),
+    manualActivation: false,
+    migratedTo: '',
+    createdAt: u.metadata?.creationTime ? new Date(u.metadata.creationTime).toISOString() : null,
+    updatedAt: null,
+    firstLoginAt: null,
+    lastLoginAt: u.metadata?.lastSignInTime ? new Date(u.metadata.lastSignInTime).toISOString() : null,
+    loginCount: 0,
+    source: 'firebase_auth_fallback'
+  };
+}
+
+function isQuotaError(error) {
+  const text = String(error?.message || error?.details || error?.code || '').toLowerCase();
+  return error?.code === 8 || text.includes('resource_exhausted') || text.includes('quota') || text.includes('free daily read units');
+}
+
+async function listUsersFromFirestore({ q, limit }) {
+  const docs = new Map();
+
+  if (q) {
+    const direct = await db.collection('users').doc(q).get();
+    if (direct.exists) docs.set(direct.id, direct);
+
+    const byEmail = await db.collection('users').where('email', '==', q).limit(Math.min(limit, 20)).get();
+    byEmail.docs.forEach(doc => docs.set(doc.id, doc));
+
+    const byUserId = await db.collection('users').where('userId', '==', q).limit(Math.min(limit, 20)).get();
+    byUserId.docs.forEach(doc => docs.set(doc.id, doc));
+
+    // Nếu người quản trị gõ một phần email/tên thì chỉ đọc tối đa 100 bản ghi gần nhất để lọc,
+    // không quét 500-1000 tài khoản như trước để tránh hết quota.
+    if (docs.size === 0 && q.length >= 3) {
+      const sample = await db.collection('users').limit(Math.min(100, Math.max(limit, 50))).get();
+      sample.docs.forEach(doc => docs.set(doc.id, doc));
+    }
+  } else {
+    const snap = await db.collection('users').limit(limit).get();
+    snap.docs.forEach(doc => docs.set(doc.id, doc));
+  }
+
+  let users = Array.from(docs.values()).map(normalizeUser);
+
+  if (q) {
+    const qLower = q.toLowerCase();
+    users = users.filter(u =>
+      String(u.email || '').toLowerCase().includes(qLower) ||
+      String(u.uid || '').toLowerCase().includes(qLower) ||
+      String(u.userId || '').toLowerCase().includes(qLower) ||
+      String(u.name || '').toLowerCase().includes(qLower)
+    );
+  }
+
+  users.sort((a, b) => {
+    const at = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const bt = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return bt - at;
+  });
+
+  return { users: users.slice(0, limit), nextCursor: null, exhausted: users.length < limit };
+}
+
+async function listUsersFromAuthFallback({ q, limit }) {
+  const list = await authAdmin.listUsers(limit);
+  let users = (list.users || []).map(normalizeAuthUser);
+  if (q) {
+    const qLower = q.toLowerCase();
+    users = users.filter(u =>
+      String(u.email || '').toLowerCase().includes(qLower) ||
+      String(u.uid || '').toLowerCase().includes(qLower) ||
+      String(u.name || '').toLowerCase().includes(qLower)
+    );
+  }
+  return users;
 }
 
 export default async function handler(req, res) {
@@ -111,31 +209,40 @@ export default async function handler(req, res) {
     }
 
     const q = String(req.query.q || req.body?.q || '').trim().toLowerCase();
-    const limit = Math.min(Number(req.query.limit || req.body?.limit || 500) || 500, 1000);
+    const limit = Math.min(Math.max(Number(req.query.limit || req.body?.limit || 50) || 50, 1), 100);
+    try {
+      const result = await listUsersFromFirestore({ q, limit });
+      return res.status(200).json({
+        success: true,
+        users: result.users,
+        count: result.users.length,
+        limit,
+        nextCursor: result.nextCursor,
+        exhausted: result.exhausted,
+        source: 'firestore'
+      });
+    } catch (error) {
+      if (!isQuotaError(error)) throw error;
 
-    const snap = await db.collection('users').limit(limit).get();
-    let users = snap.docs.map(normalizeUser);
-
-    if (q) {
-      users = users.filter(u =>
-        String(u.email || '').toLowerCase().includes(q) ||
-        String(u.uid || '').toLowerCase().includes(q) ||
-        String(u.userId || '').toLowerCase().includes(q) ||
-        String(u.name || '').toLowerCase().includes(q)
-      );
+      const users = await listUsersFromAuthFallback({ q, limit });
+      return res.status(200).json({
+        success: true,
+        users,
+        count: users.length,
+        limit,
+        nextCursor: null,
+        exhausted: true,
+        source: 'firebase_auth_fallback',
+        warning: 'Firestore đã hết quota đọc miễn phí trong ngày nên đang hiển thị tạm danh sách từ Firebase Authentication. Trạng thái PRO/Trial sẽ đọc lại khi quota Firestore được reset hoặc bật billing.'
+      });
     }
-
-    users.sort((a, b) => {
-      const at = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const bt = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      return bt - at;
-    });
-
-    return res.status(200).json({ success: true, users, count: users.length });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(200).json({
       success: false,
-      error: error.message || 'Không tải được danh sách tài khoản.'
+      code: isQuotaError(error) ? 'FIRESTORE_QUOTA_EXHAUSTED' : 'ADMIN_USERS_ERROR',
+      error: isQuotaError(error)
+        ? 'Firestore đã hết quota đọc miễn phí trong ngày. Hãy chờ quota reset hoặc bật billing/nâng quota Firebase để tải đủ dữ liệu.'
+        : (error.message || 'Không tải được danh sách tài khoản.')
     });
   }
 }

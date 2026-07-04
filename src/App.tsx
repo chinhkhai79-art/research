@@ -580,6 +580,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -611,14 +612,43 @@ export default function App() {
     );
   };
 
+  const getSubscriptionCacheKey = (uid: string) => `vtw_subscription_cache_${uid}`;
+
+  const readCachedSubscription = (uid: string) => {
+    try {
+      const raw = localStorage.getItem(getSubscriptionCacheKey(uid));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const cachedAt = Number(parsed?.cachedAt || 0);
+      const data = parsed?.data;
+      if (!data || data.userId !== uid) return null;
+      // Cache chỉ dùng để chống treo khi API/Firebase lỗi tạm thời, không dùng quá 6 giờ.
+      if (!cachedAt || Date.now() - cachedAt > 6 * 60 * 60 * 1000) return null;
+      return data as SubscriptionInfo;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const saveSubscriptionCache = (uid: string, data: SubscriptionInfo) => {
+    try {
+      localStorage.setItem(getSubscriptionCacheKey(uid), JSON.stringify({ cachedAt: Date.now(), data }));
+    } catch (_) {}
+  };
+
   const refreshSubscription = async (targetUser = user, initTrial = false) => {
     if (!targetUser) {
       setSubscriptionInfo(null);
+      setSubscriptionError(null);
       return null;
     }
 
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 10000);
+
     try {
       setSubscriptionLoading(true);
+      setSubscriptionError(null);
 
       const url =
         `/api/me/subscription` +
@@ -629,20 +659,50 @@ export default function App() {
         `&photoUrl=${encodeURIComponent(targetUser.photoURL || '')}` +
         `&initTrial=${initTrial ? '1' : '0'}`;
 
-      const res = await fetch(url, { cache: 'no-store' });
-      const data = await res.json();
+      const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (_) {
+        data = { success: false, error: raw || `API trả về không phải JSON. HTTP ${res.status}` };
+      }
 
-      if (data?.success) {
+      if (res.ok && data?.success) {
         setSubscriptionInfo(data);
+        saveSubscriptionCache(targetUser.uid, data);
         return data;
       }
 
+      const cached = readCachedSubscription(targetUser.uid);
+      if (cached) {
+        setSubscriptionInfo(cached);
+        setSubscriptionError('Đang dùng tạm dữ liệu hạn dùng đã lưu vì Firebase/API đang lỗi.');
+        return cached;
+      }
+
+      const message = data?.error || data?.message || `Không kiểm tra được hạn dùng. HTTP ${res.status}`;
+      setSubscriptionInfo(null);
+      setSubscriptionError(message);
       console.warn('Không lấy được hạn dùng:', data);
       return null;
-    } catch (error) {
+    } catch (error: any) {
+      const cached = readCachedSubscription(targetUser.uid);
+      if (cached) {
+        setSubscriptionInfo(cached);
+        setSubscriptionError('Đang dùng tạm dữ liệu hạn dùng đã lưu vì kết nối kiểm tra hạn bị gián đoạn.');
+        return cached;
+      }
+
+      const message = error?.name === 'AbortError'
+        ? 'Kiểm tra hạn dùng quá lâu, hệ thống đã tự dừng để tránh treo trang.'
+        : (error?.message || 'Lỗi kiểm tra hạn dùng.');
+      setSubscriptionInfo(null);
+      setSubscriptionError(message);
       console.error('Lỗi kiểm tra hạn dùng:', error);
       return null;
     } finally {
+      window.clearTimeout(timer);
       setSubscriptionLoading(false);
     }
   };
@@ -655,6 +715,7 @@ export default function App() {
         await refreshSubscription(currentUser, true);
       } else {
         setSubscriptionInfo(null);
+        setSubscriptionError(null);
         setShowAccountModal(false);
       }
     });
@@ -665,12 +726,18 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
+    let lastCheck = Date.now();
     const timer = window.setInterval(() => {
       setSubscriptionTick(Date.now());
+      lastCheck = Date.now();
       refreshSubscription(user, false);
-    }, 30000);
+    }, 10 * 60 * 1000);
 
-    const onFocus = () => refreshSubscription(user, false);
+    const onFocus = () => {
+      if (Date.now() - lastCheck < 60 * 1000) return;
+      lastCheck = Date.now();
+      refreshSubscription(user, false);
+    };
     window.addEventListener('focus', onFocus);
 
     return () => {
@@ -6710,6 +6777,22 @@ Quy tắc:
             <Loader2 size={42} className="text-blue-600 animate-spin mx-auto mb-5" />
             <h2 className="text-2xl font-black text-gray-800 mb-3 uppercase">Đang kiểm tra hạn dùng</h2>
             <p className="text-gray-500 text-[14px]">Vui lòng đợi trong giây lát...</p>
+          </div>
+        ) : subscriptionError && !subscriptionInfo ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-orange-200 p-12 text-center max-w-2xl mx-auto mt-20">
+            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle size={40} className="text-orange-600" />
+            </div>
+            <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">Không kiểm tra được hạn dùng</h2>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto text-[14px]">{subscriptionError}</p>
+            <button
+              type="button"
+              onClick={() => user && refreshSubscription(user, true)}
+              className="px-7 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+            >
+              <RefreshCw size={18} />
+              <span>Thử kiểm tra lại</span>
+            </button>
           </div>
         ) : subscriptionExpired ? (
           <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-12 text-center max-w-2xl mx-auto mt-20">

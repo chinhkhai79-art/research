@@ -364,9 +364,13 @@ async function loadUsers(){
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
     const q = qs('searchText').value.trim();
     setStatus('Đang tải danh sách...', '');
-    const data = await api('/api/admin-users' + (q ? '?q='+encodeURIComponent(q) : ''));
+    const data = await api('/api/admin-users?limit=50' + (q ? '&q='+encodeURIComponent(q) : ''));
     renderUsers(data.users || []);
-    setStatus('Đã tải danh sách tài khoản.', 'ok');
+    if(data.warning){
+      setStatus(esc(data.warning), 'err');
+    } else {
+      setStatus('Đã tải danh sách tài khoản. Hệ thống chỉ đọc tối đa 50 tài khoản/lượt để tránh hết quota Firestore.', 'ok');
+    }
     showTab('users');
   }catch(e){ setStatus('Lỗi tải danh sách: '+esc(e.message), 'err'); }
 }
@@ -378,13 +382,16 @@ function renderUsers(users){
       ? '<span class="badge pro">PRO</span>'
       : u.status === 'TRIAL'
         ? '<span class="badge trial">TRIAL</span>'
-        : '<span class="badge expired">HẾT HẠN</span>';
+        : u.status === 'CHƯA KIỂM TRA'
+          ? '<span class="badge" style="background:#e0f2fe;color:#075985">CHƯA KIỂM TRA</span>'
+          : '<span class="badge expired">HẾT HẠN</span>';
     const manual = u.manualActivation ? '<br><span class="muted">Manual/Pending</span>' : '';
+    const sourceNote = u.source === 'firebase_auth_fallback' ? '<br><span class="muted">Tạm từ Firebase Auth</span>' : '';
     const loginInfo = u.lastLoginAt
       ? `<div>${esc(fmtDate(u.lastLoginAt))}</div><div class="muted">${Number(u.loginCount || 0)} lần</div>`
       : '<span class="muted">Chưa rõ</span>';
     return `<tr>
-      <td><b>${esc(u.email || '')}</b><br><span class="muted">${esc(u.name || '')}</span>${manual}</td>
+      <td><b>${esc(u.email || '')}</b><br><span class="muted">${esc(u.name || '')}</span>${manual}${sourceNote}</td>
       <td class="mono">${esc(u.uid || '')}</td>
       <td>${badge}</td>
       <td>${esc(u.planName || 'Chưa có')}</td>
