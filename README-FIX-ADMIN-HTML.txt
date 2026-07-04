@@ -13,7 +13,7 @@ Cách dùng:
 
 ZIP này có thêm vercel.json đã sửa để không chặn:
 - /admin.html
-- /admin-settings.html
+- /admin.html#settings
 - /pay.html
 - /assets/*
 

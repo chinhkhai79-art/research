@@ -1,7 +1,7 @@
-HƯỚNG DẪN CÀI /admin-settings.html
+HƯỚNG DẪN CÀI /admin.html#settings
 
 1) Upload các file đúng vị trí:
-- public/admin-settings.html
+- public/admin.html#settings
 - api/admin-settings.js
 - api/payment-config.js
 - api/test-email.js
@@ -15,7 +15,7 @@ npm i nodemailer
 ADMIN_SETTINGS_PASSWORD = mật khẩu quản trị anh tự đặt
 
 4) Mở:
-https://www.tubekey.vn/admin-settings.html
+https://www.tubekey.vn/admin.html#settings
 
 5) Dán cấu hình:
 - SePay Webhook Secret

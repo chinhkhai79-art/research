@@ -11,7 +11,7 @@
 - `api/payment-status.js` → thay file cũ
 - `api/test-email.js` → thay file cũ
 - `public/pay.html` → thay file cũ
-- `public/admin-settings.html` → thêm mới trong thư mục `public`
+- `public/admin.html#settings` → thêm mới trong thư mục `public`
 
 ## Thêm biến trong Vercel
 
@@ -27,7 +27,7 @@ FIRESTORE_DATABASE_ID=...
 ## Mở trang cấu hình
 
 ```txt
-https://www.tubekey.vn/admin-settings.html
+https://www.tubekey.vn/admin.html#settings
 ```
 
 Nhập `ADMIN_SETTINGS_KEY`, bấm `Tải cấu hình`, chỉnh thanh toán + SMTP, rồi bấm `Lưu cấu hình`.
