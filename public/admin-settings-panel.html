@@ -392,7 +392,7 @@
       setVal('senderName', smtp.senderName || smtp.fromName || 'Văn Thế Web');
       setVal('emailBaseUrl', normalizeBaseUrl(smtp.emailBaseUrl || smtp.baseUrl || currentOrigin()));
 
-      // Fill plans. Luôn bảo đảm đủ cả 4 gói, kể cả Firestore cũ thiếu gói 1 tháng.
+      // Fill plans. Luôn bảo đảm đủ cả 4 gói, kể cả cấu hình cũ thiếu gói 1 tháng.
       ensurePlanRows();
       const plans = payment.plans || {};
       PLAN_IDS.forEach(id => {

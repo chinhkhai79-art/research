@@ -629,7 +629,7 @@ export default function App() {
       const cachedAt = Number(parsed?.cachedAt || 0);
       const data = parsed?.data;
       if (!data || data.userId !== uid) return null;
-      // Dùng cache trình duyệt để giảm Firestore read khi reload/focus trang.
+      // Dùng cache trình duyệt để giảm API/Supabase read khi reload/focus trang.
       // PRO cache tối đa 6 giờ, trial cache tối đa 45 phút, dữ liệu hết hạn sẽ tự chuyển inactive.
       const maxAge = data.premium || data.accountType === 'premium' ? 6 * 60 * 60 * 1000 : 45 * 60 * 1000;
       if (!cachedAt || Date.now() - cachedAt > maxAge) return null;
@@ -710,7 +710,7 @@ export default function App() {
       const cached = readCachedSubscription(targetUser.uid);
       if (cached) {
         setSubscriptionInfo(cached);
-        setSubscriptionError('Đang dùng tạm dữ liệu hạn dùng đã lưu vì Firebase/API đang lỗi.');
+        setSubscriptionError('Đang dùng tạm dữ liệu hạn dùng đã lưu vì Supabase/API đang lỗi.');
         return cached;
       }
 

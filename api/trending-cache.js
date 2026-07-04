@@ -122,7 +122,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         source: 'fallback-local-no-cache-yet',
-        message: 'Chưa có cache Firebase cho khu vực này. Admin cần chạy /api/admin-trending-cron để cập nhật dữ liệu thật YouTube API V3.',
+        message: 'Chưa có cache Supabase cho khu vực này. Admin cần chạy /api/admin-trending-cron để cập nhật dữ liệu thật YouTube API V3.',
         region,
         updatedAt: null,
         categories: buildFallbackCategories(region)

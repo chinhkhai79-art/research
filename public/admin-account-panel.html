@@ -103,7 +103,7 @@
     <div class="top">
       <div class="title">
         <h1>Admin quản lý tài khoản</h1>
-        <p>Xem tài khoản đăng ký, tìm theo email/UID, kiểm tra Trial/PRO/Hết hạn, cộng ngày, khóa PRO và ghi log vào Firestore.</p>
+        <p>Xem tài khoản đăng ký, tìm theo email/UID, kiểm tra Trial/PRO/Hết hạn, cộng ngày, khóa PRO và ghi log vào Supabase.</p>
       </div>
       <div class="links">
         <a href="https://www.tubekey.vn/" target="_top">← Về tool</a>
@@ -125,7 +125,7 @@
           <button class="btn-dark" onclick="loadUsers()">Tải 20 tài khoản</button>
         </div>
       </div>
-      <div id="status" class="status">Nhập mật khẩu quản trị rồi bấm “Lưu mật khẩu”. Chỉ bấm tải danh sách khi cần để giảm quota Firestore.</div>
+      <div id="status" class="status">Nhập mật khẩu quản trị rồi bấm “Lưu mật khẩu”. Chỉ bấm tải danh sách khi cần để giảm lượt đọc Supabase.</div>
     </div>
 
     <div class="tabs">
@@ -369,7 +369,7 @@ async function loadUsers(){
     if(data.warning){
       setStatus(esc(data.warning), 'err');
     } else {
-      setStatus(data.fromMemoryCache ? 'Đã tải từ cache admin, không đọc thêm Firestore.' : 'Đã tải danh sách tài khoản. Hệ thống chỉ đọc tối đa 20 tài khoản/lượt để tránh hết quota Firestore.', 'ok');
+      setStatus(data.fromMemoryCache ? 'Đã tải từ cache admin, không đọc thêm Supabase.' : 'Đã tải danh sách tài khoản. Hệ thống chỉ đọc tối đa 20 tài khoản/lượt để giảm tải Supabase.', 'ok');
     }
     showTab('users');
   }catch(e){ setStatus('Lỗi tải danh sách: '+esc(e.message), 'err'); }
@@ -460,7 +460,7 @@ async function resetHistoryNow(){
     const d = data.deleted || {};
     setStatus(
       `Đã xóa lịch sử và bắt đầu tính lại từ: <b>${esc(fmtDate(data.resetAt))}</b><br>` +
-      `payments: ${esc(d.payments || 0)}, paid_orders: ${esc(d.paid_orders || 0)}, sepay_logs: ${esc(d.sepay_logs || 0)}, admin_logs: ${esc(d.admin_logs || 0)}`,
+      `payments: ${esc(d.payments || 0)}, sepay_logs: ${esc(d.sepay_logs || 0)}, admin_logs: ${esc(d.admin_logs || 0)}`,
       'ok'
     );
     if(!qs('logsPanel').classList.contains('hidden')) await loadLogs();
@@ -684,7 +684,7 @@ async function bulkExtendApply(){
         ✅ Đã cộng ${days} ngày cho ${data.affectedCount} user. Đã ghi log vào Admin logs.
       </div>`;
     bulkPreviewData = null;
-    // Không tự tải lại danh sách để tránh tăng Firestore read. Người quản trị bấm tải lại khi cần.
+    // Không tự tải lại danh sách để tránh tăng lượt đọc Supabase. Người quản trị bấm tải lại khi cần.
   } catch(e) {
     setStatus('Lỗi áp dụng: ' + esc(e.message), 'err');
     qs('bulkApplyBtn').disabled = false;
@@ -693,7 +693,7 @@ async function bulkExtendApply(){
 
 qs('adminSecret').value = localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || '';
 syncDaysFromPlan();
-if(qs('adminSecret').value) setStatus('Đã có mật khẩu quản trị đã lưu. Bấm “Tải 20 tài khoản” hoặc tìm email/UID khi cần để giảm quota Firestore.', 'ok');
+if(qs('adminSecret').value) setStatus('Đã có mật khẩu quản trị đã lưu. Bấm “Tải 20 tài khoản” hoặc tìm email/UID khi cần để giảm lượt đọc Supabase.', 'ok');
 </script>
 </body>
 </html>

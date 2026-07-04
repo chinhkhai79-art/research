@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
 import fileFirebaseConfig from '../../firebase-applet-config.json';
 
 type FirebaseConfigWithDb = {
@@ -63,7 +62,7 @@ export const firebaseConfigReady = Boolean(
 
 const app = initializeApp(firebaseConfig as any);
 
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
+// Firebase chỉ còn dùng cho Authentication. Dữ liệu app/admin/thanh toán dùng Supabase/Postgres trên Vercel, không dùng Firestore client.
 export const auth = getAuth(app);
 
 export const googleProvider = new GoogleAuthProvider();

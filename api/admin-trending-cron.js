@@ -251,7 +251,7 @@ export default async function handler(req, res) {
     const exhaustedState = state.exhaustedKeysDate === todayKey ? state.exhaustedKeysToday : [];
     const used = { exhausted: new Set(Array.isArray(exhaustedState) ? exhaustedState : []) };
 
-    // Cuốn chiếu: lấy cache cũ, quét từng chủ đề, có chủ đề nào xong là ghi ngay chủ đề đó vào Firebase.
+    // Cuốn chiếu: lấy cache cũ, quét từng chủ đề, có chủ đề nào xong là ghi ngay chủ đề đó vào Supabase.
     // UI có thể gọi /api/trending-cache liên tục để thấy kết quả mới trước, không phải đợi toàn bộ 30 chủ đề.
     const existingDoc = await readTrendingCache(region);
     let categories = ensureCategoryList(existingDoc?.categories || []);

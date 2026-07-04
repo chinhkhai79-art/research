@@ -14,36 +14,21 @@ function clientIp(req) {
   return String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '').split(',')[0].trim();
 }
 
-async function getDb() {
-  const mod = await import('../lib/firebaseAdmin.js');
-  return { db: mod.db, FieldValue: mod.FieldValue || { serverTimestamp: () => new Date() } };
-}
-
 // Ghi log mọi thay đổi cấu hình vào admin_logs để bạn theo dõi ai đổi gì khi nào.
 async function logSettingsChange({ action, changes, ip, reason }) {
   if (!changes || changes.length === 0) return;
   try {
-    if (isSupabaseConfigured()) {
-      await sbAddAdminLog({
-        action,
-        targetUid: 'app_settings',
-        targetEmail: 'research_config',
-        changes,
-        ip: ip || '',
-        reason: reason || `Đổi ${changes.length} mục`
-      });
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase chưa cấu hình, bỏ qua log settings để không ghi Firestore.');
       return;
     }
-    const { db, FieldValue } = await getDb();
-    await db.collection('admin_logs').add({
-      app: 'research',
+    await sbAddAdminLog({
       action,
       targetUid: 'app_settings',
       targetEmail: 'research_config',
       changes,
       ip: ip || '',
-      reason: reason || `Đổi ${changes.length} mục`,
-      createdAt: FieldValue.serverTimestamp()
+      reason: reason || `Đổi ${changes.length} mục`
     });
   } catch (err) {
     console.error('logSettingsChange error:', err);
@@ -86,15 +71,11 @@ async function getSystemStatus() {
     if (isSupabaseConfigured()) {
       await sbGetAppSettingsRow();
       databaseOk = true;
-    } else {
-      const { db } = await getDb();
-      await db.collection('app_settings').limit(1).get();
-      databaseOk = true;
     }
   } catch (_) { databaseOk = false; }
 
   const checks = [
-    { key: 'database', label: isSupabaseConfigured() ? 'Supabase Postgres kết nối' : 'Firebase Admin SDK kết nối', ok: databaseOk, critical: true },
+    { key: 'database', label: 'Supabase Postgres kết nối', ok: databaseOk, critical: true, hint: databaseOk ? '' : 'Thiếu SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY trên Vercel, hoặc chưa chạy SQL schema.' },
     { key: 'adminSecret', label: 'Mật khẩu quản trị (ADMIN_SECRET)', ok: hasAdminSecret, critical: true, hint: hasAdminSecret ? '' : 'Bạn đang dùng mật khẩu mặc định không an toàn. Vào Vercel Env đặt ADMIN_SECRET.' },
     { key: 'sepaySecret', label: 'API Key bảo vệ SePay webhook', ok: hasSepaySecret, critical: true, hint: hasSepaySecret ? '' : 'Webhook đang mở, kẻ tấn công có thể giả mạo. Đặt API Key SePay ngay.' },
     { key: 'bankInfo', label: 'Thông tin tài khoản ngân hàng', ok: hasBankInfo, critical: true },
