@@ -40,7 +40,7 @@ vite.config.ts
    Nếu hết hạn, gói mới tính từ thời điểm thanh toán.
 
 Test sau deploy:
-https://research.vanthemmo.com/api/debug
-https://research.vanthemmo.com/pay.html
-https://research.vanthemmo.com/api/test-webhook?orderCode=RESEARCH1779163274685&amount=300000
-https://research.vanthemmo.com/api/payment-status?orderCode=RESEARCH1779163274685
+https://www.tubekey.vn/api/debug
+https://www.tubekey.vn/pay.html
+https://www.tubekey.vn/api/test-webhook?orderCode=TUBEKEY1779163274685&amount=300000
+https://www.tubekey.vn/api/payment-status?orderCode=TUBEKEY1779163274685

@@ -15,5 +15,5 @@ Cần có biến môi trường trên Vercel:
 - Firebase Admin env như app đang dùng sẵn
 
 Ghi chú:
-- Webhook URL copy vào SePay: https://research.vanthemmo.com/api/sepay-webhook
+- Webhook URL copy vào SePay: https://www.tubekey.vn/api/sepay-webhook
 - Webhook Secret trong SePay phải giống ô "API Key / Webhook Secret SePay" trên trang admin.

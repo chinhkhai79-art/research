@@ -15,7 +15,7 @@ npm i nodemailer
 ADMIN_SETTINGS_PASSWORD = mật khẩu quản trị anh tự đặt
 
 4) Mở:
-https://research.vanthemmo.com/admin-settings.html
+https://www.tubekey.vn/admin-settings.html
 
 5) Dán cấu hình:
 - SePay Webhook Secret
@@ -23,7 +23,7 @@ https://research.vanthemmo.com/admin-settings.html
 - SMTP Gmail + App Password Gmail
 
 6) Webhook URL copy vào SePay:
-https://research.vanthemmo.com/api/sepay-webhook
+https://www.tubekey.vn/api/sepay-webhook
 
 7) Muốn pay.html dùng cấu hình mới:
 Trong pay.html gọi GET /api/payment-config để lấy bankOwner, bankAccount, bankName, plans, paymentPrefix.

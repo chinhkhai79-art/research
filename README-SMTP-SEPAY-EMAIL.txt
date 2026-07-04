@@ -23,7 +23,7 @@ SMTP_SECURE=true
 SMTP_USER=email_gui_cua_anh@gmail.com
 SMTP_PASS=mat_khau_ung_dung_gmail_16_ky_tu
 SMTP_FROM_NAME=Văn Thế Web
-TOOL_URL=https://research.vanthemmo.com/
+TOOL_URL=https://www.tubekey.vn/
 
 Nếu dùng Gmail, SMTP_PASS phải là App Password, không phải mật khẩu Gmail thường.
 
@@ -44,7 +44,7 @@ Commit GitHub rồi Redeploy Vercel.
 
 Mở link:
 
-https://research.vanthemmo.com/api/test-email?to=email_nhan_test@gmail.com
+https://www.tubekey.vn/api/test-email?to=email_nhan_test@gmail.com
 
 Nếu thành công sẽ trả:
 

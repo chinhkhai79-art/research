@@ -16,15 +16,15 @@ Web app ID:
 1:143403316600:web:b386dbb542db3d5dfe848d
 
 Authorized domain cần có trong Firebase Authentication:
-research.vanthemmo.com
+tubekey.vn
 
 Google Cloud OAuth:
 Authorized JavaScript origins:
-https://research.vanthemmo.com
+https://www.tubekey.vn
 
 Authorized redirect URI:
 https://gen-lang-client-0680572356.firebaseapp.com/__/auth/handler
-https://research.vanthemmo.com/__/auth/handler
+https://www.tubekey.vn/__/auth/handler
 
 Lưu ý:
 Nếu còn auth/unauthorized-domain sau khi đã thêm domain, hãy mở tab ẩn danh hoặc Ctrl+F5 vì bản JS cũ có thể còn cache.

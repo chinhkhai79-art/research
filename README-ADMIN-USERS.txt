@@ -10,7 +10,7 @@ api/me/subscription.js
 public/admin.html
 
 Sau khi deploy Vercel, mở:
-https://research.vanthemmo.com/admin.html
+https://www.tubekey.vn/admin.html
 
 Biến môi trường cần có trên Vercel:
 - FIREBASE_SERVICE_ACCOUNT

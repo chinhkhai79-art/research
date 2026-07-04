@@ -27,7 +27,7 @@ FIRESTORE_DATABASE_ID=...
 ## Mở trang cấu hình
 
 ```txt
-https://research.vanthemmo.com/admin-settings.html
+https://www.tubekey.vn/admin-settings.html
 ```
 
 Nhập `ADMIN_SETTINGS_KEY`, bấm `Tải cấu hình`, chỉnh thanh toán + SMTP, rồi bấm `Lưu cấu hình`.

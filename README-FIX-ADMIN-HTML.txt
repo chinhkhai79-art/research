@@ -9,7 +9,7 @@ Cách dùng:
 2. Dán đè đúng thư mục gốc project.
 3. Commit lên GitHub.
 4. Redeploy Vercel.
-5. Mở lại: https://research.vanthemmo.com/admin.html
+5. Mở lại: https://www.tubekey.vn/admin.html
 
 ZIP này có thêm vercel.json đã sửa để không chặn:
 - /admin.html

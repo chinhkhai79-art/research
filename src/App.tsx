@@ -567,6 +567,13 @@ function renderBilingualCategoryLabel(title: string) {
 }
 
 const STOP_LIMIT = 10;
+const CANONICAL_APP_BASE_URL = 'https://www.tubekey.vn';
+
+function canonicalAppReturnUrl() {
+  if (typeof window === 'undefined') return `${CANONICAL_APP_BASE_URL}/`;
+  const path = window.location.pathname || '/';
+  return `${CANONICAL_APP_BASE_URL}${path}`;
+}
 
 export default function App() {
   // --- State ---
@@ -593,14 +600,14 @@ export default function App() {
   }, []);
 
   const buildPaymentUrl = (targetUser = user) => {
-    if (!targetUser) return 'https://research.vanthemmo.com/pay.html';
+    if (!targetUser) return `${CANONICAL_APP_BASE_URL}/pay.html`;
 
     return (
-      `https://research.vanthemmo.com/pay.html` +
+      `${CANONICAL_APP_BASE_URL}/pay.html` +
       `?uid=${encodeURIComponent(targetUser.uid)}` +
       `&userId=${encodeURIComponent(targetUser.uid)}` +
       `&email=${encodeURIComponent(targetUser.email || '')}` +
-      `&returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`
+      `&returnUrl=${encodeURIComponent(canonicalAppReturnUrl())}`
     );
   };
 
@@ -3561,7 +3568,7 @@ JSON mẫu:
       return { label: 'Chưa bật YouTube Data API v3', detail: 'Project tạo key chưa bật YouTube Data API v3. Vào Google Cloud/API Library bật YouTube Data API v3 rồi thử lại.' };
     }
     if (lower.includes('referer') || lower.includes('referrer') || lower.includes('ipreferer') || lower.includes('restriction') || lower.includes('request is missing')) {
-      return { label: 'Key bị giới hạn domain/API', detail: 'Key đang bị giới hạn domain/referrer/API. Hãy cho phép domain research.vanthemmo.com hoặc tạm bỏ Application restrictions để test.' };
+      return { label: 'Key bị giới hạn domain/API', detail: 'Key đang bị giới hạn domain/referrer/API. Hãy cho phép domain tubekey.vn hoặc tạm bỏ Application restrictions để test.' };
     }
     if (lower.includes('quota') || lower.includes('dailylimit') || lower.includes('ratelimit') || lower.includes('rate limit') || lower.includes('429')) {
       return { label: 'Hết quota', detail: 'Key/project đã hết quota hoặc vượt giới hạn tốc độ. Tool sẽ tự xoay sang key khác nếu có.' };

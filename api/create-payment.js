@@ -2,7 +2,7 @@ import { getAppSettings, getEnabledPlans, normalizePlanId } from '../lib/appSett
 
 function cors(req,res){ res.setHeader('Access-Control-Allow-Origin','*'); res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS'); res.setHeader('Access-Control-Allow-Headers','Content-Type'); if(req.method==='OPTIONS'){res.status(200).end(); return true;} return false; }
 function safe(v){ return String(v || '').trim(); }
-function makeOrder(prefix){ return (safe(prefix)||'RESEARCH').toUpperCase().replace(/[^A-Z0-9]/g,'') + Date.now() + Math.floor(Math.random()*900+100); }
+function makeOrder(prefix){ return (safe(prefix)||'TUBEKEY').toUpperCase().replace(/[^A-Z0-9]/g,'') + Date.now() + Math.floor(Math.random()*900+100); }
 async function getDb(){ const mod = await import('../lib/firebaseAdmin.js'); return { db:mod.db, FieldValue:mod.FieldValue || { serverTimestamp:()=>new Date() } }; }
 function qrUrl(payment, amount, orderCode){ return `https://img.vietqr.io/image/${encodeURIComponent(payment.bankId || payment.bankCode || '970416')}-${encodeURIComponent(payment.accountNo || payment.bankAccount)}-compact2.png?amount=${encodeURIComponent(amount)}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(payment.accountName || payment.bankOwner || '')}`; }
 
@@ -16,7 +16,7 @@ export default async function handler(req,res){
     const planId = normalizePlanId(body.planId || body.plan || '1m', settings);
     const plan = plans[planId];
     const payment = settings.payment;
-    const orderCode = safe(body.content || body.orderCode) || makeOrder(payment.paymentPrefix || payment.orderPrefix || 'RESEARCH');
+    const orderCode = safe(body.content || body.orderCode) || makeOrder(payment.paymentPrefix || payment.orderPrefix || 'TUBEKEY');
     // Luôn lấy giá từ cấu hình máy chủ, không tin số tiền gửi từ trình duyệt.
     const amount = Number(plan.amount);
     const uid = safe(body.uid || body.userId || body.user_id);

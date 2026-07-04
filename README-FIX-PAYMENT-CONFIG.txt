@@ -13,6 +13,6 @@ Mục tiêu sửa:
 Sau khi dán đè:
 - Commit lên GitHub.
 - Deploy lại Vercel.
-- Mở: https://research.vanthemmo.com/api/payment-config
+- Mở: https://www.tubekey.vn/api/payment-config
   Nếu thấy JSON { success: true, payment: ... } là đúng.
 - Mở lại pay.html để kiểm tra QR.

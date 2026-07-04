@@ -403,12 +403,18 @@
         </div>
 
         <div id="checkingBox" class="checking">🔄 Đang tạo mã thanh toán...</div>
-        <a class="back" href="/">← Quay lại công cụ</a>
+        <a class="back" href="https://www.tubekey.vn/">← Quay lại công cụ</a>
       </section>
     </div>
   </div>
 
 <script>
+const CANONICAL_BASE_URL = 'https://www.tubekey.vn';
+const LEGACY_HOSTS = new Set(['research.vanthemmo.com']);
+if (LEGACY_HOSTS.has(location.hostname.toLowerCase())) {
+  location.replace(CANONICAL_BASE_URL + location.pathname + location.search + location.hash);
+}
+
 const DEFAULT_PAYMENT = {
   bankId:'970416',
   bankCode:'ACB',
@@ -416,7 +422,7 @@ const DEFAULT_PAYMENT = {
   accountNo:'13131447',
   accountNumber:'13131447',
   accountName:'LE VAN KHAI',
-  transferPrefix:'RESEARCH'
+  transferPrefix:'TUBEKEY'
 };
 
 const DEFAULT_PLANS = {
@@ -446,13 +452,25 @@ let currentContent = params.get('content') || params.get('orderCode') || '';
 let currentAmount = 0;
 let currentEmail = params.get('email') || '';
 let currentUserId = params.get('userId') || params.get('uid') || '';
-let returnUrl = params.get('returnUrl') || '/?paid=success';
+let returnUrl = normalizeReturnUrl(params.get('returnUrl') || '/?paid=success');
 let pollTimer = null;
 let pollStartedAt = Date.now();
 let lastStatusRequest = 0;
 
 function clean(v){ return String(v || '').trim(); }
 function cleanAccount(v){ return clean(v).replace(/[^A-Za-z0-9]/g,''); }
+function normalizeReturnUrl(v){
+  try {
+    const u = new URL(clean(v) || '/?paid=success', CANONICAL_BASE_URL);
+    if (u.hostname.toLowerCase() === 'research.vanthemmo.com') {
+      u.protocol = 'https:';
+      u.hostname = 'www.tubekey.vn';
+    }
+    return u.toString();
+  } catch {
+    return CANONICAL_BASE_URL + '/?paid=success';
+  }
+}
 function bankId(v){
   v = clean(v);
   if (/^\d{6}$/.test(v)) return v;
@@ -485,7 +503,7 @@ function normalizePayment(raw){
   const bId = bankId(p.bankId || p.bankBin || p.bankCode || p.bankName || p.bank || code);
   const acc = cleanAccount(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
   const owner = clean(p.accountName || p.accountOwner || p.beneficiaryName || p.ownerName || DEFAULT_PAYMENT.accountName);
-  const prefix = clean(p.transferPrefix || p.transferContentPrefix || p.paymentPrefix || p.prefix || p.contentPrefix || DEFAULT_PAYMENT.transferPrefix).replace(/[^a-zA-Z0-9]/g,'').toUpperCase() || 'RESEARCH';
+  const prefix = clean(p.transferPrefix || p.transferContentPrefix || p.paymentPrefix || p.prefix || p.contentPrefix || DEFAULT_PAYMENT.transferPrefix).replace(/[^a-zA-Z0-9]/g,'').toUpperCase() || 'TUBEKEY';
   return {
     bankId:bId,
     bankBin:bId,

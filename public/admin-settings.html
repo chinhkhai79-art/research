@@ -150,12 +150,12 @@
             </div>
             <div class="field"><label>Mã ngân hàng (tự nhập, ưu tiên dropdown)</label><input id="bankName" placeholder="Ví dụ: ACB" /></div>
             <div class="field"><label>Số tài khoản</label><input id="bankAccount" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="50" placeholder="Ví dụ: LOCSPAY000339358" /></div>
-            <div class="field"><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: RESEARCH" /></div>
+            <div class="field"><label>Tiền tố nội dung chuyển khoản</label><input id="paymentPrefix" placeholder="Ví dụ: TUBEKEY" /></div>
             <div class="field full">
               <label>Webhook URL copy vào SePay</label>
               <div class="copy-line"><input id="webhookUrl" readonly /><button id="copyWebhookBtn" class="ghost" type="button">Copy</button></div>
             </div>
-            <div class="field full"><label>Base URL công cụ (đổi domain nếu cần)</label><input id="baseUrl" placeholder="https://research.vanthemmo.com" /></div>
+            <div class="field full"><label>Base URL công cụ (đổi domain nếu cần)</label><input id="baseUrl" placeholder="https://www.tubekey.vn" /></div>
           </div>
           <div class="actions">
             <button id="savePaymentBtn" class="green" type="button">Lưu thanh toán</button>
@@ -176,7 +176,7 @@
             <div class="field"><label>SMTP Port</label><input id="smtpPort" placeholder="465" /></div>
             <div class="field"><label>Bảo mật</label><select id="smtpSecure"><option value="ssl">SSL - Port 465</option><option value="tls">TLS - Port 587</option></select></div>
             <div class="field"><label>Tên người gửi</label><input id="senderName" placeholder="Văn Thế Web" /></div>
-            <div class="field"><label>Base URL website để mở mail</label><input id="emailBaseUrl" placeholder="https://research.vanthemmo.com" /></div>
+            <div class="field"><label>Base URL website để mở mail</label><input id="emailBaseUrl" placeholder="https://www.tubekey.vn" /></div>
             <div class="field"><label>Email nhận test</label><input id="testEmail" placeholder="Nhập email để gửi thử" /></div>
           </div>
           <div class="actions">
@@ -225,6 +225,7 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const apiUrl = '/api/admin-settings';
+    const CANONICAL_BASE_URL = 'https://www.tubekey.vn';
     const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút
     const state = { loaded: false, banks: [], originalBank: null };
     const PLAN_DEFAULTS = {
@@ -253,10 +254,23 @@
     function setBusy(btn, busy, text){ if(!btn)return; if(busy){ btn.dataset.old=btn.textContent; btn.textContent=text||'Đang xử lý...'; btn.disabled=true; } else { btn.textContent=btn.dataset.old||btn.textContent; btn.disabled=false; } }
     function val(id, fallback=''){ const el=$(id); return el ? (el.value || fallback).trim() : fallback; }
     function setVal(id, v){ const el=$(id); if(el) el.value = v || ''; }
-    function currentOrigin(){ return window.location.origin; }
+    function normalizeBaseUrl(url){
+      let base = String(url || CANONICAL_BASE_URL).trim().replace(/\/+$/, '');
+      if (!base) return CANONICAL_BASE_URL;
+      if (/^(https?:\/\/)?research\.vanthemmo\.com$/i.test(base)) return CANONICAL_BASE_URL;
+      try {
+        const u = new URL(base.startsWith('http') ? base : `https://${base}`);
+        if (u.hostname.toLowerCase() === 'research.vanthemmo.com') return CANONICAL_BASE_URL;
+        return u.origin;
+      } catch {
+        return base;
+      }
+    }
+    function currentOrigin(){ return CANONICAL_BASE_URL; }
     function updateWebhookUrl(){
-      const base = val('baseUrl') || currentOrigin();
-      setVal('webhookUrl', base.replace(/\/$/,'') + '/api/sepay-webhook');
+      const base = normalizeBaseUrl(val('baseUrl') || currentOrigin());
+      setVal('baseUrl', base);
+      setVal('webhookUrl', base + '/api/sepay-webhook');
     }
 
     // === Session timeout (FIX #8) ===
@@ -328,8 +342,8 @@
       setVal('bankOwner', payment.bankOwner || payment.accountName || payment.owner || '');
       setVal('bankName', payment.bankName || payment.bank || 'ACB');
       setVal('bankAccount', payment.bankAccount || payment.accountNumber || '');
-      setVal('paymentPrefix', payment.paymentPrefix || payment.prefix || 'RESEARCH');
-      setVal('baseUrl', payment.baseUrl || currentOrigin());
+      setVal('paymentPrefix', payment.paymentPrefix || payment.prefix || 'TUBEKEY');
+      setVal('baseUrl', normalizeBaseUrl(payment.baseUrl || currentOrigin()));
       updateWebhookUrl();
 
       // Sync bank dropdown to current bankName
@@ -352,7 +366,7 @@
       setVal('smtpPort', String(smtp.smtpPort || smtp.port || '465'));
       setVal('smtpSecure', smtp.smtpSecure || smtp.secureMode || 'ssl');
       setVal('senderName', smtp.senderName || smtp.fromName || 'Văn Thế Web');
-      setVal('emailBaseUrl', smtp.emailBaseUrl || smtp.baseUrl || currentOrigin());
+      setVal('emailBaseUrl', normalizeBaseUrl(smtp.emailBaseUrl || smtp.baseUrl || currentOrigin()));
 
       // Fill plans. Luôn bảo đảm đủ cả 4 gói, kể cả Firestore cũ thiếu gói 1 tháng.
       ensurePlanRows();
@@ -373,13 +387,13 @@
       if (!/^[A-Za-z0-9]+$/.test(bankAccount)) throw new Error('Số tài khoản chỉ được gồm chữ và số, không có khoảng trắng hoặc ký tự đặc biệt.');
       return { payment: {
         sepaySecret: val('sepaySecret'), bankOwner: val('bankOwner'), bankName: val('bankName'), bankAccount,
-        paymentPrefix: val('paymentPrefix'), baseUrl: val('baseUrl') || currentOrigin(), webhookUrl: val('webhookUrl')
+        paymentPrefix: val('paymentPrefix'), baseUrl: normalizeBaseUrl(val('baseUrl') || currentOrigin()), webhookUrl: val('webhookUrl')
       }};
     }
     function smtpPayload(){
       return { smtp: {
         smtpUser: val('smtpUser'), smtpPass: val('smtpPass'), smtpHost: val('smtpHost') || 'smtp.gmail.com', smtpPort: Number(val('smtpPort') || 465),
-        smtpSecure: val('smtpSecure') || 'ssl', senderName: val('senderName') || 'Văn Thế Web', emailBaseUrl: val('emailBaseUrl') || currentOrigin()
+        smtpSecure: val('smtpSecure') || 'ssl', senderName: val('senderName') || 'Văn Thế Web', emailBaseUrl: normalizeBaseUrl(val('emailBaseUrl') || currentOrigin())
       }};
     }
     function plansPayload(){

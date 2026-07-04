@@ -36,7 +36,7 @@ function addDays(base, days) { const d = new Date(base); d.setDate(d.getDate() +
 function toDate(v) { try { return v?.toDate?.() || (v ? new Date(v) : null); } catch { return null; } }
 function findOrderCode(text, prefix) {
   const c = compact(text);
-  const p = compact(prefix || 'RESEARCH');
+  const p = compact(prefix || 'TUBEKEY');
   const re = new RegExp(p + '\\d{8,}');
   const m = c.match(re);
   return m ? m[0] : '';
