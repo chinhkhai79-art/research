@@ -1,5 +1,5 @@
 import { setCors } from '../lib/cors.js';
-import { isSupabaseConfigured, listAdminLogs as sbListAdminLogs, listPayments as sbListPayments, listSepayLogs as sbListSepayLogs, deleteAdminHistory as sbDeleteAdminHistory } from '../lib/supabaseAdmin.js';
+import { isSupabaseConfigured, listAdminLogs as sbListAdminLogs, listPayments as sbListPayments, listSepayLogs as sbListSepayLogs, deleteAdminHistory as sbDeleteAdminHistory, listUsersForBulk as sbListUsersForBulk } from '../lib/supabaseAdmin.js';
 
 function getAdminToken(req) { return String(req.headers['x-admin-secret'] || req.headers['x-admin-key'] || req.headers.authorization || req.query.password || req.query.adminSecret || req.query.adminKey || req.body?.password || req.body?.adminSecret || req.body?.adminKey || '').replace(/^Bearer\s+/i, '').trim(); }
 function requireAdmin(req, res) {
@@ -24,23 +24,74 @@ async function handleAdminLogs(req, res) {
 }
 async function handleRevenue(req, res) {
   const rangeDays = Math.min(Math.max(Number(req.query.days || 30) || 30, 1), 365);
-  const limit = Math.min(Math.max(Number(req.query.limit || 150) || 150, 30), 500);
-  const [paymentRows, logRows] = await Promise.all([sbListPayments({ limit }), sbListSepayLogs(80)]);
-  const orders = (paymentRows || []).filter(p => p.paid === true || p.status === 'paid').map(p => ({
-    orderCode: p.order_code,
-    email: p.email || '',
-    uid: p.uid || p.user_id || '',
-    planId: p.plan_id || '',
-    planName: p.plan_name || '',
-    days: Number(p.days || 0),
-    amount: Number(p.amount || p.expected_amount || 0),
-    expectedAmount: Number(p.expected_amount || p.amount || 0),
-    content: p.content || p.order_code || '',
-    paidAt: p.paid_at || p.updated_at || p.created_at,
-    expiresAt: p.expires_at || null,
-    createdAt: p.created_at
-  })).sort((a,b)=>new Date(b.paidAt||0)-new Date(a.paidAt||0));
-  const pending = (paymentRows || []).filter(p => !(p.paid === true || p.status === 'paid')).map(p => ({
+  const limit = Math.min(Math.max(Number(req.query.limit || 500) || 500, 50), 500);
+  const [paymentRows, logRows, userRows] = await Promise.all([
+    sbListPayments({ limit }),
+    sbListSepayLogs(100),
+    sbListUsersForBulk({ limit: 500 })
+  ]);
+
+  // Một số webhook cũ đã cộng PRO thành công nhưng record payments chưa kịp đổi paid=true.
+  // Doanh thu phải tính cả log SePay success_paid và lastPaymentOrderCode của user để admin không bị 0đ sai.
+  const successLogByOrder = new Map();
+  for (const l of (logRows || [])) {
+    const code = String(l.order_code || '').trim().toUpperCase();
+    if (!code) continue;
+    if (['success_paid','duplicate_paid_skipped'].includes(String(l.status || '').toLowerCase())) {
+      if (!successLogByOrder.has(code)) successLogByOrder.set(code, l);
+    }
+  }
+  const paidStatuses = new Set(['paid','success','success_paid','completed','complete','confirmed']);
+  const isPaidPayment = (p) => {
+    const code = String(p.order_code || '').trim().toUpperCase();
+    return p.paid === true || paidStatuses.has(String(p.status || '').toLowerCase()) || successLogByOrder.has(code);
+  };
+  const byOrder = new Map();
+  for (const p of (paymentRows || [])) {
+    const code = String(p.order_code || '').trim().toUpperCase();
+    if (!code || !isPaidPayment(p)) continue;
+    const log = successLogByOrder.get(code) || null;
+    byOrder.set(code, {
+      orderCode: code,
+      email: p.email || '',
+      uid: p.uid || p.user_id || '',
+      planId: p.plan_id || '',
+      planName: p.plan_name || '',
+      days: Number(p.days || 0),
+      amount: Number(p.amount || p.expected_amount || log?.received_amount || log?.amount || 0),
+      expectedAmount: Number(p.expected_amount || p.amount || log?.expected_amount || 0),
+      content: p.content || p.order_code || log?.content || '',
+      paidAt: p.paid_at || log?.created_at || p.updated_at || p.created_at,
+      expiresAt: p.expires_at || null,
+      createdAt: p.created_at,
+      source: p.paid === true || String(p.status||'').toLowerCase()==='paid' ? 'payments' : 'sepay_logs'
+    });
+  }
+  // Fallback cuối: user đã được cộng PRO và có mã đơn gần nhất nhưng payments/log chưa đồng bộ.
+  for (const u of (userRows || [])) {
+    const d = u.data || {};
+    const code = String(d.lastPaymentOrderCode || '').trim().toUpperCase();
+    if (!code || byOrder.has(code)) continue;
+    const amount = Number(d.lastPaymentAmount || 0);
+    if (!amount) continue;
+    byOrder.set(code, {
+      orderCode: code,
+      email: d.email || '',
+      uid: d.uid || d.userId || u.row?.uid || '',
+      planId: d.planId || '',
+      planName: d.planName || 'GÓI PRO',
+      days: 0,
+      amount,
+      expectedAmount: amount,
+      content: code,
+      paidAt: d.updatedAt || d.updated_at || d.premiumStartedAt || d.premiumExpiresAt || u.row?.updated_at || u.row?.created_at,
+      expiresAt: d.premiumExpiresAt || d.expired_at || d.expiresAt || null,
+      createdAt: u.row?.created_at || null,
+      source: 'users_last_payment'
+    });
+  }
+  const orders = Array.from(byOrder.values()).sort((a,b)=>new Date(b.paidAt||0)-new Date(a.paidAt||0));
+  const pending = (paymentRows || []).filter(p => !isPaidPayment(p)).map(p => ({
     orderCode: p.order_code,
     status: p.status || 'pending',
     paid: false,

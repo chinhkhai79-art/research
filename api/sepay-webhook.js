@@ -7,7 +7,8 @@ import {
   addSepayLog as sbAddSepayLog,
   getUserByUid as sbGetUserByUid,
   findUsersByEmail as sbFindUsersByEmail,
-  pickBestUserByEmail as sbPickBestUserByEmail
+  pickBestUserByEmail as sbPickBestUserByEmail,
+  addAdminLog as sbAddAdminLog
 } from '../lib/supabaseAdmin.js';
 
 function cors(req, res) {
@@ -156,6 +157,20 @@ export default async function handler(req, res) {
     };
     await sbPatchPayment(orderCode, paidData);
     await safeLog({ status:'success_paid', orderCode, amount, expectedAmount, content, raw:body });
+    try {
+      await sbAddAdminLog({
+        action: 'payment_success',
+        targetUid: paidData.uid || '',
+        targetEmail: paidData.email || '',
+        planId: paidData.planId,
+        planName: paidData.planName,
+        days: Number(paidData.days || 0),
+        amount: Number(paidData.amount || 0),
+        reason: `SePay xác nhận thanh toán ${orderCode}`,
+        newExpiresAt: expiresAt?.toISOString?.(),
+        data: { orderCode, amount: paidData.amount, expectedAmount, content, source: 'sepay-webhook' }
+      });
+    } catch (logErr) { console.error('admin payment log warning:', logErr); }
     const email = paidData.email;
     if (email) {
       import('../lib/mailer.js').then(m => m.sendPaymentSuccessEmail({
