@@ -2448,6 +2448,33 @@ Rules:
   const getRegionCacheKey = (regionCode?: string) =>
     `cache_${normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN')}`;
 
+  const getNicheScanHistoryKey = (regionCode: string, index: number) =>
+    `youtube_niche_scan_history_${normalizeRegionCode(regionCode)}_${index}`;
+
+  const readNicheScanHistory = (regionCode: string, index: number) => {
+    try {
+      const raw = localStorage.getItem(getNicheScanHistoryKey(regionCode, index));
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.map((x: any) => String(x || '').trim()).filter(Boolean).slice(-80) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeNicheScanHistory = (regionCode: string, index: number, keywords: string[]) => {
+    try {
+      const normalized = Array.from(new Set((keywords || []).map((x: any) => String(x || '').trim()).filter(Boolean)));
+      localStorage.setItem(getNicheScanHistoryKey(regionCode, index), JSON.stringify(normalized.slice(-80)));
+    } catch (_) {}
+  };
+
+  const rotateListBy = <T,>(items: T[], offset: number) => {
+    const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    if (!list.length) return list;
+    const safeOffset = Math.abs(Number(offset || 0)) % list.length;
+    return [...list.slice(safeOffset), ...list.slice(0, safeOffset)];
+  };
+
   const normalizeTrendCachePayload = (value: any, regionCode?: string) => {
     const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
     if (!value) return null;
@@ -2779,6 +2806,8 @@ JSON mẫu:
     const currentItems = suggestedNiches[index]?.items || [];
     const publishedAfter = getPublishedAfterDate('month');
     const scanningKey = `${category}-${index}`;
+    const previousScanItems = readNicheScanHistory(selectedRegion, index);
+    const currentScanRound = Number((suggestedNiches[index] as any)?.scanRound || previousScanItems.length || 0);
 
     const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
       || /\b(của|cho|với|không|cách|hướng dẫn|việt nam|người|làm|món|ngách|bóng đá|thể thao)\b/i.test(value);
@@ -2835,14 +2864,26 @@ JSON mẫu:
     try {
       setScanningNicheCategory(scanningKey);
       setIsFetchingDailyTrending(true);
-      setStatus(`Đang quét ${category} tại ${regionName}: ưu tiên video 30 ngày, VPH/View cao...`);
+      setStatus(`Đang quét nhanh ${category} tại ${regionName}: lấy ít video hơn để tránh đứng, ưu tiên key mới chưa quét...`);
 
-      const seedQueries = getCategorySeedQueries(category, index, selectedRegion, currentItems);
+      const seedQueries = rotateListBy(getCategorySeedQueries(category, index, selectedRegion, currentItems), currentScanRound).slice(0, 3);
       const scores = new Map<string, number>();
       let totalVideos = 0;
 
+      const withQuickTimeout = async (promise: Promise<any>, timeoutMs = 9500, fallback: any = null) => {
+        let timer: any;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise(resolve => { timer = setTimeout(() => resolve(fallback), timeoutMs); })
+          ]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      };
+
       const runSearch = async (query: string, usePublishedAfter: boolean) => {
-        const searchRes = await youtubeFetch('search', {
+        const searchRes = await withQuickTimeout(youtubeFetch('search', {
           part: 'snippet',
           q: query,
           type: 'video',
@@ -2850,36 +2891,44 @@ JSON mẫu:
           relevanceLanguage: regionCfg.relevanceLanguage,
           ...(usePublishedAfter ? { publishedAfter } : {}),
           order: 'viewCount',
-          maxResults: 30,
-        });
+          maxResults: 12,
+        }), 9500, { items: [] });
         return (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
       };
 
       let effectiveVideoIds: string[] = [];
       for (const query of seedQueries) {
-        if (effectiveVideoIds.length >= 45) break;
+        if (effectiveVideoIds.length >= 24) break;
         const ids = await runSearch(query, true).catch(() => []);
         effectiveVideoIds.push(...ids);
       }
 
-      // Nếu 30 ngày không đủ dữ liệu, mở rộng toàn thời gian nhưng vẫn giữ regionCode + relevanceLanguage.
-      if (effectiveVideoIds.length < 8) {
-        for (const query of seedQueries.slice(0, 5)) {
-          if (effectiveVideoIds.length >= 45) break;
+      // Nếu 30 ngày không đủ dữ liệu, mở rộng nhẹ toàn thời gian nhưng vẫn giới hạn ít request để không bị đứng.
+      if (effectiveVideoIds.length < 6) {
+        for (const query of seedQueries.slice(0, 2)) {
+          if (effectiveVideoIds.length >= 24) break;
           const ids = await runSearch(query, false).catch(() => []);
           effectiveVideoIds.push(...ids);
         }
       }
 
-      effectiveVideoIds = [...new Set(effectiveVideoIds)].slice(0, 50);
+      effectiveVideoIds = [...new Set(effectiveVideoIds)].slice(0, 24);
 
       if (effectiveVideoIds.length > 0) {
-        const videoDetail = await youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') });
+        const videoDetail = await withQuickTimeout(
+          youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') }),
+          11000,
+          { items: [] }
+        );
         const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
         totalVideos = videos.length;
 
         const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
-        const channelDetail = channelIds.length ? await youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.join(',') }) : { items: [] };
+        const channelDetail = channelIds.length ? await withQuickTimeout(
+          youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.slice(0, 24).join(',') }),
+          11000,
+          { items: [] }
+        ) : { items: [] };
         const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
 
         videos.forEach((video: any) => {
@@ -2920,22 +2969,43 @@ JSON mẫu:
         }
       });
 
-      const nextItems = [...scores.entries()]
+      const rankedItems = [...scores.entries()]
         .sort((a, b) => b[1] - a[1])
         .map(([keyword]) => keyword)
-        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
-        .slice(0, 6);
+        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx);
 
-      const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
+      const previousSet = new Set([...previousScanItems, ...currentItems].map(k => cleanKeyword(k)).filter(Boolean));
+      const finalItems: string[] = [];
+      const usedFinal = new Set<string>();
+      const addFinal = (keyword: string, avoidPrevious: boolean) => {
+        const cleaned = cleanKeyword(keyword);
+        if (!cleaned || usedFinal.has(cleaned)) return;
+        if (avoidPrevious && previousSet.has(cleaned)) return;
+        finalItems.push(cleaned);
+        usedFinal.add(cleaned);
+      };
+      const fallbackItems = rotateListBy(getCategoryFallbackItems(index, selectedRegion), currentScanRound + 1);
+
+      rankedItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, true); });
+      fallbackItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, true); });
+      rankedItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, false); });
+      fallbackItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, false); });
+
+      if (!finalItems.length) {
+        getCategoryFallbackItems(index, selectedRegion).slice(0, 6).forEach(keyword => addFinal(keyword, false));
+      }
+
+      writeNicheScanHistory(selectedRegion, index, [...previousScanItems, ...finalItems]);
 
       setSuggestedNiches(prev => {
         const now = new Date().toISOString();
         const next = prev.map((item: any, i: number) => i === index ? {
           ...item,
-          items: finalItems,
+          items: finalItems.slice(0, 6),
           source: 'youtube_v3_real_scan',
           realScanned: true,
           realScannedAt: now,
+          scanRound: currentScanRound + 1,
           region: selectedRegion,
           index
         } : item).slice(0, 15);
@@ -2946,7 +3016,7 @@ JSON mẫu:
         return next;
       });
 
-      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
+      setStatus(`Đã quét nhanh ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video, ưu tiên key mới khác lần quét trước để tránh trùng và tránh đứng.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
