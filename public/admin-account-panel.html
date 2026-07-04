@@ -96,20 +96,33 @@
     .mono{font-family:Consolas,"Courier New",monospace!important}
     @media(max-width:950px){.actions button,.tabs button,.quick button{width:auto}}
 
+
+    /* v24: admin gọn, sáng và đồng bộ hơn */
+    .wrap{padding:18px 0 44px}
+    #actionPanel{width:100%}
+    .card h2{line-height:1.25}
+    .revenue-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:nowrap}
+    .revenue-toolbar label{color:#64748b;font-size:13px;white-space:nowrap}
+    .revenue-toolbar select{height:44px;min-width:180px;padding:0 14px;background:#ffffff;color:#0f172a;border:1px solid #cbd5e1;border-radius:14px}
+    .revenue-toolbar button{height:44px;min-width:88px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center}
+    .revenue-stat{background:#ffffff;border:1px solid #d8e3ef;border-radius:16px;padding:14px 16px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+    .revenue-stat-label{font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+    .revenue-stat-value{font-size:22px;margin-top:4px}
+    .revenue-stat-hint{font-size:12px;margin-top:4px}
+    .revenue-plan-breakdown{grid-column:1/-1}
+    .users-table th,.users-table td{padding:11px 9px}
+    .users-table .stt-col{width:54px;text-align:center;color:#64748b}
+    .users-table th:first-child{text-align:center}
+    .row-actions{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;white-space:nowrap}
+    .row-actions .small{height:34px;min-width:52px;padding:0 11px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center}
+    .row-actions .btn,.row-actions .btn-green,.row-actions .btn-red{box-shadow:none}
+    #bulkPanel{margin-top:14px}
+    @media(max-width:950px){.revenue-toolbar{flex-wrap:wrap}.row-actions{gap:5px}.row-actions .small{min-width:48px;padding:0 9px}}
+
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div class="title">
-        <h1>Admin quản lý tài khoản</h1>
-        <p>Xem tài khoản đăng ký, tìm theo email/UID, kiểm tra Trial/PRO/Hết hạn, cộng ngày, khóa PRO và ghi log vào Supabase.</p>
-      </div>
-      <div class="links">
-        <a href="https://www.tubekey.vn/" target="_top">← Về tool</a>
-      </div>
-    </div>
-
     <div class="card">
       <div class="grid">
         <div class="field">
@@ -135,7 +148,7 @@
       <button id="tabLogs" class="tab" onclick="showTab('logs'); loadLogs()">Admin logs</button>
     </div>
 
-    <div id="actionPanel" class="grid2 hidden">
+    <div id="actionPanel" class="hidden">
       <div class="card">
         <h2 style="margin:0 0 14px;font-size:22px;">Kích hoạt thủ công / Cộng ngày</h2>
         <div class="row">
@@ -170,24 +183,52 @@
           <button class="btn-dark" onclick="clearForm()">Xóa ô nhập</button>
         </div>
       </div>
+    </div>
 
-      <div class="card">
-        <h2 style="margin:0 0 14px;font-size:22px;">Hướng dẫn nhanh</h2>
-        <div class="status">
-          <b>Biến môi trường dùng được:</b><br>
-          <span class="mono">ADMIN_SECRET</span> hoặc <span class="mono">ADMIN_SETTINGS_PASSWORD</span> hoặc <span class="mono">ADMIN_PASSWORD</span><br><br>
-          <b>Email-only:</b> Nếu chỉ nhập email, hệ thống sẽ tìm tài khoản có email đó. Nếu chưa có, hệ thống tạo bản ghi chờ theo email. Khi khách đăng nhập Google bằng đúng email, API subscription sẽ tự gộp quyền PRO về UID Google thật.<br><br>
-          <b>Cộng dồn:</b> Nếu tài khoản đang còn hạn, ngày mới sẽ cộng tiếp từ ngày hết hạn cũ. Nếu đã hết hạn, cộng từ thời điểm hiện tại.
-        </div>
+    <div id="usersPanel" class="card">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+        <h2 style="margin:0;font-size:22px;">Danh sách tài khoản</h2>
+        <div class="muted" id="countText">0 tài khoản</div>
+      </div>
+      <div class="actions" id="usersPager" style="justify-content:flex-end;margin-top:10px;gap:8px;">
+        <button class="btn-dark small" id="prevUsersPage" onclick="changeUsersPage(-1)">← Trang trước</button>
+        <span class="muted" id="usersPageText">Trang 1 · 50 tài khoản/trang</span>
+        <button class="btn-dark small" id="nextUsersPage" onclick="changeUsersPage(1)">Trang sau →</button>
+      </div>
+      <div class="scroll">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>STT</th><th>Email</th><th>UID</th><th>Trạng thái</th><th>Gói</th><th>Hết hạn</th><th>Còn lại</th><th>Đăng nhập cuối</th><th>Đơn gần nhất</th><th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
       </div>
     </div>
 
-    <!-- BULK EXTEND CARD (cộng ngày hàng loạt cho nhiều user) -->
-    <div id="bulkPanel" class="card hidden" style="border:2px solid #f97316;">
+    <div id="logsPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+        <h2 style="margin:0;font-size:22px;">Admin logs</h2>
+        <div class="actions">
+          <button class="btn-dark" onclick="loadLogs()">Tải lại log</button>
+          <button class="btn-red" onclick="resetHistoryNow()">Xóa toàn bộ logs</button>
+        </div>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Thời gian</th><th>Hành động</th><th>Tài khoản</th><th>Gói/ngày</th><th>Ghi chú</th></tr></thead>
+          <tbody id="logsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BULK EXTEND CARD (đặt cuối tab Admin logs) -->
+    <div id="bulkPanel" class="card hidden" style="margin-top:14px;">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
         <div>
-          <h2 style="margin:0;font-size:22px;color:#f97316;">⚡ Cộng ngày hàng loạt cho user</h2>
-          <div class="muted" style="margin-top:4px;">Dùng khi hệ thống có sự cố, cần đền bù cho khách. Thao tác này KHÔNG thể hoàn tác.</div>
+          <h2 style="margin:0;font-size:22px;">Cộng ngày hàng loạt cho user</h2>
+          <div class="muted" style="margin-top:4px;">Dùng khi hệ thống có sự cố, cần đền bù cho khách. Thao tác này sẽ được ghi vào Admin logs.</div>
         </div>
       </div>
 
@@ -219,55 +260,14 @@
 
       <div id="bulkPreview" style="margin-top:14px;"></div>
     </div>
-    <div style="margin:14px 0;text-align:center;">
-      <button class="btn-dark" id="toggleBulkBtn" onclick="toggleBulkPanel()">▼ Mở chức năng "Cộng ngày hàng loạt"</button>
-    </div>
-
-    <div id="usersPanel" class="card">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-        <h2 style="margin:0;font-size:22px;">Danh sách tài khoản</h2>
-        <div class="muted" id="countText">0 tài khoản</div>
-      </div>
-      <div class="actions" id="usersPager" style="justify-content:flex-end;margin-top:10px;gap:8px;">
-        <button class="btn-dark small" id="prevUsersPage" onclick="changeUsersPage(-1)">← Trang trước</button>
-        <span class="muted" id="usersPageText">Trang 1 · 50 tài khoản/trang</span>
-        <button class="btn-dark small" id="nextUsersPage" onclick="changeUsersPage(1)">Trang sau →</button>
-      </div>
-      <div class="scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Email</th><th>UID</th><th>Trạng thái</th><th>Gói</th><th>Hết hạn</th><th>Còn lại</th><th>Đăng nhập cuối</th><th>Đơn gần nhất</th><th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="usersBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="logsPanel" class="card hidden">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-        <h2 style="margin:0;font-size:22px;">Admin logs</h2>
-        <div class="actions">
-          <button class="btn-dark" onclick="loadLogs()">Tải lại log</button>
-          <button class="btn-red" onclick="resetHistoryNow()">Xóa toàn bộ logs</button>
-        </div>
-      </div>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Thời gian</th><th>Hành động</th><th>Tài khoản</th><th>Gói/ngày</th><th>Ghi chú</th></tr></thead>
-          <tbody id="logsBody"></tbody>
-        </table>
-      </div>
-    </div>
 
     <div id="revenuePanel" class="hidden">
       <div class="card">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
           <h2 style="margin:0;font-size:22px;">Đơn hàng & Doanh thu</h2>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <label style="color:#9bb0c9;font-size:13px;">Khoảng thời gian:</label>
-            <select id="revenueRange" onchange="loadRevenue()" style="background:#0e1626;color:#e6edf7;border:1px solid #23314c;border-radius:8px;padding:6px 10px;">
+          <div class="revenue-toolbar">
+            <label>Khoảng thời gian:</label>
+            <select id="revenueRange" onchange="loadRevenue()">
               <option value="7">7 ngày</option>
               <option value="30" selected>30 ngày</option>
               <option value="90">90 ngày</option>
@@ -337,11 +337,9 @@ function showTab(name){
   qs('actionPanel').classList.toggle('hidden', name !== 'action');
   qs('logsPanel').classList.toggle('hidden', name !== 'logs');
   qs('revenuePanel').classList.toggle('hidden', name !== 'revenue');
-  // Bulk extend panel + toggle button chỉ hiện trong tab "action"
-  const bulkBtn = document.getElementById('toggleBulkBtn');
+  // Cộng ngày hàng loạt nằm ngay sau bảng Admin logs
   const bulkPanel = qs('bulkPanel');
-  if (bulkBtn) bulkBtn.parentElement.style.display = (name === 'action') ? '' : 'none';
-  if (name !== 'action' && bulkPanel) bulkPanel.classList.add('hidden');
+  if (bulkPanel) bulkPanel.classList.toggle('hidden', name !== 'logs');
   qs('tabUsers').classList.toggle('active', name === 'users');
   qs('tabAction').classList.toggle('active', name === 'action');
   qs('tabLogs').classList.toggle('active', name === 'logs');
@@ -411,7 +409,7 @@ async function loadUsers(page = 1, force = false){
 function renderUsers(users, meta={}){
   const page = Number(meta.page || currentUsersPage || 1);
   qs('countText').textContent = `${users.length} tài khoản · trang ${page}`;
-  qs('usersBody').innerHTML = users.map(u=>{
+  qs('usersBody').innerHTML = users.map((u, index)=>{
     const badge = u.status === 'PRO'
       ? '<span class="badge pro">PRO</span>'
       : u.status === 'TRIAL'
@@ -424,7 +422,9 @@ function renderUsers(users, meta={}){
     const loginInfo = u.lastLoginAt
       ? `<div>${esc(fmtDate(u.lastLoginAt))}</div><div class="muted">${Number(u.loginCount || 0)} lần</div>`
       : '<span class="muted">Chưa rõ</span>';
+    const stt = ((page - 1) * USERS_PAGE_SIZE) + index + 1;
     return `<tr>
+      <td class="stt-col">${stt}</td>
       <td><b>${esc(u.email || '')}</b><br><span class="muted">${esc(u.name || '')}</span>${manual}${sourceNote}</td>
       <td class="mono">${esc(u.uid || '')}</td>
       <td>${badge}</td>
@@ -433,13 +433,13 @@ function renderUsers(users, meta={}){
       <td><b>${esc(u.remainingText || '---')}</b></td>
       <td>${loginInfo}</td>
       <td class="mono">${esc(u.lastPaymentOrderCode || '')}</td>
-      <td><div class="actions">
+      <td><div class="row-actions">
         <button class="btn small" onclick='fillUser(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Chọn</button>
         <button class="btn-green small" onclick='quickAdd(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')}, 30)'>+30</button>
         <button class="btn-red small" onclick='quickDisable(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Khóa</button>
       </div></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="9" class="muted">Chưa có tài khoản.</td></tr>';
+  }).join('') || '<tr><td colspan="10" class="muted">Chưa có tài khoản.</td></tr>';
 }
 
 function fillUser(uid,email){ qs('activateUid').value=uid||''; qs('activateEmail').value=email||''; showTab('action'); window.scrollTo({top:0,behavior:'smooth'}); }
@@ -537,20 +537,20 @@ async function loadRevenue(){
 }
 
 function statBox(label, value, hint, color){
-  const c = color || '#22d3ee';
-  return `<div style="background:#0e1626;border:1px solid #23314c;border-radius:14px;padding:14px 16px;">
-    <div class="muted" style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;">${esc(label)}</div>
-    <div style="font-size:22px;font-weight:800;color:${c};margin-top:4px;">${value}</div>
-    ${hint ? `<div class="muted" style="font-size:11px;margin-top:4px;">${esc(hint)}</div>` : ''}
+  const c = color || '#0ea5e9';
+  return `<div class="revenue-stat">
+    <div class="muted revenue-stat-label">${esc(label)}</div>
+    <div class="revenue-stat-value" style="color:${c};">${value}</div>
+    ${hint ? `<div class="muted revenue-stat-hint">${esc(hint)}</div>` : ''}
   </div>`;
 }
 
 function renderRevenueStats(s, days){
   const planRows = Object.entries(s.planBreakdown || {})
     .sort((a,b) => (b[1].revenue || 0) - (a[1].revenue || 0))
-    .map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1c2840;font-size:13px;">
+    .map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e6edf6;font-size:13px;">
       <span><b>${esc(v.name || k)}</b> <span class="muted">×${v.count}</span></span>
-      <span style="color:#34d399;font-weight:700;">${vnd(v.revenue)}</span>
+      <span style="color:#15803d;">${vnd(v.revenue)}</span>
     </div>`).join('');
 
   qs('revenueStats').innerHTML =
@@ -561,8 +561,8 @@ function renderRevenueStats(s, days){
     + statBox('Tổng cộng', vnd(s.totalRevenue), `${s.totalPaid || 0} đơn`, '#fbbf24')
     + statBox('Đang chờ', String(s.pendingCount || 0), 'đơn pending', '#9bb0c9')
     + statBox('Có vấn đề', String(s.issueCount || 0), 'log sai sót', '#f87171')
-    + `<div style="grid-column:1/-1;background:#0e1626;border:1px solid #23314c;border-radius:14px;padding:14px 16px;">
-      <div class="muted" style="font-size:11px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">Doanh thu theo gói</div>
+    + `<div class="revenue-stat revenue-plan-breakdown">
+      <div class="muted revenue-stat-label" style="margin-bottom:8px;">Doanh thu theo gói</div>
       ${planRows || '<div class="muted">Chưa có đơn nào.</div>'}
     </div>`;
 }
@@ -573,7 +573,7 @@ function renderOrders(orders){
     <td class="mono">${esc(o.orderCode)}</td>
     <td><div>${esc(o.email)}</div><div class="mono muted">${esc(o.uid)}</div></td>
     <td>${esc(o.planName || o.planId)}<br><span class="muted">${o.days||0} ngày</span></td>
-    <td style="color:#34d399;font-weight:700;">${vnd(o.amount)}</td>
+    <td style="color:#15803d;">${vnd(o.amount)}</td>
     <td>${esc(fmtDate(o.expiresAt))}</td>
   </tr>`).join('') || '<tr><td colspan="6" class="muted">Chưa có đơn paid nào.</td></tr>';
 }
@@ -608,7 +608,7 @@ function renderIssues(issues){
       : `<span>${vnd(i.receivedAmount)}</span>`;
     return `<tr>
       <td>${esc(fmtDate(i.createdAt))}</td>
-      <td><span style="color:#f87171;font-weight:700;">${esc(label)}</span></td>
+      <td><span style="color:#b91c1c;">${esc(label)}</span></td>
       <td class="mono">${esc(i.orderCode || '—')}</td>
       <td>${amountText}</td>
       <td style="max-width:280px;word-break:break-word;">${esc(i.content || '—')}</td>
@@ -619,14 +619,6 @@ function renderIssues(issues){
 
 // ===== BULK EXTEND (cộng ngày hàng loạt) =====
 let bulkPreviewData = null;
-
-function toggleBulkPanel(){
-  const panel = qs('bulkPanel');
-  const btn = qs('toggleBulkBtn');
-  const isHidden = panel.classList.contains('hidden');
-  panel.classList.toggle('hidden');
-  btn.textContent = isHidden ? '▲ Đóng chức năng "Cộng ngày hàng loạt"' : '▼ Mở chức năng "Cộng ngày hàng loạt"';
-}
 
 function bulkExtendClear(){
   qs('bulkDays').value = 3;
@@ -663,17 +655,17 @@ async function bulkExtendPreview(){
       <td>${esc(u.email || u.uid)}</td>
       <td>${esc(u.planName || '—')}</td>
       <td>${u.oldExpiresAt ? esc(fmtDate(u.oldExpiresAt)) : '<span class="muted">chưa có</span>'}</td>
-      <td style="color:#34d399;font-weight:700;">${esc(fmtDate(u.newExpiresAt))}</td>
+      <td style="color:#15803d;">${esc(fmtDate(u.newExpiresAt))}</td>
     </tr>`).join('');
 
     qs('bulkPreview').innerHTML = `
-      <div style="background:#0e1626;border:1px solid #f97316;border-radius:12px;padding:14px;">
-        <div style="font-size:18px;font-weight:900;color:#fbbf24;margin-bottom:8px;">
-          🔍 Preview: sẽ cộng <span style="color:#34d399;">${days} ngày</span> cho <span style="color:#34d399;">${data.affectedCount}</span> ${scopeLabels[scope]}
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px;">
+        <div style="font-size:18px;color:#9a3412;margin-bottom:8px;">
+          🔍 Preview: sẽ cộng <span style="color:#15803d;">${days} ngày</span> cho <span style="color:#15803d;">${data.affectedCount}</span> ${scopeLabels[scope]}
         </div>
         ${data.skippedCount > 0 ? `<div class="muted" style="margin-bottom:8px;">${data.skippedCount} user bị bỏ qua (không khớp điều kiện scope).</div>` : ''}
         ${data.affectedCount > 0 ? `
-          <div style="max-height:300px;overflow-y:auto;border:1px solid #1c2840;border-radius:8px;margin-top:8px;">
+          <div style="max-height:300px;overflow-y:auto;border:1px solid #fed7aa;border-radius:8px;margin-top:8px;">
             <table style="font-size:12px;">
               <thead><tr><th>Email/UID</th><th>Gói</th><th>Hết hạn cũ</th><th>Hết hạn mới</th></tr></thead>
               <tbody>${sampleRows}</tbody>
@@ -681,7 +673,7 @@ async function bulkExtendPreview(){
           </div>
           ${data.affectedCount > 20 ? `<div class="muted" style="margin-top:6px;">(chỉ hiển thị 20 dòng đầu trong tổng ${data.affectedCount})</div>` : ''}
         ` : '<div class="muted">Không có user nào khớp điều kiện.</div>'}
-        ${data.affectedCount > 0 ? `<div style="margin-top:12px;color:#f87171;font-weight:700;">⚠ Nếu bạn xác nhận, ${data.affectedCount} user sẽ được cộng ngày NGAY LẬP TỨC, không thể hoàn tác.</div>` : ''}
+        ${data.affectedCount > 0 ? `<div style="margin-top:12px;color:#b91c1c;">⚠ Nếu bạn xác nhận, ${data.affectedCount} user sẽ được cộng ngày NGAY LẬP TỨC, không thể hoàn tác.</div>` : ''}
       </div>
     `;
 
@@ -716,11 +708,11 @@ async function bulkExtendApply(){
     });
     setStatus(`✅ ${data.message}`, 'ok');
     qs('bulkPreview').innerHTML += `
-      <div style="background:#064e3b;border:1px solid #34d399;border-radius:10px;padding:12px;margin-top:10px;color:#a7f3d0;font-weight:700;">
+      <div style="background:#ecfdf5;border:1px solid #86efac;border-radius:10px;padding:12px;margin-top:10px;color:#166534;">
         ✅ Đã cộng ${days} ngày cho ${data.affectedCount} user. Đã ghi log vào Admin logs.
       </div>`;
     bulkPreviewData = null;
-    // Không tự tải lại danh sách để tránh tăng lượt đọc Supabase. Người quản trị bấm tải lại khi cần.
+    if(!qs('logsPanel').classList.contains('hidden')) loadLogs();
   } catch(e) {
     setStatus('Lỗi áp dụng: ' + esc(e.message), 'err');
     qs('bulkApplyBtn').disabled = false;
