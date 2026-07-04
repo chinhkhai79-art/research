@@ -128,6 +128,24 @@ export default async function handler(req, res) {
       return send(res, 200, { success: true, message: 'Đã lưu cấu hình SMTP.', settings: maskSettings(next), changes });
     }
 
+    if (action === 'save-email-template') {
+      const current = await getAppSettings();
+      const incoming = req.body?.emailTemplates || req.body?.templates || {};
+      const paymentSuccess = incoming.paymentSuccess || req.body?.paymentSuccess || {};
+      const next = await saveAppSettings({
+        emailTemplates: {
+          ...(current.emailTemplates || {}),
+          paymentSuccess: {
+            ...(current.emailTemplates?.paymentSuccess || {}),
+            ...paymentSuccess
+          }
+        }
+      });
+      const changes = diffSettings(current, next);
+      await logSettingsChange({ action: 'update_email_template_payment_success', changes, ip, reason: req.body?.reason || 'Cập nhật mẫu email thanh toán thành công' });
+      return send(res, 200, { success: true, message: 'Đã lưu mẫu email thanh toán thành công.', settings: maskSettings(next), changes });
+    }
+
     if (action === 'save-trial') {
       const current = await getAppSettings();
       const incoming = req.body?.account || req.body?.trial || req.body || {};
@@ -230,6 +248,35 @@ export default async function handler(req, res) {
       const merged = normalizeSettings({ ...current, smtp: { ...(current.smtp || {}), ...(req.body?.smtp || {}) } });
       await testEmail(merged, req.body?.testEmail);
       return send(res, 200, { success: true, message: 'Đã gửi email test.' });
+    }
+
+    if (action === 'test-payment-email-template') {
+      const current = await getAppSettings();
+      const incoming = req.body?.emailTemplates || req.body?.templates || {};
+      const merged = normalizeSettings({
+        ...current,
+        emailTemplates: {
+          ...(current.emailTemplates || {}),
+          paymentSuccess: {
+            ...(current.emailTemplates?.paymentSuccess || {}),
+            ...(incoming.paymentSuccess || req.body?.paymentSuccess || {})
+          }
+        }
+      });
+      const to = String(req.body?.testEmail || req.body?.email || '').trim();
+      const { sendPaymentSuccessEmail } = await import('../lib/mailer.js');
+      await sendPaymentSuccessEmail({
+        email: to,
+        userName: 'Khách hàng',
+        orderCode: 'TUBEKEY040726100259',
+        planName: 'GÓI 1 THÁNG',
+        amount: 299000,
+        paidAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+        toolUrl: merged.smtp.emailBaseUrl || merged.payment.baseUrl,
+        settings: merged
+      });
+      return send(res, 200, { success: true, message: 'Đã gửi email test mẫu thanh toán thành công.' });
     }
 
     // Fallback: lưu toàn bộ

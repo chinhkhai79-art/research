@@ -158,7 +158,17 @@ export default async function handler(req, res) {
     await safeLog({ status:'success_paid', orderCode, amount, expectedAmount, content, raw:body });
     const email = paidData.email;
     if (email) {
-      import('../lib/mailer.js').then(m => m.sendPaymentSuccessEmail({ email, orderCode, planName: paidData.planName, amount: paidData.amount, expiresAt: expiresAt?.toISOString?.(), settings })).catch(err => console.error('send email warning:', err));
+      import('../lib/mailer.js').then(m => m.sendPaymentSuccessEmail({
+        email,
+        userName: payment.name || payment.displayName || body.name || body.customerName || '',
+        orderCode,
+        planName: paidData.planName,
+        amount: paidData.amount,
+        paidAt: paidData.paidAt,
+        expiresAt: expiresAt?.toISOString?.(),
+        toolUrl: settings.smtp?.emailBaseUrl || settings.payment?.baseUrl,
+        settings
+      })).catch(err => console.error('send email warning:', err));
     }
     return res.status(200).json({ success: true, updated: true, paid: true, orderCode, expiresAt: expiresAt.toISOString(), message: 'Payment confirmed. PRO activated.', dataSource:'supabase' });
   } catch (e) {

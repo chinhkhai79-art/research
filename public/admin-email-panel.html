@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mẫu email</title>
+  <style>
+    :root{--bg:#f4f8fd;--card:#fff;--line:#d8e3ef;--text:#0f172a;--muted:#64748b;--cyan:#22d3ee;--blue:#2563eb;--green:#10b981;--orange:#ff5a1f}
+    *{box-sizing:border-box}body{margin:0;background:transparent;color:var(--text);font-family:Arial,"Helvetica Neue",sans-serif;font-weight:400}.page{padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.title h1{margin:0;font-size:26px;font-weight:400;letter-spacing:-.2px}.muted{color:var(--muted);font-size:14px;line-height:1.5;margin-top:6px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);overflow:hidden}.card+.card{margin-top:16px}.head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.head h2{margin:0;font-size:20px;font-weight:400}.body{padding:18px 20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}label{font-size:13px;color:#334155}input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:var(--text);padding:12px 14px;font-size:15px;outline:none;font-family:Arial,"Helvetica Neue",sans-serif}textarea{min-height:360px;resize:vertical;line-height:1.45;font-family:Consolas,"Courier New",monospace}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:12px;padding:12px 18px;font-size:14px;cursor:pointer;white-space:nowrap}.primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.orange{background:var(--orange);color:#fff}.gray{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}.msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}.msg.ok{display:block;background:#ecfdf5;color:#047857;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.hint{font-size:13px;color:var(--muted);line-height:1.55}.tokens{display:flex;gap:8px;flex-wrap:wrap}.token{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:999px;padding:6px 10px;font-size:12px}.preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:260px;padding:14px;overflow:auto}.split{display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:16px}.switch-line{display:flex;align-items:center;gap:10px;color:#334155}.switch-line input{width:18px;height:18px}.small{font-size:12px;color:var(--muted)}@media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:flex-start}.actions button{width:100%}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="top">
+      <div class="title">
+        <h1>✉️ Mẫu email</h1>
+        <div class="muted">Cấu hình email HTML gửi về email user khi SePay xác nhận thanh toán thành công.</div>
+      </div>
+      <button id="reloadBtn" class="gray" type="button">Tải lại mẫu</button>
+    </div>
+
+    <section class="card">
+      <div class="head">
+        <h2>Email thanh toán thành công</h2>
+        <label class="switch-line"><input id="enabled" type="checkbox" checked /> Bật gửi email này</label>
+      </div>
+      <div class="body">
+        <div class="grid">
+          <div class="field full">
+            <label>Tiêu đề email</label>
+            <input id="subject" placeholder="Thanh toán thành công - {{planName}}" />
+          </div>
+          <div class="field full">
+            <label>Biến có thể dùng</label>
+            <div class="tokens">
+              <span class="token">{{name}}</span><span class="token">{{email}}</span><span class="token">{{orderCode}}</span><span class="token">{{planName}}</span><span class="token">{{amount}}</span><span class="token">{{paidAt}}</span><span class="token">{{expiresAt}}</span><span class="token">{{toolUrl}}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="split" style="margin-top:14px">
+          <div class="field">
+            <label>Nội dung HTML</label>
+            <textarea id="htmlTemplate" spellcheck="false"></textarea>
+            <div class="hint">Nội dung này được lưu vào Supabase/Postgres. Khi thanh toán thành công, SMTP sẽ render biến rồi gửi email cho khách.</div>
+          </div>
+          <div>
+            <label>Xem trước nhanh</label>
+            <div id="preview" class="preview"></div>
+            <div class="field" style="margin-top:14px">
+              <label>Email nhận test</label>
+              <input id="testEmail" placeholder="Nhập email để gửi test mẫu thanh toán" />
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="saveBtn" class="green" type="button">Lưu mẫu email</button>
+          <button id="testBtn" class="orange" type="button">Gửi test mẫu</button>
+          <button id="resetBtn" class="gray" type="button">Khôi phục mẫu mặc định</button>
+        </div>
+        <div id="msg" class="msg"></div>
+        <div class="small" style="margin-top:10px">Lưu ý: cần cấu hình SMTP đúng thì email thanh toán thành công mới gửi được.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const DEFAULT_SECRET = '123456';
+    const DEFAULT_TEMPLATE = {
+      enabled: true,
+      subject: 'Thanh toán thành công - {{planName}}',
+      html: [
+        '<div style="font-family:Arial,sans-serif;background:#f6f9fe;padding:24px;color:#0f172a">',
+        '<div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #dbe7f3;border-radius:18px;overflow:hidden">',
+        '<div style="background:linear-gradient(135deg,#0ea5e9,#22d3ee);padding:22px 26px;color:#00111f">',
+        '<h2 style="margin:0;font-size:24px">Thanh toán thành công</h2>',
+        '<p style="margin:8px 0 0">Tài khoản của bạn đã được nâng cấp PRO.</p>',
+        '</div>',
+        '<div style="padding:24px 26px;font-size:15px;line-height:1.7">',
+        '<p>Chào <b>{{name}}</b>,</p>',
+        '<p>Cảm ơn bạn đã mua hàng của chúng tôi. Hệ thống đã xác nhận thanh toán và kích hoạt gói PRO cho tài khoản của bạn.</p>',
+        '<table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:12px;overflow:hidden">',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Email</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{email}}</b></td></tr>',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Mã đơn hàng</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{orderCode}}</b></td></tr>',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Gói</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{planName}}</b></td></tr>',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Số tiền</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{amount}}</b></td></tr>',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Ngày giờ thanh toán</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{paidAt}}</b></td></tr>',
+        '<tr><td style="padding:10px;color:#64748b">Hạn sử dụng</td><td style="padding:10px"><b>{{expiresAt}}</b></td></tr>',
+        '</table>',
+        '<p style="text-align:center;margin:26px 0 10px"><a href="{{toolUrl}}" style="display:inline-block;background:#ff5a1f;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:bold">Truy cập công cụ</a></p>',
+        '<p style="margin:20px 0 0;color:#64748b">Nếu bạn cần hỗ trợ, vui lòng phản hồi email này.</p>',
+        '</div></div></div>'
+      ].join('')
+    };
+    function adminSecret(){ return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_SECRET).trim() || DEFAULT_SECRET; }
+    function show(type, text){ const el=$('msg'); el.className='msg '+(type==='err'?'err':'ok'); el.textContent=text; }
+    async function api(action, body){
+      const res = await fetch('/api/admin-settings?action=' + encodeURIComponent(action), { method: action === 'get' ? 'GET' : 'POST', headers:{ 'Content-Type':'application/json', 'x-admin-password': adminSecret() }, body: action === 'get' ? undefined : JSON.stringify(body || {}) });
+      const text = await res.text(); let data = {}; try{ data = text ? JSON.parse(text) : {}; }catch{ data = { success:false, error:text || res.statusText }; }
+      if(!res.ok || data.success === false) throw new Error(data.error || data.message || ('HTTP '+res.status));
+      return data;
+    }
+    function fill(t){
+      const data = t || DEFAULT_TEMPLATE;
+      $('enabled').checked = data.enabled !== false;
+      $('subject').value = data.subject || DEFAULT_TEMPLATE.subject;
+      $('htmlTemplate').value = data.html || DEFAULT_TEMPLATE.html;
+      renderPreview();
+    }
+    function sampleVars(){ return { name:'Khách hàng', email:'user@gmail.com', orderCode:'TUBEKEY040726100259', planName:'GÓI 1 THÁNG', amount:'299.000 VND', paidAt:'10:02:59 04/07/2026', expiresAt:'10:02:59 03/08/2026', toolUrl:'https://www.tubekey.vn' }; }
+    function renderText(t){ const vars=sampleVars(); return String(t||'').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_,k)=>vars[k] || ''); }
+    function renderPreview(){ $('preview').innerHTML = renderText($('htmlTemplate').value); }
+    function currentTemplate(){ return { enabled: $('enabled').checked, subject: $('subject').value.trim() || DEFAULT_TEMPLATE.subject, html: $('htmlTemplate').value.trim() || DEFAULT_TEMPLATE.html }; }
+    async function load(){
+      try{ const data = await api('get'); fill(data.settings?.emailTemplates?.paymentSuccess); show('ok','Đã tải mẫu email từ Supabase/Postgres.'); }
+      catch(e){ fill(DEFAULT_TEMPLATE); show('err', e.message || 'Không tải được mẫu email.'); }
+    }
+    async function save(){
+      try{ const tmpl = currentTemplate(); await api('save-email-template', { emailTemplates:{ paymentSuccess: tmpl } }); show('ok','Đã lưu mẫu email thanh toán thành công.'); }
+      catch(e){ show('err', e.message || 'Lưu mẫu email thất bại.'); }
+    }
+    async function test(){
+      const to = $('testEmail').value.trim();
+      if(!to){ show('err','Vui lòng nhập email nhận test.'); return; }
+      try{ const tmpl = currentTemplate(); await api('test-payment-email-template', { testEmail: to, emailTemplates:{ paymentSuccess: tmpl } }); show('ok','Đã gửi test mẫu email thanh toán thành công.'); }
+      catch(e){ show('err', e.message || 'Gửi test thất bại.'); }
+    }
+    function syncSharedAdminSecret(value){ if(value){ localStorage.setItem('ADMIN_SHARED_SECRET', String(value)); localStorage.setItem('ADMIN_SECRET_RESEARCH', String(value)); } }
+    window.syncSharedAdminSecret = syncSharedAdminSecret;
+    window.addEventListener('message', (event)=>{ if(event.origin === location.origin && event.data?.type === 'ADMIN_SHARED_SECRET') syncSharedAdminSecret(event.data.value); });
+    $('htmlTemplate').addEventListener('input', renderPreview);
+    $('subject').addEventListener('input', renderPreview);
+    $('reloadBtn').addEventListener('click', load);
+    $('saveBtn').addEventListener('click', save);
+    $('testBtn').addEventListener('click', test);
+    $('resetBtn').addEventListener('click', ()=>{ fill(DEFAULT_TEMPLATE); show('ok','Đã khôi phục mẫu mặc định, bấm Lưu mẫu email để áp dụng.'); });
+    load();
+  </script>
+</body>
+</html>
