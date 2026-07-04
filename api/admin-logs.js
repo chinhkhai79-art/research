@@ -55,28 +55,103 @@ function toIso(v) {
 }
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 
+function getResetRef() {
+  return db.collection('app_settings').doc('admin_history_reset');
+}
+
+function getDocMillis(docData, keys) {
+  for (const k of keys) {
+    const d = toDate(docData?.[k]);
+    if (d && !Number.isNaN(d.getTime())) return d.getTime();
+  }
+  return 0;
+}
+
+async function getHistoryResetAt() {
+  const snap = await getResetRef().get();
+  if (!snap.exists) return null;
+  return toDate((snap.data() || {}).resetAt);
+}
+
+function isAfterReset(docData, resetAt, keys) {
+  if (!resetAt) return true;
+  const t = getDocMillis(docData, keys);
+  return t >= resetAt.getTime();
+}
+
+async function deleteCollection(collectionName, batchSize = 250, maxRounds = 80) {
+  let total = 0;
+  for (let round = 0; round < maxRounds; round++) {
+    const snap = await db.collection(collectionName).limit(batchSize).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    total += snap.size;
+    if (snap.size < batchSize) break;
+  }
+  return total;
+}
+
+async function handleResetHistory(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success:false, error:'Method not allowed. Use POST.' });
+  }
+
+  const confirmText = String(req.body?.confirmText || req.query.confirmText || '').trim().toUpperCase();
+  if (confirmText !== 'XOA') {
+    return res.status(400).json({ success:false, error:'Nhập XOA để xác nhận xóa lịch sử thanh toán, doanh thu và logs.' });
+  }
+
+  const resetAt = new Date();
+  const collections = ['payments', 'paid_orders', 'sepay_logs', 'admin_logs'];
+  const deleted = {};
+  for (const name of collections) {
+    deleted[name] = await deleteCollection(name);
+  }
+
+  await getResetRef().set({
+    resetAt,
+    resetAtIso: resetAt.toISOString(),
+    deleted,
+    note: 'Reset lịch sử thanh toán, đơn hàng, doanh thu và logs. Dữ liệu mới sẽ tính từ thời điểm này.',
+    updatedAt: resetAt
+  }, { merge:true });
+
+  return res.status(200).json({
+    success:true,
+    resetAt: resetAt.toISOString(),
+    deleted
+  });
+}
+
+
 // ============== HANDLER: admin logs (cũ) ==============
 async function handleAdminLogs(req, res) {
   const limit = Math.min(Number(req.query.limit || 100) || 100, 300);
+  const resetAt = await getHistoryResetAt();
   const snap = await db.collection('admin_logs').limit(limit).get();
-  const logs = snap.docs.map(doc => {
-    const d = doc.data() || {};
-    return {
-      id: doc.id,
-      ...d,
-      createdAt: toIso(d.createdAt),
-      oldExpiresAt: toIso(d.oldExpiresAt),
-      newExpiresAt: toIso(d.newExpiresAt)
-    };
-  }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  const logs = snap.docs
+    .filter(doc => isAfterReset(doc.data() || {}, resetAt, ['createdAt', 'updatedAt']))
+    .map(doc => {
+      const d = doc.data() || {};
+      return {
+        id: doc.id,
+        ...d,
+        createdAt: toIso(d.createdAt),
+        oldExpiresAt: toIso(d.oldExpiresAt),
+        newExpiresAt: toIso(d.newExpiresAt)
+      };
+    }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
-  return res.status(200).json({ success: true, logs });
+  return res.status(200).json({ success: true, logs, resetAt: toIso(resetAt) });
 }
 
 // ============== HANDLER: revenue (mới — gộp vào đây) ==============
 async function handleRevenue(req, res) {
   const rangeDays = Math.min(Math.max(Number(req.query.days || 30) || 30, 1), 365);
   const limit = Math.min(Math.max(Number(req.query.limit || 500) || 500, 50), 2000);
+  const resetAt = await getHistoryResetAt();
 
   const [paidSnap, pendingSnap, logsSnap] = await Promise.all([
     db.collection('paid_orders').limit(limit).get(),
@@ -85,7 +160,9 @@ async function handleRevenue(req, res) {
   ]);
 
   // Paid orders
-  const orders = paidSnap.docs.map(doc => {
+  const orders = paidSnap.docs
+  .filter(doc => isAfterReset(doc.data() || {}, resetAt, ['paidAt', 'createdAt', 'created_at', 'updatedAt']))
+  .map(doc => {
     const d = doc.data() || {};
     return {
       orderCode: doc.id,
@@ -105,6 +182,7 @@ async function handleRevenue(req, res) {
 
   // Pending payments
   const pending = pendingSnap.docs
+    .filter(doc => isAfterReset(doc.data() || {}, resetAt, ['createdAt', 'created_at', 'updatedAt', 'updated_at']))
     .map(doc => {
       const d = doc.data() || {};
       return {
@@ -133,6 +211,7 @@ async function handleRevenue(req, res) {
     'warning_no_secret_configured'
   ]);
   const issues = logsSnap.docs
+    .filter(doc => isAfterReset(doc.data() || {}, resetAt, ['createdAt', 'updatedAt']))
     .map(doc => {
       const d = doc.data() || {};
       return {
@@ -193,6 +272,7 @@ async function handleRevenue(req, res) {
   return res.status(200).json({
     success: true,
     rangeDays,
+    resetAt: toIso(resetAt),
     stats: {
       totalPaid, totalRevenue,
       todayPaid, todayRevenue,
@@ -214,6 +294,9 @@ export default async function handler(req, res) {
 
   try {
     const type = String(req.query.type || '').trim().toLowerCase();
+    if (type === 'reset-history' || type === 'reset') {
+      return await handleResetHistory(req, res);
+    }
     if (type === 'revenue') {
       return await handleRevenue(req, res);
     }

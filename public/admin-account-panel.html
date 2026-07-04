@@ -229,7 +229,10 @@
     <div id="logsPanel" class="card hidden">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
         <h2 style="margin:0;font-size:22px;">Admin logs</h2>
-        <button class="btn-dark" onclick="loadLogs()">Tải lại log</button>
+        <div class="actions">
+          <button class="btn-dark" onclick="loadLogs()">Tải lại log</button>
+          <button class="btn-red" onclick="resetHistoryNow()">Xóa toàn bộ logs</button>
+        </div>
       </div>
       <div class="scroll">
         <table>
@@ -252,8 +255,10 @@
               <option value="365">365 ngày</option>
             </select>
             <button class="btn-dark" onclick="loadRevenue()">Tải lại</button>
+            <button class="btn-red" onclick="resetHistoryNow()">Xóa lịch sử</button>
           </div>
         </div>
+        <div class="status" style="margin-bottom:12px;">Dữ liệu doanh thu, đơn hàng, thanh toán và logs sẽ chỉ tính từ thời điểm bấm xóa trở đi.</div>
         <div id="revenueStats" class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;"></div>
       </div>
 
@@ -418,6 +423,30 @@ async function disableUser(){
     setStatus(`Đã khóa/hủy PRO. Số tài khoản ảnh hưởng: <b>${esc(data.affectedCount || 0)}</b>`, 'ok');
     await loadUsers();
   }catch(e){ setStatus('Lỗi khóa tài khoản: '+esc(e.message), 'err'); }
+}
+
+
+async function resetHistoryNow(){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    const first = confirm('Xác nhận xóa toàn bộ lịch sử thanh toán, đơn hàng, doanh thu, SePay logs và Admin logs? Tài khoản PRO hiện tại của khách vẫn được giữ nguyên.');
+    if(!first) return;
+    const typed = prompt('Nhập XOA để xác nhận xóa vĩnh viễn và bắt đầu tính lại từ bây giờ:');
+    if(String(typed || '').trim().toUpperCase() !== 'XOA') return setStatus('Đã hủy xóa lịch sử.', '');
+    setStatus('Đang xóa lịch sử thanh toán, doanh thu và logs...', '');
+    const data = await api('/api/admin-logs?type=reset-history', {
+      method:'POST',
+      body: JSON.stringify({ confirmText:'XOA' })
+    });
+    const d = data.deleted || {};
+    setStatus(
+      `Đã xóa lịch sử và bắt đầu tính lại từ: <b>${esc(fmtDate(data.resetAt))}</b><br>` +
+      `payments: ${esc(d.payments || 0)}, paid_orders: ${esc(d.paid_orders || 0)}, sepay_logs: ${esc(d.sepay_logs || 0)}, admin_logs: ${esc(d.admin_logs || 0)}`,
+      'ok'
+    );
+    if(!qs('logsPanel').classList.contains('hidden')) await loadLogs();
+    if(!qs('revenuePanel').classList.contains('hidden')) await loadRevenue();
+  }catch(e){ setStatus('Lỗi xóa lịch sử: '+esc(e.message), 'err'); }
 }
 
 async function loadLogs(){
