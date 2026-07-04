@@ -83,15 +83,6 @@
     table.plans-table td input{padding:8px 10px;font-size:13px}
     table.plans-table td input[type=checkbox]{width:18px;height:18px;margin:0}
     table.plans-table td:first-child{font-weight:900;color:#1d4ed8;width:60px}
-    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
-    .modal-overlay.show{display:flex}
-    .modal{background:#fff;border-radius:16px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-    .modal h3{margin:0 0 12px;font-size:18px;color:var(--red)}
-    .modal .diff{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0;font-family:Consolas,"Courier New",monospace;font-size:12px}
-    .modal .diff .old{color:var(--red);text-decoration:line-through}
-    .modal .diff .new{color:var(--green);font-weight:900}
-    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
-    body.modal-open{overflow:hidden}
     .page{padding-bottom:18px}
 
     /* Toàn bộ trang quản trị dùng nét chữ thường, không in đậm. */
@@ -102,19 +93,6 @@
 <body>
   <div id="toast" class="toast"></div>
 
-  <!-- Modal xác nhận đổi thông tin nhạy cảm (số tài khoản, ngân hàng) -->
-  <div id="confirmModal" class="modal-overlay">
-    <div class="modal">
-      <h3>⚠ Xác nhận đổi thông tin tài khoản nhận tiền</h3>
-      <div>Bạn sắp đổi <b>thông tin tài khoản ngân hàng</b>. Đây là thay đổi cực kỳ nhạy cảm — toàn bộ tiền khách chuyển sẽ chảy về tài khoản mới.</div>
-      <div id="confirmDiff" class="diff"></div>
-      <div class="hint">Hành động này sẽ được ghi vào nhật ký quản trị (admin_logs).</div>
-      <div class="modal-actions">
-        <button id="confirmCancelBtn" class="gray" type="button">Huỷ</button>
-        <button id="confirmOkBtn" class="red" type="button">Xác nhận đổi</button>
-      </div>
-    </div>
-  </div>
 
   <main class="page">
     <div class="top">
@@ -526,15 +504,14 @@
       if (cur.bankName.toUpperCase() !== state.originalBank.bankName.toUpperCase()) changes.push({ label: 'Ngân hàng', old: state.originalBank.bankName, new: cur.bankName });
       return changes.length > 0 ? changes : null;
     }
-    function showConfirmModal(changes, onConfirm){
-      const diffEl = $('confirmDiff');
-      diffEl.innerHTML = changes.map(c => `<div><b>${c.label}:</b> <span class="old">${c.old || '(rỗng)'}</span> → <span class="new">${c.new || '(rỗng)'}</span></div>`).join('');
-      $('confirmModal').classList.add('show');
-      document.body.classList.add('modal-open');
-      const ok = $('confirmOkBtn'), cancel = $('confirmCancelBtn');
-      const close = () => { $('confirmModal').classList.remove('show'); document.body.classList.remove('modal-open'); ok.onclick = null; cancel.onclick = null; };
-      ok.onclick = () => { close(); onConfirm(); };
-      cancel.onclick = close;
+    function confirmSensitiveBankChange(changes){
+      if (!changes || !changes.length) return true;
+      const lines = changes.map(c => `${c.label}: ${c.old || '(rỗng)'} → ${c.new || '(rỗng)'}`).join('\n');
+      return window.confirm(
+        'Xác nhận đổi thông tin tài khoản nhận tiền?\n\n' +
+        lines +
+        '\n\nTiền khách chuyển sẽ về thông tin mới. Hành động này sẽ được ghi vào admin logs.'
+      );
     }
 
     async function savePayment(){
@@ -551,8 +528,7 @@
         catch(e){ msg('paymentMsg', e.message, 'err'); toast(e.message,'err'); }
         finally{ setBusy(btn,false); }
       };
-      if (sensitive) showConfirmModal(sensitive, doSave);
-      else doSave();
+      if (!sensitive || confirmSensitiveBankChange(sensitive)) doSave();
     }
     async function saveSmtp(){
       if(!adminPassword()) return msg('smtpMsg','Vui lòng nhập mật khẩu quản trị.','warn');
@@ -593,8 +569,7 @@
         catch(e){ msg('paymentMsg', e.message, 'err'); toast(e.message,'err'); }
         finally{ setBusy(btn,false); }
       };
-      if (sensitive) showConfirmModal(sensitive, doTest);
-      else doTest();
+      if (!sensitive || confirmSensitiveBankChange(sensitive)) doTest();
     }
     async function testEmail(){
       if(!adminPassword()) return msg('smtpMsg','Vui lòng nhập mật khẩu quản trị.','warn');
