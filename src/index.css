@@ -5057,3 +5057,88 @@
     max-height: none !important;
   }
 }
+
+/* PATCH v49 — Web: đồng bộ 2 ô chọn tự động chuyển key / săn kênh nhỏ */
+@media (min-width: 769px) {
+  .vtw-bottom-actions.vtw-auto-hunt-box {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 18px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .vtw-bottom-actions.vtw-auto-hunt-box > div:first-child {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(220px, 1fr)) !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vtw-auto-hunt-wrap,
+  .vtw-deep-drill-toggle {
+    display: grid !important;
+    grid-template-columns: 24px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 58px !important;
+    padding: 10px 14px !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    border: 1px solid #fed7aa !important;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .06) !important;
+  }
+
+  .vtw-auto-hunt-wrap {
+    background: #fff7ed !important;
+  }
+
+  .vtw-auto-hunt-wrap input[type="checkbox"],
+  .vtw-deep-drill-toggle input[type="checkbox"] {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    margin: 0 !important;
+  }
+
+  .vtw-auto-hunt-text,
+  .vtw-deep-drill-toggle label {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    line-height: 1.18 !important;
+    text-align: left !important;
+  }
+
+  .vtw-auto-hunt-full,
+  .vtw-deep-full {
+    display: block !important;
+    white-space: normal !important;
+    word-break: normal !important;
+  }
+
+  .vtw-auto-hunt-text span,
+  .vtw-deep-drill-toggle .vtw-deep-full {
+    font-size: 11px !important;
+    letter-spacing: .01em !important;
+  }
+
+  .vtw-deep-sub {
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+    margin-top: 2px !important;
+  }
+
+  .vtw-auto-hunt-mobile,
+  .vtw-deep-mobile {
+    display: none !important;
+  }
+}

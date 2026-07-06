@@ -3579,3 +3579,93 @@ body .vtw-channel-trending-card {
     font-weight: 800 !important;
   }
 }
+
+/* PATCH v49 — Mobile: 2 ô chọn nằm 2 cột đều nhau, chữ gọn */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+  .vtw-bottom-actions.vtw-auto-hunt-box {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    padding: 10px !important;
+    border-radius: 16px !important;
+  }
+
+  .vtw-bottom-actions.vtw-auto-hunt-box > div:first-child {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vtw-auto-hunt-wrap,
+  .vtw-deep-drill-toggle {
+    display: grid !important;
+    grid-template-columns: 20px minmax(0, 1fr) !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    min-height: 58px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 9px 8px !important;
+    border-radius: 14px !important;
+    gap: 7px !important;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .06) !important;
+  }
+
+  .vtw-auto-hunt-wrap {
+    background: #fff7ed !important;
+    border: 1px solid #fed7aa !important;
+  }
+
+  .vtw-deep-drill-toggle {
+    background: #ffffff !important;
+    border: 1px solid #fed7aa !important;
+  }
+
+  .vtw-auto-hunt-wrap input,
+  .vtw-deep-drill-toggle input {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    flex: 0 0 18px !important;
+    margin: 0 !important;
+  }
+
+  .vtw-auto-hunt-text,
+  .vtw-deep-drill-toggle label {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    text-align: left !important;
+    line-height: 1.12 !important;
+  }
+
+  .vtw-auto-hunt-full,
+  .vtw-deep-full,
+  .vtw-deep-sub {
+    display: none !important;
+  }
+
+  .vtw-auto-hunt-mobile,
+  .vtw-deep-mobile {
+    display: block !important;
+    font-size: 10.5px !important;
+    line-height: 1.12 !important;
+    font-weight: 900 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .vtw-deep-mobile {
+    color: #0f766e !important;
+  }
+
+  .vtw-bottom-actions.vtw-auto-hunt-box > div:last-child {
+    width: 100% !important;
+  }
+}

@@ -5659,7 +5659,8 @@ Quy tắc:
                       onChange={(e) => setConfig({ ...config, autoNiche: e.target.checked })}
                     />
                     <label htmlFor="autoHunt" className="vtw-auto-hunt-text font-bold text-[12px] text-[#d35400] cursor-pointer flex flex-col">
-                      <span>Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</span>
+                      <span className="vtw-auto-hunt-full">Tự động chuyển từ khóa<br className="vtw-auto-web-break" />đến khi đủ 10 Kênh</span>
+                      <span className="vtw-auto-hunt-mobile">Tự chuyển key<br />đủ 10 kênh</span>
                     </label>
                   </div>
                   <div className="vtw-deep-drill-toggle flex items-center gap-2 bg-white border border-orange-200 rounded-lg px-3 py-2 shadow-sm">
@@ -5671,8 +5672,9 @@ Quy tắc:
                       onChange={(e) => setConfig({ ...config, deepDrillSmallTrend: e.target.checked })}
                     />
                     <label htmlFor="deepDrillSmallTrend" className="cursor-pointer flex flex-col leading-tight">
-                      <span className="font-black text-[12px] text-[#0f766e]">Săn kênh nhỏ / Mới Trend</span>
-                      <span className="text-[10px] text-slate-500">Deep Drill: dưới 50.000 sub, 30 ngày</span>
+                      <span className="vtw-deep-full font-black text-[12px] text-[#0f766e]">Săn kênh nhỏ / Mới Trend</span>
+                      <span className="vtw-deep-mobile font-black text-[12px] text-[#0f766e]">Kênh nhỏ<br />mới trend</span>
+                      <span className="vtw-deep-sub text-[10px] text-slate-500">Deep Drill: dưới 50.000 sub, 30 ngày</span>
                     </label>
                   </div>
                 </div>
