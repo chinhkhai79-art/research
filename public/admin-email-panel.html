@@ -24,7 +24,7 @@
     textarea{min-height:76px;resize:vertical;line-height:1.45}
     input:focus,textarea:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
-    .test-email-inline{margin-top:14px;max-width:520px}
+    .test-email-inline{margin-top:0;max-width:100%}
     button{border:0;border-radius:12px;padding:11px 16px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
     .primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.orange{background:var(--orange);color:#fff}.gray{background:#f1f5f9;color:#000;border:1px solid #cbd5e1}
     .msg{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:999999;margin:0;width:max-content;max-width:min(520px,calc(100vw - 32px));border-radius:14px;padding:14px 18px;font-size:15px;line-height:1.45;text-align:center;box-shadow:0 18px 55px rgba(15,23,42,.18)}.msg.ok{display:block;background:#ecfdf5;color:#000;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#000;border:1px solid #fecaca}
@@ -82,13 +82,13 @@
             <div class="grid">
               <div class="field"><label>Tiêu đề email</label><input id="admin_subjectBase" placeholder="Admin: Đơn hàng đã thanh toán thành công" /></div>
               <div class="field"><label>Mã đơn ở tiêu đề</label><label class="pill"><input id="admin_subjectHasOrder" type="checkbox" checked /> Có</label></div>
+              <div class="field full test-email-inline"><label>Email nhận test</label><input id="testEmail" value="chinhkhai79@gmail.com" placeholder="Nhập email để gửi test mẫu" /></div>
               <div class="field full"><label>Dòng tiêu đề trong email</label><input id="admin_heroTitle" placeholder="Thông báo thanh toán thành công" /></div>
               <div class="field full"><label>Dòng mô tả ngay dưới tiêu đề</label><input id="admin_heroSubtitle" placeholder="Hệ thống vừa ghi nhận một đơn hàng đã thanh toán thành công." /></div>
               <div class="field full"><label>Nội dung thông báo</label><textarea id="admin_introText" placeholder="Hệ thống vừa ghi nhận đơn hàng {{orderCode}}..."></textarea></div>
               <div class="field"><label>Chữ trên nút</label><input id="admin_buttonText" placeholder="Mở công cụ" /></div>
               <div class="field"><label>Dòng cuối email</label><input id="admin_footerText" placeholder="Email này được gửi tự động từ hệ thống tubekey.vn." /></div>
             </div>
-            <div class="field test-email-inline"><label>Email nhận test</label><input id="testEmail" value="chinhkhai79@gmail.com" placeholder="Nhập email để gửi test mẫu" /></div>
             <div class="actions">
               <button id="admin_saveBtn" class="green" type="button">Lưu mẫu Admin</button>
               <button id="admin_testBtn" class="orange" type="button">Gửi test Admin</button>
