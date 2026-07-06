@@ -27,7 +27,7 @@
     .test-email-inline{margin-top:14px;max-width:520px}
     button{border:0;border-radius:12px;padding:11px 16px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
     .primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.orange{background:var(--orange);color:#fff}.gray{background:#f1f5f9;color:#000;border:1px solid #cbd5e1}
-    .msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}.msg.ok{display:block;background:#ecfdf5;color:#000;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#000;border:1px solid #fecaca}
+    .msg{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:999999;margin:0;width:max-content;max-width:min(520px,calc(100vw - 32px));border-radius:14px;padding:14px 18px;font-size:15px;line-height:1.45;text-align:center;box-shadow:0 18px 55px rgba(15,23,42,.18)}.msg.ok{display:block;background:#ecfdf5;color:#000;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#000;border:1px solid #fecaca}
     .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:220px;padding:14px;overflow:visible}
     .switch-line{display:flex;align-items:center;gap:10px;color:#000}.switch-line input{width:18px;height:18px}.pill{display:flex;align-items:center;gap:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:9px 12px;font-size:13px;color:#000;white-space:nowrap;min-height:42px;width:max-content;max-width:100%}.pill input{width:18px;height:18px}.mini-note{font-size:13px;line-height:1.5;color:#000;background:#f8fbff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-top:12px}
     @media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:flex-start}.actions button{width:100%}}
@@ -127,7 +127,15 @@
     function lineBreak(v){ return esc(v).replace(/\n/g,'<br>'); }
     function defaultNameFromEmail(email){ const local=String(email||'').split('@')[0]||'bạn'; return local.replace(/[._-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase()).trim() || 'bạn'; }
     function adminSecret(){ return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_SECRET).trim() || DEFAULT_SECRET; }
-    function show(type, text){ const el=$('msg'); el.className='msg '+(type==='err'?'err':'ok'); el.textContent=text; }
+    let toastTimer = null;
+    function show(type, text){
+      const el=$('msg');
+      if(!el) return;
+      if(toastTimer) clearTimeout(toastTimer);
+      el.className='msg '+(type==='err'?'err':'ok');
+      el.textContent=text;
+      toastTimer = setTimeout(() => { el.className='msg'; el.textContent=''; toastTimer=null; }, 3000);
+    }
     async function api(action, body){
       const res = await fetch('/api/admin-settings?action=' + encodeURIComponent(action), { method: action === 'get' ? 'GET' : 'POST', headers:{ 'Content-Type':'application/json', 'x-admin-password': adminSecret() }, body: action === 'get' ? undefined : JSON.stringify(body || {}) });
       const text = await res.text(); let data = {}; try{ data = text ? JSON.parse(text) : {}; }catch{ data = { success:false, error:text || res.statusText }; }
