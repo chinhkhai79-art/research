@@ -8867,7 +8867,7 @@ Quy tắc:
                         <div className="col-span-full py-20 text-center text-gray-400 italic">Không tìm thấy video Shorts nào trong danh sách được tải. Thử phân tích lại với số lượng items lớn hơn.</div>
                       ) : nicheResults.shorts.map((v: any, i: number) => (
                          <div key={i} className="vtw-shorts-card aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
-                            <img src={v.snippet.thumbnails.high.url} className="vtw-shorts-thumb w-full h-full object-contain bg-black opacity-90" />
+                            <img src={v.snippet.thumbnails.high.url} className="vtw-shorts-thumb w-full h-full object-cover bg-black opacity-90" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
                             <div className="absolute bottom-0 left-0 right-0 p-4">

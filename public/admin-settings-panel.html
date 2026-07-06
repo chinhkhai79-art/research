@@ -37,8 +37,10 @@
     .head h2{font-size:20px;margin:0;font-weight:900}
     .body{padding:18px}
     .login-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-    .stack-col{display:flex;flex-direction:column;gap:16px}
+    .two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
+    .stack-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+    .two-col>.stack-col>.grid-card{height:100%;margin-bottom:0;display:flex;flex-direction:column}
+    .two-col>.stack-col>.grid-card>.body{flex:1}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
     .field.full{grid-column:1/-1}
     label{display:block;font-weight:900;margin-bottom:6px;font-size:13px}
@@ -65,18 +67,19 @@
     .actions{align-items:center}
     .actions > *{flex:0 0 auto}
     label{text-transform:none;letter-spacing:0}
-    @media(max-width:900px){.status-grid{grid-template-columns:1fr}}
-
-
     /* === Mới thêm: System status & Plans table & Modal === */
-    .status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .status-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+    .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;align-items:stretch}
+    .status-grid>.muted{grid-column:1/-1}
+    .system-status-card .body{padding:12px 18px}
+    .status-item{display:flex;gap:8px;align-items:flex-start;padding:8px 9px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;min-height:48px}
     .status-item.ok{background:#ecfdf5;border-color:#86efac}
     .status-item.err{background:#fef2f2;border-color:#fecaca}
     .status-item.warn{background:#fff7ed;border-color:#fed7aa}
-    .status-icon{font-size:20px;line-height:1;flex-shrink:0}
-    .status-label{font-weight:900;font-size:13px}
-    .status-hint{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600}
+    .status-icon{font-size:16px;line-height:1;flex-shrink:0}
+    .status-label{font-weight:900;font-size:12px;line-height:1.2}
+    .status-hint{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;line-height:1.25}
+    @media(max-width:900px){.status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:560px){.status-grid{grid-template-columns:1fr}}
     table.plans-table{width:100%;border-collapse:collapse;font-size:13px}
     table.plans-table th{background:#f1f5f9;text-align:left;padding:10px;border-bottom:1px solid var(--line);font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
     table.plans-table td{padding:8px;border-bottom:1px solid #eef2f7}
@@ -193,18 +196,19 @@
           </div>
         </section>
 
-        <!-- System status -->
-        <section class="grid-card">
-          <div class="head">
-            <h2>🩺 Trạng thái hệ thống</h2>
-            <button id="refreshStatusBtn" class="ghost" type="button">Làm mới</button>
-          </div>
-          <div class="body">
-            <div id="statusGrid" class="status-grid"><div class="muted">Bấm "Tải cấu hình" để xem trạng thái.</div></div>
-          </div>
-        </section>
       </div>
     </div>
+
+    <!-- System status -->
+    <section class="grid-card system-status-card">
+      <div class="head">
+        <h2>🩺 Trạng thái hệ thống</h2>
+        <button id="refreshStatusBtn" class="ghost" type="button">Làm mới</button>
+      </div>
+      <div class="body">
+        <div id="statusGrid" class="status-grid"><div class="muted">Bấm "Tải cấu hình" để xem trạng thái.</div></div>
+      </div>
+    </section>
 
     <!-- Plans management -->
     <section class="grid-card">
