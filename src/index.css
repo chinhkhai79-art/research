@@ -4909,3 +4909,97 @@
 .vtw-technical-details-card .vtw-technical-details-grid > div {
   background-image: none !important;
 }
+
+/* PATCH v41 — viền mỏng cho các khung video/ngách để dễ phân biệt trên web */
+.vtw-niche-video-card,
+.vtw-trending-video-card,
+.vtw-square-video-card,
+.vtw-related-video-card,
+.vtw-niche-related-video-card,
+.vtw-niche-channel-card,
+.vtw-channel-trending-card {
+  border: 1px solid rgba(15, 23, 42, 0.20) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 10px 22px rgba(15, 23, 42, 0.06) !important;
+}
+.vtw-niche-video-card:hover,
+.vtw-trending-video-card:hover,
+.vtw-square-video-card:hover,
+.vtw-related-video-card:hover,
+.vtw-niche-related-video-card:hover,
+.vtw-niche-channel-card:hover,
+.vtw-channel-trending-card:hover {
+  border-color: rgba(37, 99, 235, 0.34) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12), 0 14px 30px rgba(15, 23, 42, 0.10) !important;
+}
+.vtw-niche-video-card .vtw-video-thumb,
+.vtw-trending-video-card .vtw-trending-video-thumb,
+.vtw-niche-video-card .relative.aspect-video {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.14) !important;
+}
+
+/* PATCH v41 — bottom mobile icon menu cố định */
+.vtw-mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body:has(.vtw-mobile-bottom-nav) {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .vtw-mobile-app {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .vtw-mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4990;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px));
+    background: rgba(9, 14, 22, 0.98);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 -10px 28px rgba(2, 6, 23, 0.22);
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: center;
+    gap: 5px;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .vtw-mobile-bottom-nav-item {
+    height: 44px;
+    min-width: 0;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s ease, background .15s ease, color .15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vtw-mobile-bottom-nav-item:active {
+    transform: scale(0.94);
+  }
+  .vtw-mobile-bottom-nav-item.is-active {
+    background: rgba(59, 130, 246, 0.22);
+    color: #60a5fa;
+  }
+  .vtw-mobile-bottom-nav-account img {
+    width: 31px;
+    height: 31px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.88);
+    object-fit: cover;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  }
+  .vtw-mobile-bottom-nav ~ .vtw-toast-overlay,
+  .vtw-toast-overlay {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .fixed[title="Lên đầu trang"] {
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}

@@ -10496,6 +10496,69 @@ Quy tắc:
         )}
       </AnimatePresence>
 
+      {user && !subscriptionLoading && subscriptionInfo && !subscriptionExpired && (
+        <nav className="vtw-mobile-bottom-nav" aria-label="Menu chức năng mobile" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 1 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(1)}
+            aria-label="Tìm kênh"
+            title="Tìm kênh"
+          >
+            <Home size={23} strokeWidth={2.8} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 2 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(2)}
+            aria-label="Spy"
+            title="Spy"
+          >
+            <BarChart2 size={23} strokeWidth={2.8} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 4 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(4)}
+            aria-label="Video"
+            title="Video"
+          >
+            <Video size={23} strokeWidth={2.8} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 3 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(3)}
+            aria-label="Tracking"
+            title="Tracking"
+          >
+            <UserRoundSearch size={23} strokeWidth={2.8} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 5 ? 'is-active' : ''}`}
+            onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
+            aria-label="Ngách"
+            title="Ngách"
+          >
+            <LayoutGrid size={23} strokeWidth={2.8} />
+          </button>
+          <button
+            type="button"
+            className="vtw-mobile-bottom-nav-item vtw-mobile-bottom-nav-account"
+            onClick={() => { setShowAccountModal(true); refreshSubscription(user, true, true); }}
+            aria-label="Tài khoản"
+            title="Tài khoản"
+          >
+            <img
+              src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+              alt="Tài khoản"
+              referrerPolicy="no-referrer"
+            />
+          </button>
+        </nav>
+      )}
+
       {/* === Mobile/responsive CSS đã được tách ra ./mobile.css (import trong main.tsx) === */}
 
       {/* === TOAST NOTIFICATION giữa màn hình — auto-dismiss 3s, không stack === */}
