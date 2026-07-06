@@ -2018,6 +2018,47 @@ export default function App() {
     return viewCount / hours;
   };
 
+  const getIsoDurationSeconds = (pt: string) => {
+    if (!pt || typeof pt !== 'string') return 0;
+    const hours = Number((pt.match(/(\d+)H/) || [])[1] || 0);
+    const minutes = Number((pt.match(/(\d+)M/) || [])[1] || 0);
+    const seconds = Number((pt.match(/(\d+)S/) || [])[1] || 0);
+    return (hours * 3600) + (minutes * 60) + seconds;
+  };
+
+  const isLikelyYoutubeShort = (video: any) => {
+    const seconds = getIsoDurationSeconds(video?.contentDetails?.duration || '');
+    // YouTube Data API chỉ có videoDuration=short (<4 phút). Giữ ngưỡng 3 phút để đủ Shorts mới nhưng vẫn loại video dài.
+    return seconds > 0 && seconds <= 180;
+  };
+
+  const sortNewestVideos = (items: any[]) => {
+    return [...items].sort((a: any, b: any) => {
+      const tb = new Date(b?.snippet?.publishedAt || 0).getTime();
+      const ta = new Date(a?.snippet?.publishedAt || 0).getTime();
+      return tb - ta;
+    });
+  };
+
+  const buildShortsExpansionSeeds = (keyword: string, topKeywords: any[] = []) => {
+    const base = cleanNichePhrase(keyword || '').trim();
+    const topicWords = topKeywords
+      .map((k: any) => cleanNichePhrase(k?.text || ''))
+      .filter((k: string) => k && k.length >= 3 && k.length <= 32)
+      .filter((k: string) => !/^(video|shorts|youtube|official|subscribe|like|part|full|new|mới|nhất)$/i.test(k))
+      .slice(0, 5);
+    const seeds = [
+      base,
+      `${base} shorts`,
+      `${base} viral shorts`,
+      `${base} mới nhất`,
+      `${base} trending`,
+      ...topicWords.map((k: string) => `${base} ${k}`),
+      ...topicWords.map((k: string) => `${k} shorts`)
+    ].map(v => v.trim()).filter(Boolean);
+    return Array.from(new Set(seeds)).slice(0, 10);
+  };
+
   const calculateTrendScore = (video: any, channel: any) => {
     if (!video || !video.snippet) return 0;
     let score = 0;
@@ -3535,22 +3576,6 @@ JSON mẫu:
         };
       });
 
-      // Simple Shorts filter
-      const shorts = processedVideos.filter((v: any) => {
-        const d = v.contentDetails?.duration;
-        if (!d) return false;
-        if (d.includes('H')) return false;
-        if (d.includes('M')) {
-          const match = d.match(/PT(\d+)M/);
-          if (match && parseInt(match[1]) > 1) return false;
-          if (match && parseInt(match[1]) === 1 && d.includes('S')) {
-             const sMatch = d.match(/(\d+)S/);
-             if (sMatch && parseInt(sMatch[1]) > 0) return false;
-          }
-        }
-        return true;
-      });
-
       // 5. Keyword analysis
       const allTags = processedVideos.flatMap((v: any) => {
         const tags = v.snippet.tags || [];
@@ -3591,6 +3616,97 @@ JSON mẫu:
             score: Math.min(100, Math.round(kwScore))
           };
         });
+
+      const collectExpandedNewestShorts = async () => {
+        const targetCount = 15;
+        const searchSeeds = buildShortsExpansionSeeds(kw, topKeywords);
+        const videoIdSet = new Set<string>();
+        const keepSearchIds = (items: any[] = []) => {
+          items.forEach((item: any) => {
+            const id = item?.id?.videoId;
+            if (id && videoIdSet.size < 45) videoIdSet.add(id);
+          });
+        };
+
+        for (const seed of searchSeeds) {
+          if (videoIdSet.size >= 30) break;
+          setStatus(`Đang tìm Shorts mới nhất: ${seed}...`);
+          try {
+            const res = await youtubeFetch('search', {
+              q: seed,
+              type: 'video',
+              regionCode: nicheRegion,
+              relevanceLanguage: (REGION_SEARCH_CONFIG as any)[nicheRegion]?.relevanceLanguage || undefined,
+              publishedAfter,
+              maxResults: 15,
+              order: 'date',
+              videoDuration: 'short'
+            });
+            keepSearchIds(res?.items || []);
+          } catch (shortSearchError) {
+            console.warn('shorts expansion search error:', shortSearchError);
+          }
+          if (videoIdSet.size >= targetCount + 5) break;
+        }
+
+        const shortIds = Array.from(videoIdSet);
+        if (!shortIds.length) return [];
+
+        let detailedShorts: any[] = [];
+        for (let i = 0; i < shortIds.length; i += 50) {
+          const res = await youtubeFetch('videos', {
+            id: shortIds.slice(i, i + 50).join(','),
+            part: 'snippet,statistics,contentDetails'
+          });
+          if (res?.items) detailedShorts = [...detailedShorts, ...res.items];
+        }
+
+        const shortChannelIds = Array.from(new Set(detailedShorts.map((v: any) => v?.snippet?.channelId).filter(Boolean)));
+        let shortChannels: any[] = [];
+        for (let i = 0; i < shortChannelIds.length; i += 50) {
+          const res = await youtubeFetch('channels', {
+            id: shortChannelIds.slice(i, i + 50).join(','),
+            part: 'snippet,statistics,topicDetails'
+          });
+          if (res?.items) shortChannels = [...shortChannels, ...res.items];
+        }
+
+        const shortChannelMap = new Map(shortChannels.map((c: any) => [c.id, c]));
+        const enrichedShorts = detailedShorts
+          .filter((v: any) => isLikelyYoutubeShort(v))
+          .map((v: any) => {
+            const chan: any = shortChannelMap.get(v.snippet.channelId);
+            const stats = v.statistics || {};
+            const views = parseInt(stats.viewCount) || 0;
+            const channelSubscriberCount = parseInt(chan?.statistics?.subscriberCount) || 0;
+            return {
+              ...v,
+              vph: calculateVPH(views, v.snippet.publishedAt),
+              trendScore: calculateTrendScore(v, chan),
+              channelStats: chan?.statistics || {},
+              channelSubscriberCount,
+              engagementRate: calculateEngagementRate(stats),
+              viewPerDay: views / Math.max(1, (Date.now() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
+            };
+          });
+
+        const inSubRange = enrichedShorts.filter((v: any) => {
+          const sub = Number(v.channelSubscriberCount || 0);
+          return sub >= nicheMinSub && sub <= nicheMaxSub;
+        });
+        const source = inSubRange.length >= 10 ? inSubRange : enrichedShorts;
+        return sortNewestVideos(source).slice(0, targetCount);
+      };
+
+      let shorts = sortNewestVideos(processedVideos.filter((v: any) => isLikelyYoutubeShort(v))).slice(0, 15);
+      if (nicheActiveSubTab === 'shorts' || nicheVideoType === 'short' || shorts.length < 10) {
+        const expandedShorts = await collectExpandedNewestShorts();
+        const mergedShorts = new Map<string, any>();
+        [...expandedShorts, ...shorts].forEach((v: any) => {
+          if (v?.id && !mergedShorts.has(v.id)) mergedShorts.set(v.id, v);
+        });
+        shorts = sortNewestVideos(Array.from(mergedShorts.values())).slice(0, 15);
+      }
 
       // 6. Summary metrics
       const avgVPH = processedVideos.reduce((acc, curr) => acc + curr.vph, 0) / Math.max(1, processedVideos.length);
