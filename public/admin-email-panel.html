@@ -12,7 +12,7 @@
     .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
     .title h1{margin:0;font-size:28px;font-weight:400;letter-spacing:-.2px;color:var(--blue)!important}
     .muted{color:#000;font-size:14px;line-height:1.5;margin-top:6px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);overflow:hidden}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);overflow:visible}
     .head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
     .head h2{margin:0;font-size:20px;font-weight:400;color:var(--blue)!important;border-left:4px solid var(--cyan);padding-left:10px}
     .body{padding:18px 20px}
@@ -27,11 +27,15 @@
     .primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.orange{background:var(--orange);color:#fff}.gray{background:#f1f5f9;color:#000;border:1px solid #cbd5e1}
     .msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}.msg.ok{display:block;background:#ecfdf5;color:#000;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#000;border:1px solid #fecaca}
     .hint{font-size:13px;color:#000;line-height:1.55;background:#eff8ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 12px}
-    .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:260px;padding:14px;overflow:auto}
+    .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:260px;padding:14px;overflow:visible}
     .split{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(360px,1.1fr);gap:16px;align-items:start}
     .switch-line{display:flex;align-items:center;gap:10px;color:#000}.switch-line input{width:18px;height:18px}.small{font-size:12px;color:#000}.check-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:7px 10px;font-size:12px;color:#000}
+    .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:10px 12px;font-size:13px;color:#000;white-space:nowrap;min-height:44px}
     @media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:flex-start}.actions button{width:100%}}
+
+    /* v35: không dùng thanh cuộn nội bộ trong mẫu email */
+    html,body,.page,.card,.preview{overflow:visible!important;max-height:none!important}
+    .grid{grid-template-columns:minmax(0,1.35fr) minmax(190px,.65fr)}
   </style>
 </head>
 <body>
@@ -58,8 +62,8 @@
                 <input id="subjectBase" placeholder="Thanh toán thành công" />
               </div>
               <div class="field">
-                <label>Gắn mã đơn hàng vào tiêu đề</label>
-                <label class="pill"><input id="subjectHasOrder" type="checkbox" checked /> Có, ví dụ: Thanh toán thành công - TUBEKEY...</label>
+                <label>Mã đơn ở tiêu đề</label>
+                <label class="pill"><input id="subjectHasOrder" type="checkbox" checked /> Có</label>
               </div>
               <div class="field full">
                 <label>Dòng tiêu đề trong email</label>
@@ -81,9 +85,6 @@
                 <label>Dòng hỗ trợ cuối email</label>
                 <input id="footerText" placeholder="Nếu bạn cần hỗ trợ, vui lòng phản hồi email này." />
               </div>
-              <div class="field full">
-                <div class="hint">Lời chào tự lấy tên Google của tài khoản. Nếu chưa có tên, hệ thống dùng phần tên trong email, không dùng “Khách hàng”. Các thông tin mã đơn, gói, số tiền, ngày thanh toán và hạn dùng sẽ tự điền khi gửi.</div>
-              </div>
             </div>
             <div class="actions">
               <button id="saveBtn" class="green" type="button">Lưu mẫu email</button>
@@ -101,7 +102,6 @@
           <div>
             <label>Xem trước nhanh</label>
             <div id="preview" class="preview"></div>
-            <div class="small" style="margin-top:10px">Mẫu này lưu vào Supabase/Postgres. Cần cấu hình SMTP đúng thì email thanh toán thành công mới gửi được.</div>
           </div>
         </div>
       </div>

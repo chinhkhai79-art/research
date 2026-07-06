@@ -35,7 +35,7 @@ async function handleRevenue(req, res) {
   const limit = Math.min(Math.max(Number(req.query.limit || 500) || 500, 50), 500);
   const [paymentRows, logRows, userRows] = await Promise.all([
     sbListPayments({ limit }),
-    sbListSepayLogs(100),
+    sbListSepayLogs(500),
     sbListUsersForBulk({ limit: 500 })
   ]);
 
@@ -145,7 +145,7 @@ async function handleRevenue(req, res) {
     if (!planBreakdown[planKey]) planBreakdown[planKey] = { count:0, revenue:0, name:o.planName || planKey };
     planBreakdown[planKey].count++; planBreakdown[planKey].revenue += o.amount;
   }
-  return res.status(200).json({ success:true, rangeDays, resetAt:null, source:'supabase', stats:{ totalPaid,totalRevenue,todayPaid,todayRevenue,weekRevenue,monthRevenue,rangeRevenue,pendingCount:pending.length,issueCount:issues.length,planBreakdown,dailyRevenue }, orders:orders.slice(0,80), pending:pending.slice(0,50), issues });
+  return res.status(200).json({ success:true, rangeDays, resetAt:null, source:'supabase', stats:{ totalPaid,totalRevenue,todayPaid,todayRevenue,weekRevenue,monthRevenue,rangeRevenue,pendingCount:pending.length,issueCount:issues.length,planBreakdown,dailyRevenue }, orders:orders.slice(0,500), pending:pending.slice(0,500), issues });
 }
 
 export default async function handler(req, res) {

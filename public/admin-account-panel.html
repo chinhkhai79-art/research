@@ -187,6 +187,19 @@
     #usersPageText{font-size:12px!important;white-space:nowrap}
     @media(max-width:950px){.users-table th,.users-table td{font-size:9.8px!important;padding:7px 4px!important}.users-table .row-actions .small{min-width:36px!important;padding:0 6px!important;font-size:9.5px!important}}
 
+
+    /* v35: bỏ mọi thanh cuộn nội bộ, bảng tự co và phân trang từng nhóm doanh thu */
+    html,body{overflow:visible!important}
+    .wrap,.card,.scroll{overflow:visible!important;max-height:none!important}
+    .scroll{border-radius:0!important}
+    table{table-layout:fixed;width:100%!important;min-width:0!important}
+    table th,table td{font-size:11px!important;line-height:1.24!important;white-space:normal!important;word-break:break-word!important;padding:9px 7px!important}
+    .revenue-table .mono{word-break:break-all!important;font-size:10.5px!important}
+    .pager-row{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:10px 0 0;flex-wrap:wrap}
+    .pager-row .small{height:32px!important;padding:0 10px!important;font-size:11px!important}
+    .pager-text{font-size:12px!important;color:#000!important}
+    #issuesDesc{display:none!important}
+
   </style>
 </head>
 <body>
@@ -196,7 +209,7 @@
       <div class="grid">
         <div class="field">
           <label>Tìm email / UID / tên</label>
-          <input id="searchText" placeholder="VD: user@gmail.com hoặc UID đăng nhập" onkeydown="if(event.key==='Enter') loadUsers(1, true)" />
+          <input id="searchText" placeholder="VD: user@gmail.com, UID, mã đơn, nội dung CK" oninput="handleSearchInput()" onkeydown="handleSearchKey(event)" />
         </div>
         <div class="actions">
           <button class="btn-dark" onclick="loadUsers(currentUsersPage, true)">Làm mới danh sách</button>
@@ -378,31 +391,34 @@
       <div class="card" style="margin-top:14px;">
         <h2 style="margin:0 0 12px;font-size:20px;">Đơn đã thanh toán</h2>
         <div class="scroll">
-          <table>
+          <table class="revenue-table">
             <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>Email/UID</th><th>Gói</th><th>Số tiền</th><th>Hết hạn</th></tr></thead>
             <tbody id="ordersBody"></tbody>
           </table>
+          <div class="pager-row" id="ordersPager"><button class="btn-dark small" onclick="changeRevenuePage('orders',-1)">← Trước</button><span class="pager-text" id="ordersPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('orders',1)">Sau →</button></div>
         </div>
       </div>
 
       <div class="card" style="margin-top:14px;">
         <h2 style="margin:0 0 12px;font-size:20px;color:#fbbf24;">⚠ Đơn chờ thanh toán / sai sót</h2>
         <div class="scroll">
-          <table>
+          <table class="revenue-table">
             <thead><tr><th>Tạo lúc</th><th>Mã đơn</th><th>Trạng thái</th><th>Email/UID</th><th>Gói</th><th>Số tiền dự kiến</th><th>Đã nhận</th></tr></thead>
             <tbody id="pendingBody"></tbody>
           </table>
+          <div class="pager-row" id="pendingPager"><button class="btn-dark small" onclick="changeRevenuePage('pending',-1)">← Trước</button><span class="pager-text" id="pendingPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('pending',1)">Sau →</button></div>
         </div>
       </div>
 
       <div class="card" style="margin-top:14px;">
         <h2 style="margin:0 0 12px;font-size:20px;color:#f87171;">⚠ Giao dịch SePay không khớp / có vấn đề</h2>
-        <div class="muted" style="margin-bottom:8px;">Bao gồm: không tìm thấy mã đơn, số tiền không đủ, token sai, webhook chưa cấu hình bảo mật.</div>
+        <div id="issuesDesc" class="muted" style="margin-bottom:8px;">Bao gồm: không tìm thấy mã đơn, số tiền không đủ, token sai, webhook chưa cấu hình bảo mật.</div>
         <div class="scroll">
-          <table>
+          <table class="revenue-table">
             <thead><tr><th>Thời gian</th><th>Trạng thái</th><th>Mã đơn</th><th>Nhận / Dự kiến</th><th>Nội dung CK</th><th>Lý do / IP</th></tr></thead>
             <tbody id="issuesBody"></tbody>
           </table>
+          <div class="pager-row" id="issuesPager"><button class="btn-dark small" onclick="changeRevenuePage('issues',-1)">← Trước</button><span class="pager-text" id="issuesPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('issues',1)">Sau →</button></div>
         </div>
       </div>
     </div>
@@ -412,6 +428,9 @@
 const USERS_PAGE_SIZE = 50;
 let currentUsersPage = 1;
 let currentUsersHasNext = false;
+const REVENUE_PAGE_SIZE = 10;
+const revenueState = { orders: [], pending: [], issues: [], pages: { orders: 1, pending: 1, issues: 1 } };
+let revenueSearchTimer = null;
 
 const BULK_DEFAULT_REASON = 'Cộng ngày hàng loạt từ admin';
 const PLAN_MAP = {
@@ -455,6 +474,23 @@ function secret(){
 function esc(v){ return String(v ?? '').replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s])); }
 function setStatus(msg, type=''){ const el=qs('status'); el.className='status '+type; el.innerHTML=msg; }
 function fmtDate(v){ if(!v) return 'Chưa có'; const d=new Date(v); if(isNaN(d)) return String(v); return d.toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}); }
+function currentSearch(){ return String((qs('searchText') && qs('searchText').value) || '').trim(); }
+function handleSearchKey(event){
+  if(event && event.key !== 'Enter') return;
+  if(!qs('revenuePanel').classList.contains('hidden')) loadRevenue();
+  else loadUsers(1, true);
+}
+function handleSearchInput(){
+  if(qs('revenuePanel').classList.contains('hidden')) return;
+  clearTimeout(revenueSearchTimer);
+  revenueSearchTimer = setTimeout(function(){ applyRevenueSearchAndRender(true); }, 180);
+}
+function textMatch(obj, q){
+  if(!q) return true;
+  const hay = Object.values(obj || {}).map(v => typeof v === 'object' ? JSON.stringify(v || {}) : String(v ?? '')).join(' ').toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+
 function showTab(name){
   qs('usersPanel').classList.toggle('hidden', name !== 'users');
   qs('actionPanel').classList.toggle('hidden', name !== 'action');
@@ -561,7 +597,7 @@ function changeUsersPage(delta){
 async function loadUsers(page = 1, force = false){
   try{
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
-    const q = qs('searchText').value.trim();
+    const q = currentSearch();
     currentUsersPage = Math.max(1, Number(page || 1));
     setStatus('Đang tải danh sách Supabase...', '');
     const url = '/api/admin-users?limit=' + USERS_PAGE_SIZE + '&page=' + currentUsersPage + (force ? '&force=1' : '') + (q ? '&q='+encodeURIComponent(q) : '');
@@ -698,13 +734,16 @@ async function loadRevenue(){
   try{
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
     const days = qs('revenueRange').value || '30';
+    const q = currentSearch();
     setStatus('Đang tải dữ liệu doanh thu...', '');
-    const data = await api('/api/admin-logs?type=revenue&limit=150&days=' + encodeURIComponent(days));
+    const data = await api('/api/admin-logs?type=revenue&limit=500&days=' + encodeURIComponent(days) + (q ? '&q=' + encodeURIComponent(q) : ''));
     renderRevenueStats(data.stats || {}, days);
-    renderOrders(data.orders || []);
-    renderPending(data.pending || []);
-    renderIssues(data.issues || []);
-    setStatus(`Đã tải dữ liệu doanh thu ${days} ngày gần nhất.`, 'ok');
+    revenueState.orders = data.orders || [];
+    revenueState.pending = data.pending || [];
+    revenueState.issues = data.issues || [];
+    revenueState.pages = { orders: 1, pending: 1, issues: 1 };
+    applyRevenueSearchAndRender(false);
+    setStatus(`Đã tải dữ liệu doanh thu ${days} ngày gần nhất${q ? ' theo từ khóa tìm kiếm.' : '.'}`, 'ok');
   }catch(e){ setStatus('Lỗi tải doanh thu: '+esc(e.message), 'err'); }
 }
 
@@ -739,8 +778,43 @@ function renderRevenueStats(s, days){
     </div>`;
 }
 
-function renderOrders(orders){
-  qs('ordersBody').innerHTML = orders.map(o => `<tr>
+function applyRevenueSearchAndRender(resetPages){
+  const q = currentSearch();
+  const orders = revenueState.orders.filter(x => textMatch(x, q));
+  const pending = revenueState.pending.filter(x => textMatch(x, q));
+  const issues = revenueState.issues.filter(x => textMatch(x, q));
+  if(resetPages) revenueState.pages = { orders: 1, pending: 1, issues: 1 };
+  renderOrders(orders);
+  renderPending(pending);
+  renderIssues(issues);
+}
+
+function paginateRows(type, rows){
+  const total = rows.length;
+  const maxPage = Math.max(1, Math.ceil(total / REVENUE_PAGE_SIZE));
+  revenueState.pages[type] = Math.min(Math.max(1, Number(revenueState.pages[type] || 1)), maxPage);
+  const page = revenueState.pages[type];
+  const start = (page - 1) * REVENUE_PAGE_SIZE;
+  return { page, maxPage, total, rows: rows.slice(start, start + REVENUE_PAGE_SIZE) };
+}
+function updateRevenuePager(type, pageInfo){
+  const text = qs(type + 'PageText');
+  const pager = qs(type + 'Pager');
+  if(text) text.textContent = `${pageInfo.total} dòng · trang ${pageInfo.page}/${pageInfo.maxPage} · 10 dòng/trang`;
+  if(pager){
+    const btns = pager.querySelectorAll('button');
+    if(btns[0]) btns[0].disabled = pageInfo.page <= 1;
+    if(btns[1]) btns[1].disabled = pageInfo.page >= pageInfo.maxPage;
+  }
+}
+function changeRevenuePage(type, delta){
+  revenueState.pages[type] = Math.max(1, Number(revenueState.pages[type] || 1) + Number(delta || 0));
+  applyRevenueSearchAndRender(false);
+}
+
+function renderOrders(allOrders){
+  const pageInfo = paginateRows('orders', allOrders || []);
+  qs('ordersBody').innerHTML = pageInfo.rows.map(o => `<tr>
     <td>${esc(fmtDate(o.paidAt))}</td>
     <td class="mono">${esc(o.orderCode)}</td>
     <td><div>${esc(o.email)}</div><div class="mono muted">${esc(o.uid)}</div></td>
@@ -748,24 +822,28 @@ function renderOrders(orders){
     <td style="color:#15803d;">${vnd(o.amount)}</td>
     <td>${esc(fmtDate(o.expiresAt))}</td>
   </tr>`).join('') || '<tr><td colspan="6" class="muted">Chưa có đơn paid nào.</td></tr>';
+  updateRevenuePager('orders', pageInfo);
 }
 
-function renderPending(pending){
-  qs('pendingBody').innerHTML = pending.map(p => {
+function renderPending(allPending){
+  const pageInfo = paginateRows('pending', allPending || []);
+  qs('pendingBody').innerHTML = pageInfo.rows.map(p => {
     const statusColor = p.status === 'amount_mismatch' ? '#f87171' : '#fbbf24';
     return `<tr>
       <td>${esc(fmtDate(p.createdAt))}</td>
       <td class="mono">${esc(p.orderCode)}</td>
-      <td><span style="color:${statusColor};font-weight:700;">${esc(p.status)}</span></td>
+      <td><span style="color:${statusColor};">${esc(p.status)}</span></td>
       <td><div>${esc(p.email)}</div><div class="mono muted">${esc(p.uid)}</div></td>
       <td>${esc(p.planName || p.planId)}</td>
       <td>${vnd(p.amount)}</td>
       <td>${p.amountMismatchReceived ? `<span style="color:#f87171;">${vnd(p.amountMismatchReceived)}</span>` : '<span class="muted">—</span>'}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" class="muted">Không có đơn pending.</td></tr>';
+  updateRevenuePager('pending', pageInfo);
 }
 
-function renderIssues(issues){
+function renderIssues(allIssues){
+  const pageInfo = paginateRows('issues', allIssues || []);
   const labels = {
     'no_order_code': 'Không tìm thấy mã đơn',
     'reject_amount_mismatch': 'Sai số tiền',
@@ -773,7 +851,7 @@ function renderIssues(issues){
     'reject_invalid_token': 'Token bảo mật sai',
     'warning_no_secret_configured': 'Chưa cấu hình bảo mật'
   };
-  qs('issuesBody').innerHTML = issues.map(i => {
+  qs('issuesBody').innerHTML = pageInfo.rows.map(i => {
     const label = labels[i.status] || i.status;
     const amountText = i.expectedAmount
       ? `<span style="color:#f87171;">${vnd(i.receivedAmount)}</span> / <span class="muted">${vnd(i.expectedAmount)}</span>`
@@ -783,10 +861,11 @@ function renderIssues(issues){
       <td><span style="color:#b91c1c;">${esc(label)}</span></td>
       <td class="mono">${esc(i.orderCode || '—')}</td>
       <td>${amountText}</td>
-      <td style="max-width:280px;word-break:break-word;">${esc(i.content || '—')}</td>
+      <td>${esc(i.content || '—')}</td>
       <td><div>${esc(i.reason || '')}</div>${i.ip ? `<div class="mono muted">${esc(i.ip)}</div>` : ''}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" class="muted">Không có giao dịch sai sót — tốt!</td></tr>';
+  updateRevenuePager('issues', pageInfo);
 }
 
 // ===== BULK EXTEND (cộng ngày hàng loạt) =====

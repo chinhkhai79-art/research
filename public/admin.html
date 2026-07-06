@@ -30,8 +30,8 @@
     .tab{border:1px solid var(--line);border-radius:14px;background:#ffffff;color:#334155;padding:13px 18px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
     .tab.active{background:var(--cyan);color:#00111f;border-color:#67e8f9}
     .note{background:#eff8ff;border:1px solid #bfdbfe;color:#245078;border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
-    .frame-card{background:#ffffff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,.08)}
-    iframe{display:block;width:100%;border:0;background:transparent;min-height:0;height:auto}
+    .frame-card{background:#ffffff;border:0;border-radius:0;overflow:visible;box-shadow:none}
+    iframe{display:block;width:100%;border:0;background:transparent;min-height:0;height:auto;overflow:hidden}
     .shared-secret{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);padding:16px;margin:12px 0 16px}
     .shared-grid{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:12px;align-items:end}
     .shared-field label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px;font-weight:400}
@@ -215,24 +215,27 @@
         var main = doc.querySelector('.wrap') || doc.querySelector('.page') || doc.body;
         if (!main) return;
         try {
+          frame.setAttribute('scrolling', 'no');
+          frame.style.overflow = 'hidden';
           doc.documentElement.style.minHeight = '0';
           doc.body.style.minHeight = '0';
           doc.documentElement.style.overflow = 'visible';
           doc.body.style.overflow = 'visible';
         } catch (_) {}
+        var heights = [main.scrollHeight || 0, main.offsetHeight || 0, doc.body.scrollHeight || 0, doc.documentElement.scrollHeight || 0];
         var top = main.getBoundingClientRect ? main.getBoundingClientRect().top : 0;
         var maxBottom = 0;
-        var nodes = main.querySelectorAll ? main.querySelectorAll('.card:not(.hidden), .tabs, .status:not(.hidden), .grid:not(.hidden), .top:not(.hidden)') : [];
+        var nodes = main.querySelectorAll ? main.querySelectorAll('section:not(.hidden), .card:not(.hidden), .grid-card:not(.hidden), .tabs:not(.hidden), .status:not(.hidden), .top:not(.hidden), .two-col:not(.hidden), .split:not(.hidden), table:not(.hidden)') : [];
         for (var i = 0; i < nodes.length; i++) {
           var el = nodes[i];
           if (!el || el.offsetParent === null) continue;
           var r = el.getBoundingClientRect();
           if (r && r.bottom) maxBottom = Math.max(maxBottom, r.bottom - top);
         }
-        var fallback = main.offsetHeight || 0;
-        var h = Math.max(maxBottom || fallback || 0, 420);
-        h = Math.ceil(h + 28);
-        if (Math.abs((parseInt(frame.style.height, 10) || 0) - h) > 6) frame.style.height = h + 'px';
+        heights.push(maxBottom || 0);
+        var h = Math.max.apply(Math, heights.concat([420]));
+        h = Math.ceil(h + 36);
+        if (Math.abs((parseInt(frame.style.height, 10) || 0) - h) > 4) frame.style.height = h + 'px';
       } catch (_) {}
     }
     function handleFrameLoad(frame, name){

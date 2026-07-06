@@ -32,7 +32,7 @@
     .badge{display:inline-flex;align-items:center;gap:8px;background:#eaf2ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:8px 12px;font-weight:900;font-size:12px;text-decoration:none}
     .badge:hover{background:#dbeafe}
     .notice{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:700;margin-bottom:16px}
-    .login,.grid-card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+    .login,.grid-card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:visible;margin-bottom:16px}
     .head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);background:#fff}
     .head h2{font-size:20px;margin:0;font-weight:900}
     .body{padding:18px}
@@ -52,7 +52,7 @@
     .primary{background:var(--blue);color:#fff}.orange{background:var(--orange);color:#fff}.green{background:var(--green);color:#fff}.ghost{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}.gray{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}.red{background:var(--red);color:#fff}
     button:active{transform:translateY(1px) scale(.99)} button[disabled]{opacity:.55;cursor:not-allowed}
     .msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:800}.msg.ok{display:block;background:#ecfdf5;color:#047857;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.msg.warn{display:block;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
-    .small-code{background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px;padding:9px 10px;font-family:Consolas,"Courier New",monospace;font-size:12px;overflow:auto;white-space:nowrap;margin-top:6px;color:#334155}
+    .small-code{background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px;padding:9px 10px;font-family:Consolas,"Courier New",monospace;font-size:12px;overflow:visible;white-space:normal;margin-top:6px;color:#334155}
     .help{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-top:16px}.help h3{margin:0 0 10px;font-size:18px}.help ol{margin:0;padding-left:20px}.help li{margin:5px 0}
     .toast{position:fixed;right:18px;top:18px;z-index:99999;display:none;max-width:420px;padding:13px 16px;border-radius:14px;box-shadow:0 18px 50px rgba(15,23,42,.22);font-weight:900}.toast.show{display:block}.toast.ok{background:#ecfdf5;color:#047857;border:1px solid #86efac}.toast.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.toast.warn{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
     .copy-line{display:flex;gap:8px}.copy-line input{font-family:Consolas,"Courier New",monospace}.copy-line button{white-space:nowrap}
@@ -100,6 +100,9 @@
     h1,h2,h3,.head h2,.help h3{color:#0f3b66 !important}
     .head h2{border-left:4px solid #22d3ee;padding-left:10px}
 
+
+    /* v35: không dùng thanh cuộn nội bộ trong panel */
+    html,body,.page,.grid-card,.body{overflow:visible!important;max-height:none!important}
   </style>
 </head>
 <body>
@@ -147,7 +150,7 @@
               <div class="field">
                 <label>Ngân hàng</label>
                 <select id="bankSelect"><option value="">-- Chọn ngân hàng --</option></select>
-                <div class="hint">Hoặc gõ mã ngân hàng tuỳ chỉnh ở ô bên dưới (chỉ dùng nếu ngân hàng không có trong danh sách).</div>
+                
               </div>
               <div class="field"><label>Mã ngân hàng (tự nhập, ưu tiên dropdown)</label><input id="bankName" placeholder="Ví dụ: ACB" /></div>
               <div class="field"><label>Số tài khoản</label><input id="bankAccount" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="50" placeholder="Ví dụ: LOCSPAY000339358" /></div>
