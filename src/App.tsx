@@ -8335,8 +8335,8 @@ Quy tắc:
                         <input
                           type="text"
                           inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={String(nicheMinSub)}
+                          pattern="[0-9.]*"
+                          value={formatVNNumber(nicheMinSub)}
                           onChange={(e) => updateNicheMinSub(e.target.value)}
                           onBlur={(e) => updateNicheMinSub(e.target.value)}
                           title="Nhập Sub tối thiểu từ 0 đến 10 triệu"
@@ -8347,8 +8347,8 @@ Quy tắc:
                         <input
                           type="text"
                           inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={String(nicheMaxSub)}
+                          pattern="[0-9.]*"
+                          value={formatVNNumber(nicheMaxSub)}
                           onChange={(e) => updateNicheMaxSubManual(e.target.value)}
                           onBlur={(e) => updateNicheMaxSubManual(e.target.value)}
                           title="Nhập Sub tối đa từ 1 đến 10 triệu và phải lớn hơn Sub tối thiểu"
