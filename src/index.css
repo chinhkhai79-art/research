@@ -4937,7 +4937,7 @@
   border-bottom: 1px solid rgba(15, 23, 42, 0.14) !important;
 }
 
-/* PATCH v42 — mobile bottom icon menu dạng pill sáng, luôn hiện trên mobile */
+/* PATCH v44 — mobile bottom icon menu: icon tròn đồng bộ, viền mỏng */
 .vtw-mobile-bottom-nav {
   display: none;
 }
@@ -4947,7 +4947,7 @@
     padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .vtw-mobile-app {
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .vtw-mobile-bottom-nav {
     position: fixed;
@@ -4955,55 +4955,64 @@
     right: 14px;
     bottom: max(10px, env(safe-area-inset-bottom));
     z-index: 4990;
-    height: 64px;
+    height: 66px;
     max-width: 560px;
     margin: 0 auto;
-    padding: 8px;
-    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(239,248,255,.94));
-    border: 1px solid rgba(14, 165, 233, 0.24);
+    padding: 8px 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(240,249,255,.96));
+    border: 1px solid rgba(14, 165, 233, 0.22);
     border-radius: 999px;
-    box-shadow: 0 14px 35px rgba(15, 59, 102, 0.18), 0 4px 12px rgba(14, 165, 233, 0.10);
+    box-shadow: 0 14px 35px rgba(15, 59, 102, 0.16), 0 4px 12px rgba(14, 165, 233, 0.10);
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     align-items: center;
+    justify-items: center;
     gap: 7px;
     -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
   }
   .vtw-mobile-bottom-nav-item {
-    height: 48px;
-    min-width: 0;
-    border: 0;
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border: 1px solid rgba(15, 59, 102, 0.16);
     border-radius: 999px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.82);
     color: #0F3B66;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: transform .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease;
+    padding: 0;
+    box-shadow: 0 3px 9px rgba(15, 59, 102, 0.08);
+    transition: transform .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease, border-color .16s ease;
     -webkit-tap-highlight-color: transparent;
   }
   .vtw-mobile-bottom-nav-item svg {
-    filter: drop-shadow(0 1px 0 rgba(255,255,255,.55));
+    width: 22px;
+    height: 22px;
+    stroke-width: 2.25;
+    filter: none;
   }
   .vtw-mobile-bottom-nav-item:active {
-    transform: scale(0.93);
+    transform: scale(0.94);
   }
   .vtw-mobile-bottom-nav-item.is-active {
-    background: linear-gradient(135deg, #18cbe3, #1d6bff);
+    background: linear-gradient(135deg, #1dd4ef, #1d6bff);
     color: #ffffff;
-    box-shadow: 0 8px 18px rgba(29, 107, 255, 0.26);
+    border-color: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 8px 18px rgba(29, 107, 255, 0.22);
+  }
+  .vtw-mobile-bottom-nav-account {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(14, 165, 233, 0.35);
   }
   .vtw-mobile-bottom-nav-account img {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 999px;
-    border: 2px solid #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.96);
     object-fit: cover;
-    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.46), 0 6px 14px rgba(15, 59, 102, 0.18);
-  }
-  .vtw-mobile-bottom-nav-account:active img {
-    transform: scale(.96);
+    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.34);
   }
   .vtw-mobile-bottom-nav ~ .vtw-toast-overlay,
   .vtw-toast-overlay {
@@ -5013,6 +5022,7 @@
     bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
+
 
 @media (min-width: 769px) {
   .vtw-mobile-bottom-nav {

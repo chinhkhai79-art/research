@@ -10621,7 +10621,7 @@ Quy tắc:
             aria-label="Tìm kênh"
             title="Tìm kênh"
           >
-            <Home size={23} strokeWidth={2.8} />
+            <Search size={22} strokeWidth={2.25} />
           </button>
           <button
             type="button"
@@ -10630,7 +10630,7 @@ Quy tắc:
             aria-label="Spy"
             title="Spy"
           >
-            <BarChart2 size={23} strokeWidth={2.8} />
+            <BarChart2 size={22} strokeWidth={2.25} />
           </button>
           <button
             type="button"
@@ -10639,7 +10639,7 @@ Quy tắc:
             aria-label="Video"
             title="Video"
           >
-            <Video size={23} strokeWidth={2.8} />
+            <Video size={22} strokeWidth={2.25} />
           </button>
           <button
             type="button"
@@ -10648,7 +10648,7 @@ Quy tắc:
             aria-label="Tracking"
             title="Tracking"
           >
-            <UserRoundSearch size={23} strokeWidth={2.8} />
+            <UserRoundSearch size={22} strokeWidth={2.25} />
           </button>
           <button
             type="button"
@@ -10657,7 +10657,7 @@ Quy tắc:
             aria-label="Ngách"
             title="Ngách"
           >
-            <LayoutGrid size={23} strokeWidth={2.8} />
+            <LayoutGrid size={22} strokeWidth={2.25} />
           </button>
           <button
             type="button"

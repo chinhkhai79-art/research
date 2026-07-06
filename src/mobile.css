@@ -3460,7 +3460,7 @@
   }
 }
 
-/* PATCH v42 — mobile bottom icon menu dạng pill sáng, luôn hiện trên mobile */
+/* PATCH v44 — mobile bottom icon menu: icon tròn đồng bộ, viền mỏng */
 @media (max-width: 768px) {
   body .vtw-mobile-bottom-nav {
     position: fixed !important;
@@ -3468,55 +3468,67 @@
     right: 14px !important;
     bottom: max(10px, env(safe-area-inset-bottom)) !important;
     z-index: 4990 !important;
-    height: 64px !important;
+    height: 66px !important;
     max-width: 560px !important;
     margin: 0 auto !important;
-    padding: 8px !important;
-    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(239,248,255,.94)) !important;
-    border: 1px solid rgba(14, 165, 233, 0.24) !important;
+    padding: 8px 10px !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(240,249,255,.96)) !important;
+    border: 1px solid rgba(14, 165, 233, 0.22) !important;
     border-radius: 999px !important;
-    box-shadow: 0 14px 35px rgba(15, 59, 102, 0.18), 0 4px 12px rgba(14, 165, 233, 0.10) !important;
+    box-shadow: 0 14px 35px rgba(15, 59, 102, 0.16), 0 4px 12px rgba(14, 165, 233, 0.10) !important;
     display: grid !important;
     grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
     align-items: center !important;
+    justify-items: center !important;
     gap: 7px !important;
     -webkit-backdrop-filter: blur(16px) !important;
     backdrop-filter: blur(16px) !important;
   }
   body .vtw-mobile-bottom-nav-item {
-    height: 48px !important;
-    min-width: 0 !important;
-    border: 0 !important;
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    border: 1px solid rgba(15, 59, 102, 0.16) !important;
     border-radius: 999px !important;
-    background: transparent !important;
+    background: rgba(255, 255, 255, 0.82) !important;
     color: #0F3B66 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: transform .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease !important;
+    padding: 0 !important;
+    box-shadow: 0 3px 9px rgba(15, 59, 102, 0.08) !important;
+    transition: transform .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease, border-color .16s ease !important;
     -webkit-tap-highlight-color: transparent !important;
   }
   body .vtw-mobile-bottom-nav-item svg {
-    filter: drop-shadow(0 1px 0 rgba(255,255,255,.55)) !important;
+    width: 22px !important;
+    height: 22px !important;
+    stroke-width: 2.25 !important;
+    filter: none !important;
   }
   body .vtw-mobile-bottom-nav-item:active {
-    transform: scale(.93) !important;
+    transform: scale(.94) !important;
   }
   body .vtw-mobile-bottom-nav-item.is-active {
-    background: linear-gradient(135deg, #18cbe3, #1d6bff) !important;
+    background: linear-gradient(135deg, #1dd4ef, #1d6bff) !important;
     color: #ffffff !important;
-    box-shadow: 0 8px 18px rgba(29, 107, 255, 0.26) !important;
+    border-color: rgba(255, 255, 255, 0.86) !important;
+    box-shadow: 0 8px 18px rgba(29, 107, 255, 0.22) !important;
+  }
+  body .vtw-mobile-bottom-nav-account {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-color: rgba(14, 165, 233, 0.35) !important;
   }
   body .vtw-mobile-bottom-nav-account img {
-    width: 36px !important;
-    height: 36px !important;
+    width: 38px !important;
+    height: 38px !important;
     border-radius: 999px !important;
-    border: 2px solid #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.96) !important;
     object-fit: cover !important;
-    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.46), 0 6px 14px rgba(15, 59, 102, 0.18) !important;
+    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.34) !important;
   }
   body .vtw-mobile-app {
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
