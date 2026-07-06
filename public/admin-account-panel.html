@@ -162,7 +162,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <input id="adminSecret" type="hidden" value="123456" />
+      <input id="adminSecret" type="hidden" value="ThanhCong2027###" />
       <div class="grid">
         <div class="field">
           <label>Tìm email / UID / tên</label>
@@ -392,7 +392,7 @@ const PLAN_MAP = {
   'custom': { name: 'GÓI TÙY CHỈNH', days: 30 }
 };
 
-const DEFAULT_ADMIN_SECRET = '123456';
+const DEFAULT_ADMIN_SECRET = 'ThanhCong2027###';
 function qs(id){ return document.getElementById(id); }
 function getSharedAdminSecret(){
   return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_ADMIN_SECRET).trim();
