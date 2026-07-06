@@ -31,7 +31,7 @@
     .tab.active{background:var(--cyan);color:#00111f;border-color:#67e8f9}
     .note{background:#eff8ff;border:1px solid #bfdbfe;color:#245078;border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
     .frame-card{background:#ffffff;border:0;border-radius:0;overflow:visible;box-shadow:none}
-    iframe{display:block;width:100%;border:0;background:transparent;min-height:0;height:auto;overflow:hidden}
+    iframe{display:block;width:100%;border:0;background:transparent;min-height:0;height:0;overflow:hidden}
     .shared-secret{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);padding:16px;margin:12px 0 16px}
     .shared-grid{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:12px;align-items:end}
     .shared-field label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px;font-weight:400}
@@ -206,42 +206,77 @@
       } catch (_) {}
       setTimeout(function(){ resizeFrame(frame); }, 600);
     }
-    function resizeFrame(frame){
+    function getFrameContentHeight(frame){
       try {
-        if (!frame || !frame.contentWindow) return;
-        if (frame.closest && frame.closest('.hidden')) return;
+        if (!frame || !frame.contentWindow) return 0;
+        if (frame.closest && frame.closest('.hidden')) return 0;
         var doc = frame.contentDocument || frame.contentWindow.document;
-        if (!doc) return;
+        if (!doc) return 0;
         var main = doc.querySelector('.wrap') || doc.querySelector('.page') || doc.body;
-        if (!main) return;
+        if (!main) return 0;
         try {
           frame.setAttribute('scrolling', 'no');
           frame.style.overflow = 'hidden';
           doc.documentElement.style.minHeight = '0';
           doc.body.style.minHeight = '0';
-          doc.documentElement.style.overflow = 'visible';
-          doc.body.style.overflow = 'visible';
+          doc.documentElement.style.overflow = 'hidden';
+          doc.body.style.overflow = 'hidden';
         } catch (_) {}
-        var heights = [main.scrollHeight || 0, main.offsetHeight || 0, doc.body.scrollHeight || 0, doc.documentElement.scrollHeight || 0];
-        var top = main.getBoundingClientRect ? main.getBoundingClientRect().top : 0;
-        var maxBottom = 0;
-        var nodes = main.querySelectorAll ? main.querySelectorAll('section:not(.hidden), .card:not(.hidden), .grid-card:not(.hidden), .tabs:not(.hidden), .status:not(.hidden), .top:not(.hidden), .two-col:not(.hidden), .split:not(.hidden), table:not(.hidden)') : [];
-        for (var i = 0; i < nodes.length; i++) {
-          var el = nodes[i];
+        var rect = main.getBoundingClientRect ? main.getBoundingClientRect() : null;
+        var h = Math.max(
+          main.offsetHeight || 0,
+          main.scrollHeight || 0,
+          rect ? Math.ceil(rect.height) : 0
+        );
+        var children = main.children || [];
+        var bottom = 0;
+        for (var i = 0; i < children.length; i++) {
+          var el = children[i];
           if (!el || el.offsetParent === null) continue;
-          var r = el.getBoundingClientRect();
-          if (r && r.bottom) maxBottom = Math.max(maxBottom, r.bottom - top);
+          var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+          if (r && rect) bottom = Math.max(bottom, Math.ceil(r.bottom - rect.top));
         }
-        heights.push(maxBottom || 0);
-        var h = Math.max.apply(Math, heights.concat([420]));
-        h = Math.ceil(h + 36);
-        if (Math.abs((parseInt(frame.style.height, 10) || 0) - h) > 4) frame.style.height = h + 'px';
+        h = Math.max(h, bottom, 360) + 8;
+        return Math.min(Math.ceil(h), 3600);
+      } catch (_) { return 0; }
+    }
+    function resizeFrame(frame){
+      try {
+        if (!frame || !frame.contentWindow) return;
+        if (frame.closest && frame.closest('.hidden')) return;
+        var h = getFrameContentHeight(frame);
+        if (!h) return;
+        frame.style.height = h + 'px';
+      } catch (_) {}
+    }
+    function attachFrameResizeWatcher(frame){
+      try {
+        if (!frame || frame.__resizeWatcherAttached) return;
+        var doc = frame.contentDocument || frame.contentWindow.document;
+        if (!doc) return;
+        frame.__resizeWatcherAttached = true;
+        var timer = null;
+        function schedule(){
+          clearTimeout(timer);
+          timer = setTimeout(function(){ resizeFrame(frame); }, 80);
+        }
+        var target = doc.querySelector('.wrap') || doc.querySelector('.page') || doc.body;
+        if (window.ResizeObserver && target) {
+          var ro = new ResizeObserver(schedule);
+          ro.observe(target);
+          frame.__resizeObserver = ro;
+        }
+        if (window.MutationObserver && target) {
+          var mo = new MutationObserver(schedule);
+          mo.observe(target, { childList:true, subtree:true, attributes:true, characterData:true });
+          frame.__mutationObserver = mo;
+        }
       } catch (_) {}
     }
     function handleFrameLoad(frame, name){
       saveSharedSecret();
       syncSharedSecretToFrame(frame);
-      setTimeout(function(){ resizeFrame(frame); }, name === 'settings' ? 900 : 450);
+      setTimeout(function(){ resizeFrame(frame); attachFrameResizeWatcher(frame); }, name === 'settings' ? 500 : 300);
     }
     function showAdminPanel(name){
       var isSettings = name === 'settings';
@@ -263,8 +298,7 @@
       else history.replaceState(null, '', location.pathname + location.search);
       setTimeout(function(){
         resizeFrame(isEmail ? ef : (isSettings ? sf : document.getElementById('accountsFrame')));
-        try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (_) { window.scrollTo(0,0); }
-      }, 600);
+      }, 250);
     }
     function showAdminMain(){
       document.getElementById('adminLoginCard').classList.add('hidden');
@@ -275,7 +309,7 @@
       if (location.hash === '#settings') showAdminPanel('settings');
       else if (location.hash === '#email') showAdminPanel('email');
       else showAdminPanel('accounts');
-      setTimeout(function(){ try { window.scrollTo(0,0); } catch(_){} }, 80);
+
     }
     function showAdminLogin(){
       document.getElementById('adminMain').classList.add('hidden');
@@ -284,7 +318,6 @@
       var e = document.getElementById('adminLoginEmail');
       var p = document.getElementById('adminLoginPassword');
       setTimeout(function(){ try { (p && !p.value ? p : e).focus(); } catch(_){} }, 60);
-      try { window.scrollTo(0,0); } catch(_){}
     }
     function doAdminLogin(){
       var email = String((document.getElementById('adminLoginEmail') || {}).value || '').trim().toLowerCase();
@@ -326,11 +359,6 @@
       });
       if (sessionStorage.getItem('TUBEKEY_ADMIN_AUTH_OK') === '1') showAdminMain();
       else showAdminLogin();
-      setInterval(function(){
-        if (document.getElementById('adminMain').classList.contains('hidden')) return;
-        var active = !document.getElementById('emailCard').classList.contains('hidden') ? document.getElementById('emailFrame') : (document.getElementById('settingsCard').classList.contains('hidden') ? document.getElementById('accountsFrame') : document.getElementById('settingsFrame'));
-        resizeFrame(active);
-      }, 1200);
     });
   </script>
 </body>
