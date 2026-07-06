@@ -45,6 +45,8 @@
     .login-field label{display:block;color:#000;font-size:13px;margin-bottom:7px}
     .login-field input{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:13px 14px;font-size:15px;outline:none;color:#000}
     .login-error{margin-top:12px;color:#dc2626;font-size:14px;display:none}
+    .remember-row{display:flex;align-items:center;gap:8px;margin-top:12px;color:#000;font-size:14px;user-select:none}
+    .remember-row input{width:16px;height:16px;accent-color:#22d3ee}
     .admin-session .shared-grid{grid-template-columns:minmax(280px,1fr) auto auto}
     .session-title{font-size:15px;color:#000}.session-title b{color:#0f3b66;font-weight:500}
     .logout-btn{background:#fee2e2!important;color:#991b1b!important;border:1px solid #fecaca!important}
@@ -85,6 +87,10 @@
         </div>
         <button id="adminLoginBtn" class="admin-btn" type="button">Đăng nhập</button>
       </div>
+      <label class="remember-row" for="adminRememberLogin">
+        <input id="adminRememberLogin" type="checkbox" checked />
+        <span>Lưu nhớ tài khoản và mật khẩu trên trình duyệt này</span>
+      </label>
       <div id="adminLoginError" class="login-error">Sai tài khoản hoặc mật khẩu quản trị.</div>
     </div>
 
@@ -106,13 +112,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" data-src="/admin-account-panel.html" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" data-src="/admin-settings-panel.html" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" data-src="/admin-email-panel.html" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -122,6 +128,41 @@
     var DEFAULT_ADMIN_SECRET = 'ThanhCong2027###';
     var ADMIN_LOGIN_EMAIL = 'vantheweb@gmail.com';
     var ADMIN_LOGIN_PASSWORD = 'ThanhCong2027###';
+    var ADMIN_REMEMBER_KEY = 'TUBEKEY_ADMIN_REMEMBER_LOGIN';
+    var ADMIN_SAVED_EMAIL_KEY = 'TUBEKEY_ADMIN_SAVED_EMAIL';
+    var ADMIN_SAVED_PASS_KEY = 'TUBEKEY_ADMIN_SAVED_PASSWORD';
+    function shouldRememberAdmin(){
+      try { return localStorage.getItem(ADMIN_REMEMBER_KEY) !== '0'; } catch (_) { return true; }
+    }
+    function loadRememberedAdmin(){
+      var remembered = shouldRememberAdmin();
+      var cb = document.getElementById('adminRememberLogin');
+      if (cb) cb.checked = remembered;
+      var email = ADMIN_LOGIN_EMAIL;
+      var pass = ADMIN_LOGIN_PASSWORD;
+      try {
+        email = localStorage.getItem(ADMIN_SAVED_EMAIL_KEY) || email;
+        pass = localStorage.getItem(ADMIN_SAVED_PASS_KEY) || pass;
+      } catch (_) {}
+      var e = document.getElementById('adminLoginEmail');
+      var p = document.getElementById('adminLoginPassword');
+      if (e) e.value = remembered ? email : ADMIN_LOGIN_EMAIL;
+      if (p) p.value = remembered ? pass : '';
+    }
+    function saveRememberedAdmin(){
+      var cb = document.getElementById('adminRememberLogin');
+      var remember = !cb || cb.checked;
+      try {
+        localStorage.setItem(ADMIN_REMEMBER_KEY, remember ? '1' : '0');
+        if (remember) {
+          localStorage.setItem(ADMIN_SAVED_EMAIL_KEY, ADMIN_LOGIN_EMAIL);
+          localStorage.setItem(ADMIN_SAVED_PASS_KEY, ADMIN_LOGIN_PASSWORD);
+        } else {
+          localStorage.removeItem(ADMIN_SAVED_EMAIL_KEY);
+          localStorage.removeItem(ADMIN_SAVED_PASS_KEY);
+        }
+      } catch (_) {}
+    }
     function getSharedSecret(){
       return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_ADMIN_SECRET).trim();
     }
@@ -236,11 +277,10 @@
     function showAdminLogin(){
       document.getElementById('adminMain').classList.add('hidden');
       document.getElementById('adminLoginCard').classList.remove('hidden');
+      loadRememberedAdmin();
       var e = document.getElementById('adminLoginEmail');
       var p = document.getElementById('adminLoginPassword');
-      if (e && !e.value) e.value = ADMIN_LOGIN_EMAIL;
-      if (p) p.value = '';
-      setTimeout(function(){ try { (p || e).focus(); } catch(_){} }, 60);
+      setTimeout(function(){ try { (p && !p.value ? p : e).focus(); } catch(_){} }, 60);
       try { window.scrollTo(0,0); } catch(_){}
     }
     function doAdminLogin(){
@@ -250,6 +290,7 @@
       if (email === ADMIN_LOGIN_EMAIL && pass === ADMIN_LOGIN_PASSWORD) {
         sessionStorage.setItem('TUBEKEY_ADMIN_AUTH_OK', '1');
         localStorage.setItem('TUBEKEY_ADMIN_EMAIL', ADMIN_LOGIN_EMAIL);
+        saveRememberedAdmin();
         if (err) err.style.display = 'none';
         showAdminMain();
       } else {
@@ -271,6 +312,11 @@
       if (loginBtn) loginBtn.addEventListener('click', doAdminLogin);
       if (logoutBtn) logoutBtn.addEventListener('click', doAdminLogout);
       if (refreshBtn) refreshBtn.addEventListener('click', refreshActivePanel);
+      var rememberCb = document.getElementById('adminRememberLogin');
+      if (rememberCb) rememberCb.addEventListener('change', function(){
+        if (rememberCb.checked) saveRememberedAdmin();
+        else { try { localStorage.setItem(ADMIN_REMEMBER_KEY, '0'); localStorage.removeItem(ADMIN_SAVED_EMAIL_KEY); localStorage.removeItem(ADMIN_SAVED_PASS_KEY); } catch(_){} }
+      });
       ['adminLoginEmail','adminLoginPassword'].forEach(function(id){
         var el = document.getElementById(id);
         if (el) el.addEventListener('keydown', function(ev){ if(ev.key === 'Enter') doAdminLogin(); });
