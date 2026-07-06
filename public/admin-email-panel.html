@@ -9,14 +9,9 @@
     *{box-sizing:border-box}
     html,body{margin:0;min-height:0!important;overflow:visible!important;background:transparent;color:#000;font-family:Arial,"Helvetica Neue",sans-serif;font-weight:400}
     .page{padding:24px 24px 28px;max-width:1280px;margin:0 auto;overflow:visible!important}
-    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
-    .title{min-width:0;flex:1}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
     .title h1{margin:0;font-size:28px;font-weight:400;letter-spacing:-.2px;color:var(--blue)!important}
     .muted{color:#000;font-size:14px;line-height:1.5;margin-top:6px}
-    .test-toolbar{margin-top:12px;display:grid;grid-template-columns:minmax(240px,1fr) auto auto;gap:10px;align-items:end;max-width:860px}
-    .test-toolbar .field{gap:6px}
-    .test-toolbar input{height:44px}
-    .test-toolbar button{height:44px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);overflow:visible;margin-bottom:18px}
     .head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .head h2{margin:0;font-size:20px;font-weight:400;color:var(--blue)!important;border-left:4px solid var(--cyan);padding-left:10px}
@@ -29,12 +24,13 @@
     textarea{min-height:76px;resize:vertical;line-height:1.45}
     input:focus,textarea:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+    .test-email-inline{margin-top:14px;max-width:520px}
     button{border:0;border-radius:12px;padding:11px 16px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
     .primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.orange{background:var(--orange);color:#fff}.gray{background:#f1f5f9;color:#000;border:1px solid #cbd5e1}
-    .msg{display:none}.toast-center{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;max-width:min(560px,calc(100vw - 32px));padding:16px 20px;border-radius:16px;background:#ecfdf5;color:#000;border:1px solid #86efac;box-shadow:0 22px 60px rgba(15,23,42,.18);font-size:16px;line-height:1.45;text-align:center}.toast-center.err{background:#fef2f2;border-color:#fecaca}
+    .msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}.msg.ok{display:block;background:#ecfdf5;color:#000;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#000;border:1px solid #fecaca}
     .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:220px;padding:14px;overflow:visible}
     .switch-line{display:flex;align-items:center;gap:10px;color:#000}.switch-line input{width:18px;height:18px}.pill{display:flex;align-items:center;gap:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:9px 12px;font-size:13px;color:#000;white-space:nowrap;min-height:42px;width:max-content;max-width:100%}.pill input{width:18px;height:18px}.mini-note{font-size:13px;line-height:1.5;color:#000;background:#f8fbff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-top:12px}
-    @media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:stretch}.test-toolbar{grid-template-columns:1fr 1fr;max-width:none}.test-toolbar .field{grid-column:1/-1}.test-toolbar button{width:100%;padding-left:8px;padding-right:8px}.actions button{width:100%}}
+    @media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:flex-start}.actions button{width:100%}}
   </style>
 </head>
 <body>
@@ -43,11 +39,6 @@
       <div class="title">
         <h1>✉️ Mẫu email</h1>
         <div class="muted">Cấu hình email HTML gửi cho khách hàng và email thông báo gửi về Admin khi SePay xác nhận thanh toán thành công.</div>
-        <div class="test-toolbar">
-          <div class="field"><label>Email nhận test</label><input id="testEmail" value="chinhkhai79@gmail.com" placeholder="Nhập email để gửi test mẫu" /></div>
-          <button id="customer_testBtn" class="orange" type="button">Gửi test khách hàng</button>
-          <button id="admin_testBtn" class="orange" type="button">Gửi test Admin</button>
-        </div>
       </div>
       <button id="reloadBtn" class="gray" type="button">Tải lại mẫu</button>
     </div>
@@ -71,6 +62,7 @@
             </div>
             <div class="actions">
               <button id="customer_saveBtn" class="green" type="button">Lưu mẫu khách hàng</button>
+              <button id="customer_testBtn" class="orange" type="button">Gửi test khách hàng</button>
               <button id="customer_resetBtn" class="gray" type="button">Khôi phục</button>
             </div>
           </div>
@@ -96,8 +88,10 @@
               <div class="field"><label>Chữ trên nút</label><input id="admin_buttonText" placeholder="Mở công cụ" /></div>
               <div class="field"><label>Dòng cuối email</label><input id="admin_footerText" placeholder="Email này được gửi tự động từ hệ thống tubekey.vn." /></div>
             </div>
+            <div class="field test-email-inline"><label>Email nhận test</label><input id="testEmail" value="chinhkhai79@gmail.com" placeholder="Nhập email để gửi test mẫu" /></div>
             <div class="actions">
               <button id="admin_saveBtn" class="green" type="button">Lưu mẫu Admin</button>
+              <button id="admin_testBtn" class="orange" type="button">Gửi test Admin</button>
               <button id="admin_resetBtn" class="gray" type="button">Khôi phục</button>
             </div>
             <div class="mini-note">Biến có thể dùng trong nội dung: {{name}}, {{email}}, {{orderCode}}, {{planName}}, {{amount}}, {{paidAt}}, {{expiresAt}}, {{toolUrl}}.</div>
@@ -133,19 +127,7 @@
     function lineBreak(v){ return esc(v).replace(/\n/g,'<br>'); }
     function defaultNameFromEmail(email){ const local=String(email||'').split('@')[0]||'bạn'; return local.replace(/[._-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase()).trim() || 'bạn'; }
     function adminSecret(){ return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_SECRET).trim() || DEFAULT_SECRET; }
-    let toastTimer = null;
-    function show(type, text){
-      const oldToast = document.querySelector('.toast-center');
-      if (oldToast) oldToast.remove();
-      const msgEl = $('msg');
-      if (msgEl) { msgEl.className = 'msg'; msgEl.textContent = ''; }
-      const toast = document.createElement('div');
-      toast.className = 'toast-center ' + (type === 'err' ? 'err' : 'ok');
-      toast.textContent = text;
-      document.body.appendChild(toast);
-      if (toastTimer) clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.remove(), 3000);
-    }
+    function show(type, text){ const el=$('msg'); el.className='msg '+(type==='err'?'err':'ok'); el.textContent=text; }
     async function api(action, body){
       const res = await fetch('/api/admin-settings?action=' + encodeURIComponent(action), { method: action === 'get' ? 'GET' : 'POST', headers:{ 'Content-Type':'application/json', 'x-admin-password': adminSecret() }, body: action === 'get' ? undefined : JSON.stringify(body || {}) });
       const text = await res.text(); let data = {}; try{ data = text ? JSON.parse(text) : {}; }catch{ data = { success:false, error:text || res.statusText }; }
