@@ -10496,7 +10496,7 @@ Quy tắc:
         )}
       </AnimatePresence>
 
-      {user && !subscriptionLoading && subscriptionInfo && !subscriptionExpired && (
+      {user && (
         <nav className="vtw-mobile-bottom-nav" aria-label="Menu chức năng mobile" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"

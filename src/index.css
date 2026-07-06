@@ -4937,69 +4937,85 @@
   border-bottom: 1px solid rgba(15, 23, 42, 0.14) !important;
 }
 
-/* PATCH v41 — bottom mobile icon menu cố định */
+/* PATCH v42 — mobile bottom icon menu dạng pill sáng, luôn hiện trên mobile */
 .vtw-mobile-bottom-nav {
   display: none;
 }
 
 @media (max-width: 768px) {
   body:has(.vtw-mobile-bottom-nav) {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .vtw-mobile-app {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .vtw-mobile-bottom-nav {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 14px;
+    right: 14px;
+    bottom: max(10px, env(safe-area-inset-bottom));
     z-index: 4990;
-    height: calc(58px + env(safe-area-inset-bottom, 0px));
-    padding: 7px 10px calc(7px + env(safe-area-inset-bottom, 0px));
-    background: rgba(9, 14, 22, 0.98);
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 -10px 28px rgba(2, 6, 23, 0.22);
+    height: 64px;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(239,248,255,.94));
+    border: 1px solid rgba(14, 165, 233, 0.24);
+    border-radius: 999px;
+    box-shadow: 0 14px 35px rgba(15, 59, 102, 0.18), 0 4px 12px rgba(14, 165, 233, 0.10);
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     align-items: center;
-    gap: 5px;
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
+    gap: 7px;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
   }
   .vtw-mobile-bottom-nav-item {
-    height: 44px;
+    height: 48px;
     min-width: 0;
     border: 0;
-    border-radius: 16px;
+    border-radius: 999px;
     background: transparent;
-    color: #ffffff;
+    color: #0F3B66;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: transform .15s ease, background .15s ease, color .15s ease;
+    transition: transform .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease;
     -webkit-tap-highlight-color: transparent;
   }
+  .vtw-mobile-bottom-nav-item svg {
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,.55));
+  }
   .vtw-mobile-bottom-nav-item:active {
-    transform: scale(0.94);
+    transform: scale(0.93);
   }
   .vtw-mobile-bottom-nav-item.is-active {
-    background: rgba(59, 130, 246, 0.22);
-    color: #60a5fa;
+    background: linear-gradient(135deg, #18cbe3, #1d6bff);
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(29, 107, 255, 0.26);
   }
   .vtw-mobile-bottom-nav-account img {
-    width: 31px;
-    height: 31px;
+    width: 36px;
+    height: 36px;
     border-radius: 999px;
-    border: 2px solid rgba(255, 255, 255, 0.88);
+    border: 2px solid #ffffff;
     object-fit: cover;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.46), 0 6px 14px rgba(15, 59, 102, 0.18);
+  }
+  .vtw-mobile-bottom-nav-account:active img {
+    transform: scale(.96);
   }
   .vtw-mobile-bottom-nav ~ .vtw-toast-overlay,
   .vtw-toast-overlay {
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .fixed[title="Lên đầu trang"] {
-    bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .vtw-mobile-bottom-nav {
+    display: none !important;
   }
 }
