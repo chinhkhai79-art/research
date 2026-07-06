@@ -172,20 +172,55 @@ export default async function handler(req, res) {
       });
     } catch (logErr) { console.error('admin payment log warning:', logErr); }
     const email = paidData.email;
-    if (email) {
-      import('../lib/mailer.js').then(m => m.sendPaymentSuccessEmail({
-        email,
-        userName: payment.name || payment.displayName || body.name || body.customerName || '',
-        orderCode,
-        planName: paidData.planName,
-        amount: paidData.amount,
-        paidAt: paidData.paidAt,
-        expiresAt: expiresAt?.toISOString?.(),
-        toolUrl: settings.smtp?.emailBaseUrl || settings.payment?.baseUrl,
-        settings
-      })).catch(err => console.error('send email warning:', err));
+    const userName = payment.name || payment.displayName || body.name || body.customerName || '';
+    let emailNotifications = { customer: 'skipped_no_email', admin: 'skipped' };
+    try {
+      const mailer = await import('../lib/mailer.js');
+      const jobs = [];
+      if (email) {
+        jobs.push({
+          key: 'customer',
+          promise: mailer.sendPaymentSuccessEmail({
+            email,
+            userName,
+            orderCode,
+            planName: paidData.planName,
+            amount: paidData.amount,
+            paidAt: paidData.paidAt,
+            expiresAt: expiresAt?.toISOString?.(),
+            toolUrl: settings.smtp?.emailBaseUrl || settings.payment?.baseUrl,
+            settings
+          })
+        });
+      }
+      jobs.push({
+        key: 'admin',
+        promise: mailer.sendAdminPaymentSuccessEmail({
+          email,
+          userName,
+          orderCode,
+          planName: paidData.planName,
+          amount: paidData.amount,
+          paidAt: paidData.paidAt,
+          expiresAt: expiresAt?.toISOString?.(),
+          toolUrl: settings.smtp?.emailBaseUrl || settings.payment?.baseUrl,
+          settings
+        })
+      });
+      const results = await Promise.allSettled(jobs.map(j => j.promise));
+      results.forEach((r, i) => {
+        const key = jobs[i]?.key || `email_${i}`;
+        if (r.status === 'fulfilled') emailNotifications[key] = r.value ? 'sent' : 'skipped';
+        else {
+          emailNotifications[key] = 'failed';
+          console.error(`send ${key} email warning:`, r.reason);
+        }
+      });
+    } catch (err) {
+      emailNotifications = { customer: email ? 'failed' : 'skipped_no_email', admin: 'failed' };
+      console.error('send payment notification emails warning:', err);
     }
-    return res.status(200).json({ success: true, updated: true, paid: true, orderCode, expiresAt: expiresAt.toISOString(), message: 'Payment confirmed. PRO activated.', dataSource:'supabase' });
+    return res.status(200).json({ success: true, updated: true, paid: true, orderCode, expiresAt: expiresAt.toISOString(), emailNotifications, message: 'Payment confirmed. PRO activated.', dataSource:'supabase' });
   } catch (e) {
     console.error('sepay webhook error:', e);
     return res.status(500).json({ success: false, error: e.message || 'Webhook error' });

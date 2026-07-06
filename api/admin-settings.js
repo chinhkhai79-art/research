@@ -131,19 +131,23 @@ export default async function handler(req, res) {
     if (action === 'save-email-template') {
       const current = await getAppSettings();
       const incoming = req.body?.emailTemplates || req.body?.templates || {};
-      const paymentSuccess = incoming.paymentSuccess || req.body?.paymentSuccess || {};
-      const next = await saveAppSettings({
-        emailTemplates: {
-          ...(current.emailTemplates || {}),
-          paymentSuccess: {
-            ...(current.emailTemplates?.paymentSuccess || {}),
-            ...paymentSuccess
-          }
-        }
-      });
+      const payload = { ...(current.emailTemplates || {}) };
+      if (incoming.paymentSuccess || req.body?.paymentSuccess) {
+        payload.paymentSuccess = {
+          ...(current.emailTemplates?.paymentSuccess || {}),
+          ...(incoming.paymentSuccess || req.body?.paymentSuccess || {})
+        };
+      }
+      if (incoming.adminPaymentSuccess || req.body?.adminPaymentSuccess) {
+        payload.adminPaymentSuccess = {
+          ...(current.emailTemplates?.adminPaymentSuccess || {}),
+          ...(incoming.adminPaymentSuccess || req.body?.adminPaymentSuccess || {})
+        };
+      }
+      const next = await saveAppSettings({ emailTemplates: payload });
       const changes = diffSettings(current, next);
-      await logSettingsChange({ action: 'update_email_template_payment_success', changes, ip, reason: req.body?.reason || 'Cập nhật mẫu email thanh toán thành công' });
-      return send(res, 200, { success: true, message: 'Đã lưu mẫu email thanh toán thành công.', settings: maskSettings(next), changes });
+      await logSettingsChange({ action: 'update_email_templates', changes, ip, reason: req.body?.reason || 'Cập nhật mẫu email thanh toán' });
+      return send(res, 200, { success: true, message: 'Đã lưu mẫu email.', settings: maskSettings(next), changes });
     }
 
     if (action === 'save-trial') {
@@ -277,6 +281,36 @@ export default async function handler(req, res) {
         settings: merged
       });
       return send(res, 200, { success: true, message: 'Đã gửi email test mẫu thanh toán thành công.' });
+    }
+
+    if (action === 'test-admin-payment-email-template') {
+      const current = await getAppSettings();
+      const incoming = req.body?.emailTemplates || req.body?.templates || {};
+      const merged = normalizeSettings({
+        ...current,
+        emailTemplates: {
+          ...(current.emailTemplates || {}),
+          adminPaymentSuccess: {
+            ...(current.emailTemplates?.adminPaymentSuccess || {}),
+            ...(incoming.adminPaymentSuccess || req.body?.adminPaymentSuccess || {})
+          }
+        }
+      });
+      const to = String(req.body?.testEmail || req.body?.email || '').trim();
+      const { sendAdminPaymentSuccessEmail } = await import('../lib/mailer.js');
+      await sendAdminPaymentSuccessEmail({
+        adminEmail: to,
+        email: 'user@gmail.com',
+        userName: 'User Test',
+        orderCode: 'TUBEKEY040726100259',
+        planName: 'GÓI 1 THÁNG',
+        amount: 299000,
+        paidAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+        toolUrl: merged.smtp.emailBaseUrl || merged.payment.baseUrl,
+        settings: merged
+      });
+      return send(res, 200, { success: true, message: 'Đã gửi test mẫu email thông báo Admin.' });
     }
 
     // Fallback: lưu toàn bộ

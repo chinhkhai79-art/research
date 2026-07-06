@@ -200,6 +200,13 @@
     .pager-text{font-size:12px!important;color:#000!important}
     #issuesDesc{display:none!important}
 
+
+    /* v36: phân trang gọn, đơn giản toàn bộ admin */
+    .pager-row,#usersPager{justify-content:flex-end!important;align-items:center!important;gap:6px!important;margin:8px 0 0!important;flex-wrap:nowrap!important}
+    .pager-row .small,#usersPager .small{height:28px!important;min-width:32px!important;padding:0 9px!important;font-size:12px!important;border-radius:999px!important;line-height:1!important}
+    .pager-text,#usersPageText{font-size:12px!important;color:#000!important;white-space:nowrap!important;line-height:1.1!important}
+    .pager-row button:disabled,#usersPager button:disabled{opacity:.45;cursor:not-allowed}
+
   </style>
 </head>
 <body>
@@ -336,9 +343,9 @@
         <div class="muted" id="countText">0 tài khoản</div>
       </div>
       <div class="actions" id="usersPager" style="justify-content:flex-end;margin-top:10px;gap:8px;">
-        <button class="btn-dark small" id="prevUsersPage" onclick="changeUsersPage(-1)">← Trang trước</button>
-        <span class="muted" id="usersPageText">Trang 1 · 50 tài khoản/trang</span>
-        <button class="btn-dark small" id="nextUsersPage" onclick="changeUsersPage(1)">Trang sau →</button>
+        <button class="btn-dark small" id="prevUsersPage" onclick="changeUsersPage(-1)">‹</button>
+        <span class="muted" id="usersPageText">1 · 50/trang</span>
+        <button class="btn-dark small" id="nextUsersPage" onclick="changeUsersPage(1)">›</button>
       </div>
       <div class="scroll">
         <table class="users-table">
@@ -395,7 +402,7 @@
             <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>Email/UID</th><th>Gói</th><th>Số tiền</th><th>Hết hạn</th></tr></thead>
             <tbody id="ordersBody"></tbody>
           </table>
-          <div class="pager-row" id="ordersPager"><button class="btn-dark small" onclick="changeRevenuePage('orders',-1)">← Trước</button><span class="pager-text" id="ordersPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('orders',1)">Sau →</button></div>
+          <div class="pager-row" id="ordersPager"><button class="btn-dark small" onclick="changeRevenuePage('orders',-1)">‹</button><span class="pager-text" id="ordersPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('orders',1)">›</button></div>
         </div>
       </div>
 
@@ -406,7 +413,7 @@
             <thead><tr><th>Tạo lúc</th><th>Mã đơn</th><th>Trạng thái</th><th>Email/UID</th><th>Gói</th><th>Số tiền dự kiến</th><th>Đã nhận</th></tr></thead>
             <tbody id="pendingBody"></tbody>
           </table>
-          <div class="pager-row" id="pendingPager"><button class="btn-dark small" onclick="changeRevenuePage('pending',-1)">← Trước</button><span class="pager-text" id="pendingPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('pending',1)">Sau →</button></div>
+          <div class="pager-row" id="pendingPager"><button class="btn-dark small" onclick="changeRevenuePage('pending',-1)">‹</button><span class="pager-text" id="pendingPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('pending',1)">›</button></div>
         </div>
       </div>
 
@@ -418,7 +425,7 @@
             <thead><tr><th>Thời gian</th><th>Trạng thái</th><th>Mã đơn</th><th>Nhận / Dự kiến</th><th>Nội dung CK</th><th>Lý do / IP</th></tr></thead>
             <tbody id="issuesBody"></tbody>
           </table>
-          <div class="pager-row" id="issuesPager"><button class="btn-dark small" onclick="changeRevenuePage('issues',-1)">← Trước</button><span class="pager-text" id="issuesPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('issues',1)">Sau →</button></div>
+          <div class="pager-row" id="issuesPager"><button class="btn-dark small" onclick="changeRevenuePage('issues',-1)">‹</button><span class="pager-text" id="issuesPageText">Trang 1</span><button class="btn-dark small" onclick="changeRevenuePage('issues',1)">›</button></div>
         </div>
       </div>
     </div>
@@ -586,7 +593,7 @@ function updateUsersPager(data){
   const pageText = qs('usersPageText');
   if(prevBtn) prevBtn.disabled = currentUsersPage <= 1;
   if(nextBtn) nextBtn.disabled = !currentUsersHasNext;
-  if(pageText) pageText.textContent = `Trang ${currentUsersPage} · 50 tài khoản/trang`;
+  if(pageText) pageText.textContent = `${currentUsersPage} · 50/trang`;
 }
 function changeUsersPage(delta){
   const next = Math.max(1, currentUsersPage + Number(delta || 0));
@@ -800,7 +807,7 @@ function paginateRows(type, rows){
 function updateRevenuePager(type, pageInfo){
   const text = qs(type + 'PageText');
   const pager = qs(type + 'Pager');
-  if(text) text.textContent = `${pageInfo.total} dòng · trang ${pageInfo.page}/${pageInfo.maxPage} · 10 dòng/trang`;
+  if(text) text.textContent = `${pageInfo.page}/${pageInfo.maxPage} · ${pageInfo.total} dòng`;
   if(pager){
     const btns = pager.querySelectorAll('button');
     if(btns[0]) btns[0].disabled = pageInfo.page <= 1;

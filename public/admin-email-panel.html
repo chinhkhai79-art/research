@@ -5,37 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mẫu email</title>
   <style>
-    :root{--bg:#f4f8fd;--card:#fff;--line:#d8e3ef;--text:#000;--muted:#000;--cyan:#22d3ee;--blue:#0f3b66;--green:#10b981;--orange:#ff5a1f}
+    :root{--bg:#f4f8fd;--card:#fff;--line:#d8e3ef;--text:#000;--cyan:#22d3ee;--blue:#0f3b66;--green:#10b981;--orange:#ff5a1f}
     *{box-sizing:border-box}
     html,body{margin:0;min-height:0!important;overflow:visible!important;background:transparent;color:#000;font-family:Arial,"Helvetica Neue",sans-serif;font-weight:400}
-    .page{padding:24px 24px 28px;max-width:1280px;margin:0 auto}
+    .page{padding:24px 24px 28px;max-width:1280px;margin:0 auto;overflow:visible!important}
     .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
     .title h1{margin:0;font-size:28px;font-weight:400;letter-spacing:-.2px;color:var(--blue)!important}
     .muted{color:#000;font-size:14px;line-height:1.5;margin-top:6px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);overflow:visible}
-    .head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);overflow:visible;margin-bottom:18px}
+    .head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .head h2{margin:0;font-size:20px;font-weight:400;color:var(--blue)!important;border-left:4px solid var(--cyan);padding-left:10px}
     .body{padding:18px 20px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(340px,.95fr);gap:16px;align-items:start}
+    .grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(170px,.55fr);gap:14px}
     .field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}
     label{font-size:13px;color:#000}
-    input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#000;padding:12px 14px;font-size:15px;outline:none;font-family:Arial,"Helvetica Neue",sans-serif}
-    textarea{min-height:90px;resize:vertical;line-height:1.45}
+    input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#000;padding:11px 13px;font-size:15px;outline:none;font-family:Arial,"Helvetica Neue",sans-serif}
+    textarea{min-height:76px;resize:vertical;line-height:1.45}
     input:focus,textarea:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
-    button{border:0;border-radius:12px;padding:12px 18px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
+    button{border:0;border-radius:12px;padding:11px 16px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
     .primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.orange{background:var(--orange);color:#fff}.gray{background:#f1f5f9;color:#000;border:1px solid #cbd5e1}
     .msg{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}.msg.ok{display:block;background:#ecfdf5;color:#000;border:1px solid #86efac}.msg.err{display:block;background:#fef2f2;color:#000;border:1px solid #fecaca}
-    .hint{font-size:13px;color:#000;line-height:1.55;background:#eff8ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 12px}
-    .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:260px;padding:14px;overflow:visible}
-    .split{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(360px,1.1fr);gap:16px;align-items:start}
-    .switch-line{display:flex;align-items:center;gap:10px;color:#000}.switch-line input{width:18px;height:18px}.small{font-size:12px;color:#000}.check-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:10px 12px;font-size:13px;color:#000;white-space:nowrap;min-height:44px}
+    .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:220px;padding:14px;overflow:visible}
+    .switch-line{display:flex;align-items:center;gap:10px;color:#000}.switch-line input{width:18px;height:18px}.pill{display:flex;align-items:center;gap:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:9px 12px;font-size:13px;color:#000;white-space:nowrap;min-height:42px;width:max-content;max-width:100%}.pill input{width:18px;height:18px}.mini-note{font-size:13px;line-height:1.5;color:#000;background:#f8fbff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-top:12px}
     @media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:flex-start}.actions button{width:100%}}
-
-    /* v35: không dùng thanh cuộn nội bộ trong mẫu email */
-    html,body,.page,.card,.preview{overflow:visible!important;max-height:none!important}
-    .grid{grid-template-columns:minmax(0,1.35fr) minmax(190px,.65fr)}
   </style>
 </head>
 <body>
@@ -43,67 +37,72 @@
     <div class="top">
       <div class="title">
         <h1>✉️ Mẫu email</h1>
-        <div class="muted">Cấu hình email gửi về email user khi SePay xác nhận thanh toán thành công.</div>
+        <div class="muted">Cấu hình email HTML gửi cho khách hàng và email thông báo gửi về Admin khi SePay xác nhận thanh toán thành công.</div>
       </div>
       <button id="reloadBtn" class="gray" type="button">Tải lại mẫu</button>
     </div>
 
-    <section class="card">
+    <section class="card" data-template="customer">
       <div class="head">
-        <h2>Email thanh toán thành công</h2>
-        <label class="switch-line"><input id="enabled" type="checkbox" checked /> Bật gửi email này</label>
+        <h2>Email gửi cho khách hàng</h2>
+        <label class="switch-line"><input id="customer_enabled" type="checkbox" checked /> Bật gửi email này</label>
       </div>
       <div class="body">
         <div class="split">
           <div>
             <div class="grid">
-              <div class="field">
-                <label>Tiêu đề email</label>
-                <input id="subjectBase" placeholder="Thanh toán thành công" />
-              </div>
-              <div class="field">
-                <label>Mã đơn ở tiêu đề</label>
-                <label class="pill"><input id="subjectHasOrder" type="checkbox" checked /> Có</label>
-              </div>
-              <div class="field full">
-                <label>Dòng tiêu đề trong email</label>
-                <input id="heroTitle" placeholder="Thanh toán thành công" />
-              </div>
-              <div class="field full">
-                <label>Dòng mô tả ngay dưới tiêu đề</label>
-                <input id="heroSubtitle" placeholder="Tài khoản của bạn đã nâng cấp PRO" />
-              </div>
-              <div class="field full">
-                <label>Nội dung cảm ơn</label>
-                <textarea id="introText" placeholder="Cảm ơn bạn đã mua hàng của chúng tôi..."></textarea>
-              </div>
-              <div class="field">
-                <label>Chữ trên nút</label>
-                <input id="buttonText" placeholder="Truy cập công cụ" />
-              </div>
-              <div class="field">
-                <label>Dòng hỗ trợ cuối email</label>
-                <input id="footerText" placeholder="Nếu bạn cần hỗ trợ, vui lòng phản hồi email này." />
-              </div>
+              <div class="field"><label>Tiêu đề email</label><input id="customer_subjectBase" placeholder="Thanh toán thành công" /></div>
+              <div class="field"><label>Mã đơn ở tiêu đề</label><label class="pill"><input id="customer_subjectHasOrder" type="checkbox" checked /> Có</label></div>
+              <div class="field full"><label>Dòng tiêu đề trong email</label><input id="customer_heroTitle" placeholder="Thanh toán thành công" /></div>
+              <div class="field full"><label>Dòng mô tả ngay dưới tiêu đề</label><input id="customer_heroSubtitle" placeholder="Tài khoản của bạn đã nâng cấp PRO" /></div>
+              <div class="field full"><label>Nội dung cảm ơn</label><textarea id="customer_introText" placeholder="Cảm ơn bạn đã mua hàng của chúng tôi..."></textarea></div>
+              <div class="field"><label>Chữ trên nút</label><input id="customer_buttonText" placeholder="Truy cập công cụ" /></div>
+              <div class="field"><label>Dòng hỗ trợ cuối email</label><input id="customer_footerText" placeholder="Nếu bạn cần hỗ trợ, vui lòng phản hồi email này." /></div>
             </div>
             <div class="actions">
-              <button id="saveBtn" class="green" type="button">Lưu mẫu email</button>
-              <button id="resetBtn" class="gray" type="button">Khôi phục mặc định</button>
+              <button id="customer_saveBtn" class="green" type="button">Lưu mẫu khách hàng</button>
+              <button id="customer_testBtn" class="orange" type="button">Gửi test khách hàng</button>
+              <button id="customer_resetBtn" class="gray" type="button">Khôi phục</button>
             </div>
-            <div class="field" style="margin-top:14px">
-              <label>Email nhận test</label>
-              <input id="testEmail" placeholder="Nhập email để gửi test mẫu thanh toán" />
-            </div>
-            <div class="actions">
-              <button id="testBtn" class="orange" type="button">Gửi test mẫu</button>
-            </div>
-            <div id="msg" class="msg"></div>
           </div>
-          <div>
-            <label>Xem trước nhanh</label>
-            <div id="preview" class="preview"></div>
-          </div>
+          <div><label>Xem trước khách hàng</label><div id="customer_preview" class="preview"></div></div>
         </div>
+      </div>
+    </section>
+
+    <section class="card" data-template="admin">
+      <div class="head">
+        <h2>Email thông báo gửi về Admin</h2>
+        <label class="switch-line"><input id="admin_enabled" type="checkbox" checked /> Bật gửi email này</label>
+      </div>
+      <div class="body">
+        <div class="split">
+          <div>
+            <div class="grid">
+              <div class="field"><label>Tiêu đề email</label><input id="admin_subjectBase" placeholder="Admin: Đơn hàng đã thanh toán thành công" /></div>
+              <div class="field"><label>Mã đơn ở tiêu đề</label><label class="pill"><input id="admin_subjectHasOrder" type="checkbox" checked /> Có</label></div>
+              <div class="field full"><label>Dòng tiêu đề trong email</label><input id="admin_heroTitle" placeholder="Thông báo thanh toán thành công" /></div>
+              <div class="field full"><label>Dòng mô tả ngay dưới tiêu đề</label><input id="admin_heroSubtitle" placeholder="Hệ thống vừa ghi nhận một đơn hàng đã thanh toán thành công." /></div>
+              <div class="field full"><label>Nội dung thông báo</label><textarea id="admin_introText" placeholder="Hệ thống vừa ghi nhận đơn hàng {{orderCode}}..."></textarea></div>
+              <div class="field"><label>Chữ trên nút</label><input id="admin_buttonText" placeholder="Mở công cụ" /></div>
+              <div class="field"><label>Dòng cuối email</label><input id="admin_footerText" placeholder="Email này được gửi tự động từ hệ thống tubekey.vn." /></div>
+            </div>
+            <div class="actions">
+              <button id="admin_saveBtn" class="green" type="button">Lưu mẫu Admin</button>
+              <button id="admin_testBtn" class="orange" type="button">Gửi test Admin</button>
+              <button id="admin_resetBtn" class="gray" type="button">Khôi phục</button>
+            </div>
+            <div class="mini-note">Biến có thể dùng trong nội dung: {{name}}, {{email}}, {{orderCode}}, {{planName}}, {{amount}}, {{paidAt}}, {{expiresAt}}, {{toolUrl}}.</div>
+          </div>
+          <div><label>Xem trước Admin</label><div id="admin_preview" class="preview"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="body">
+        <div class="field"><label>Email nhận test</label><input id="testEmail" placeholder="Nhập email để gửi test mẫu" /></div>
+        <div id="msg" class="msg"></div>
       </div>
     </section>
   </main>
@@ -111,16 +110,22 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const DEFAULT_SECRET = 'ThanhCong2027###';
-    const DEFAULT_CONTENT = {
-      subjectBase: 'Thanh toán thành công',
-      subjectHasOrder: true,
-      heroTitle: 'Thanh toán thành công',
-      heroSubtitle: 'Tài khoản của bạn đã nâng cấp PRO',
-      introText: 'Cảm ơn bạn đã mua hàng của chúng tôi. Hệ thống đã xác nhận thanh toán và kích hoạt gói PRO cho tài khoản của bạn.',
-      buttonText: 'Truy cập công cụ',
-      footerText: 'Nếu bạn cần hỗ trợ, vui lòng phản hồi email này.'
+    const DEFAULTS = {
+      customer: {
+        enabled: true,
+        subjectBase: 'Thanh toán thành công', subjectHasOrder: true,
+        heroTitle: 'Thanh toán thành công', heroSubtitle: 'Tài khoản của bạn đã nâng cấp PRO',
+        introText: 'Cảm ơn bạn đã mua hàng của chúng tôi. Hệ thống đã xác nhận thanh toán và kích hoạt gói PRO cho tài khoản của bạn.',
+        buttonText: 'Truy cập công cụ', footerText: 'Nếu bạn cần hỗ trợ, vui lòng phản hồi email này.'
+      },
+      admin: {
+        enabled: true,
+        subjectBase: 'Admin: Đơn hàng đã thanh toán thành công', subjectHasOrder: true,
+        heroTitle: 'Thông báo thanh toán thành công', heroSubtitle: 'Hệ thống vừa ghi nhận một đơn hàng đã thanh toán thành công.',
+        introText: 'Hệ thống vừa ghi nhận đơn hàng {{orderCode}} thanh toán thành công số tiền {{amount}} từ người dùng {{name}}.',
+        buttonText: 'Mở công cụ', footerText: 'Email này được gửi tự động từ hệ thống tubekey.vn.'
+      }
     };
-    const DEFAULT_TEMPLATE = { enabled: true, subject: 'Thanh toán thành công - {{orderCode}}', content: DEFAULT_CONTENT, html: '' };
     function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
     function lineBreak(v){ return esc(v).replace(/\n/g,'<br>'); }
     function defaultNameFromEmail(email){ const local=String(email||'').split('@')[0]||'bạn'; return local.replace(/[._-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase()).trim() || 'bạn'; }
@@ -132,77 +137,82 @@
       if(!res.ok || data.success === false) throw new Error(data.error || data.message || ('HTTP '+res.status));
       return data;
     }
-    function getContent(){ return {
-      subjectBase: $('subjectBase').value.trim() || DEFAULT_CONTENT.subjectBase,
-      subjectHasOrder: $('subjectHasOrder').checked,
-      heroTitle: $('heroTitle').value.trim() || DEFAULT_CONTENT.heroTitle,
-      heroSubtitle: $('heroSubtitle').value.trim() || DEFAULT_CONTENT.heroSubtitle,
-      introText: $('introText').value.trim() || DEFAULT_CONTENT.introText,
-      buttonText: $('buttonText').value.trim() || DEFAULT_CONTENT.buttonText,
-      footerText: $('footerText').value.trim() || DEFAULT_CONTENT.footerText
+    function sampleVars(){ return { name: 'User Test', email:'user@gmail.com', orderCode:'TUBEKEY040726100259', planName:'GÓI 1 THÁNG', amount:'299.000 VND', paidAt:'10:02:59 04/07/2026', expiresAt:'10:02:59 03/08/2026', toolUrl:'https://www.tubekey.vn' }; }
+    function renderTemplate(t, vars){ return String(t||'').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_,k)=>esc(vars[k] || '')); }
+    function ids(kind, name){ return $(kind + '_' + name); }
+    function getContent(kind){ const d=DEFAULTS[kind]; return {
+      subjectBase: ids(kind,'subjectBase').value.trim() || d.subjectBase,
+      subjectHasOrder: ids(kind,'subjectHasOrder').checked,
+      heroTitle: ids(kind,'heroTitle').value.trim() || d.heroTitle,
+      heroSubtitle: ids(kind,'heroSubtitle').value.trim() || d.heroSubtitle,
+      introText: ids(kind,'introText').value.trim() || d.introText,
+      buttonText: ids(kind,'buttonText').value.trim() || d.buttonText,
+      footerText: ids(kind,'footerText').value.trim() || d.footerText
     }; }
     function subjectFromContent(c){ return c.subjectBase + (c.subjectHasOrder ? ' - {{orderCode}}' : ''); }
-    function sampleVars(){ return { name: defaultNameFromEmail('user@gmail.com'), email:'user@gmail.com', orderCode:'TUBEKEY040726100259', planName:'GÓI 1 THÁNG', amount:'299.000 VND', paidAt:'10:02:59 04/07/2026', expiresAt:'10:02:59 03/08/2026', toolUrl:'https://www.tubekey.vn' }; }
-    function renderTemplate(t, vars){ return String(t||'').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_,k)=>esc(vars[k] || '')); }
-    function buildHtml(c){
+    function buildHtml(kind, c){
+      const isAdmin = kind === 'admin';
+      const gradient = isAdmin ? 'linear-gradient(135deg,#0f3b66,#22d3ee)' : 'linear-gradient(135deg,#0ea5e9,#22d3ee)';
+      const buttonColor = isAdmin ? '#ff7a00' : '#ff5a1f';
+      const intro = isAdmin ? '<p><b>'+lineBreak(c.introText)+'</b></p>' : '<p>Chào <b>{{name}}</b>,</p><p>'+lineBreak(c.introText)+'</p>';
       return [
         '<div style="font-family:Arial,sans-serif;background:#f6f9fe;padding:24px;color:#0f172a">',
-        '<div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #dbe7f3;border-radius:18px;overflow:hidden">',
-        '<div style="background:linear-gradient(135deg,#0ea5e9,#22d3ee);padding:22px 26px;color:#00111f">',
+        '<div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #dbe7f3;border-radius:18px;overflow:hidden">',
+        '<div style="background:'+gradient+';padding:22px 26px;color:'+(isAdmin?'#ffffff':'#00111f')+'">',
         '<h2 style="margin:0;font-size:24px">'+esc(c.heroTitle)+'</h2>',
         '<p style="margin:8px 0 0">'+esc(c.heroSubtitle)+'</p>',
         '</div>',
         '<div style="padding:24px 26px;font-size:15px;line-height:1.7">',
-        '<p>Chào <b>{{name}}</b>,</p>',
-        '<p>'+lineBreak(c.introText)+'</p>',
+        intro,
         '<table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:12px;overflow:hidden">',
-        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Email</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{email}}</b></td></tr>',
         '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Mã đơn hàng</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{orderCode}}</b></td></tr>',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Người dùng</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{name}}</b></td></tr>',
+        '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Email</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{email}}</b></td></tr>',
         '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Gói</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{planName}}</b></td></tr>',
         '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Số tiền</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{amount}}</b></td></tr>',
         '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Ngày giờ thanh toán</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{paidAt}}</b></td></tr>',
         '<tr><td style="padding:10px;color:#64748b">Hạn sử dụng</td><td style="padding:10px"><b>{{expiresAt}}</b></td></tr>',
         '</table>',
-        '<p style="text-align:center;margin:26px 0 10px"><a href="{{toolUrl}}" style="display:inline-block;background:#ff5a1f;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:bold">'+esc(c.buttonText)+'</a></p>',
+        '<p style="text-align:center;margin:26px 0 10px"><a href="{{toolUrl}}" style="display:inline-block;background:'+buttonColor+';color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:bold">'+esc(c.buttonText)+'</a></p>',
         '<p style="margin:20px 0 0;color:#64748b">'+esc(c.footerText)+'</p>',
         '</div></div></div>'
       ].join('');
     }
-    function renderPreview(){ const vars=sampleVars(); $('preview').innerHTML = renderTemplate(buildHtml(getContent()), vars); }
-    function fill(t){
-      const data = t || DEFAULT_TEMPLATE;
-      const c = { ...DEFAULT_CONTENT, ...(data.content || {}) };
-      if (!data.content && data.subject) {
-        const raw = String(data.subject || '');
-        c.subjectHasOrder = /{{\s*orderCode\s*}}/.test(raw);
-        c.subjectBase = raw.replace(/\s*-?\s*{{\s*orderCode\s*}}/g,'').trim() || DEFAULT_CONTENT.subjectBase;
-      }
-      $('enabled').checked = data.enabled !== false;
-      $('subjectBase').value = c.subjectBase;
-      $('subjectHasOrder').checked = c.subjectHasOrder !== false;
-      $('heroTitle').value = c.heroTitle;
-      $('heroSubtitle').value = c.heroSubtitle;
-      $('introText').value = c.introText;
-      $('buttonText').value = c.buttonText;
-      $('footerText').value = c.footerText;
-      renderPreview();
+    function renderPreview(kind){ const vars=sampleVars(); ids(kind,'preview').innerHTML = renderTemplate(buildHtml(kind, getContent(kind)), vars); }
+    function fillOne(kind, t){
+      const d = DEFAULTS[kind]; const data = t || {}; const c = { ...d, ...(data.content || {}) };
+      if (!data.content && data.subject) { const raw=String(data.subject||''); c.subjectHasOrder=/{{\s*orderCode\s*}}/.test(raw); c.subjectBase=raw.replace(/\s*-?\s*{{\s*orderCode\s*}}/g,'').trim() || d.subjectBase; }
+      ids(kind,'enabled').checked = data.enabled !== false;
+      ['subjectBase','heroTitle','heroSubtitle','introText','buttonText','footerText'].forEach(k => { ids(kind,k).value = c[k] || d[k]; });
+      ids(kind,'subjectHasOrder').checked = c.subjectHasOrder !== false;
+      renderPreview(kind);
     }
-    function currentTemplate(){ const content = getContent(); return { enabled: $('enabled').checked, subject: subjectFromContent(content), html: buildHtml(content), content }; }
+    function currentTemplate(kind){ const content=getContent(kind); return { enabled: ids(kind,'enabled').checked, subject: subjectFromContent(content), html: buildHtml(kind, content), content }; }
     async function load(){
-      try{ const data = await api('get'); fill(data.settings?.emailTemplates?.paymentSuccess); show('ok','Đã tải mẫu email từ Supabase/Postgres.'); }
-      catch(e){ fill(DEFAULT_TEMPLATE); show('err', e.message || 'Không tải được mẫu email.'); }
+      try{ const data = await api('get'); const t=data.settings?.emailTemplates||{}; fillOne('customer', t.paymentSuccess); fillOne('admin', t.adminPaymentSuccess); show('ok','Đã tải mẫu email từ Supabase/Postgres.'); }
+      catch(e){ fillOne('customer'); fillOne('admin'); show('err', e.message || 'Không tải được mẫu email.'); }
     }
-    async function save(){ try{ const tmpl = currentTemplate(); await api('save-email-template', { emailTemplates:{ paymentSuccess: tmpl } }); show('ok','Đã lưu mẫu email thanh toán thành công.'); } catch(e){ show('err', e.message || 'Lưu mẫu email thất bại.'); } }
-    async function test(){ const to = $('testEmail').value.trim(); if(!to){ show('err','Vui lòng nhập email nhận test.'); return; } try{ const tmpl = currentTemplate(); await api('test-payment-email-template', { testEmail: to, emailTemplates:{ paymentSuccess: tmpl } }); show('ok','Đã gửi test mẫu email thanh toán thành công.'); } catch(e){ show('err', e.message || 'Gửi test thất bại.'); } }
+    async function save(kind){
+      try{ const body = kind==='admin' ? { emailTemplates:{ adminPaymentSuccess: currentTemplate('admin') } } : { emailTemplates:{ paymentSuccess: currentTemplate('customer') } }; await api('save-email-template', body); show('ok', kind==='admin' ? 'Đã lưu mẫu email Admin.' : 'Đã lưu mẫu email khách hàng.'); }
+      catch(e){ show('err', e.message || 'Lưu mẫu email thất bại.'); }
+    }
+    async function test(kind){
+      const to = $('testEmail').value.trim(); if(!to){ show('err','Vui lòng nhập email nhận test.'); return; }
+      try{ const action = kind==='admin' ? 'test-admin-payment-email-template' : 'test-payment-email-template'; const body = kind==='admin' ? { testEmail: to, emailTemplates:{ adminPaymentSuccess: currentTemplate('admin') } } : { testEmail: to, emailTemplates:{ paymentSuccess: currentTemplate('customer') } }; await api(action, body); show('ok', kind==='admin' ? 'Đã gửi test mẫu email Admin.' : 'Đã gửi test mẫu email khách hàng.'); }
+      catch(e){ show('err', e.message || 'Gửi test thất bại.'); }
+    }
+    function reset(kind){ fillOne(kind); show('ok', kind==='admin' ? 'Đã khôi phục mẫu Admin, bấm Lưu để áp dụng.' : 'Đã khôi phục mẫu khách hàng, bấm Lưu để áp dụng.'); }
     function syncSharedAdminSecret(value){ if(value){ localStorage.setItem('ADMIN_SHARED_SECRET', String(value)); localStorage.setItem('ADMIN_SECRET_RESEARCH', String(value)); } }
     window.syncSharedAdminSecret = syncSharedAdminSecret;
     window.addEventListener('message', (event)=>{ if(event.origin === location.origin && event.data?.type === 'ADMIN_SHARED_SECRET') syncSharedAdminSecret(event.data.value); });
-    ['subjectBase','subjectHasOrder','heroTitle','heroSubtitle','introText','buttonText','footerText'].forEach(id => $(id).addEventListener('input', renderPreview));
-    $('subjectHasOrder').addEventListener('change', renderPreview);
+    ['customer','admin'].forEach(kind => {
+      ['subjectBase','subjectHasOrder','heroTitle','heroSubtitle','introText','buttonText','footerText'].forEach(id => ids(kind,id).addEventListener('input', () => renderPreview(kind)));
+      ids(kind,'subjectHasOrder').addEventListener('change', () => renderPreview(kind));
+      ids(kind,'saveBtn').addEventListener('click', () => save(kind));
+      ids(kind,'testBtn').addEventListener('click', () => test(kind));
+      ids(kind,'resetBtn').addEventListener('click', () => reset(kind));
+    });
     $('reloadBtn').addEventListener('click', load);
-    $('saveBtn').addEventListener('click', save);
-    $('testBtn').addEventListener('click', test);
-    $('resetBtn').addEventListener('click', ()=>{ fill(DEFAULT_TEMPLATE); show('ok','Đã khôi phục mẫu mặc định, bấm Lưu mẫu email để áp dụng.'); });
     load();
   </script>
 </body>
