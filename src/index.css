@@ -5142,3 +5142,237 @@
     display: none !important;
   }
 }
+
+/* PATCH v50 — Thu gọn 2 nút tự chuyển key / săn kênh, đồng bộ nền và ép mobile 2 cột */
+@media (min-width: 901px) {
+  html body .vtw-bottom-actions.vtw-auto-hunt-box {
+    display: grid !important;
+    grid-template-columns: auto minmax(210px, max-content) !important;
+    justify-content: start !important;
+    align-items: center !important;
+    gap: 14px !important;
+    width: 100% !important;
+    padding: 9px 12px !important;
+    border-radius: 14px !important;
+    background: #fff7ed !important;
+    border: 1px solid #fed7aa !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .06) !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box > div:first-child {
+    display: grid !important;
+    grid-template-columns: 300px 300px !important;
+    align-items: stretch !important;
+    justify-content: start !important;
+    width: auto !important;
+    max-width: 100% !important;
+    gap: 10px !important;
+    min-width: 0 !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle {
+    display: grid !important;
+    grid-template-columns: 19px minmax(0, 1fr) !important;
+    align-items: center !important;
+    justify-content: start !important;
+    width: 300px !important;
+    max-width: 300px !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    padding: 7px 10px !important;
+    border-radius: 12px !important;
+    gap: 8px !important;
+    background: #fff7ed !important;
+    border: 1px solid #fed7aa !important;
+    box-shadow: none !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap input[type="checkbox"],
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle input[type="checkbox"] {
+    width: 17px !important;
+    height: 17px !important;
+    min-width: 17px !important;
+    margin: 0 !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-text,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle label {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    line-height: 1.12 !important;
+    text-align: left !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-full,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-full {
+    display: block !important;
+    font-size: 10px !important;
+    line-height: 1.12 !important;
+    letter-spacing: .005em !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-sub {
+    display: block !important;
+    font-size: 8.5px !important;
+    line-height: 1.1 !important;
+    margin-top: 1px !important;
+    color: #64748b !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-mobile,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-mobile {
+    display: none !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box > div:last-child {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-start-button {
+    min-width: 190px !important;
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    border-radius: 11px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  html body .vtw-bottom-actions.vtw-auto-hunt-box {
+    grid-template-columns: 1fr !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box > div:first-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  html body .vtw-bottom-actions.vtw-auto-hunt-box {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    padding: 9px !important;
+    border-radius: 16px !important;
+    background: #fff7ed !important;
+    border: 1px solid #fed7aa !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .06) !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box > div:first-child,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .flex.items-center.gap-4 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle {
+    display: grid !important;
+    grid-template-columns: 19px minmax(0, 1fr) !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    padding: 8px 7px !important;
+    border-radius: 14px !important;
+    gap: 6px !important;
+    background: #fff7ed !important;
+    border: 1px solid #fed7aa !important;
+    box-shadow: none !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap input[type="checkbox"],
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    margin: 0 !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-text,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle label {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    line-height: 1.1 !important;
+    text-align: left !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-full,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-full,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-sub {
+    display: none !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-mobile,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-mobile {
+    display: block !important;
+    font-size: 10px !important;
+    line-height: 1.08 !important;
+    font-weight: 900 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box > div:last-child {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 390px) {
+  html body .vtw-bottom-actions.vtw-auto-hunt-box {
+    padding: 8px !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box > div:first-child,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .flex.items-center.gap-4 {
+    gap: 6px !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle {
+    grid-template-columns: 16px minmax(0, 1fr) !important;
+    min-height: 50px !important;
+    padding: 7px 5px !important;
+    gap: 5px !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-wrap input[type="checkbox"],
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-drill-toggle input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+  }
+
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-auto-hunt-mobile,
+  html body .vtw-bottom-actions.vtw-auto-hunt-box .vtw-deep-mobile {
+    font-size: 9px !important;
+    line-height: 1.06 !important;
+  }
+}
