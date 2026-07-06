@@ -3988,6 +3988,30 @@ JSON mẫu:
     return `${dateStr} - ${timeStr} (${tzStr})`;
   };
 
+  const extractYouTubeVideoIdForEmbed = (input?: string | null) => {
+    if (!input || typeof input !== 'string') return '';
+    let text = input.trim();
+    text = text.split('&t=')[0].split('?t=')[0];
+    const patterns = [
+      /(?:v=|v\/|embed\/|shorts\/|live\/|youtu\.be\/|\/v\/|watch\?v%3D|watch\?feature=player_embedded&v=|watch\?v=)([^"&?\/\s]{11})/i,
+      /^[a-zA-Z0-9_-]{11}$/
+    ];
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) return match[1];
+      if (match && !pattern.source.includes('(')) return match[0];
+    }
+    const advancedMatch = text.match(/(?:[\/v=])([a-zA-Z0-9_-]{11})(?:[&?\/]|$)/);
+    if (advancedMatch) return advancedMatch[1];
+    const coarseMatch = text.match(/[a-zA-Z0-9_-]{11}/);
+    return coarseMatch ? coarseMatch[0] : '';
+  };
+
+  const openInlineVideo = (input?: string | null) => {
+    const videoId = extractYouTubeVideoIdForEmbed(input || '');
+    if (videoId) setInlineVideoId(videoId);
+  };
+
   const analyzeSpy = async (targetId?: string | any) => {
     const query = (typeof targetId === 'string' && targetId) ? targetId : spyInput;
     if (!query || typeof query !== 'string') return;
@@ -6111,9 +6135,9 @@ Quy tắc:
                         <div className="flex flex-wrap gap-x-2">
                           <span className="font-bold text-red-600">Video mới nhất:</span>
                           {spyResult.videos[0] ? (
-                            <a href={`https://youtube.com/watch?v=${spyResult.videos[0].id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate max-w-md">
+                            <button type="button" onClick={() => openInlineVideo(spyResult.videos[0].id)} className="text-blue-600 hover:underline truncate max-w-md text-left" title="Mở video trong popup">
                               https://youtube.com/watch?v=${spyResult.videos[0].id}
-                            </a>
+                            </button>
                           ) : <span className="text-gray-400">N/A</span>}
                           <span className="text-gray-500 italic">
                             (lượt xem={spyResult.videos[0]?.views.toLocaleString() || 0})
@@ -6196,9 +6220,9 @@ Quy tắc:
                                 <img src={v.thumbnail} className="w-20 h-14 object-cover rounded shadow-sm border border-[#ccc]" />
                               </td>
                               <td className="px-2 py-1 font-mono text-[10px] text-gray-500">
-                                <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                                <button type="button" onClick={() => openInlineVideo(v.id)} className="text-blue-600 hover:underline text-left" title="Mở video trong popup">
                                   {v.id}
-                                </a>
+                                </button>
                               </td>
                               <td className="px-2 py-1 text-center">
                                 <button 
@@ -6209,9 +6233,9 @@ Quy tắc:
                                 </button>
                               </td>
                               <td className="px-2 py-1 font-bold text-black">
-                                <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline transition-colors uppercase">
+                                <button type="button" onClick={() => openInlineVideo(v.id)} className="text-blue-600 hover:underline transition-colors uppercase text-left" title="Mở video trong popup">
                                   {v.title}
-                                </a>
+                                </button>
                               </td>
                               <td className="px-2 py-1 text-center text-gray-600 text-[8.8px]">{v.date}</td>
                               <td className="px-2 py-1 text-right font-medium">{v.views.toLocaleString()}</td>
@@ -6227,9 +6251,9 @@ Quy tắc:
                               </td>
                               <td className="px-2 py-1 text-right text-blue-600 font-bold">{v.viewsPerDay.toLocaleString()}</td>
                               <td className="px-2 py-1 text-blue-600 underline truncate max-w-[200px]">
-                                <a href={v.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600">
-                                  Link <ExternalLink size={10} />
-                                </a>
+                                <button type="button" onClick={() => openInlineVideo(v.id || v.url)} className="flex items-center gap-1 text-blue-600" title="Mở video trong popup">
+                                  Link <Play size={10} />
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -6742,7 +6766,22 @@ Quy tắc:
                          <div className="markdown-body prose max-w-none prose-blue prose-sm text-gray-700 font-medium leading-relaxed bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
                             <Markdown
                               components={{
-                                a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" />
+                                a: ({ node, href, children, ...props }) => {
+                                  const videoId = extractYouTubeVideoIdForEmbed(String(href || ''));
+                                  if (videoId) {
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => openInlineVideo(videoId)}
+                                        className="text-blue-600 hover:underline text-left"
+                                        title="Mở video trong popup"
+                                      >
+                                        {children || href}
+                                      </button>
+                                    );
+                                  }
+                                  return <a {...props} href={href} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" />;
+                                }
                               }}
                             >
                               {aiAnalysisResult}
@@ -6803,12 +6842,12 @@ Quy tắc:
                           <div className="space-y-4">
                              {nicheResults.videos.sort((a: any, b: any) => b.trendScore - a.trendScore).slice(0, 3).map((v: any, i: number) => (
                                <div key={i} className="vtw-niche-top-video flex gap-4 p-2 rounded-xl hover:bg-gray-50 transition-colors group relative overflow-hidden">
-                                  <div className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200">
+                                  <button type="button" onClick={() => openInlineVideo(v.id)} className="w-24 h-14 rounded-lg overflow-hidden shrink-0 border border-gray-200 bg-black p-0" title="Mở video trong popup">
                                      <img src={v.snippet.thumbnails.medium.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                                  </div>
+                                  </button>
                                   <div className="flex flex-col justify-between overflow-hidden flex-1">
                                      <h4 className="text-[10px] font-black text-gray-900 uppercase flex items-center justify-between gap-2">
-                                        <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate w-full" title={v.snippet.title}>{v.snippet.title}</a>
+                                        <button type="button" onClick={() => openInlineVideo(v.id)} className="text-blue-600 hover:underline truncate w-full text-left" title={v.snippet.title}>{v.snippet.title}</button>
                                      </h4>
                                      <div className="flex items-center gap-3 mt-1">
                                         <div className="flex flex-col">
@@ -7074,7 +7113,7 @@ Quy tắc:
                       ) : nicheResults.shorts.map((v: any, i: number) => (
                          <div key={i} className="vtw-shorts-card aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
                             <img src={v.snippet.thumbnails.high.url} className="vtw-shorts-thumb w-full h-full object-contain bg-black opacity-90" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
                             <div className="absolute bottom-0 left-0 right-0 p-4">
                                <div className="flex items-center justify-between gap-2 mb-2">
@@ -7100,7 +7139,9 @@ Quy tắc:
                                      <span className="text-[8px] text-gray-400 font-bold uppercase leading-none">Bình luận</span>
                                   </div>
                                </div>
-                               <h4 className="text-[10px] text-white font-bold leading-tight uppercase mb-2 line-clamp-2">{v.snippet.title}</h4>
+                               <h4 className="text-[10px] text-white font-bold leading-tight uppercase mb-2 line-clamp-2">
+                                  <button type="button" onClick={() => openInlineVideo(v.id)} className="text-left hover:underline" title="Mở Shorts trong popup">{v.snippet.title}</button>
+                               </h4>
                                <div className="flex gap-2">
                                  <a href={`https://youtube.com/shorts/${v.id}`} target="_blank" rel="noreferrer" className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md">Phát Shorts</a>
                                  <button 
@@ -7190,7 +7231,7 @@ Quy tắc:
                                <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                   <button onClick={() => window.open(v.snippet.thumbnails.high.url, '_blank')} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Xem ảnh gốc"><Eye size={18} /></button>
-                                  <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noreferrer" className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Mở video"><ExternalLink size={18} /></a>
+                                  <button type="button" onClick={() => openInlineVideo(v.id)} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Mở video trong popup"><Play size={18} /></button>
                                </div>
                             </div>
                             <h5 className="text-[11px] font-bold text-gray-900 line-clamp-2 uppercase h-8 leading-tight">{v.snippet.title}</h5>
@@ -7546,7 +7587,7 @@ Quy tắc:
                           <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 group-hover:text-blue-500 transition-colors">{item.label}</div>
                           {item.isLink ? (
                             <div className="flex items-center gap-2">
-                              <a href={item.value} target="_blank" rel="noreferrer" className="text-[14px] font-black text-blue-600 break-all flex-1 leading-tight hover:underline">{item.value}</a>
+                              <button type="button" onClick={() => openInlineVideo(item.value)} className="text-[14px] font-black text-blue-600 break-all flex-1 leading-tight hover:underline text-left" title="Mở video trong popup">{item.value}</button>
                               <button onClick={() => copyToClipboard(item.value)} className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"><Copy size={12}/></button>
                             </div>
                           ) : (
