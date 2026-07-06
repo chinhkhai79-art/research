@@ -2550,6 +2550,67 @@ JSON mẫu:
     return (map.find(([rx]) => rx.test(normalized))?.[1] || category.replace(/\(.+\)/g, '').toLowerCase()).trim();
   };
 
+  const normalizeTopicText = (value: string) => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const getCategoryTopicRule = (category: string, index: number) => {
+    const normalized = `${category || ''} ${CATEGORY_VI_TITLES[index] || ''}`.toUpperCase();
+    const rules: Array<{ test: RegExp; must: RegExp; ban?: RegExp; strictSeeds: string[] }> = [
+      {
+        test: /PHÁT TRIỂN|SELF|自己|자기|พัฒนา|Selbst|Développement|Само|Desenvolvimento|Desarrollo/i,
+        must: /(phat trien ban than|tu phat trien|ky luat|ki luat|thoi quen|tri hoan|nang suat|tu duy|dong luc|muc tieu|quan ly thoi gian|tap trung|tu tin|tu chu|song toi gian|mindset|self improvement|self development|personal growth|habit|discipline|productivity|motivation|confidence|time management|focus|goal|stoic|stoicism)/i,
+        ban: /(kinh te|tai chinh|ngan hang|chung khoan|bat dong san|gia xang|luong huu|tro cap|thi tot nghiep|truong tai|trường tài|chinh tri|thoi su|phap luat|tin moi|game|bong da|ai tool|chatgpt|review xe|nau an|mon an)/i,
+        strictSeeds: ['kỷ luật bản thân', 'vượt qua trì hoãn', 'thói quen thành công', 'quản lý thời gian', 'năng suất cá nhân', 'tư duy tích cực', 'stoic mindset', 'tự tin hơn', 'tập trung làm việc', 'mục tiêu cuộc sống']
+      },
+      { test: /SỨC KHỎE|HEALTH|BEAUTY|LÀM ĐẸP/i, must: /(suc khoe|lam dep|skincare|giam can|yoga|workout|fitness|eat clean|cham soc da|cham soc toc|health|beauty|diet|makeup|skin|hair)/i, ban: /(game|bong da|kinh te|tai chinh|chinh tri)/i, strictSeeds: ['giảm cân tại nhà','yoga tại nhà','skincare cơ bản','ăn sạch sống khỏe','bài tập giảm mỡ','chăm sóc tóc'] },
+      { test: /CÔNG NGHỆ|TECH|AI/i, must: /(cong nghe|tri tue nhan tao|ai|chatgpt|gemini|ung dung|phan mem|dien thoai|iphone|android|automation|technology|tech|software|app|tool)/i, ban: /(bong da|nau an|mon an|tinh yeu|tu vi)/i, strictSeeds: ['công cụ AI mới','hướng dẫn ChatGPT','ứng dụng AI','review điện thoại','mẹo iPhone','tự động hóa AI'] },
+      { test: /GIÁO DỤC|EDUCATION|HỌC TẬP/i, must: /(hoc tap|tu hoc|tieng anh|ielts|on thi|lap trinh|kien thuc|ky nang|study|learn|education|exam|school)/i, ban: /(gia xang|chinh tri|game|bong da)/i, strictSeeds: ['học tiếng Anh','mẹo học nhanh','từ vựng IELTS','tự học lập trình','ôn thi hiệu quả','kỹ năng ghi nhớ'] },
+      { test: /ẨM THỰC|FOOD|COOK|NẤU/i, must: /(am thuc|nau|mon an|cong thuc|bep|quan an|food|cook|recipe|meal|kitchen|mukbang)/i, ban: /(game|bong da|ai tool|chatgpt|kinh te|tai chinh)/i, strictSeeds: ['món ngon dễ làm','nấu ăn gia đình','công thức món chay','bữa sáng nhanh','meal prep','món ăn healthy'] },
+      { test: /DU LỊCH|TRAVEL/i, must: /(du lich|kham pha|phuot|dia diem|homestay|cam trai|travel|trip|tour|destination|camping|vlog)/i, ban: /(game|bong da|tai chinh|chinh tri)/i, strictSeeds: ['du lịch tự túc','travel vlog','địa điểm đẹp','du lịch tiết kiệm','ẩm thực địa phương','cắm trại cuối tuần'] },
+      { test: /GIẢI TRÍ|ENTERTAIN|COMEDY|HÀI/i, must: /(giai tri|hai|phim|meme|reaction|thu thach|funny|comedy|entertainment|movie|film|drama)/i, strictSeeds: ['phim hài ngắn','reaction video','tóm tắt phim','meme hài hước','thử thách vui','câu chuyện lạ'] },
+      { test: /THỂ THAO|BÓNG ĐÁ|SPORT|FOOTBALL|FITNESS/i, must: /(the thao|bong da|gym|tap luyen|fitness|football|soccer|sport|workout|tennis|basketball)/i, strictSeeds: ['bóng đá hôm nay','highlight bóng đá','lịch thi đấu bóng đá','v league','tin thể thao','bài tập thể lực'] },
+      { test: /PETS|ĐỘNG VẬT|PET|ANIMAL/i, must: /(thu cung|cho|meo|dong vat|huan luyen|pet|dog|cat|animal|puppy|kitten|grooming)/i, strictSeeds: ['huấn luyện chó','chăm sóc mèo','thú cưng đáng yêu','pet grooming','thức ăn cho mèo','vlog chó mèo'] },
+      { test: /GIA ĐÌNH|ĐỜI SỐNG|FAMILY|LIFESTYLE/i, must: /(gia dinh|doi song|nha cua|nuoi con|don nha|meo nha|family|home|parenting|cleaning|lifestyle|life tips)/i, strictSeeds: ['mẹo dọn nhà','nuôi dạy con','tài chính gia đình','trang trí nhà nhỏ','mẹo nhà bếp','đời sống tối giản'] },
+      { test: /NGHỆ THUẬT|SÁNG TẠO|ART|CREATIVE/i, must: /(sang tao|nghe thuat|ve|thiet ke|canva|edit|chup anh|guitar|art|creative|drawing|design|photography)/i, strictSeeds: ['vẽ tranh dễ','thiết kế Canva','edit video CapCut','chụp ảnh điện thoại','guitar cơ bản','ý tưởng sáng tạo'] },
+      { test: /XE|Ô TÔ|AUTO|CAR/i, must: /(xe may|o to|phu kien xe|review xe|bao duong|car|auto|vehicle|motorcycle|bike)/i, strictSeeds: ['review xe máy','ô tô điện','kinh nghiệm mua xe','phụ kiện ô tô','bảo dưỡng xe','xe tiết kiệm xăng'] },
+      { test: /TÀI CHÍNH|KIẾM TIỀN|FINANCE|MONEY/i, must: /(tai chinh|kiem tien|dau tu|tiet kiem|affiliate|kinh doanh|finance|money|investing|side hustle|business)/i, ban: /(bong da|nau an|mon an|game)/i, strictSeeds: ['kiếm tiền online','quản lý tài chính','đầu tư cho người mới','side hustle','affiliate marketing','tiết kiệm tiền'] },
+      { test: /REVIEW|SẢN PHẨM|PRODUCT/i, must: /(review|danh gia|san pham|mo hop|unboxing|mua gi|gadget|product|shopping)/i, ban: /(bong da|gameplay|karaoke)/i, strictSeeds: ['unboxing sản phẩm','review đồ công nghệ','review mỹ phẩm','đồ gia dụng thông minh','sản phẩm viral','mua gì đáng tiền'] },
+      { test: /MARKETING|TRUYỀN THÔNG|MEDIA/i, must: /(marketing|truyen thong|content|seo|youtube growth|tiktok|quang cao|branding|social media)/i, strictSeeds: ['content marketing','xây kênh YouTube','SEO cơ bản','chạy quảng cáo','tăng trưởng TikTok','chiến lược nội dung'] },
+    ];
+    return rules.find(rule => rule.test.test(normalized)) || null;
+  };
+
+  const isKeywordRelevantToCategory = (keyword: string, category: string, index: number) => {
+    const cleaned = normalizeTopicText(keyword);
+    if (!cleaned || cleaned.length < 3) return false;
+    const rule = getCategoryTopicRule(category, index);
+    if (!rule) return true;
+    if (rule.ban?.test(cleaned)) return false;
+    if (rule.must.test(cleaned)) return true;
+    return rule.strictSeeds.some(seed => normalizeTopicText(seed) === cleaned || normalizeTopicText(seed).includes(cleaned) || cleaned.includes(normalizeTopicText(seed)));
+  };
+
+  const getStrictCategorySeedItems = (category: string, index: number, regionCode: string) => {
+    const rule = getCategoryTopicRule(category, index);
+    const fallback = getCategoryFallbackItems(index, regionCode);
+    const strict = (rule?.strictSeeds || fallback).filter(k => languageLooksOkLoose(k, regionCode));
+    return [...new Set([...strict, ...fallback].map(k => String(k || '').trim()).filter(Boolean))].slice(0, 10);
+  };
+
+  const languageLooksOkLoose = (value: string, regionCode: string) => {
+    const v = String(value || '').trim();
+    if (!v) return false;
+    const hasVN = /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(v);
+    if (String(regionCode || '').toUpperCase() === 'VN') return /[a-zăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹềếệểễíìỉĩịóòỏõọôồốộổỗơờớợởỡúùủũụưừứựửữýỳỷỹỵ]/i.test(v);
+    return /[a-z]/i.test(v) && !hasVN;
+  };
+
   const getCategoryFallbackItems = (index: number, regionCode: string) => {
     const templates = getKeywordTemplateForRegion(regionCode);
     const fallback = templates[index] || REGION_KEYWORD_TEMPLATES.VN[index] || SUGGESTED_NICHES[index]?.items || [];
@@ -2561,10 +2622,17 @@ JSON mẫu:
     const localCategory = String((suggestedNiches[index] as any)?.localCategory || category).replace(/\(.+\)/g, '').trim();
     const viCategory = String((suggestedNiches[index] as any)?.viCategory || CATEGORY_VI_TITLES[index] || category).trim();
     const fallbackItems = getCategoryFallbackItems(index, regionCode);
-    const seedItems = [...currentItems, ...fallbackItems].map(k => String(k || '').trim()).filter(Boolean);
+    const strictItems = getStrictCategorySeedItems(category, index, regionCode);
+    const safeCurrentItems = currentItems
+      .map(k => String(k || '').trim())
+      .filter(Boolean)
+      .filter(k => isKeywordRelevantToCategory(k, category, index))
+      .slice(0, 4);
+    const seedItems = [...strictItems, ...fallbackItems, ...safeCurrentItems].map(k => String(k || '').trim()).filter(Boolean);
     const categorySeed = categoryTitleToSearchSeed(category);
 
     const vnSpecialSeeds: Record<number, string[]> = {
+      0: ['phát triển bản thân', 'kỷ luật bản thân', 'vượt qua trì hoãn', 'thói quen thành công', 'stoic mindset', 'năng suất cá nhân'],
       7: ['bóng đá hôm nay', 'highlight bóng đá', 'tin thể thao việt nam', 'v league', 'lịch thi đấu bóng đá', 'thể thao mới nhất'],
       11: ['review ô tô', 'xe máy mới', 'ô tô điện', 'kinh nghiệm mua xe', 'phụ kiện ô tô', 'bảo dưỡng xe'],
       12: ['kiếm tiền online', 'tài chính cá nhân', 'đầu tư cho người mới', 'side hustle', 'tiết kiệm tiền', 'affiliate marketing'],
@@ -2574,13 +2642,16 @@ JSON mẫu:
     const firstFour = seedItems.slice(0, 4);
 
     const queries = [
-      `${firstTwo} ${localCategory}`.trim(),
+      `${localCategory} ${firstTwo}`.trim(),
+      `${viCategory} ${firstFour.slice(0, 2).join(' ')}`.trim(),
+      `${categorySeed} ${firstFour.slice(0, 3).join(' ')}`.trim(),
       `${firstFour.join(' ')}`.trim(),
-      `${regionCfg.seed} ${localCategory}`.trim(),
-      `${categorySeed} ${regionCfg.seed}`.trim(),
-      `${viCategory} ${regionCfg.seed}`.trim(),
       ...(regionCode === 'VN' && vnSpecialSeeds[index] ? vnSpecialSeeds[index] : []),
-    ].filter(Boolean);
+      `${localCategory} ${regionCfg.seed}`.trim(),
+    ]
+      .map(q => q.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .filter(q => isKeywordRelevantToCategory(q, category, index));
 
     return [...new Set(queries)].slice(0, 8);
   };
@@ -2598,6 +2669,8 @@ JSON mẫu:
     const regionName = REGIONS.find(r => r.code === selectedRegion)?.name || selectedRegion;
     const currentItems = suggestedNiches[index]?.items || [];
     const publishedAfter = getPublishedAfterDate('month');
+    const publishedAfter3Months = getPublishedAfterDate('3months');
+    const publishedAfterYear = getPublishedAfterDate('year');
     const scanningKey = `${category}-${index}`;
 
     const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
@@ -2729,24 +2802,27 @@ JSON mẫu:
             .filter(k => k.length >= 3 && k.length <= 52)
             .filter(languageLooksOk)
             .filter(k => !isBadKeyword(k))
+            .filter(k => isKeywordRelevantToCategory(k, category, index))
             .forEach(k => scores.set(k, (scores.get(k) || 0) + baseScore));
         });
       }
 
-      // Bơm thêm seed đúng chủ đề/khu vực để luôn có key liên quan nếu YouTube trả ít tag/title tách được.
-      getCategoryFallbackItems(index, selectedRegion).forEach((keyword, idx) => {
-        if (languageLooksOk(keyword) && !isBadKeyword(keyword)) {
-          scores.set(cleanKeyword(keyword), (scores.get(cleanKeyword(keyword)) || 0) + 25 - idx);
+      // Bơm thêm seed đúng ngách cha/con nếu YouTube trả ít tag/title tách được.
+      getStrictCategorySeedItems(category, index, selectedRegion).forEach((keyword, idx) => {
+        if (languageLooksOk(keyword) && !isBadKeyword(keyword) && isKeywordRelevantToCategory(keyword, category, index)) {
+          const key = cleanKeyword(keyword);
+          scores.set(key, (scores.get(key) || 0) + 35 - idx);
         }
       });
 
       const nextItems = [...scores.entries()]
         .sort((a, b) => b[1] - a[1])
         .map(([keyword]) => keyword)
+        .filter(keyword => isKeywordRelevantToCategory(keyword, category, index))
         .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
         .slice(0, 6);
 
-      const finalItems = nextItems.length > 0 ? nextItems : getCategoryFallbackItems(index, selectedRegion).slice(0, 6);
+      const finalItems = nextItems.length > 0 ? nextItems : getStrictCategorySeedItems(category, index, selectedRegion).slice(0, 6);
 
       setSuggestedNiches(prev => {
         const next = prev.map((item: any, i: number) => i === index ? {
@@ -8393,7 +8469,7 @@ Quy tắc:
                      <div className="flex flex-col gap-1 min-w-0">
                      <h3 className="text-[13px] font-black text-gray-800 uppercase flex flex-col">
                         <span className="flex items-center gap-1 text-orange-600"><Flame size={16} /> DỮ LIỆU NGÁCH THEO KHU VỰC</span>
-                        <span className="text-[10px] text-gray-500 font-medium mt-1">Chọn khu vực để đổi ngôn ngữ chủ đề/key. Bấm kính lúp từng chủ đề để tìm key đúng khu vực; ưu tiên 30 ngày, nếu thiếu dữ liệu sẽ mở rộng toàn thời gian.</span>
+                        
                         {trendingCacheMeta?.updatedAt && (
                           <span className="text-[10px] text-blue-600 font-bold mt-1">Cập nhật: {new Date(trendingCacheMeta.updatedAt).toLocaleString('vi-VN')}</span>
                         )}
