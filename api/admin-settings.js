@@ -156,7 +156,7 @@ export default async function handler(req, res) {
       const next = await saveAppSettings({ account: { ...(current.account || {}), ...incoming } });
       const changes = diffSettings(current, next);
       await logSettingsChange({ action: 'update_trial_settings', changes, ip, reason: req.body?.reason || 'Đổi thời gian dùng thử tài khoản mới' });
-      return send(res, 200, { success: true, message: 'Đã lưu thời gian dùng thử cho tài khoản mới.', settings: maskSettings(next), changes });
+      return send(res, 200, { success: true, message: 'Đã lưu thời gian và API key dùng thử cho tài khoản mới.', settings: maskSettings(next), changes });
     }
 
     // Lưu riêng các gói (giá + ngày + bật/tắt). Giá này là nguồn chuẩn phía server.

@@ -56,7 +56,16 @@
     .hidden{display:none!important}.scroll{overflow:auto;max-height:620px;border-radius:14px}
     .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
     .quick button{padding:10px;font-size:12px;background:#0b1526;color:#cfe4ff;border:1px solid var(--line)}
-    @media(max-width:950px){.top,.grid,.grid2,.row,.quick{grid-template-columns:1fr;display:grid}.links{justify-content:flex-start}.title h1{font-size:25px}table{white-space:nowrap}}
+    .trial-key-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .trial-key-wrap{display:flex;gap:8px;align-items:center}
+    .trial-key-wrap input{min-width:0;font-family:Consolas,"Courier New",monospace!important}
+    .trial-key-wrap button{flex:0 0 auto;padding:12px 13px}
+    .trial-key-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+    .trial-key-actions button{padding:9px 11px;font-size:12px}
+    .trial-key-result{margin-top:8px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;font-size:12px;line-height:1.45;word-break:break-word}
+    .trial-key-result.ok{background:#ecfdf5;border-color:#86efac;color:#166534!important}
+    .trial-key-result.err{background:#fef2f2;border-color:#fecaca;color:#b91c1c!important}
+    @media(max-width:950px){.top,.grid,.grid2,.row,.quick,.trial-key-grid{grid-template-columns:1fr;display:grid}.links{justify-content:flex-start}.title h1{font-size:25px}table{white-space:nowrap}}
   
     /* Giao diện sáng cho trang quản trị chung */
     :root {
@@ -291,8 +300,46 @@
             <button onclick="setTrialQuick(1,'days')">1 ngày</button>
             <button onclick="setTrialQuick(3,'days')">3 ngày</button>
           </div>
+          <div class="trial-key-grid">
+            <div class="field">
+              <label>Gemini API Key dành riêng cho dùng thử</label>
+              <div class="trial-key-wrap">
+                <input id="trialGeminiApiKey" type="password" autocomplete="new-password" placeholder="Nhập Gemini API Key" oninput="resetTrialKeyCheck('gemini')" />
+                <button id="trialGeminiEyeBtn" type="button" class="btn-dark" onclick="toggleTrialKeyVisibility('trialGeminiApiKey','trialGeminiEyeBtn')">Hiện key</button>
+              </div>
+              <select id="trialGeminiModel" style="margin-top:8px;" onchange="resetTrialKeyCheck('gemini')">
+                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (mặc định)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+              </select>
+              <div class="trial-key-actions">
+                <button type="button" class="btn-dark" onclick="checkTrialGeminiKey()">Check Gemini Key</button>
+                <button id="trialGeminiResultToggle" type="button" class="btn-dark hidden" onclick="toggleTrialKeyResult('gemini')">Ẩn kết quả</button>
+              </div>
+              <div id="trialGeminiKeyResult" class="trial-key-result hidden"></div>
+            </div>
+            <div class="field">
+              <label>YouTube Data API v3 Key dành riêng cho dùng thử</label>
+              <div class="trial-key-wrap">
+                <input id="trialYoutubeApiKey" type="password" autocomplete="new-password" placeholder="Nhập YouTube API Key V3" oninput="resetTrialKeyCheck('youtube')" />
+                <button id="trialYoutubeEyeBtn" type="button" class="btn-dark" onclick="toggleTrialKeyVisibility('trialYoutubeApiKey','trialYoutubeEyeBtn')">Hiện key</button>
+              </div>
+              <div class="trial-key-actions">
+                <button type="button" class="btn-dark" onclick="checkTrialYoutubeKey()">Check YouTube Key</button>
+                <button id="trialYoutubeResultToggle" type="button" class="btn-dark hidden" onclick="toggleTrialKeyResult('youtube')">Ẩn kết quả</button>
+              </div>
+              <div id="trialYoutubeKeyResult" class="trial-key-result hidden"></div>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:10px;font-size:12px;line-height:1.45;">
+            Hai key này chỉ được cấp tạm thời cho tài khoản trial còn hạn, không lưu vào trình duyệt của user và bị thu hồi ngay khi thời gian dùng thử kết thúc.
+          </div>
           <div class="actions" style="margin-top:12px;">
-            <button class="btn" onclick="saveTrialSettings()">Lưu thời gian dùng thử</button>
+            <button class="btn" onclick="saveTrialSettings()">Lưu cài đặt dùng thử</button>
             <button class="btn-dark" onclick="loadTrialSettings(true)">Tải lại</button>
           </div>
           <div id="trialSettingsMsg" class="status" style="margin-top:12px;">Mặc định hiện tại: 1 giờ dùng thử.</div>
@@ -523,6 +570,81 @@ function setTrialQuick(value, unit){
   qs('trialDurationValue').value = value;
   qs('trialDurationUnit').value = unit;
 }
+function trialKeyUi(kind){
+  const isGemini = kind === 'gemini';
+  return {
+    input: qs(isGemini ? 'trialGeminiApiKey' : 'trialYoutubeApiKey'),
+    result: qs(isGemini ? 'trialGeminiKeyResult' : 'trialYoutubeKeyResult'),
+    toggle: qs(isGemini ? 'trialGeminiResultToggle' : 'trialYoutubeResultToggle')
+  };
+}
+function toggleTrialKeyVisibility(inputId, buttonId){
+  const input = qs(inputId);
+  const button = qs(buttonId);
+  if(!input || !button) return;
+  const willShow = input.type === 'password';
+  input.type = willShow ? 'text' : 'password';
+  button.textContent = willShow ? 'Ẩn key' : 'Hiện key';
+}
+function setTrialKeyResult(kind, message, type=''){
+  const ui = trialKeyUi(kind);
+  if(!ui.result || !ui.toggle) return;
+  ui.result.className = 'trial-key-result ' + type;
+  ui.result.innerHTML = message;
+  ui.toggle.classList.remove('hidden');
+  ui.toggle.textContent = 'Ẩn kết quả';
+}
+function resetTrialKeyCheck(kind){
+  const ui = trialKeyUi(kind);
+  if(ui.result){ ui.result.className = 'trial-key-result hidden'; ui.result.innerHTML = ''; }
+  if(ui.toggle) ui.toggle.classList.add('hidden');
+}
+function toggleTrialKeyResult(kind){
+  const ui = trialKeyUi(kind);
+  if(!ui.result || !ui.toggle) return;
+  const isHidden = ui.result.classList.toggle('hidden');
+  ui.toggle.textContent = isHidden ? 'Hiện kết quả' : 'Ẩn kết quả';
+}
+function googleApiError(data, status){
+  return String(data && data.error && (data.error.message || data.error.status) || `HTTP ${status || 'UNKNOWN'}`);
+}
+async function checkTrialGeminiKey(){
+  const key = String((qs('trialGeminiApiKey') && qs('trialGeminiApiKey').value) || '').trim();
+  const model = String((qs('trialGeminiModel') && qs('trialGeminiModel').value) || 'gemini-3.1-flash-lite');
+  if(!key) return setTrialKeyResult('gemini', 'Vui lòng nhập Gemini API Key trước khi kiểm tra.', 'err');
+  setTrialKeyResult('gemini', `Đang kiểm tra key với model <b>${esc(model)}</b>...`, '');
+  try{
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ contents:[{ role:'user', parts:[{ text:'Reply with exactly: OK' }] }] })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && !data.error){
+      return setTrialKeyResult('gemini', `✅ Gemini Key hợp lệ và gọi được model <b>${esc(model)}</b>.`, 'ok');
+    }
+    setTrialKeyResult('gemini', `❌ Gemini Key không dùng được với model <b>${esc(model)}</b>: ${esc(googleApiError(data, res.status))}`, 'err');
+  }catch(e){
+    setTrialKeyResult('gemini', '❌ Không kết nối được Gemini API: ' + esc(e.message || e), 'err');
+  }
+}
+async function checkTrialYoutubeKey(){
+  const key = String((qs('trialYoutubeApiKey') && qs('trialYoutubeApiKey').value) || '').trim();
+  if(!key) return setTrialKeyResult('youtube', 'Vui lòng nhập YouTube API Key V3 trước khi kiểm tra.', 'err');
+  setTrialKeyResult('youtube', 'Đang gọi dữ liệu thật từ YouTube Data API v3...', '');
+  try{
+    const params = new URLSearchParams({ part:'snippet', chart:'mostPopular', regionCode:'US', maxResults:'1', key });
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && !data.error){
+      return setTrialKeyResult('youtube', '✅ YouTube API Key V3 hợp lệ và gọi được dữ liệu thật.', 'ok');
+    }
+    setTrialKeyResult('youtube', '❌ YouTube API Key không dùng được: ' + esc(googleApiError(data, res.status)), 'err');
+  }catch(e){
+    setTrialKeyResult('youtube', '❌ Không kết nối được YouTube API: ' + esc(e.message || e), 'err');
+  }
+}
 function trialLabel(value, unit){
   return `${value} ${unit === 'days' ? 'ngày' : 'giờ'}`;
 }
@@ -537,8 +659,18 @@ async function loadTrialSettings(force=false){
     const unit = account.trialDurationUnit === 'days' ? 'days' : 'hours';
     qs('trialDurationValue').value = value;
     qs('trialDurationUnit').value = unit;
+    qs('trialGeminiApiKey').value = String(account.trialGeminiApiKey || '');
+    qs('trialYoutubeApiKey').value = String(account.trialYoutubeApiKey || '');
+    qs('trialGeminiApiKey').type = 'password';
+    qs('trialYoutubeApiKey').type = 'password';
+    qs('trialGeminiEyeBtn').textContent = 'Hiện key';
+    qs('trialYoutubeEyeBtn').textContent = 'Hiện key';
+    resetTrialKeyCheck('gemini');
+    resetTrialKeyCheck('youtube');
     trialSettingsLoaded = true;
-    setTrialStatus(`Đang áp dụng: tài khoản mới được dùng thử <b>${trialLabel(value, unit)}</b>.`, 'ok');
+    const geminiState = account.trialGeminiApiKey ? 'Gemini key đã cài' : 'chưa có Gemini key';
+    const youtubeState = account.trialYoutubeApiKey ? 'YouTube key đã cài' : 'chưa có YouTube key';
+    setTrialStatus(`Đang áp dụng: tài khoản mới được dùng thử <b>${trialLabel(value, unit)}</b>; ${geminiState}; ${youtubeState}.`, 'ok');
   }catch(e){
     setTrialStatus('Lỗi tải cấu hình dùng thử: ' + esc(e.message), 'err');
   }
@@ -548,14 +680,16 @@ async function saveTrialSettings(){
     if(!secret()) return setTrialStatus('Chưa nhập mật khẩu quản trị.', 'err');
     const value = Math.max(1, Math.round(Number(qs('trialDurationValue').value || 1)));
     const unit = qs('trialDurationUnit').value === 'days' ? 'days' : 'hours';
-    setTrialStatus('Đang lưu thời gian dùng thử...', '');
+    const trialGeminiApiKey = String(qs('trialGeminiApiKey').value || '').trim();
+    const trialYoutubeApiKey = String(qs('trialYoutubeApiKey').value || '').trim();
+    setTrialStatus('Đang lưu cài đặt dùng thử...', '');
     const data = await api('/api/admin-settings?action=save-trial', {
       method:'POST',
-      body: JSON.stringify({ account: { trialDurationValue: value, trialDurationUnit: unit } })
+      body: JSON.stringify({ account: { trialDurationValue: value, trialDurationUnit: unit, trialGeminiApiKey, trialYoutubeApiKey } })
     });
     trialSettingsLoaded = true;
-    setTrialStatus((data.message || 'Đã lưu.') + ` Tài khoản mới sẽ dùng thử <b>${trialLabel(value, unit)}</b>.`, 'ok');
-    setStatus(`Đã lưu thời gian dùng thử tài khoản mới: ${trialLabel(value, unit)}.`, 'ok');
+    setTrialStatus((data.message || 'Đã lưu.') + ` Tài khoản mới sẽ dùng thử <b>${trialLabel(value, unit)}</b>. Gemini: ${trialGeminiApiKey ? 'đã cài' : 'chưa cài'}; YouTube: ${trialYoutubeApiKey ? 'đã cài' : 'chưa cài'}.`, 'ok');
+    setStatus(`Đã lưu cài đặt dùng thử tài khoản mới: ${trialLabel(value, unit)}.`, 'ok');
   }catch(e){
     setTrialStatus('Lỗi lưu cấu hình dùng thử: ' + esc(e.message), 'err');
   }

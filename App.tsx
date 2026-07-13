@@ -182,6 +182,12 @@ interface SubscriptionInfo {
   userId?: string;
 }
 
+interface TrialApiKeys {
+  geminiApiKeys: string[];
+  youtubeApiKeys: string[];
+  expiresAt: string | null;
+}
+
 // --- Constants ---
 const DEFAULT_CONFIG: YouTubeConfig = {
   apiKeys: [],
@@ -846,6 +852,11 @@ export default function App() {
     try { return localStorage.getItem('youtube_gemini_api_key') || ''; }
     catch { return ''; }
   });
+  const [trialApiKeys, setTrialApiKeys] = useState<TrialApiKeys>({
+    geminiApiKeys: [],
+    youtubeApiKeys: [],
+    expiresAt: null,
+  });
   const [geminiKeyIndex, setGeminiKeyIndex] = useState(0);
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
@@ -864,6 +875,80 @@ export default function App() {
   const [youtubeKeyCheckResults, setYoutubeKeyCheckResults] = useState<Array<{ key: string; ok: boolean; label: string; detail: string }>>([]);
   const [showYoutubeKeyCheckResults, setShowYoutubeKeyCheckResults] = useState(true);
   const [showNicheModal, setShowNicheModal] = useState(false);
+
+  // Key do admin cấp chỉ tồn tại trong RAM của tab hiện tại. Endpoint phía server
+  // xác thực Firebase UID và chỉ trả key khi chính tài khoản đó là trial còn hạn.
+  useEffect(() => {
+    let cancelled = false;
+    let expiryTimer: number | null = null;
+    const expiresAtMs = subscriptionInfo?.expiresAt ? new Date(subscriptionInfo.expiresAt).getTime() : 0;
+    const isActiveTrial = Boolean(
+      user &&
+      subscriptionInfo?.active &&
+      subscriptionInfo?.accountType === 'trial' &&
+      expiresAtMs > Date.now()
+    );
+
+    const clearTrialAccess = () => {
+      if (cancelled) return;
+      setTrialApiKeys({ geminiApiKeys: [], youtubeApiKeys: [], expiresAt: null });
+      setExhaustedKeys([]);
+      exhaustedKeysRef.current = [];
+      setExhaustedGeminiKeys([]);
+      exhaustedGeminiKeysRef.current = [];
+      setYoutubeKeyCheckResults([]);
+      setGeminiKeyCheckResults([]);
+    };
+
+    const scheduleExpiry = () => {
+      const remaining = expiresAtMs - Date.now();
+      if (remaining <= 0) {
+        clearTrialAccess();
+        setSubscriptionInfo(previous => previous?.accountType === 'trial'
+          ? { ...previous, active: false, premium: false, accountType: 'expired', remainingMs: 0, remainingText: 'Đã hết hạn' }
+          : previous
+        );
+        setSubscriptionTick(Date.now());
+        return;
+      }
+      expiryTimer = window.setTimeout(scheduleExpiry, Math.min(remaining, 24 * 60 * 60 * 1000));
+    };
+
+    if (!isActiveTrial) {
+      clearTrialAccess();
+      return () => { cancelled = true; };
+    }
+
+    scheduleExpiry();
+    (async () => {
+      try {
+        const idToken = await user!.getIdToken();
+        const response = await fetch(`/api/me/trial-keys?userId=${encodeURIComponent(user!.uid)}`, {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const data = await response.json().catch(() => ({}));
+        const keyExpiresAt = data?.expiresAt ? new Date(data.expiresAt).getTime() : 0;
+        if (cancelled || !response.ok || !data?.success || keyExpiresAt <= Date.now()) {
+          if (!cancelled) clearTrialAccess();
+          return;
+        }
+        setTrialApiKeys({
+          geminiApiKeys: Array.isArray(data.geminiApiKeys) ? data.geminiApiKeys.map(String).map((key: string) => key.trim()).filter(Boolean) : [],
+          youtubeApiKeys: Array.isArray(data.youtubeApiKeys) ? data.youtubeApiKeys.map(String).map((key: string) => key.trim()).filter(Boolean) : [],
+          expiresAt: data.expiresAt,
+        });
+      } catch (error) {
+        console.warn('Không lấy được API key dùng thử:', error);
+        clearTrialAccess();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (expiryTimer !== null) window.clearTimeout(expiryTimer);
+    };
+  }, [user?.uid, subscriptionInfo?.active, subscriptionInfo?.accountType, subscriptionInfo?.expiresAt]);
   const clearHistory = () => {
     triggerConfirm(
       "Xóa lịch sử",
@@ -1302,6 +1387,11 @@ export default function App() {
 
   // Save exhausted keys whenever they change
   useEffect(() => {
+    if (isActiveTrialAccount()) {
+      // Tuyệt đối không ghi key do admin cấp vào cache/lịch sử của trình duyệt user.
+      localStorage.removeItem('youtube_exhausted_keys');
+      return;
+    }
     const today = new Date().toISOString().split('T')[0];
     exhaustedKeysRef.current = exhaustedKeys.map(k => String(k || '').trim()).filter(Boolean);
     if (exhaustedKeys.length > 0) {
@@ -1319,7 +1409,27 @@ export default function App() {
   }, [exhaustedGeminiKeys]);
 
   // --- API Helpers ---
-  const getActiveApiKey = () => config.apiKeys[apiKeyIndex] || '';
+  const isActiveTrialAccount = () => {
+    const subscriptionExpiry = subscriptionInfo?.expiresAt ? new Date(subscriptionInfo.expiresAt).getTime() : 0;
+    return Boolean(
+      subscriptionInfo?.active &&
+      subscriptionInfo?.accountType === 'trial' &&
+      subscriptionExpiry > Date.now()
+    );
+  };
+
+  const trialKeysAreLoaded = () => {
+    const keyExpiry = trialApiKeys.expiresAt ? new Date(trialApiKeys.expiresAt).getTime() : 0;
+    return isActiveTrialAccount() && keyExpiry > Date.now();
+  };
+
+  const getTrialYoutubeKeys = () => trialKeysAreLoaded() ? trialApiKeys.youtubeApiKeys : [];
+  const getTrialGeminiKeys = () => trialKeysAreLoaded() ? trialApiKeys.geminiApiKeys : [];
+
+  const getActiveApiKey = () => {
+    const keys = isActiveTrialAccount() ? getTrialYoutubeKeys() : config.apiKeys;
+    return keys[apiKeyIndex] || '';
+  };
 
   const rotateApiKey = () => {
     // Find next available key that isn't exhausted
@@ -1342,7 +1452,9 @@ export default function App() {
     return false;
   };
 
-  const getActiveGeminiKeys = () => parseGeminiKeyText(geminiApiKey);
+  const getActiveGeminiKeys = () => isActiveTrialAccount()
+    ? getTrialGeminiKeys()
+    : parseGeminiKeyText(geminiApiKey);
 
   const getActiveGeminiKey = () => {
     const keys = getActiveGeminiKeys();
@@ -3107,7 +3219,9 @@ JSON mẫu:
 
   const analyzeWithAI = async () => {
     if (getActiveGeminiKeys().length === 0) {
-      setStatus('Lỗi: Vui lòng nhập ít nhất 1 Gemini API Key ở Cài đặt API.');
+      setStatus(isActiveTrialAccount()
+        ? 'Gemini API Key dùng thử chưa được admin cấu hình hoặc đang tải. Vui lòng thử lại sau.'
+        : 'Lỗi: Vui lòng nhập ít nhất 1 Gemini API Key ở Cài đặt API.');
       return;
     }
     if (!nicheResults) return;
@@ -3162,6 +3276,7 @@ JSON mẫu:
   ]);
 
   const getMergedYoutubeKeys = () => {
+    if (isActiveTrialAccount()) return getTrialYoutubeKeys();
     const fromTextarea = manualKeysInput
       .split(/\r?\n/)
       .map(k => String(k || '').trim())
@@ -3237,7 +3352,9 @@ JSON mẫu:
     setIsCheckingYoutubeKeys(false);
     const goodKeys = results.filter(r => r.ok).map(r => r.key);
     if (goodKeys.length) {
-      setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      if (!isActiveTrialAccount()) {
+        setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      }
       setApiKeyIndex(Math.max(0, keys.findIndex(k => k === goodKeys[0])));
       setExhaustedKeys(prev => prev.filter(k => !goodKeys.includes(k)));
       exhaustedKeysRef.current = exhaustedKeysRef.current.filter(k => !goodKeys.includes(k));
@@ -3250,12 +3367,14 @@ JSON mẫu:
   const youtubeFetch = async (endpoint: string, params: Record<string, any>, retryCount = 0): Promise<any> => {
     const keys = getMergedYoutubeKeys();
     if (keys.length === 0) {
-      throw new Error('Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
+      throw new Error(isActiveTrialAccount()
+        ? 'YouTube API Key dùng thử chưa được admin cấu hình hoặc đang tải. Vui lòng thử lại sau.'
+        : 'Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
     }
 
     // Đồng bộ ngay danh sách key đang nhập để hệ thống xoay vòng đủ key, không cần bấm lưu lại.
     const currentConfigKeys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
-    if (keys.join('\n') !== currentConfigKeys.join('\n')) {
+    if (!isActiveTrialAccount() && keys.join('\n') !== currentConfigKeys.join('\n')) {
       setConfig(prev => ({ ...prev, apiKeys: keys }));
       localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
       localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
@@ -5619,11 +5738,11 @@ Quy tắc:
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Video size={12} className="text-red-500" /> YouTube V3:</span>
-                            <span className="text-[10px] font-black text-blue-600">{config.apiKeys.length} Keys ({exhaustedKeys.length} Lỗi)</span>
+                            <span className="text-[10px] font-black text-blue-600">{getMergedYoutubeKeys().length} Keys ({exhaustedKeys.length} Lỗi){isActiveTrialAccount() ? ' · Dùng thử' : ''}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Bot size={12} className="text-indigo-500" /> Gemini AI:</span>
-                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)` : 'Chưa có'}</span>
+                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)${isActiveTrialAccount() ? ' · Dùng thử' : ''}` : 'Chưa có'}</span>
                           </div>
                         </div>
                       </div>
