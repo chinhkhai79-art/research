@@ -668,7 +668,7 @@ async function loadUsers(page = 1, force = false){
     const q = currentSearch();
     currentUsersPage = Math.max(1, Number(page || 1));
     setStatus('Đang tải danh sách Supabase...', '');
-    const url = '/api/admin-users?limit=' + USERS_PAGE_SIZE + '&page=' + currentUsersPage + (force ? '&force=1' : '') + (q ? '&q='+encodeURIComponent(q) : '');
+    const url = '/api/admin-account?action=users&limit=' + USERS_PAGE_SIZE + '&page=' + currentUsersPage + (force ? '&force=1' : '') + (q ? '&q='+encodeURIComponent(q) : '');
     const data = await api(url);
     renderUsers(data.users || [], data);
     updateUsersPager(data);
@@ -737,7 +737,7 @@ async function activateUser(){
     };
     if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
     setStatus('Đang kích hoạt/cộng ngày...', '');
-    const data = await api('/api/admin-activate-user', { method:'POST', body: JSON.stringify(body) });
+    const data = await api('/api/admin-account?action=activate', { method:'POST', body: JSON.stringify(body) });
     await loadUsers(currentUsersPage, true);
     setStatus(`Đã kích hoạt/cộng ngày PRO cho <b>${esc(data.email || body.email || body.uid)}</b>. Hết hạn mới: <b>${esc(fmtDate(data.expiresAt))}</b>.`, 'ok');
   }catch(e){ setStatus('Lỗi kích hoạt: '+esc(e.message), 'err'); }
@@ -750,7 +750,7 @@ async function disableUser(){
     const body = { uid: qs('activateUid').value.trim(), email: qs('activateEmail').value.trim(), reason: qs('reason').value.trim() };
     if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
     setStatus('Đang khóa/hủy PRO...', '');
-    const data = await api('/api/admin-disable-user', { method:'POST', body: JSON.stringify(body) });
+    const data = await api('/api/admin-account?action=disable', { method:'POST', body: JSON.stringify(body) });
     await loadUsers(currentUsersPage, true);
     setStatus(`Đã khóa/hủy PRO. Số tài khoản ảnh hưởng: <b>${esc(data.affectedCount || 0)}</b>.`, 'ok');
   }catch(e){ setStatus('Lỗi khóa tài khoản: '+esc(e.message), 'err'); }
@@ -765,7 +765,7 @@ async function resetHistoryNow(){
     const typed = prompt('Nhập XOA để xác nhận xóa vĩnh viễn và bắt đầu tính lại từ bây giờ:');
     if(String(typed || '').trim().toUpperCase() !== 'XOA') return setStatus('Đã hủy xóa lịch sử.', '');
     setStatus('Đang xóa lịch sử thanh toán, doanh thu và logs...', '');
-    const data = await api('/api/admin-logs?type=reset-history', {
+    const data = await api('/api/admin-account?action=reset-history', {
       method:'POST',
       body: JSON.stringify({ confirmText:'XOA' })
     });
@@ -783,7 +783,7 @@ async function resetHistoryNow(){
 async function loadLogs(){
   try{
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
-    const data = await api('/api/admin-logs?limit=50');
+    const data = await api('/api/admin-account?action=logs&limit=50');
     const logs = data.logs || [];
     qs('logsBody').innerHTML = logs.map(l => `<tr>
       <td>${esc(fmtDate(l.createdAt))}</td>
@@ -804,7 +804,7 @@ async function loadRevenue(){
     const days = qs('revenueRange').value || '30';
     const q = currentSearch();
     setStatus('Đang tải dữ liệu doanh thu...', '');
-    const data = await api('/api/admin-logs?type=revenue&limit=500&days=' + encodeURIComponent(days) + (q ? '&q=' + encodeURIComponent(q) : ''));
+    const data = await api('/api/admin-account?action=revenue&limit=500&days=' + encodeURIComponent(days) + (q ? '&q=' + encodeURIComponent(q) : ''));
     renderRevenueStats(data.stats || {}, days);
     revenueState.orders = data.orders || [];
     revenueState.pending = data.pending || [];
@@ -960,7 +960,7 @@ async function bulkExtendPreview(){
   qs('bulkApplyBtn').disabled = true;
 
   try {
-    const data = await api('/api/admin-activate-user', {
+    const data = await api('/api/admin-account?action=activate', {
       method: 'POST',
       body: JSON.stringify({ action: 'bulk_extend_preview', days, scope, reason })
     });
@@ -1020,7 +1020,7 @@ async function bulkExtendApply(){
   setStatus('Đang cộng ngày hàng loạt... (có thể mất 5-30 giây)', '');
 
   try {
-    const data = await api('/api/admin-activate-user', {
+    const data = await api('/api/admin-account?action=activate', {
       method: 'POST',
       body: JSON.stringify({ action: 'bulk_extend_apply', days, scope, reason })
     });
