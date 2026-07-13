@@ -70,6 +70,12 @@
       .msg{max-width:calc(100vw - 24px)!important;font-size:14px!important;padding:12px 14px!important}
     }
 
+    /* v63: mobile panel cao đúng nội dung, không bị che phần cuối */
+    @media(max-width:760px){
+      html,body{overflow-x:hidden!important;overflow-y:visible!important;min-height:auto!important}
+      .wrap,.page{padding-bottom:96px!important;min-height:auto!important}
+    }
+
   </style>
 </head>
 <body>

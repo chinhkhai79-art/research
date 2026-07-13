@@ -117,6 +117,12 @@
 
     /* v35: không dùng thanh cuộn nội bộ trong panel */
     html,body,.page,.grid-card,.body{overflow:visible!important;max-height:none!important}
+    /* v63: mobile panel cao đúng nội dung, không bị che phần cuối */
+    @media(max-width:760px){
+      html,body{overflow-x:hidden!important;overflow-y:visible!important;min-height:auto!important}
+      .wrap,.page{padding-bottom:96px!important;min-height:auto!important}
+    }
+
   </style>
 </head>
 <body>

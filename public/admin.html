@@ -81,6 +81,11 @@
     .guide-video-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
     @media(max-width:750px){.top-actions{width:100%;justify-content:center}.guide-header-btn,.back{width:100%;justify-content:center;text-align:center}.guide-grid{grid-template-columns:1fr}.guide-config{padding:12px}.guide-config-title{font-size:16px}}
 
+    /* v63: mobile admin không cắt nội dung iframe và có nút lên đầu trang */
+    .admin-scroll-top{position:fixed;right:18px;bottom:18px;z-index:99990;display:none;align-items:center;justify-content:center;gap:7px;border:1px solid #bae6fd;background:#22d3ee;color:#00111f;border-radius:999px;padding:11px 14px;min-width:46px;min-height:46px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-size:14px;font-weight:500;cursor:pointer}
+    .admin-scroll-top.show{display:inline-flex}
+    @media(max-width:750px){.admin-scroll-top{right:14px;bottom:14px;padding:10px 12px;font-size:13px}}
+
   </style>
 </head>
 <body>
@@ -148,13 +153,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=62" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=63" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=62" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=63" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=62" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=63" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -171,6 +176,8 @@
       </div>
     </div>
   </div>
+
+  <button id="adminScrollTopBtn" class="admin-scroll-top" type="button" aria-label="Lên đầu trang">↑ Đầu trang</button>
 
   <script>
     try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
@@ -368,8 +375,8 @@
           var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
           if (r && rect) bottom = Math.max(bottom, Math.ceil(r.bottom - rect.top));
         }
-        h = Math.max(h, bottom, 360) + 8;
-        return Math.min(Math.ceil(h), 3600);
+        h = Math.max(h, bottom, 360) + 96;
+        return Math.min(Math.ceil(h), 50000);
       } catch (_) { return 0; }
     }
     function resizeFrame(frame){
@@ -502,6 +509,18 @@
         var el = document.getElementById(id);
         if (el) el.addEventListener('keydown', function(ev){ if(ev.key === 'Enter') doAdminLogin(); });
       });
+
+      var scrollTopBtn = document.getElementById('adminScrollTopBtn');
+      if (scrollTopBtn) {
+        scrollTopBtn.addEventListener('click', function(){
+          try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); }
+        });
+        var updateScrollTopBtn = function(){
+          scrollTopBtn.classList.toggle('show', (window.scrollY || document.documentElement.scrollTop || 0) > 360);
+        };
+        window.addEventListener('scroll', updateScrollTopBtn, { passive: true });
+        updateScrollTopBtn();
+      }
       if (sessionStorage.getItem('TUBEKEY_ADMIN_AUTH_OK') === '1') showAdminMain();
       else showAdminLogin();
     });
