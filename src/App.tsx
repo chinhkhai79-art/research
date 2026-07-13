@@ -832,6 +832,7 @@ export default function App() {
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
   const [inlineVideoId, setInlineVideoId] = useState<string | null>(null);
+  const [guideVideoUrl, setGuideVideoUrl] = useState('');
   const [isAnalyzingVideo, setIsAnalyzingVideo] = useState(false);
   const [isVideoAuditAnalyzing, setIsVideoAuditAnalyzing] = useState(false);
   const [videoAuditProgress, setVideoAuditProgress] = useState(0);
@@ -1125,6 +1126,24 @@ export default function App() {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     };
   }, [status]);
+
+  useEffect(() => {
+    let stopped = false;
+    const loadGuideVideo = async () => {
+      try {
+        const res = await fetch('/api/payment-config', { cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!stopped && res.ok && data?.success !== false) {
+          setGuideVideoUrl(String(data?.guide?.videoUrl || '').trim());
+        }
+      } catch (err) {
+        console.warn('Không tải được link video hướng dẫn:', err);
+      }
+    };
+    loadGuideVideo();
+    return () => { stopped = true; };
+  }, []);
+
   const [progress, setProgress] = useState(0);
   const [isHunting, setIsHunting] = useState(false);
   const [quotaUsed, setQuotaUsed] = useState(0);
@@ -1464,18 +1483,37 @@ export default function App() {
     return ytCount > 0 || geminiCount > 0;
   };
 
+  const getLocalYoutubeApiKeys = () => {
+    const fromTextarea = manualKeysInput
+      .split(/\r?\n/)
+      .map(k => String(k || '').trim())
+      .filter(Boolean);
+    const fromConfig = config.apiKeys
+      .map(k => String(k || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set([...fromTextarea, ...fromConfig]));
+  };
+
+  const getLocalGeminiApiKeys = () => parseGeminiKeyText(geminiApiKey);
+
+  const hasUserYoutubeApiKeys = () => getLocalYoutubeApiKeys().length > 0;
+  const hasUserGeminiApiKeys = () => getLocalGeminiApiKeys().length > 0;
+
   const getTrialYoutubeApiKeys = () => {
-    if (!isActiveTrialWithServerKeys()) return [] as string[];
+    // Tài khoản trial chỉ dùng key do Admin cấp khi người dùng chưa tự nhập key riêng.
+    // Khi user dán/check key hợp lệ của họ, key riêng được ưu tiên và loại bỏ key trial khỏi luồng gọi API.
+    if (hasUserYoutubeApiKeys() || !isActiveTrialWithServerKeys()) return [] as string[];
     return Array.from(new Set((subscriptionInfo?.trialApiKeys?.youtubeApiKeys || []).map(k => String(k || '').trim()).filter(Boolean)));
   };
 
   const getTrialGeminiApiKeys = () => {
-    if (!isActiveTrialWithServerKeys()) return [] as string[];
+    // Tài khoản trial chỉ dùng key do Admin cấp khi người dùng chưa tự nhập key riêng.
+    if (hasUserGeminiApiKeys() || !isActiveTrialWithServerKeys()) return [] as string[];
     return Array.from(new Set((subscriptionInfo?.trialApiKeys?.geminiApiKeys || []).map(k => String(k || '').trim()).filter(Boolean)));
   };
 
-  const isUsingTrialYoutubeKeys = () => getTrialYoutubeApiKeys().length > 0;
-  const isUsingTrialGeminiKeys = () => getTrialGeminiApiKeys().length > 0;
+  const isUsingTrialYoutubeKeys = () => !hasUserYoutubeApiKeys() && getTrialYoutubeApiKeys().length > 0;
+  const isUsingTrialGeminiKeys = () => !hasUserGeminiApiKeys() && getTrialGeminiApiKeys().length > 0;
 
   const getActiveApiKey = () => {
     const keys = getMergedYoutubeKeys();
@@ -1505,9 +1543,9 @@ export default function App() {
   };
 
   const getActiveGeminiKeys = () => {
-    const trialKeys = getTrialGeminiApiKeys();
-    if (trialKeys.length) return trialKeys;
-    return parseGeminiKeyText(geminiApiKey);
+    const userKeys = getLocalGeminiApiKeys();
+    if (userKeys.length) return userKeys;
+    return getTrialGeminiApiKeys();
   };
 
   const getActiveGeminiKey = () => {
@@ -3975,16 +4013,9 @@ JSON mẫu:
   ]);
 
   const getMergedYoutubeKeys = () => {
-    const trialKeys = getTrialYoutubeApiKeys();
-    if (trialKeys.length) return trialKeys;
-    const fromTextarea = manualKeysInput
-      .split(/\r?\n/)
-      .map(k => String(k || '').trim())
-      .filter(Boolean);
-    const fromConfig = config.apiKeys
-      .map(k => String(k || '').trim())
-      .filter(Boolean);
-    return Array.from(new Set([...fromTextarea, ...fromConfig]));
+    const userKeys = getLocalYoutubeApiKeys();
+    if (userKeys.length) return userKeys;
+    return getTrialYoutubeApiKeys();
   };
 
   const getYoutubeErrorText = (data: any, httpStatus?: number, err?: any) => {
@@ -5407,6 +5438,15 @@ ${topKeywordsStr}`;
   const openInlineVideo = (input?: string | null) => {
     const videoId = extractYouTubeVideoIdForEmbed(input || '');
     if (videoId) setInlineVideoId(videoId);
+  };
+
+  const openGuideVideo = () => {
+    const videoId = extractYouTubeVideoIdForEmbed(guideVideoUrl);
+    if (!videoId) {
+      setStatus('Admin chưa cấu hình link Video hướng dẫn hoặc link YouTube chưa hợp lệ.');
+      return;
+    }
+    setInlineVideoId(videoId);
   };
 
 
@@ -6910,6 +6950,16 @@ Quy tắc:
           </h1>
 
           <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); openGuideVideo(); }}
+              className="vtw-header-guide vtw-header-icon-btn px-4 py-2 rounded-xl bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              title="Video hướng dẫn"
+            >
+              <Video size={15} />
+              <span className="vtw-guide-label-full">Video hướng dẫn</span>
+              <span className="vtw-guide-label-mobile">Video</span>
+            </button>
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
                 <button

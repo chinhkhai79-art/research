@@ -207,6 +207,58 @@
     .pager-text,#usersPageText{font-size:12px!important;color:#000!important;white-space:nowrap!important;line-height:1.1!important}
     .pager-row button:disabled,#usersPager button:disabled{opacity:.45;cursor:not-allowed}
 
+
+    /* v59: mobile admin account/table cards - hiển thị đủ, không bị nén chữ */
+    @media(max-width:640px){
+      html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;background:transparent!important}
+      .wrap{width:100%!important;max-width:100%!important;padding:8px 8px 22px!important;overflow:visible!important}
+      .card{border-radius:18px!important;padding:14px!important;overflow:visible!important}
+      .tabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin:10px 0 12px!important}
+      .tabs button{width:100%!important;min-width:0!important;height:48px!important;padding:0 8px!important;border-radius:14px!important;font-size:13px!important;white-space:normal!important;line-height:1.2!important}
+      .grid,.grid2,.row{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+      .quick{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+      .quick button{width:100%!important;min-width:0!important;white-space:normal!important;line-height:1.2!important}
+      input,select,textarea{font-size:14px!important;padding:11px 12px!important;border-radius:13px!important;min-width:0!important}
+      .actions{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+      .actions button{width:100%!important;min-width:0!important;white-space:normal!important}
+      #usersPanel{padding:14px 12px!important}
+      #usersPanel>div:first-child{align-items:flex-start!important}
+      #usersPanel h2{font-size:21px!important;line-height:1.25!important}
+      #countText{font-size:14px!important}
+      #usersPager{display:flex!important;justify-content:flex-end!important;gap:6px!important;margin-top:8px!important}
+      #usersPager button{width:34px!important;height:34px!important;min-width:34px!important;padding:0!important}
+      #usersPageText{font-size:13px!important}
+      .scroll{width:100%!important;overflow:visible!important;max-height:none!important;border-radius:0!important}
+      .users-table,.users-table tbody,.users-table tr,.users-table td{display:block!important;width:100%!important}
+      .users-table{border-collapse:separate!important;border-spacing:0!important;margin-top:12px!important;table-layout:auto!important}
+      .users-table thead{display:none!important}
+      .users-table tr{background:#fff!important;border:1px solid #d8e3ef!important;border-radius:16px!important;margin:0 0 10px!important;padding:10px 10px 8px!important;box-shadow:0 8px 22px rgba(15,23,42,.05)!important;overflow:visible!important}
+      .users-table tr:hover td{background:transparent!important}
+      .users-table td{border:0!important;padding:7px 0!important;font-size:13px!important;line-height:1.35!important;overflow:visible!important;word-break:break-word!important;white-space:normal!important;color:#000!important}
+      .users-table td:not(:last-child){display:grid!important;grid-template-columns:104px minmax(0,1fr)!important;gap:8px!important;align-items:start!important}
+      .users-table td::before{content:'';font-size:12px!important;color:#64748b!important;line-height:1.3!important}
+      .users-table td:nth-child(1)::before{content:'STT'}
+      .users-table td:nth-child(2)::before{content:'Email'}
+      .users-table td:nth-child(3)::before{content:'UID'}
+      .users-table td:nth-child(4)::before{content:'Trạng thái'}
+      .users-table td:nth-child(5)::before{content:'Gói'}
+      .users-table td:nth-child(6)::before{content:'Hết hạn'}
+      .users-table td:nth-child(7)::before{content:'Còn lại'}
+      .users-table td:nth-child(8)::before{content:'Đăng nhập'}
+      .users-table td:nth-child(9)::before{content:'Đơn gần nhất'}
+      .users-table td:nth-child(10)::before{content:'Thao tác';display:block!important;margin-bottom:6px!important;color:#64748b!important}
+      .users-table .stt-col{text-align:left!important;color:#000!important}
+      .cell2,.plan-cell,.login-cell,.uid-cell,.one-line{display:block!important;max-height:none!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;-webkit-line-clamp:unset!important;word-break:break-word!important;font-size:13px!important;line-height:1.35!important}
+      .uid-cell,.mono{word-break:break-all!important;font-size:12px!important}
+      .login-date,.login-count{font-size:13px!important;white-space:normal!important;display:block!important}
+      .users-table .badge{font-size:11px!important;padding:5px 8px!important;display:inline-flex!important;width:max-content!important;max-width:100%!important}
+      .users-table .row-actions{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:8px!important;width:100%!important;white-space:normal!important}
+      .users-table .row-actions .small{width:100%!important;height:36px!important;min-width:0!important;padding:0 8px!important;font-size:12px!important}
+      .trial-api-card .row>div .field, .trial-api-card .field>div{min-width:0!important}
+      .trial-api-card .field>div[style*="display:flex"]{display:grid!important;grid-template-columns:1fr 58px 64px!important;gap:6px!important}
+      .trial-api-card .field>div[style*="display:flex"] button{width:auto!important;min-width:0!important;padding:0 8px!important;height:40px!important}
+    }
+
   </style>
 </head>
 <body>

@@ -34,6 +34,42 @@
     .preview{border:1px solid #dbe7f3;border-radius:16px;background:#f8fafc;min-height:220px;padding:14px;overflow:visible}
     .switch-line{display:flex;align-items:center;gap:10px;color:#000}.switch-line input{width:18px;height:18px}.pill{display:flex;align-items:center;gap:8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:999px;padding:9px 12px;font-size:13px;color:#000;white-space:nowrap;min-height:42px;width:max-content;max-width:100%}.pill input{width:18px;height:18px}.mini-note{font-size:13px;line-height:1.5;color:#000;background:#f8fbff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-top:12px}
     @media(max-width:900px){.grid,.split{grid-template-columns:1fr}.page{padding:14px}.top{flex-direction:column;align-items:flex-start}.actions button{width:100%}.test-email-body{align-items:stretch}.test-email-field{min-width:0;max-width:100%}}
+
+    /* v59: mobile email templates - tránh tràn khung, form và preview hiển thị đầy đủ */
+    @media(max-width:640px){
+      html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important;background:transparent!important}
+      .page{width:100%!important;max-width:100%!important;padding:10px 8px 20px!important;overflow:visible!important}
+      .top{gap:8px!important;margin-bottom:12px!important}
+      .title h1{font-size:25px!important;line-height:1.2!important}
+      .muted{font-size:13px!important;line-height:1.45!important}
+      .card{width:100%!important;max-width:100%!important;border-radius:16px!important;margin-bottom:14px!important;overflow:visible!important}
+      .head{padding:14px 12px!important;gap:8px!important;display:grid!important;grid-template-columns:1fr!important}
+      .head h2{font-size:19px!important;line-height:1.25!important}
+      .body{padding:14px 12px!important;width:100%!important;max-width:100%!important;overflow:visible!important}
+      .split,.grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;width:100%!important;max-width:100%!important}
+      .split>div,.grid>div,.field{min-width:0!important;width:100%!important;max-width:100%!important}
+      label{font-size:13px!important;line-height:1.35!important}
+      input,textarea{width:100%!important;max-width:100%!important;min-width:0!important;font-size:14px!important;padding:11px 12px!important;border-radius:12px!important}
+      textarea{min-height:96px!important}
+      .test-email-body{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:12px!important}
+      .test-email-field,.test-email-note{width:100%!important;max-width:100%!important;min-width:0!important}
+      .switch-line{align-items:flex-start!important;line-height:1.35!important}
+      .pill{width:100%!important;max-width:100%!important;justify-content:flex-start!important}
+      .actions{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;margin-top:12px!important}
+      .actions button,#reloadBtn{width:100%!important;min-width:0!important;white-space:normal!important;line-height:1.25!important}
+      .mini-note{font-size:13px!important;line-height:1.45!important;word-break:break-word!important}
+      .preview{width:100%!important;max-width:100%!important;min-height:0!important;padding:10px!important;overflow:hidden!important;border-radius:14px!important}
+      .preview *{max-width:100%!important;box-sizing:border-box!important;word-break:break-word!important}
+      .preview>div{padding:0!important;background:#f6f9fe!important}
+      .preview>div>div{width:100%!important;margin:0!important;border-radius:14px!important;overflow:hidden!important}
+      .preview h2{font-size:21px!important;line-height:1.2!important}
+      .preview p{font-size:14px!important;line-height:1.5!important}
+      .preview table{width:100%!important;table-layout:fixed!important;display:block!important;overflow:hidden!important}
+      .preview tbody,.preview tr,.preview td{display:block!important;width:100%!important}
+      .preview td{padding:8px 10px!important;border-bottom:1px solid #e2e8f0!important}
+      .msg{max-width:calc(100vw - 24px)!important;font-size:14px!important;padding:12px 14px!important}
+    }
+
   </style>
 </head>
 <body>

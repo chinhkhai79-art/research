@@ -191,6 +191,15 @@ export default async function handler(req, res) {
       return send(res, 200, { success: true, message: 'Đã lưu thời gian dùng thử cho tài khoản mới.', settings: maskSettings(next), changes });
     }
 
+    if (action === 'save-guide') {
+      const current = await getAppSettings();
+      const incoming = req.body?.guide || req.body || {};
+      const next = await saveAppSettings({ guide: { ...(current.guide || {}), ...incoming } });
+      const changes = diffSettings(current, next);
+      await logSettingsChange({ action: 'update_guide_video', changes, ip, reason: req.body?.reason || 'Cập nhật link video hướng dẫn' });
+      return send(res, 200, { success: true, message: 'Đã lưu link video hướng dẫn.', settings: maskSettings(next), changes });
+    }
+
     // Lưu riêng các gói (giá + ngày + bật/tắt). Giá này là nguồn chuẩn phía server.
     if (action === 'save-plans') {
       const current = await getAppSettings();

@@ -3782,3 +3782,69 @@ body .vtw-channel-trending-card {
     line-height: 1.06 !important;
   }
 }
+
+/* v61: nút Video hướng dẫn trên thanh tiêu đề đồng bộ với các nút header */
+.vtw-header-guide .vtw-guide-label-mobile { display: none; }
+@media (max-width: 768px) {
+  body .vtw-app-header .vtw-header-guide {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    order: 2 !important;
+    flex: 1 1 calc(25% - 5px) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 38px !important;
+    height: auto !important;
+    padding: 0 6px !important;
+    margin: 0 !important;
+    border-radius: 10px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+  }
+  body .vtw-app-header .vtw-header-logout,
+  body .vtw-app-header .vtw-header-upgrade,
+  body .vtw-app-header .vtw-header-refresh {
+    flex: 1 1 calc(25% - 5px) !important;
+  }
+  body .vtw-app-header .vtw-header-guide svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 14px !important;
+  }
+  body .vtw-app-header .vtw-header-guide .vtw-guide-label-full { display: none !important; }
+  body .vtw-app-header .vtw-header-guide .vtw-guide-label-mobile {
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-weight: 900 !important;
+  }
+}
+@media (max-width: 400px) {
+  body .vtw-app-header .vtw-header-guide {
+    min-height: 34px !important;
+    padding: 0 4px !important;
+    font-size: 9px !important;
+    gap: 3px !important;
+  }
+  body .vtw-app-header .vtw-header-guide svg {
+    width: 12px !important;
+    height: 12px !important;
+    flex: 0 0 12px !important;
+  }
+  body .vtw-app-header .vtw-header-guide .vtw-guide-label-mobile { font-size: 9px !important; }
+}
