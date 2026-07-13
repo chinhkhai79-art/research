@@ -48,6 +48,28 @@ async function testEmail(settings, testEmail) {
   return true;
 }
 
+
+async function checkYoutubeTrialApiKey(key) {
+  const clean = String(key || '').trim();
+  if (!clean) throw new Error('Vui lòng nhập YouTube API Key V3 để kiểm tra.');
+  const params = new URLSearchParams({ part: 'snippet', chart: 'mostPopular', regionCode: 'US', maxResults: '1', key: clean });
+  const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+  const data = await r.json().catch(() => ({}));
+  if (r.ok && !data?.error) return { ok: true, message: 'YouTube API Key V3 hợp lệ và gọi được dữ liệu thật.' };
+  const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || data?.error?.message || `HTTP ${r.status}`;
+  throw new Error(`YouTube API Key chưa dùng được: ${reason}`);
+}
+
+async function checkGeminiTrialApiKey(key) {
+  const clean = String(key || '').trim();
+  if (!clean) throw new Error('Vui lòng nhập Gemini API Key để kiểm tra.');
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(clean)}`);
+  const data = await r.json().catch(() => ({}));
+  if (r.ok && !data?.error) return { ok: true, message: 'Gemini API Key hợp lệ và gọi được Google Generative Language API.' };
+  const reason = data?.error?.message || data?.error?.status || `HTTP ${r.status}`;
+  throw new Error(`Gemini API Key chưa dùng được: ${reason}`);
+}
+
 // === TÍNH NĂNG MỚI: trạng thái hệ thống ===
 // Trả về flag cho biết các thành phần quan trọng đã cấu hình chưa.
 async function getSystemStatus() {
@@ -111,6 +133,16 @@ export default async function handler(req, res) {
 
     if (req.method !== 'POST') return send(res, 405, { success: false, error: 'Method not allowed' });
 
+    if (action === 'check-trial-youtube-key') {
+      const result = await checkYoutubeTrialApiKey(req.body?.key || req.body?.trialYoutubeApiKey || req.body?.youtubeApiKey);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === 'check-trial-gemini-key') {
+      const result = await checkGeminiTrialApiKey(req.body?.key || req.body?.trialGeminiApiKey || req.body?.geminiApiKey);
+      return send(res, 200, { success: true, ...result });
+    }
+
     if (action === 'save-payment') {
       const current = await getAppSettings();
       const incoming = req.body?.payment || req.body || {};
@@ -156,7 +188,7 @@ export default async function handler(req, res) {
       const next = await saveAppSettings({ account: { ...(current.account || {}), ...incoming } });
       const changes = diffSettings(current, next);
       await logSettingsChange({ action: 'update_trial_settings', changes, ip, reason: req.body?.reason || 'Đổi thời gian dùng thử tài khoản mới' });
-      return send(res, 200, { success: true, message: 'Đã lưu thời gian và API key dùng thử cho tài khoản mới.', settings: maskSettings(next), changes });
+      return send(res, 200, { success: true, message: 'Đã lưu thời gian dùng thử cho tài khoản mới.', settings: maskSettings(next), changes });
     }
 
     // Lưu riêng các gói (giá + ngày + bật/tắt). Giá này là nguồn chuẩn phía server.

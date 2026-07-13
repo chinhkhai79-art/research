@@ -48,7 +48,7 @@ function getRemainingText(expiresAt) {
 function emptyResponse(userId, accountType = "none") {
   return { success: true, active: false, premium: false, accountType, plan: null, planId: null, planName: null, startedAt: null, expiresAt: null, remainingMs: 0, remainingText: "---", userId };
 }
-function buildResponse(userId, data = {}) {
+function buildResponse(userId, data = {}, settings = null) {
   const sub = data?.subscriptionInfo || data?.subscription || {};
   const premiumExpiresAt = toDate(data.premiumExpiresAt || data.expired_at || data.expiresAt || data.proUntil || sub.expiresAt || sub.premiumExpiresAt);
   const trialExpiresAt = toDate(data.trialExpiresAt || sub.trialExpiresAt);
@@ -64,6 +64,10 @@ function buildResponse(userId, data = {}) {
   const startedAt = premiumActive ? premiumStartedAt : trialActive ? trialStartedAt : (premiumStartedAt || trialStartedAt);
   const planId = data.planId || sub.planId || null;
   const planName = data.planName || sub.planName || null;
+  const trialApiKeys = trialActive ? {
+    youtubeApiKeys: String(settings?.account?.trialYoutubeApiKey || '').trim() ? [String(settings.account.trialYoutubeApiKey).trim()] : [],
+    geminiApiKeys: String(settings?.account?.trialGeminiApiKey || '').trim() ? [String(settings.account.trialGeminiApiKey).trim()] : []
+  } : null;
   return {
     success: true,
     active,
@@ -76,7 +80,8 @@ function buildResponse(userId, data = {}) {
     expiresAt: expiresAt ? expiresAt.toISOString() : null,
     remainingMs: expiresAt ? Math.max(0, expiresAt.getTime() - now) : 0,
     remainingText: getRemainingText(expiresAt),
-    userId
+    userId,
+    ...(trialApiKeys && (trialApiKeys.youtubeApiKeys.length || trialApiKeys.geminiApiKeys.length) ? { trialApiKeys } : {})
   };
 }
 function cacheKey(userId) { return String(userId || "").trim(); }
@@ -99,7 +104,9 @@ function readMemoryCache(userId, maxAgeMs = MEMORY_CACHE_TTL_MS) {
 }
 function saveMemoryCache(userId, data) {
   if (!userId || !data || data.success === false) return;
-  subscriptionMemoryCache.set(cacheKey(userId), { cachedAt: Date.now(), data: { ...data } });
+  const safeData = { ...data };
+  delete safeData.trialApiKeys;
+  subscriptionMemoryCache.set(cacheKey(userId), { cachedAt: Date.now(), data: safeData });
   if (subscriptionMemoryCache.size > 2000) {
     const firstKey = subscriptionMemoryCache.keys().next().value;
     if (firstKey) subscriptionMemoryCache.delete(firstKey);
@@ -122,7 +129,7 @@ async function findPendingEmailActivationSupabase(email, userId) {
 }
 async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initTrial, force }) {
   const cached = !force ? readMemoryCache(userId, initTrial ? INIT_CACHE_TTL_MS : MEMORY_CACHE_TTL_MS) : null;
-  if (cached && (!initTrial || cached.active)) return cached;
+  if (cached && cached.accountType !== "trial" && (!initTrial || cached.active)) return cached;
 
   const existing = await sbGetUserByUid(userId);
   let user = existing?.data || null;
@@ -158,7 +165,7 @@ async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initT
       }
       const saved = await sbUpsertUser(userId, merged);
       await sbUpsertUser(pending.row.uid, { ...pendingData, migratedTo: userId, migratedAt: new Date().toISOString() });
-      const response = buildResponse(userId, saved.data);
+      const response = buildResponse(userId, saved.data, await getAppSettings().catch(() => null));
       saveMemoryCache(userId, response);
       return response;
     }
@@ -193,7 +200,7 @@ async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initT
       updated_at: now.toISOString()
     };
     const saved = await sbUpsertUser(userId, trialData);
-    const response = buildResponse(userId, saved.data);
+    const response = buildResponse(userId, saved.data, settings);
     saveMemoryCache(userId, response);
     return response;
   }
@@ -218,7 +225,7 @@ async function handleSubscriptionSupabase({ userId, email, name, photoUrl, initT
     }
   }
 
-  const response = buildResponse(userId, user);
+  const response = buildResponse(userId, user, await getAppSettings().catch(() => null));
   saveMemoryCache(userId, response);
   return response;
 }

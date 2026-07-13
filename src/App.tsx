@@ -183,6 +183,10 @@ interface SubscriptionInfo {
   remainingMs?: number;
   remainingText?: string;
   userId?: string;
+  trialApiKeys?: {
+    youtubeApiKeys?: string[];
+    geminiApiKeys?: string[];
+  };
 }
 
 // --- Constants ---
@@ -624,6 +628,12 @@ export default function App() {
 
   const getSubscriptionCacheKey = (uid: string) => `vtw_subscription_cache_${uid}`;
 
+  const stripTrialApiKeysForCache = (data: SubscriptionInfo) => {
+    const safe = { ...(data || {}) } as SubscriptionInfo;
+    delete (safe as any).trialApiKeys;
+    return safe;
+  };
+
   const readCachedSubscription = (uid: string) => {
     try {
       const raw = localStorage.getItem(getSubscriptionCacheKey(uid));
@@ -658,7 +668,7 @@ export default function App() {
 
   const saveSubscriptionCache = (uid: string, data: SubscriptionInfo) => {
     try {
-      localStorage.setItem(getSubscriptionCacheKey(uid), JSON.stringify({ cachedAt: Date.now(), data }));
+      localStorage.setItem(getSubscriptionCacheKey(uid), JSON.stringify({ cachedAt: Date.now(), data: stripTrialApiKeysForCache(data) }));
     } catch (_) {}
   };
 
@@ -671,7 +681,7 @@ export default function App() {
 
     if (!force) {
       const cached = readCachedSubscription(targetUser.uid);
-      if (cached && cached.active) {
+      if (cached && cached.active && cached.accountType !== 'trial') {
         setSubscriptionInfo(cached);
         setSubscriptionError(null);
         return cached;
@@ -750,7 +760,7 @@ export default function App() {
       if (currentUser) {
         const force = shouldForceSubscriptionRefresh();
         const cached = !force ? readCachedSubscription(currentUser.uid) : null;
-        if (cached && cached.active) {
+        if (cached && cached.active && cached.accountType !== 'trial') {
           setSubscriptionInfo(cached);
           setSubscriptionError(null);
         } else {
@@ -789,6 +799,27 @@ export default function App() {
       window.removeEventListener('focus', onFocus);
     };
   }, [user]);
+
+
+  useEffect(() => {
+    if (!subscriptionInfo || subscriptionInfo.accountType !== 'trial' || !subscriptionInfo.expiresAt) return;
+    const expires = new Date(subscriptionInfo.expiresAt).getTime();
+    if (Number.isNaN(expires)) return;
+    const delay = Math.max(0, expires - Date.now() + 500);
+    const timer = window.setTimeout(() => {
+      setSubscriptionTick(Date.now());
+      setSubscriptionInfo(prev => prev && prev.accountType === 'trial' ? {
+        ...prev,
+        active: false,
+        premium: false,
+        accountType: 'expired',
+        remainingMs: 0,
+        remainingText: 'Đã hết hạn',
+        trialApiKeys: undefined
+      } : prev);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [subscriptionInfo?.accountType, subscriptionInfo?.expiresAt]);
 
   // STEP_11: Loại bỏ hoàn toàn chip trạng thái/PRO nổi để không che giao diện web/mobile.
   // Vẫn giữ logic kiểm tra gói ở header/tài khoản, chỉ xóa DOM cũ nếu còn tồn tại sau deploy.
@@ -1422,11 +1453,39 @@ export default function App() {
   }, [exhaustedGeminiKeys]);
 
   // --- API Helpers ---
-  const getActiveApiKey = () => config.apiKeys[apiKeyIndex] || '';
+  const isActiveTrialWithServerKeys = () => {
+    if (!subscriptionInfo || subscriptionInfo.accountType !== 'trial' || !subscriptionInfo.active) return false;
+    if (subscriptionInfo.expiresAt) {
+      const expires = new Date(subscriptionInfo.expiresAt).getTime();
+      if (!Number.isNaN(expires) && expires <= Date.now()) return false;
+    }
+    const ytCount = (subscriptionInfo.trialApiKeys?.youtubeApiKeys || []).map(k => String(k || '').trim()).filter(Boolean).length;
+    const geminiCount = (subscriptionInfo.trialApiKeys?.geminiApiKeys || []).map(k => String(k || '').trim()).filter(Boolean).length;
+    return ytCount > 0 || geminiCount > 0;
+  };
+
+  const getTrialYoutubeApiKeys = () => {
+    if (!isActiveTrialWithServerKeys()) return [] as string[];
+    return Array.from(new Set((subscriptionInfo?.trialApiKeys?.youtubeApiKeys || []).map(k => String(k || '').trim()).filter(Boolean)));
+  };
+
+  const getTrialGeminiApiKeys = () => {
+    if (!isActiveTrialWithServerKeys()) return [] as string[];
+    return Array.from(new Set((subscriptionInfo?.trialApiKeys?.geminiApiKeys || []).map(k => String(k || '').trim()).filter(Boolean)));
+  };
+
+  const isUsingTrialYoutubeKeys = () => getTrialYoutubeApiKeys().length > 0;
+  const isUsingTrialGeminiKeys = () => getTrialGeminiApiKeys().length > 0;
+
+  const getActiveApiKey = () => {
+    const keys = getMergedYoutubeKeys();
+    return keys[apiKeyIndex] || keys[0] || '';
+  };
 
   const rotateApiKey = () => {
+    const keys = getMergedYoutubeKeys();
     // Find next available key that isn't exhausted
-    const nextIndex = config.apiKeys.findIndex((key, idx) => 
+    const nextIndex = keys.findIndex((key, idx) => 
       idx > apiKeyIndex && !exhaustedKeys.includes(key)
     );
     
@@ -1436,7 +1495,7 @@ export default function App() {
     }
 
     // Wrap around to start if needed
-    const wrapIndex = config.apiKeys.findIndex((key) => !exhaustedKeys.includes(key));
+    const wrapIndex = keys.findIndex((key) => !exhaustedKeys.includes(key));
     if (wrapIndex !== -1 && wrapIndex !== apiKeyIndex) {
       setApiKeyIndex(wrapIndex);
       return true;
@@ -1445,7 +1504,11 @@ export default function App() {
     return false;
   };
 
-  const getActiveGeminiKeys = () => parseGeminiKeyText(geminiApiKey);
+  const getActiveGeminiKeys = () => {
+    const trialKeys = getTrialGeminiApiKeys();
+    if (trialKeys.length) return trialKeys;
+    return parseGeminiKeyText(geminiApiKey);
+  };
 
   const getActiveGeminiKey = () => {
     const keys = getActiveGeminiKeys();
@@ -2126,7 +2189,7 @@ export default function App() {
   };
 
   const fetchDailyTrendingFromYouTube = async () => {
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setStatus('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
       setShowKeyInputModal(true);
       return;
@@ -3017,7 +3080,7 @@ JSON mẫu:
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
     quotaUsedRef.current = 0;
     setQuotaUsed(0);
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
       setShowKeyInputModal(true);
       return;
@@ -3542,7 +3605,7 @@ JSON mẫu:
       localStorage.setItem('youtube_last_niche_keyword', kw);
     }
 
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setStatus('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
       setShowKeyInputModal(true);
       return;
@@ -3912,6 +3975,8 @@ JSON mẫu:
   ]);
 
   const getMergedYoutubeKeys = () => {
+    const trialKeys = getTrialYoutubeApiKeys();
+    if (trialKeys.length) return trialKeys;
     const fromTextarea = manualKeysInput
       .split(/\r?\n/)
       .map(k => String(k || '').trim())
@@ -3987,11 +4052,15 @@ JSON mẫu:
     setIsCheckingYoutubeKeys(false);
     const goodKeys = results.filter(r => r.ok).map(r => r.key);
     if (goodKeys.length) {
-      setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      if (!isUsingTrialYoutubeKeys()) {
+        setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      }
       setApiKeyIndex(Math.max(0, keys.findIndex(k => k === goodKeys[0])));
       setExhaustedKeys(prev => prev.filter(k => !goodKeys.includes(k)));
       exhaustedKeysRef.current = exhaustedKeysRef.current.filter(k => !goodKeys.includes(k));
-      setStatus(`YouTube: tìm thấy ${goodKeys.length}/${results.length} key hợp lệ. Tool sẽ dùng key hợp lệ để quét dữ liệu.`);
+      setStatus(isUsingTrialYoutubeKeys()
+        ? `YouTube: key dùng thử do Admin cấp đang hoạt động. Tài khoản trial sẽ tự khóa key khi hết hạn dùng thử.`
+        : `YouTube: tìm thấy ${goodKeys.length}/${results.length} key hợp lệ. Tool sẽ dùng key hợp lệ để quét dữ liệu.`);
     } else {
       setStatus('YouTube: chưa có key hợp lệ. Xem lỗi chi tiết ở phần Check YouTube Key.');
     }
@@ -4005,7 +4074,7 @@ JSON mẫu:
 
     // Đồng bộ ngay danh sách key đang nhập để hệ thống xoay vòng đủ key, không cần bấm lưu lại.
     const currentConfigKeys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
-    if (keys.join('\n') !== currentConfigKeys.join('\n')) {
+    if (!isUsingTrialYoutubeKeys() && keys.join('\n') !== currentConfigKeys.join('\n')) {
       setConfig(prev => ({ ...prev, apiKeys: keys }));
       localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
       localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
@@ -4597,7 +4666,7 @@ JSON mẫu:
 
 
   const startHunter = async () => {
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
       setShowKeyInputModal(true);
       return;
@@ -7276,19 +7345,19 @@ Quy tắc:
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Hệ thống API</span>
                           <div className="flex gap-1.5">
-                             <div className={`w-2 h-2 rounded-full ${config.apiKeys.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
-                             <div className={`w-2 h-2 rounded-full ${geminiApiKey ? 'bg-indigo-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                             <div className={`w-2 h-2 rounded-full ${getMergedYoutubeKeys().length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
+                             <div className={`w-2 h-2 rounded-full ${getActiveGeminiKeys().length ? 'bg-indigo-500 animate-pulse' : 'bg-gray-300'}`}></div>
                           </div>
                         </div>
 
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Video size={12} className="text-red-500" /> YouTube V3:</span>
-                            <span className="text-[10px] font-black text-blue-600">{config.apiKeys.length} Keys ({exhaustedKeys.length} Lỗi)</span>
+                            <span className="text-[10px] font-black text-blue-600">{isUsingTrialYoutubeKeys() ? `Trial ${getMergedYoutubeKeys().length} Key` : `${getMergedYoutubeKeys().length} Keys (${exhaustedKeys.length} Lỗi)`}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Bot size={12} className="text-indigo-500" /> Gemini AI:</span>
-                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)` : 'Chưa có'}</span>
+                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? (isUsingTrialGeminiKeys() ? `Trial ${getActiveGeminiKeys().length} Key` : `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)`) : 'Chưa có'}</span>
                           </div>
                         </div>
                       </div>
