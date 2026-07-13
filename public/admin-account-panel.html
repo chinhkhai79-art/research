@@ -259,6 +259,33 @@
       .trial-api-card .field>div[style*="display:flex"] button{width:auto!important;min-width:0!important;padding:0 8px!important;height:40px!important}
     }
 
+    /* v62: danh sách tài khoản mobile dùng card riêng, không nén bảng */
+    .users-cards{display:none}
+    @media(max-width:760px){
+      #usersPanel{padding:14px 12px!important;border-radius:18px!important}
+      #usersPanel>div:first-child{display:grid!important;grid-template-columns:1fr!important;gap:6px!important}
+      #countText{font-size:13px!important;color:#475569!important}
+      .users-table-wrap{display:none!important}
+      .users-cards{display:grid!important;grid-template-columns:1fr!important;gap:12px!important;margin-top:12px!important;width:100%!important}
+      .user-card{background:#fff!important;border:1px solid #d8e3ef!important;border-radius:16px!important;padding:12px!important;box-shadow:0 8px 22px rgba(15,23,42,.05)!important;color:#000!important;overflow:hidden!important}
+      .user-card-top{display:flex!important;justify-content:space-between!important;gap:10px!important;align-items:flex-start!important;margin-bottom:10px!important}
+      .user-card-index{width:30px;height:30px;border-radius:999px;background:#e0f2fe;border:1px solid #bae6fd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#075985;flex:0 0 30px}
+      .user-card-main{min-width:0;flex:1}
+      .user-card-email{font-size:14px!important;line-height:1.25!important;font-weight:600!important;color:#000!important;word-break:break-word!important}
+      .user-card-name{font-size:12px!important;line-height:1.25!important;margin-top:3px!important;color:#475569!important;word-break:break-word!important}
+      .user-card .badge{font-size:10.5px!important;padding:5px 8px!important;white-space:nowrap!important;flex:0 0 auto!important}
+      .user-card-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:8px!important}
+      .user-card-field{background:#f8fafc!important;border:1px solid #e2e8f0!important;border-radius:12px!important;padding:8px!important;min-width:0!important}
+      .user-card-field.wide{grid-column:1/-1!important}
+      .user-card-label{display:block!important;font-size:10.5px!important;letter-spacing:.02em;text-transform:uppercase;color:#64748b!important;margin-bottom:4px!important;line-height:1.1!important}
+      .user-card-value{display:block!important;font-size:12.5px!important;line-height:1.3!important;color:#000!important;word-break:break-word!important}
+      .user-card-value.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace!important;font-size:11.5px!important;word-break:break-all!important}
+      .user-card-actions{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:8px!important;margin-top:10px!important}
+      .user-card-actions button{width:100%!important;min-width:0!important;height:36px!important;border-radius:999px!important;font-size:12px!important;padding:0 8px!important}
+      body.admin-mobile-view .users-table-wrap{display:none!important}
+      body.admin-mobile-view .users-cards{display:grid!important}
+    }
+
   </style>
 </head>
 <body>
@@ -425,7 +452,7 @@
         <span class="muted" id="usersPageText">1 · 50/trang</span>
         <button class="btn-dark small" id="nextUsersPage" onclick="changeUsersPage(1)">›</button>
       </div>
-      <div class="scroll">
+      <div class="scroll users-table-wrap">
         <table class="users-table">
           <thead>
             <tr>
@@ -435,6 +462,7 @@
           <tbody id="usersBody"></tbody>
         </table>
       </div>
+      <div id="usersCards" class="users-cards" aria-label="Danh sách tài khoản mobile"></div>
     </div>
 
     <div id="logsPanel" class="card hidden">
@@ -575,6 +603,12 @@ function textMatch(obj, q){
   const hay = Object.values(obj || {}).map(v => typeof v === 'object' ? JSON.stringify(v || {}) : String(v ?? '')).join(' ').toLowerCase();
   return hay.includes(q.toLowerCase());
 }
+function syncMobileAccountLayout(){
+  try { document.body.classList.toggle('admin-mobile-view', window.innerWidth <= 760); } catch(_) {}
+}
+window.addEventListener('resize', syncMobileAccountLayout);
+window.addEventListener('orientationchange', function(){ setTimeout(syncMobileAccountLayout, 120); });
+syncMobileAccountLayout();
 
 function showTab(name){
   qs('usersPanel').classList.toggle('hidden', name !== 'users');
@@ -737,14 +771,17 @@ async function loadUsers(page = 1, force = false){
 function renderUsers(users, meta={}){
   const page = Number(meta.page || currentUsersPage || 1);
   qs('countText').textContent = `${users.length} tài khoản · trang ${page}`;
-  qs('usersBody').innerHTML = users.map((u, index)=>{
-    const badge = u.status === 'PRO'
+  const badgeFor = (u)=> u.status === 'PRO'
       ? '<span class="badge pro">PRO</span>'
       : u.status === 'TRIAL'
         ? '<span class="badge trial">TRIAL</span>'
         : u.status === 'CHƯA KIỂM TRA'
           ? '<span class="badge" style="background:#e0f2fe;color:#075985">CHƯA KIỂM TRA</span>'
           : '<span class="badge expired">HẾT HẠN</span>';
+  const emptyRow = '<tr><td colspan="10" class="muted">Chưa có tài khoản.</td></tr>';
+  const emptyCard = '<div class="user-card"><div class="user-card-value">Chưa có tài khoản.</div></div>';
+  const rows = users.map((u, index)=>{
+    const badge = badgeFor(u);
     const manual = u.manualActivation ? '<br><span class="muted">Manual/Pending</span>' : '';
     const sourceNote = u.source === 'firebase_auth_fallback' ? '<br><span class="muted">Tạm từ Firebase Auth</span>' : '';
     const loginInfo = u.lastLoginAt
@@ -767,7 +804,41 @@ function renderUsers(users, meta={}){
         <button class="btn-red small" onclick='quickDisable(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Khóa</button>
       </div></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="10" class="muted">Chưa có tài khoản.</td></tr>';
+  });
+  qs('usersBody').innerHTML = rows.join('') || emptyRow;
+  const cards = users.map((u, index)=>{
+    const badge = badgeFor(u);
+    const stt = ((page - 1) * USERS_PAGE_SIZE) + index + 1;
+    const name = String(u.name || '').trim();
+    const lastLogin = u.lastLoginAt ? `${esc(fmtDate(u.lastLoginAt))} · ${Number(u.loginCount || 0)} lần` : 'Chưa rõ';
+    const order = String(u.lastPaymentOrderCode || '').trim() || '---';
+    const uid = String(u.uid || '').trim() || '---';
+    return `<div class="user-card">
+      <div class="user-card-top">
+        <div class="user-card-index">${stt}</div>
+        <div class="user-card-main">
+          <div class="user-card-email">${esc(u.email || '')}</div>
+          ${name ? `<div class="user-card-name">${esc(name)}</div>` : ''}
+        </div>
+        ${badge}
+      </div>
+      <div class="user-card-grid">
+        <div class="user-card-field wide"><span class="user-card-label">UID</span><span class="user-card-value mono">${esc(uid)}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Gói</span><span class="user-card-value">${esc(u.planName || 'Chưa có')}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Hết hạn</span><span class="user-card-value">${esc(fmtDate(u.expiresAt))}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Còn lại</span><span class="user-card-value">${esc(u.remainingText || '---')}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Đăng nhập</span><span class="user-card-value">${lastLogin}</span></div>
+        <div class="user-card-field wide"><span class="user-card-label">Đơn gần nhất</span><span class="user-card-value mono">${esc(order)}</span></div>
+      </div>
+      <div class="user-card-actions">
+        <button class="btn small" onclick='fillUser(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Chọn</button>
+        <button class="btn-green small" onclick='quickAdd(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')}, 30)'>+30</button>
+        <button class="btn-red small" onclick='quickDisable(${JSON.stringify(u.uid || '')}, ${JSON.stringify(u.email || '')})'>Khóa</button>
+      </div>
+    </div>`;
+  });
+  if(qs('usersCards')) qs('usersCards').innerHTML = cards.join('') || emptyCard;
+  syncMobileAccountLayout();
 }
 
 function fillUser(uid,email){ qs('activateUid').value=uid||''; qs('activateEmail').value=email||''; showTab('action'); window.scrollTo({top:0,behavior:'smooth'}); }
