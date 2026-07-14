@@ -4042,15 +4042,17 @@ JSON mẫu:
   };
 
   const getYoutubeErrorText = (data: any, httpStatus?: number, err?: any) => {
-    return String(
-      data?.error?.errors?.[0]?.reason ||
-      data?.error?.status ||
-      data?.error?.message ||
-      data?.error ||
-      err?.message ||
-      err ||
+    const first = data?.error?.errors?.[0] || {};
+    return String([
+      first.reason,
+      first.message,
+      data?.error?.status,
+      data?.error?.message,
+      data?.error,
+      err?.message,
+      err,
       `HTTP_${httpStatus || 'UNKNOWN'}`
-    );
+    ].filter(Boolean).join(' | '));
   };
 
   const classifyYoutubeError = (data: any, httpStatus?: number, err?: any) => {
@@ -4065,8 +4067,8 @@ JSON mẫu:
     if (lower.includes('referer') || lower.includes('referrer') || lower.includes('ipreferer') || lower.includes('restriction') || lower.includes('request is missing')) {
       return { label: 'Key bị giới hạn domain/API', detail: 'Key đang bị giới hạn domain/referrer/API. Hãy cho phép domain tubekey.vn hoặc tạm bỏ Application restrictions để test.' };
     }
-    if (lower.includes('quota') || lower.includes('dailylimit') || lower.includes('ratelimit') || lower.includes('rate limit') || lower.includes('429')) {
-      return { label: 'Hết quota', detail: 'Key/project đã hết quota hoặc vượt giới hạn tốc độ. Tool sẽ tự xoay sang key khác nếu có.' };
+    if (lower.includes('quota') || lower.includes('dailylimit') || lower.includes('daily limit') || lower.includes('ratelimit') || lower.includes('rate limit') || lower.includes('user_rate_limit') || lower.includes('resource_exhausted') || lower.includes('429')) {
+      return { label: 'Key hợp lệ - hết dữ liệu api hôm nay', detail: 'Key/project hợp lệ nhưng quota YouTube Data API hôm nay đã hết hoặc đang vượt giới hạn tốc độ. Tool sẽ tự xoay sang key khác nếu có.' };
     }
     if (httpStatus === 403) {
       return { label: 'Project không có quyền gọi YouTube Data API', detail: 'Project/key bị từ chối quyền gọi YouTube Data API. Kiểm tra API restrictions, domain restrictions hoặc quota của project.' };
@@ -4108,6 +4110,12 @@ JSON mẫu:
     }
     setIsCheckingYoutubeKeys(false);
     const goodKeys = results.filter(r => r.ok).map(r => r.key);
+    const failedKeys = results.filter(r => !r.ok && r.key).map(r => r.key);
+    if (failedKeys.length) {
+      const nextFailed = Array.from(new Set([...exhaustedKeysRef.current, ...failedKeys])).filter(k => !goodKeys.includes(k));
+      exhaustedKeysRef.current = nextFailed;
+      setExhaustedKeys(nextFailed);
+    }
     if (goodKeys.length) {
       if (!isUsingTrialYoutubeKeys()) {
         setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
@@ -9974,7 +9982,7 @@ Quy tắc:
                             <div className="flex gap-2">
                               {exhaustedKeys.includes(key.trim()) && (
                                 <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                  LỖI / HẾT HẠN
+                                  LỖI / HẾT QUOTA
                                 </span>
                               )}
                               {config.apiKeys.includes(key.trim()) && (

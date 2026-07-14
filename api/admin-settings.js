@@ -53,6 +53,38 @@ function splitKeyLines(value) {
   return Array.from(new Set(String(value || '').split(/[\r\n,;]+/).map(k => String(k || '').trim()).filter(Boolean)));
 }
 
+
+function classifyYoutubeKeyCheck(data, httpStatus) {
+  const firstError = data?.error?.errors?.[0] || {};
+  const raw = String(
+    firstError.reason ||
+    data?.error?.status ||
+    data?.error?.message ||
+    data?.error ||
+    `HTTP_${httpStatus || 'UNKNOWN'}`
+  );
+  const lower = raw.toLowerCase();
+  const reason = String(firstError.reason || data?.error?.status || '').toLowerCase();
+  const quotaSignals = ['quota', 'dailylimit', 'daily limit', 'rate limit', 'ratelimit', 'user_rate_limit', 'resource_exhausted'];
+  if (httpStatus === 429 || quotaSignals.some(sig => lower.includes(sig) || reason.includes(sig))) {
+    return {
+      label: 'Key hợp lệ - hết dữ liệu api hôm nay',
+      quotaExhausted: true,
+      message: 'Key/project hợp lệ nhưng quota YouTube Data API hôm nay đã hết hoặc đang vượt giới hạn tốc độ. Hệ thống sẽ xoay sang key khác nếu còn.'
+    };
+  }
+  if (lower.includes('keyinvalid') || lower.includes('api key not valid') || lower.includes('invalid api key') || lower.includes('bad request') || reason.includes('keyinvalid')) {
+    return { label: 'Key sai', quotaExhausted: false, message: 'YouTube API Key không hợp lệ hoặc sai định dạng.' };
+  }
+  if (lower.includes('accessnotconfigured') || lower.includes('api has not been used') || lower.includes('disabled') || (lower.includes('youtube data api') && lower.includes('not'))) {
+    return { label: 'Chưa bật YouTube Data API v3', quotaExhausted: false, message: 'Project tạo key chưa bật YouTube Data API v3.' };
+  }
+  if (lower.includes('referer') || lower.includes('referrer') || lower.includes('ipreferer') || lower.includes('restriction') || lower.includes('request is missing')) {
+    return { label: 'Key bị giới hạn domain/API', quotaExhausted: false, message: 'Key đang bị giới hạn domain/referrer/API.' };
+  }
+  return { label: 'Lỗi YouTube API', quotaExhausted: false, message: raw || `HTTP ${httpStatus || ''}`.trim() };
+}
+
 function maskKey(key) {
   const clean = String(key || '').trim();
   if (!clean) return 'key';
@@ -70,25 +102,29 @@ async function checkYoutubeTrialApiKey(keyText) {
       const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
       const data = await r.json().catch(() => ({}));
       if (r.ok && !data?.error) {
-        results.push({ index: idx + 1, key: maskKey(clean), ok: true, reason: 'gọi được dữ liệu thật' });
+        results.push({ index: idx + 1, key: maskKey(clean), ok: true, label: 'Key hợp lệ', reason: 'gọi được dữ liệu thật', quotaExhausted: false });
       } else {
-        const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || data?.error?.message || `HTTP ${r.status}`;
-        results.push({ index: idx + 1, key: maskKey(clean), ok: false, reason });
+        const info = classifyYoutubeKeyCheck(data, r.status);
+        results.push({ index: idx + 1, key: maskKey(clean), ok: false, label: info.label, reason: info.message, quotaExhausted: info.quotaExhausted });
       }
     } catch (error) {
       results.push({ index: idx + 1, key: maskKey(clean), ok: false, reason: error?.message || 'lỗi kết nối' });
     }
   }
   const okCount = results.filter(r => r.ok).length;
-  const detail = results.map(r => `#${r.index} ${r.ok ? 'OK' : 'Lỗi'} (${r.key}${r.ok ? '' : ': ' + r.reason})`).join(' | ');
+  const quotaCount = results.filter(r => r.quotaExhausted).length;
+  const detail = results.map(r => `#${r.index} ${r.ok ? 'Key hợp lệ' : (r.label || 'Lỗi')} (${r.key}${r.ok ? ': ' + r.reason : ': ' + r.reason})`).join(' | ');
   return {
     ok: okCount > 0,
     total: results.length,
     okCount,
+    quotaCount,
     results,
     message: okCount > 0
-      ? `YouTube API dùng thử: ${okCount}/${results.length} key hợp lệ. Tool sẽ xoay vòng theo thứ tự mỗi dòng. ${detail}`
-      : `YouTube API dùng thử: chưa có key hợp lệ. ${detail}`
+      ? `YouTube API dùng thử: ${okCount}/${results.length} key đang lấy được dữ liệu thật. Tool sẽ xoay vòng theo thứ tự mỗi dòng. ${detail}`
+      : (quotaCount > 0
+        ? `YouTube API dùng thử: ${quotaCount}/${results.length} key hợp lệ nhưng hết dữ liệu api hôm nay. ${detail}`
+        : `YouTube API dùng thử: chưa có key hợp lệ. ${detail}`)
   };
 }
 
