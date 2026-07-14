@@ -84,6 +84,15 @@
     .tab{background:#ffffff;color:#334155;border:1px solid var(--line)}
     .tab.active{background:#22d3ee;color:#00111f}
     .quick button{background:#ffffff;color:#334155;border:1px solid var(--line)}
+
+    .trial-api-stack{display:flex;flex-direction:column;gap:14px}
+    .trial-key-field{width:100%}
+    .trial-key-control{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+    .trial-key-control textarea{min-height:82px;resize:vertical;line-height:1.45;font-family:Consolas,"Courier New",monospace!important;font-size:13px;white-space:pre;overflow:auto}
+    .trial-key-control textarea.masked-key{-webkit-text-security:disc}
+    .trial-key-control button{height:44px;min-width:68px;display:inline-flex;align-items:center;justify-content:center}
+    .trial-key-hint{margin-top:6px;color:#64748b;font-size:12px;line-height:1.35}
+    @media(max-width:950px){.trial-key-control{grid-template-columns:1fr}.trial-key-control button{width:100%}.trial-key-control textarea{min-height:96px}}
   
   
     /* Đồng bộ font/giao diện sáng, hạn chế xuống dòng, không in đậm */
@@ -410,22 +419,24 @@
                 <div class="muted" style="font-size:12.5px;line-height:1.45;">Chỉ cấp cho tài khoản đang còn thời gian dùng thử. Hết trial hệ thống sẽ không trả key này về tài khoản đó nữa.</div>
               </div>
             </div>
-            <div class="row">
-              <div class="field">
+            <div class="trial-api-stack">
+              <div class="field trial-key-field">
                 <label>YouTube API Key V3 dùng thử</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <input id="trialYoutubeApiKey" type="password" placeholder="Nhập YouTube Data API V3 Key" autocomplete="off" />
+                <div class="trial-key-control">
+                  <textarea id="trialYoutubeApiKey" class="masked-key" rows="3" placeholder="Mỗi YouTube API Key V3 một dòng để hệ thống tự xoay vòng" autocomplete="off" spellcheck="false"></textarea>
                   <button type="button" class="btn-dark small" id="trialYoutubeShowBtn" onclick="toggleTrialKey('trialYoutubeApiKey','trialYoutubeShowBtn')">Hiện</button>
                   <button type="button" class="btn small" onclick="checkTrialKey('youtube')">Check</button>
                 </div>
+                <div class="trial-key-hint">Nhập nhiều key, mỗi key một dòng. Tài khoản trial sẽ dùng lần lượt và tự chuyển key khi key trước lỗi/quota.</div>
               </div>
-              <div class="field">
+              <div class="field trial-key-field">
                 <label>Gemini API Key dùng thử</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <input id="trialGeminiApiKey" type="password" placeholder="Nhập Gemini API Key" autocomplete="off" />
+                <div class="trial-key-control">
+                  <textarea id="trialGeminiApiKey" class="masked-key" rows="3" placeholder="Mỗi Gemini API Key một dòng để hệ thống tự xoay vòng" autocomplete="off" spellcheck="false"></textarea>
                   <button type="button" class="btn-dark small" id="trialGeminiShowBtn" onclick="toggleTrialKey('trialGeminiApiKey','trialGeminiShowBtn')">Hiện</button>
                   <button type="button" class="btn small" onclick="checkTrialKey('gemini')">Check</button>
                 </div>
+                <div class="trial-key-hint">Gemini cũng hỗ trợ nhiều key, mỗi key một dòng, dùng đúng key admin đã nhập cho tài khoản trải nghiệm.</div>
               </div>
             </div>
           </div>
@@ -689,19 +700,29 @@ function syncTrialPlanOption(){
   const opt = qs('trialPlanOption');
   if(opt) opt.textContent = `KÍCH HOẠT DÙNG THỬ - ${getCurrentTrialLabel().toUpperCase()}`;
 }
+function parseTrialKeys(text){
+  return Array.from(new Set(String(text || '').split(/[\r\n,;]+/).map(k => String(k || '').trim()).filter(Boolean)));
+}
 function toggleTrialKey(inputId, btnId){
   const input = qs(inputId);
   const btn = qs(btnId);
   if(!input) return;
+  if(String(input.tagName || '').toLowerCase() === 'textarea'){
+    const show = input.classList.contains('masked-key');
+    input.classList.toggle('masked-key', !show);
+    if(btn) btn.textContent = show ? 'Ẩn' : 'Hiện';
+    return;
+  }
   const show = input.type === 'password';
   input.type = show ? 'text' : 'password';
   if(btn) btn.textContent = show ? 'Ẩn' : 'Hiện';
 }
 function maskTrialKeyInfo(key){
-  const clean = String(key || '').trim();
-  if(!clean) return 'chưa nhập';
-  if(clean.length <= 12) return 'đã nhập';
-  return `${clean.slice(0,6)}...${clean.slice(-5)}`;
+  const keys = parseTrialKeys(key);
+  if(!keys.length) return 'chưa nhập';
+  const first = keys[0];
+  const masked = first.length <= 12 ? 'đã nhập' : `${first.slice(0,6)}...${first.slice(-5)}`;
+  return keys.length === 1 ? masked : `${keys.length} key (${masked})`;
 }
 async function checkTrialKey(kind){
   try{
@@ -709,13 +730,14 @@ async function checkTrialKey(kind){
     const isYoutube = kind === 'youtube';
     const inputId = isYoutube ? 'trialYoutubeApiKey' : 'trialGeminiApiKey';
     const key = String((qs(inputId) && qs(inputId).value) || '').trim();
-    if(!key) return setTrialStatus(`Vui lòng nhập ${isYoutube ? 'YouTube API Key V3' : 'Gemini API Key'} trước khi check.`, 'err');
-    setTrialStatus(`Đang check ${isYoutube ? 'YouTube API V3' : 'Gemini API'} key dùng thử...`, '');
+    const count = parseTrialKeys(key).length;
+    if(!count) return setTrialStatus(`Vui lòng nhập ${isYoutube ? 'YouTube API Key V3' : 'Gemini API Key'} trước khi check.`, 'err');
+    setTrialStatus(`Đang check ${count} ${isYoutube ? 'YouTube API V3' : 'Gemini API'} key dùng thử do admin nhập...`, '');
     const data = await api(`/api/admin-settings?action=${isYoutube ? 'check-trial-youtube-key' : 'check-trial-gemini-key'}`, {
       method:'POST',
       body: JSON.stringify({ key })
     });
-    setTrialStatus(data.message || 'Key dùng thử hợp lệ.', 'ok');
+    setTrialStatus(data.message || 'Đã check key dùng thử.', data.ok === false ? 'err' : 'ok');
   }catch(e){
     setTrialStatus('Lỗi check key dùng thử: ' + esc(e.message), 'err');
   }

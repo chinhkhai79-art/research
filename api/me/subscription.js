@@ -45,6 +45,10 @@ function getRemainingText(expiresAt) {
   if (hours > 0) return `${hours} giờ ${minutes} phút`;
   return `${Math.max(1, minutes)} phút`;
 }
+
+function splitApiKeyText(value) {
+  return Array.from(new Set(String(value || '').split(/[\r\n,;]+/).map(k => String(k || '').trim()).filter(Boolean)));
+}
 function emptyResponse(userId, accountType = "none") {
   return { success: true, active: false, premium: false, accountType, plan: null, planId: null, planName: null, startedAt: null, expiresAt: null, remainingMs: 0, remainingText: "---", userId };
 }
@@ -65,8 +69,8 @@ function buildResponse(userId, data = {}, settings = null) {
   const planId = data.planId || sub.planId || null;
   const planName = data.planName || sub.planName || null;
   const trialApiKeys = trialActive ? {
-    youtubeApiKeys: String(settings?.account?.trialYoutubeApiKey || '').trim() ? [String(settings.account.trialYoutubeApiKey).trim()] : [],
-    geminiApiKeys: String(settings?.account?.trialGeminiApiKey || '').trim() ? [String(settings.account.trialGeminiApiKey).trim()] : []
+    youtubeApiKeys: splitApiKeyText(settings?.account?.trialYoutubeApiKey || settings?.account?.trialYoutubeApiKeys || ''),
+    geminiApiKeys: splitApiKeyText(settings?.account?.trialGeminiApiKey || settings?.account?.trialGeminiApiKeys || '')
   } : null;
   return {
     success: true,

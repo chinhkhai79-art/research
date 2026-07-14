@@ -49,25 +49,78 @@ async function testEmail(settings, testEmail) {
 }
 
 
-async function checkYoutubeTrialApiKey(key) {
-  const clean = String(key || '').trim();
-  if (!clean) throw new Error('Vui lòng nhập YouTube API Key V3 để kiểm tra.');
-  const params = new URLSearchParams({ part: 'snippet', chart: 'mostPopular', regionCode: 'US', maxResults: '1', key: clean });
-  const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
-  const data = await r.json().catch(() => ({}));
-  if (r.ok && !data?.error) return { ok: true, message: 'YouTube API Key V3 hợp lệ và gọi được dữ liệu thật.' };
-  const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || data?.error?.message || `HTTP ${r.status}`;
-  throw new Error(`YouTube API Key chưa dùng được: ${reason}`);
+function splitKeyLines(value) {
+  return Array.from(new Set(String(value || '').split(/[\r\n,;]+/).map(k => String(k || '').trim()).filter(Boolean)));
 }
 
-async function checkGeminiTrialApiKey(key) {
+function maskKey(key) {
   const clean = String(key || '').trim();
-  if (!clean) throw new Error('Vui lòng nhập Gemini API Key để kiểm tra.');
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(clean)}`);
-  const data = await r.json().catch(() => ({}));
-  if (r.ok && !data?.error) return { ok: true, message: 'Gemini API Key hợp lệ và gọi được Google Generative Language API.' };
-  const reason = data?.error?.message || data?.error?.status || `HTTP ${r.status}`;
-  throw new Error(`Gemini API Key chưa dùng được: ${reason}`);
+  if (!clean) return 'key';
+  if (clean.length <= 14) return 'đã nhập';
+  return `${clean.slice(0, 8)}...${clean.slice(-5)}`;
+}
+
+async function checkYoutubeTrialApiKey(keyText) {
+  const keys = splitKeyLines(keyText);
+  if (!keys.length) throw new Error('Vui lòng nhập YouTube API Key V3 để kiểm tra, mỗi key một dòng.');
+  const results = [];
+  for (const [idx, clean] of keys.entries()) {
+    const params = new URLSearchParams({ part: 'snippet', chart: 'mostPopular', regionCode: 'US', maxResults: '1', key: clean });
+    try {
+      const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && !data?.error) {
+        results.push({ index: idx + 1, key: maskKey(clean), ok: true, reason: 'gọi được dữ liệu thật' });
+      } else {
+        const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || data?.error?.message || `HTTP ${r.status}`;
+        results.push({ index: idx + 1, key: maskKey(clean), ok: false, reason });
+      }
+    } catch (error) {
+      results.push({ index: idx + 1, key: maskKey(clean), ok: false, reason: error?.message || 'lỗi kết nối' });
+    }
+  }
+  const okCount = results.filter(r => r.ok).length;
+  const detail = results.map(r => `#${r.index} ${r.ok ? 'OK' : 'Lỗi'} (${r.key}${r.ok ? '' : ': ' + r.reason})`).join(' | ');
+  return {
+    ok: okCount > 0,
+    total: results.length,
+    okCount,
+    results,
+    message: okCount > 0
+      ? `YouTube API dùng thử: ${okCount}/${results.length} key hợp lệ. Tool sẽ xoay vòng theo thứ tự mỗi dòng. ${detail}`
+      : `YouTube API dùng thử: chưa có key hợp lệ. ${detail}`
+  };
+}
+
+async function checkGeminiTrialApiKey(keyText) {
+  const keys = splitKeyLines(keyText);
+  if (!keys.length) throw new Error('Vui lòng nhập Gemini API Key để kiểm tra, mỗi key một dòng.');
+  const results = [];
+  for (const [idx, clean] of keys.entries()) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(clean)}`);
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && !data?.error) {
+        results.push({ index: idx + 1, key: maskKey(clean), ok: true, reason: 'gọi được Google Generative Language API' });
+      } else {
+        const reason = data?.error?.message || data?.error?.status || `HTTP ${r.status}`;
+        results.push({ index: idx + 1, key: maskKey(clean), ok: false, reason });
+      }
+    } catch (error) {
+      results.push({ index: idx + 1, key: maskKey(clean), ok: false, reason: error?.message || 'lỗi kết nối' });
+    }
+  }
+  const okCount = results.filter(r => r.ok).length;
+  const detail = results.map(r => `#${r.index} ${r.ok ? 'OK' : 'Lỗi'} (${r.key}${r.ok ? '' : ': ' + r.reason})`).join(' | ');
+  return {
+    ok: okCount > 0,
+    total: results.length,
+    okCount,
+    results,
+    message: okCount > 0
+      ? `Gemini API dùng thử: ${okCount}/${results.length} key hợp lệ. Tool sẽ xoay vòng theo thứ tự mỗi dòng. ${detail}`
+      : `Gemini API dùng thử: chưa có key hợp lệ. ${detail}`
+  };
 }
 
 // === TÍNH NĂNG MỚI: trạng thái hệ thống ===
