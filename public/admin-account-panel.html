@@ -259,6 +259,26 @@
       .trial-api-card .field>div[style*="display:flex"] button{width:auto!important;min-width:0!important;padding:0 8px!important;height:40px!important}
     }
 
+    /* v64: ô tìm kiếm nằm cùng hàng với tab, khi tải lại luôn để trống */
+    .admin-status-card{padding:14px 18px!important;margin-bottom:14px!important}
+    .admin-status-card #status{margin:0!important}
+    .tabs-search-row{display:flex!important;align-items:flex-end!important;gap:12px!important;flex-wrap:wrap!important;margin:16px 0!important;width:100%!important}
+    .tabs-search-row .tabs{margin:0!important;flex:0 0 auto!important}
+    .search-inline{margin-left:auto!important;display:grid!important;grid-template-columns:minmax(280px,520px) auto!important;gap:10px!important;align-items:end!important;flex:1 1 560px!important;max-width:820px!important;min-width:360px!important}
+    .search-inline .field label{margin-bottom:6px!important;color:#000!important}
+    .search-inline input{height:48px!important;font-size:14px!important}
+    .search-inline .refresh-users-btn{height:48px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important}
+    @media(max-width:950px){
+      .tabs-search-row{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+      .tabs-search-row .tabs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;width:100%!important}
+      .tabs-search-row .tabs .tab{width:100%!important;min-width:0!important;text-align:center!important}
+      .search-inline{margin-left:0!important;width:100%!important;min-width:0!important;max-width:none!important;grid-template-columns:1fr auto!important;flex:0 0 auto!important}
+    }
+    @media(max-width:560px){
+      .search-inline{grid-template-columns:1fr!important}
+      .search-inline .refresh-users-btn{width:100%!important}
+    }
+
     /* v62: danh sách tài khoản mobile dùng card riêng, không nén bảng */
     .users-cards{display:none}
     @media(max-width:760px){
@@ -296,25 +316,25 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
+    <div class="card admin-status-card">
       <input id="adminSecret" type="hidden" value="ThanhCong2027###" />
-      <div class="grid">
-        <div class="field">
-          <label>Tìm email / UID / tên</label>
-          <input id="searchText" placeholder="VD: user@gmail.com, UID, mã đơn, nội dung CK" oninput="handleSearchInput()" onkeydown="handleSearchKey(event)" />
-        </div>
-        <div class="actions">
-          <button class="btn-dark" onclick="loadUsers(currentUsersPage, true)">Làm mới danh sách</button>
-        </div>
-      </div>
       <div id="status" class="status">Đang dùng mật khẩu quản trị chung từ trang admin. Danh sách Supabase hiển thị 50 tài khoản mỗi trang.</div>
     </div>
 
-    <div class="tabs">
-      <button id="tabUsers" class="tab active" onclick="showTab('users')">Danh sách tài khoản</button>
-      <button id="tabAction" class="tab" onclick="showTab('action')">Kích hoạt / khóa PRO</button>
-      <button id="tabRevenue" class="tab" onclick="showTab('revenue'); loadRevenue()">Đơn hàng & Doanh thu</button>
-      <button id="tabLogs" class="tab" onclick="showTab('logs'); loadLogs()">Admin logs</button>
+    <div class="tabs-search-row">
+      <div class="tabs">
+        <button id="tabUsers" class="tab active" onclick="showTab('users')">Danh sách tài khoản</button>
+        <button id="tabAction" class="tab" onclick="showTab('action')">Kích hoạt / khóa PRO</button>
+        <button id="tabRevenue" class="tab" onclick="showTab('revenue'); loadRevenue()">Đơn hàng & Doanh thu</button>
+        <button id="tabLogs" class="tab" onclick="showTab('logs'); loadLogs()">Admin logs</button>
+      </div>
+      <div class="search-inline" aria-label="Tìm kiếm tài khoản">
+        <div class="field search-field">
+          <label>Tìm email / UID / tên</label>
+          <input id="searchText" name="adminAccountSearchV64" value="" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="search" enterkeyhint="search" placeholder="VD: user@gmail.com, UID, tên, mã đơn" oninput="handleSearchInput()" onkeydown="handleSearchKey(event)" />
+        </div>
+        <button class="btn-dark refresh-users-btn" onclick="loadUsers(currentUsersPage, true)">Làm mới danh sách</button>
+      </div>
     </div>
 
     <div id="actionPanel" class="hidden">
@@ -594,6 +614,12 @@ function esc(v){ return String(v ?? '').replace(/[&<>"']/g, s=>({'&':'&amp;','<'
 function setStatus(msg, type=''){ const el=qs('status'); el.className='status '+type; el.innerHTML=msg; }
 function fmtDate(v){ if(!v) return 'Chưa có'; const d=new Date(v); if(isNaN(d)) return String(v); return d.toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}); }
 function currentSearch(){ return String((qs('searchText') && qs('searchText').value) || '').trim(); }
+function resetSearchOnFreshLoad(){
+  const el = qs('searchText');
+  if(!el) return;
+  el.value = '';
+  el.setAttribute('autocomplete', 'off');
+}
 function handleSearchKey(event){
   if(event && event.key !== 'Enter') return;
   if(!qs('revenuePanel').classList.contains('hidden')) loadRevenue();
@@ -1168,6 +1194,7 @@ async function bulkExtendApply(){
 }
 
 syncSharedAdminSecret(getSharedAdminSecret());
+resetSearchOnFreshLoad();
 syncDaysFromPlan();
 setStatus('Đã đồng bộ mật khẩu quản trị dùng chung. Đang tải danh sách Supabase/Postgres 50 tài khoản mỗi trang...', 'ok');
 loadUsers(1, false);
