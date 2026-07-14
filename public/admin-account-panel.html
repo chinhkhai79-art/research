@@ -357,6 +357,7 @@
             <div class="field">
               <label>Gói</label>
               <select id="planId" onchange="syncDaysFromPlan()">
+                <option value="trial_settings" id="trialPlanOption">KÍCH HOẠT DÙNG THỬ - THEO CÀI ĐẶT</option>
                 <option value="manual_30d">KÍCH HOẠT THỦ CÔNG 30 NGÀY</option>
                 <option value="3m">GÓI 3 THÁNG - 90 NGÀY</option>
                 <option value="6m">GÓI 6 THÁNG - 180 NGÀY</option>
@@ -573,6 +574,7 @@ let revenueSearchTimer = null;
 
 const BULK_DEFAULT_REASON = 'Cộng ngày hàng loạt từ admin';
 const PLAN_MAP = {
+  'trial_settings': { name: 'KÍCH HOẠT DÙNG THỬ', days: 0, trial: true },
   'manual_30d': { name: 'KÍCH HOẠT THỦ CÔNG 30 NGÀY', days: 30 },
   '3m': { name: 'GÓI 3 THÁNG', days: 90 },
   '6m': { name: 'GÓI 6 THÁNG', days: 180 },
@@ -666,9 +668,20 @@ function setTrialStatus(msg, type=''){
 function setTrialQuick(value, unit){
   qs('trialDurationValue').value = value;
   qs('trialDurationUnit').value = unit;
+  syncTrialPlanOption();
+  if(qs('planId') && qs('planId').value === 'trial_settings') syncDaysFromPlan();
 }
 function trialLabel(value, unit){
   return `${value} ${unit === 'days' ? 'ngày' : 'giờ'}`;
+}
+function getCurrentTrialLabel(){
+  const value = Math.max(1, Math.round(Number((qs('trialDurationValue') && qs('trialDurationValue').value) || 1)));
+  const unit = qs('trialDurationUnit') && qs('trialDurationUnit').value === 'days' ? 'days' : 'hours';
+  return trialLabel(value, unit);
+}
+function syncTrialPlanOption(){
+  const opt = qs('trialPlanOption');
+  if(opt) opt.textContent = `KÍCH HOẠT DÙNG THỬ - ${getCurrentTrialLabel().toUpperCase()}`;
 }
 function toggleTrialKey(inputId, btnId){
   const input = qs(inputId);
@@ -714,6 +727,8 @@ async function loadTrialSettings(force=false){
     qs('trialDurationUnit').value = unit;
     if(qs('trialYoutubeApiKey')) qs('trialYoutubeApiKey').value = account.trialYoutubeApiKey || '';
     if(qs('trialGeminiApiKey')) qs('trialGeminiApiKey').value = account.trialGeminiApiKey || '';
+    syncTrialPlanOption();
+    if(qs('planId') && qs('planId').value === 'trial_settings') syncDaysFromPlan();
     trialSettingsLoaded = true;
     setTrialStatus(`Đang áp dụng: tài khoản mới được dùng thử <b>${trialLabel(value, unit)}</b>. YouTube key: <b>${maskTrialKeyInfo(account.trialYoutubeApiKey)}</b>, Gemini key: <b>${maskTrialKeyInfo(account.trialGeminiApiKey)}</b>.`, 'ok');
   }catch(e){
@@ -733,14 +748,34 @@ async function saveTrialSettings(){
       body: JSON.stringify({ account: { trialDurationValue: value, trialDurationUnit: unit, trialYoutubeApiKey, trialGeminiApiKey } })
     });
     trialSettingsLoaded = true;
+    syncTrialPlanOption();
+    if(qs('planId') && qs('planId').value === 'trial_settings') syncDaysFromPlan();
     setTrialStatus((data.message || 'Đã lưu.') + ` Tài khoản mới sẽ dùng thử <b>${trialLabel(value, unit)}</b>. YouTube key: <b>${maskTrialKeyInfo(trialYoutubeApiKey)}</b>, Gemini key: <b>${maskTrialKeyInfo(trialGeminiApiKey)}</b>.`, 'ok');
     setStatus(`Đã lưu cấu hình dùng thử tài khoản mới: ${trialLabel(value, unit)}.`, 'ok');
   }catch(e){
     setTrialStatus('Lỗi lưu cấu hình dùng thử: ' + esc(e.message), 'err');
   }
 }
-function syncDaysFromPlan(){ const p=PLAN_MAP[qs('planId').value] || PLAN_MAP.custom; qs('days').value = p.days; }
-function setDays(days, planId, planName){ qs('planId').value=planId; qs('days').value=days; setStatus(`Đã chọn ${esc(planName)}.`, 'ok'); }
+function syncDaysFromPlan(){
+  const p=PLAN_MAP[qs('planId').value] || PLAN_MAP.custom;
+  const daysInput = qs('days');
+  if(p.trial){
+    daysInput.value = '';
+    daysInput.disabled = true;
+    daysInput.placeholder = `Theo cài đặt dùng thử: ${getCurrentTrialLabel()}`;
+    setStatus(`Đã chọn kích hoạt dùng thử theo cấu hình hiện tại: ${esc(getCurrentTrialLabel())}.`, 'ok');
+  } else {
+    daysInput.disabled = false;
+    daysInput.placeholder = '';
+    daysInput.value = p.days;
+  }
+}
+function setDays(days, planId, planName){
+  qs('planId').value=planId;
+  syncDaysFromPlan();
+  if(!PLAN_MAP[planId]?.trial) qs('days').value=days;
+  setStatus(`Đã chọn ${esc(planName)}.`, 'ok');
+}
 function clearForm(){ qs('activateEmail').value=''; qs('activateUid').value=''; qs('reason').value=''; qs('planId').value='manual_30d'; syncDaysFromPlan(); }
 
 async function api(path, opts={}){
@@ -880,21 +915,27 @@ function quickDisable(uid,email){ fillUser(uid,email); disableUser(); }
 async function activateUser(){
   try{
     if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
-    if(!confirm('Xác nhận kích hoạt/cộng ngày cho tài khoản này?')) return;
     const plan = PLAN_MAP[qs('planId').value] || PLAN_MAP.custom;
+    const isTrial = Boolean(plan.trial);
+    if(!confirm(isTrial ? `Xác nhận kích hoạt dùng thử theo cấu hình hiện tại (${getCurrentTrialLabel()}) cho tài khoản này?` : 'Xác nhận kích hoạt/cộng ngày cho tài khoản này?')) return;
     const body = {
       uid: qs('activateUid').value.trim(),
       email: qs('activateEmail').value.trim(),
+      action: isTrial ? 'activate_trial' : 'activate_or_extend',
       planId: qs('planId').value,
       planName: plan.name,
-      days: Number(qs('days').value || plan.days),
+      days: isTrial ? 0 : Number(qs('days').value || plan.days),
       reason: qs('reason').value.trim()
     };
     if(!body.uid && !body.email) return setStatus('Cần nhập email hoặc UID.', 'err');
-    setStatus('Đang kích hoạt/cộng ngày...', '');
+    setStatus(isTrial ? 'Đang kích hoạt dùng thử...' : 'Đang kích hoạt/cộng ngày...', '');
     const data = await api('/api/admin-account?action=activate', { method:'POST', body: JSON.stringify(body) });
     await loadUsers(currentUsersPage, true);
-    setStatus(`Đã kích hoạt/cộng ngày PRO cho <b>${esc(data.email || body.email || body.uid)}</b>. Hết hạn mới: <b>${esc(fmtDate(data.expiresAt))}</b>.`, 'ok');
+    if(isTrial){
+      setStatus(`Đã kích hoạt dùng thử cho <b>${esc(data.email || body.email || body.uid)}</b>. Hết hạn dùng thử: <b>${esc(fmtDate(data.expiresAt))}</b>.`, 'ok');
+    } else {
+      setStatus(`Đã kích hoạt/cộng ngày PRO cho <b>${esc(data.email || body.email || body.uid)}</b>. Hết hạn mới: <b>${esc(fmtDate(data.expiresAt))}</b>.`, 'ok');
+    }
   }catch(e){ setStatus('Lỗi kích hoạt: '+esc(e.message), 'err'); }
 }
 
