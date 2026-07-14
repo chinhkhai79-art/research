@@ -49,7 +49,10 @@
     th{color:#9fb3ce;text-transform:uppercase;font-size:11px;letter-spacing:.08em;background:#0b1526;position:sticky;top:0;z-index:2}
     tr:hover td{background:#0c192b}
     .badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900;text-transform:uppercase}
-    .pro{background:#06351d;color:#86efac}.trial{background:#3a2a07;color:#fde68a}.expired{background:#3a1111;color:#fecaca}
+    /* v66: màu trạng thái rõ hơn */
+    .pro{background:#16a34a!important;color:#ffffff!important;border:1px solid #15803d!important;box-shadow:0 2px 8px rgba(22,163,74,.18)!important}
+    .trial{background:#f59e0b!important;color:#111827!important;border:1px solid #d97706!important;box-shadow:0 2px 8px rgba(245,158,11,.2)!important}
+    .expired{background:#ef4444!important;color:#ffffff!important;border:1px solid #dc2626!important;box-shadow:0 2px 8px rgba(239,68,68,.2)!important}
     .muted{color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all}
     .actions{display:flex;gap:8px;flex-wrap:wrap}.small{padding:8px 10px;font-size:12px}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tab{background:#172338;color:#cfe4ff;border:1px solid var(--line)}.tab.active{background:#22d3ee;color:#00111f}
@@ -124,6 +127,9 @@
     body, .card, .field label, .muted, th, td, .status, .status.ok, .status.err, .revenue-stat-label, .revenue-stat-hint, .revenue-stat-value, .users-table .stt-col, .mono, input, select, textarea, .quick button, .tab, .btn-dark, .shared-note{color:#000 !important}
     h1,h2,h3,.title h1{color:#000 !important}
     .badge{color:#fff !important}
+    .badge.pro{background:#16a34a!important;color:#ffffff!important}
+    .badge.trial{background:#f59e0b!important;color:#111827!important}
+    .badge.expired{background:#ef4444!important;color:#ffffff!important}
     .tab.active,.btn,.btn-green,.admin-btn{color:#000 !important}
     .btn-red{color:#fff !important}
     .status a{color:#000 !important;text-decoration:underline}
