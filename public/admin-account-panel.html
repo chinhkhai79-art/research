@@ -92,7 +92,11 @@
     .trial-key-control textarea.masked-key{-webkit-text-security:disc}
     .trial-key-control button{height:44px;min-width:68px;display:inline-flex;align-items:center;justify-content:center}
     .trial-key-hint{margin-top:6px;color:#64748b;font-size:12px;line-height:1.35}
-    @media(max-width:950px){.trial-key-control{grid-template-columns:1fr}.trial-key-control button{width:100%}.trial-key-control textarea{min-height:96px}}
+    .trial-ip-limit-row{margin:10px 0 14px;padding:12px;border:1px solid #dbeafe;border-radius:14px;background:#ffffff}
+    .trial-ip-toggle{display:flex!important;align-items:center;gap:10px;color:#0f3b66!important;font-size:14px!important;margin:0 0 4px!important}
+    .trial-ip-toggle input{width:20px;height:20px;accent-color:#22d3ee;flex:0 0 auto}
+    .trial-ip-toggle span{font-weight:700!important}
+    @media(max-width:950px){.trial-key-control{grid-template-columns:1fr}.trial-key-control button{width:100%}.trial-key-control textarea{min-height:96px}.trial-ip-limit-row{padding:10px}}
   
   
     /* Đồng bộ font/giao diện sáng, hạn chế xuống dòng, không in đậm */
@@ -418,6 +422,13 @@
                 <div style="font-size:15px;color:#0f3b66;margin-bottom:3px;">Key API dùng cho tài khoản trải nghiệm</div>
                 <div class="muted" style="font-size:12.5px;line-height:1.45;">Chỉ cấp cho tài khoản đang còn thời gian dùng thử. Hết trial hệ thống sẽ không trả key này về tài khoản đó nữa.</div>
               </div>
+            </div>
+            <div class="trial-ip-limit-row">
+              <label class="trial-ip-toggle">
+                <input id="trialIpLimitEnabled" type="checkbox" />
+                <span>Giới hạn IP dùng thử đồng thời</span>
+              </label>
+              <div class="trial-key-hint">Bật để chỉ cho tối đa <b>20 IP</b> khác nhau gọi API trải nghiệm cùng lúc. IP không hoạt động sau <b>10 phút</b> sẽ tự được giải phóng. Nếu quá tải, server trả 429 và không gửi yêu cầu lên Google.</div>
             </div>
             <div class="trial-api-stack">
               <div class="field trial-key-field">
@@ -755,10 +766,12 @@ async function loadTrialSettings(force=false){
     qs('trialDurationUnit').value = unit;
     if(qs('trialYoutubeApiKey')) qs('trialYoutubeApiKey').value = account.trialYoutubeApiKey || '';
     if(qs('trialGeminiApiKey')) qs('trialGeminiApiKey').value = account.trialGeminiApiKey || '';
+    if(qs('trialIpLimitEnabled')) qs('trialIpLimitEnabled').checked = account.trialIpLimitEnabled === true;
     syncTrialPlanOption();
     if(qs('planId') && qs('planId').value === 'trial_settings') syncDaysFromPlan();
     trialSettingsLoaded = true;
-    setTrialStatus(`Đang áp dụng: tài khoản mới được dùng thử <b>${trialLabel(value, unit)}</b>. YouTube key: <b>${maskTrialKeyInfo(account.trialYoutubeApiKey)}</b>, Gemini key: <b>${maskTrialKeyInfo(account.trialGeminiApiKey)}</b>.`, 'ok');
+    const ipLimitText = account.trialIpLimitEnabled === true ? 'Bật giới hạn IP: tối đa 20 IP/10 phút' : 'Giới hạn IP đang tắt';
+    setTrialStatus(`Đang áp dụng: tài khoản mới được dùng thử <b>${trialLabel(value, unit)}</b>. YouTube key: <b>${maskTrialKeyInfo(account.trialYoutubeApiKey)}</b>, Gemini key: <b>${maskTrialKeyInfo(account.trialGeminiApiKey)}</b>. ${ipLimitText}.`, 'ok');
   }catch(e){
     setTrialStatus('Lỗi tải cấu hình dùng thử: ' + esc(e.message), 'err');
   }
@@ -770,15 +783,17 @@ async function saveTrialSettings(){
     const unit = qs('trialDurationUnit').value === 'days' ? 'days' : 'hours';
     const trialYoutubeApiKey = String((qs('trialYoutubeApiKey') && qs('trialYoutubeApiKey').value) || '').trim();
     const trialGeminiApiKey = String((qs('trialGeminiApiKey') && qs('trialGeminiApiKey').value) || '').trim();
+    const trialIpLimitEnabled = Boolean(qs('trialIpLimitEnabled') && qs('trialIpLimitEnabled').checked);
     setTrialStatus('Đang lưu cấu hình dùng thử...', '');
     const data = await api('/api/admin-settings?action=save-trial', {
       method:'POST',
-      body: JSON.stringify({ account: { trialDurationValue: value, trialDurationUnit: unit, trialYoutubeApiKey, trialGeminiApiKey } })
+      body: JSON.stringify({ account: { trialDurationValue: value, trialDurationUnit: unit, trialYoutubeApiKey, trialGeminiApiKey, trialIpLimitEnabled } })
     });
     trialSettingsLoaded = true;
     syncTrialPlanOption();
     if(qs('planId') && qs('planId').value === 'trial_settings') syncDaysFromPlan();
-    setTrialStatus((data.message || 'Đã lưu.') + ` Tài khoản mới sẽ dùng thử <b>${trialLabel(value, unit)}</b>. YouTube key: <b>${maskTrialKeyInfo(trialYoutubeApiKey)}</b>, Gemini key: <b>${maskTrialKeyInfo(trialGeminiApiKey)}</b>.`, 'ok');
+    const ipLimitText = trialIpLimitEnabled ? 'Đã bật giới hạn 20 IP hoạt động/10 phút.' : 'Giới hạn IP đang tắt.';
+    setTrialStatus((data.message || 'Đã lưu.') + ` Tài khoản mới sẽ dùng thử <b>${trialLabel(value, unit)}</b>. YouTube key: <b>${maskTrialKeyInfo(trialYoutubeApiKey)}</b>, Gemini key: <b>${maskTrialKeyInfo(trialGeminiApiKey)}</b>. ${ipLimitText}`, 'ok');
     setStatus(`Đã lưu cấu hình dùng thử tài khoản mới: ${trialLabel(value, unit)}.`, 'ok');
   }catch(e){
     setTrialStatus('Lỗi lưu cấu hình dùng thử: ' + esc(e.message), 'err');

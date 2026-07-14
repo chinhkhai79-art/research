@@ -1515,6 +1515,22 @@ export default function App() {
   const isUsingTrialYoutubeKeys = () => !hasUserYoutubeApiKeys() && getTrialYoutubeApiKeys().length > 0;
   const isUsingTrialGeminiKeys = () => !hasUserGeminiApiKeys() && getTrialGeminiApiKeys().length > 0;
 
+  const enforceTrialIpLimit = async (apiType: 'youtube' | 'gemini') => {
+    const shouldGuard = apiType === 'youtube' ? isUsingTrialYoutubeKeys() : isUsingTrialGeminiKeys();
+    if (!shouldGuard) return;
+    const response = await fetch(`/api/payment-config?action=trial-ip-guard&apiType=${apiType}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiType })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.success === false || data?.allowed === false) {
+      const message = data?.message || 'Hệ thống dùng thử đang quá tải (Đạt giới hạn 20 người dùng cùng lúc). Vui lòng thử lại sau ít phút!';
+      setStatus(message);
+      throw new Error(message);
+    }
+  };
+
   const getActiveApiKey = () => {
     const keys = getMergedYoutubeKeys();
     return keys[apiKeyIndex] || keys[0] || '';
@@ -1618,6 +1634,10 @@ export default function App() {
       return;
     }
 
+    if (isUsingTrialGeminiKeys()) {
+      await enforceTrialIpLimit('gemini');
+    }
+
     setIsCheckingGeminiKeys(true);
     const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
 
@@ -1682,6 +1702,9 @@ export default function App() {
   const callGeminiGenerateContent = async (prompt: string) => {
     const keys = getActiveGeminiKeys();
     if (keys.length === 0) throw new Error('Thiếu Gemini API Key. Vui lòng dán ít nhất 1 key.');
+    if (isUsingTrialGeminiKeys()) {
+      await enforceTrialIpLimit('gemini');
+    }
 
     // Logic AI phân tích: ưu tiên xoay model bên trong key hiện tại trước.
     // Nếu key đó lỗi/hết quota ở toàn bộ model thì mới chuyển sang key tiếp theo.
@@ -4061,6 +4084,9 @@ JSON mẫu:
       setYoutubeKeyCheckResults([{ key: '', ok: false, label: 'Thiếu key', detail: 'Vui lòng dán ít nhất 1 YouTube API Key V3, mỗi key một dòng.' }]);
       return;
     }
+    if (isUsingTrialYoutubeKeys()) {
+      await enforceTrialIpLimit('youtube');
+    }
     setIsCheckingYoutubeKeys(true);
     const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
     for (const key of keys) {
@@ -4101,6 +4127,9 @@ JSON mẫu:
     const keys = getMergedYoutubeKeys();
     if (keys.length === 0) {
       throw new Error('Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
+    }
+    if (isUsingTrialYoutubeKeys()) {
+      await enforceTrialIpLimit('youtube');
     }
 
     // Đồng bộ ngay danh sách key đang nhập để hệ thống xoay vòng đủ key, không cần bấm lưu lại.
