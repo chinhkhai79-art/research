@@ -107,11 +107,11 @@
       <div class="login-grid">
         <div class="login-field">
           <label>Email quản trị</label>
-          <input id="adminLoginEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" name="admin_email_login_v70" placeholder="Nhập email quản trị" />
+          <input id="adminLoginEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" name="admin_email_login_v71" placeholder="Nhập email quản trị" />
         </div>
         <div class="login-field">
           <label>Mật khẩu</label>
-          <input id="adminLoginPassword" type="password" autocomplete="new-password" name="admin_password_login_v70" placeholder="Nhập mật khẩu quản trị" />
+          <input id="adminLoginPassword" type="password" autocomplete="new-password" name="admin_password_login_v71" placeholder="Nhập mật khẩu quản trị" />
         </div>
         <button id="adminLoginBtn" class="admin-btn" type="button">Đăng nhập</button>
       </div>
@@ -149,13 +149,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=70" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=71" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=70" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=71" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=70" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=71" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -273,8 +273,35 @@
         'ADMIN_SECRET', 'admin_settings_password', 'admin_settings_login_at'
       ];
       localKeys.forEach(function(k){ try { localStorage.removeItem(k); } catch (_) {} });
-      try { sessionStorage.removeItem('TUBEKEY_ADMIN_AUTH_OK'); } catch (_) {}
+    }
+    function clearAdminSession(){
+      try {
+        sessionStorage.removeItem('TUBEKEY_ADMIN_AUTH_OK');
+        sessionStorage.removeItem('TUBEKEY_ADMIN_SESSION_EMAIL');
+        sessionStorage.removeItem('TUBEKEY_ADMIN_SESSION_SECRET');
+      } catch (_) {}
       ADMIN_RUNTIME_SECRET = '';
+    }
+    function saveAdminSession(){
+      try {
+        sessionStorage.setItem('TUBEKEY_ADMIN_AUTH_OK', '1');
+        sessionStorage.setItem('TUBEKEY_ADMIN_SESSION_EMAIL', ADMIN_LOGIN_EMAIL);
+        sessionStorage.setItem('TUBEKEY_ADMIN_SESSION_SECRET', ADMIN_LOGIN_PASSWORD);
+      } catch (_) {}
+      ADMIN_RUNTIME_SECRET = ADMIN_LOGIN_PASSWORD;
+    }
+    function restoreAdminSession(){
+      try {
+        var ok = sessionStorage.getItem('TUBEKEY_ADMIN_AUTH_OK') === '1';
+        var email = String(sessionStorage.getItem('TUBEKEY_ADMIN_SESSION_EMAIL') || '').trim().toLowerCase();
+        var secret = String(sessionStorage.getItem('TUBEKEY_ADMIN_SESSION_SECRET') || '');
+        if (ok && email === ADMIN_LOGIN_EMAIL && secret === ADMIN_LOGIN_PASSWORD) {
+          ADMIN_RUNTIME_SECRET = secret;
+          return true;
+        }
+      } catch (_) {}
+      clearAdminSession();
+      return false;
     }
     function shouldRememberAdmin(){ return false; }
     function loadRememberedAdmin(){
@@ -297,7 +324,7 @@
       ADMIN_RUNTIME_SECRET = v;
       if (input) input.value = v;
       var note = document.getElementById('sharedSecretNote');
-      if (note) note.textContent = 'Phiên quản trị chỉ có hiệu lực trên tab hiện tại, tải lại trang sẽ phải đăng nhập lại.';
+      if (note) note.textContent = 'Phiên quản trị tạm đang hoạt động trong tab hiện tại. Tải lại trang vẫn giữ đăng nhập, đóng tab hoặc đăng xuất sẽ cần login lại.';
       syncSharedSecretToFrames();
     }
     function syncSharedSecretToFrame(frame){
@@ -446,9 +473,8 @@
       var pass = String((document.getElementById('adminLoginPassword') || {}).value || '');
       var err = document.getElementById('adminLoginError');
       if (email === ADMIN_LOGIN_EMAIL && pass === ADMIN_LOGIN_PASSWORD) {
-        ADMIN_RUNTIME_SECRET = ADMIN_LOGIN_PASSWORD;
         clearAdminStoredCredentials();
-        ADMIN_RUNTIME_SECRET = ADMIN_LOGIN_PASSWORD;
+        saveAdminSession();
         if (err) err.style.display = 'none';
         try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
         showAdminMain();
@@ -458,6 +484,7 @@
     }
     function doAdminLogout(){
       clearAdminStoredCredentials();
+      clearAdminSession();
       ['accountsFrame','settingsFrame','emailFrame'].forEach(function(id){ var f=document.getElementById(id); if(f) f.removeAttribute('src'); });
       showAdminLogin();
     }
@@ -498,7 +525,8 @@
         updateScrollTopBtn();
       }
       clearAdminStoredCredentials();
-      showAdminLogin();
+      if (restoreAdminSession()) showAdminMain();
+      else showAdminLogin();
     });
   </script>
 </body>
