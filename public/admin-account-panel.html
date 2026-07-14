@@ -611,17 +611,14 @@ const PLAN_MAP = {
 };
 
 const DEFAULT_ADMIN_SECRET = 'ThanhCong2027###';
+let SHARED_ADMIN_SECRET = '';
 function qs(id){ return document.getElementById(id); }
 function getSharedAdminSecret(){
-  return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_ADMIN_SECRET).trim();
+  return String(SHARED_ADMIN_SECRET || DEFAULT_ADMIN_SECRET).trim();
 }
 function persistSharedAdminSecret(value){
   const v = String(value || DEFAULT_ADMIN_SECRET).trim() || DEFAULT_ADMIN_SECRET;
-  localStorage.setItem('ADMIN_SHARED_SECRET', v);
-  localStorage.setItem('ADMIN_SECRET_RESEARCH', v);
-  localStorage.setItem('ADMIN_SECRET', v);
-  localStorage.setItem('admin_settings_password', v);
-  localStorage.setItem('admin_settings_login_at', Date.now().toString());
+  SHARED_ADMIN_SECRET = v;
   return v;
 }
 function syncSharedAdminSecret(value){

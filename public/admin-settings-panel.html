@@ -305,15 +305,11 @@
       if(text) setTimeout(()=>{ el.className='msg'; el.textContent=''; }, 4000);
     }
     function getSharedAdminSecret(){
-      return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_ADMIN_SECRET).trim();
+      return String(SHARED_ADMIN_SECRET || DEFAULT_ADMIN_SECRET).trim();
     }
     function persistSharedAdminSecret(value){
       const v = String(value || DEFAULT_ADMIN_SECRET).trim() || DEFAULT_ADMIN_SECRET;
-      localStorage.setItem('ADMIN_SHARED_SECRET', v);
-      localStorage.setItem('ADMIN_SECRET_RESEARCH', v);
-      localStorage.setItem('ADMIN_SECRET', v);
-      localStorage.setItem('admin_settings_password', v);
-      localStorage.setItem('admin_settings_login_at', Date.now().toString());
+      SHARED_ADMIN_SECRET = v;
       return v;
     }
     function syncSharedAdminSecret(value){
@@ -369,7 +365,6 @@
       if (state.loaded) startSessionTimer();
     }
     function doLogout(byTimeout){
-      localStorage.removeItem('admin_settings_password');
       setVal('adminPassword', '');
       state.loaded = false;
       $('loginState').textContent = 'Đã đăng xuất';
@@ -539,8 +534,6 @@
 
     async function loadConfig(){
       if(!adminPassword()) return msg('topMsg','Vui lòng nhập mật khẩu quản trị.','warn');
-      localStorage.setItem('admin_settings_password', adminPassword());
-      localStorage.setItem('admin_settings_login_at', Date.now().toString());
       const btn=$('loadBtn'); setBusy(btn,true,'Đang tải...');
       try{
         await loadBanks();
@@ -662,12 +655,6 @@
 
     window.addEventListener('load', ()=>{
       ensurePlanRows();
-      // Check session expiry on load (FIX #8)
-      const loginAt = Number(localStorage.getItem('admin_settings_login_at') || 0);
-      if (loginAt && (Date.now() - loginAt) > SESSION_TIMEOUT_MS) {
-        localStorage.removeItem('admin_settings_password');
-        localStorage.removeItem('admin_settings_login_at');
-      }
       const saved = getSharedAdminSecret();
       syncSharedAdminSecret(saved);
       fill({ payment:{ baseUrl: currentOrigin() }, smtp:{ emailBaseUrl: currentOrigin() }});

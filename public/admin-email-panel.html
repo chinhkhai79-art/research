@@ -177,7 +177,7 @@
     function esc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
     function lineBreak(v){ return esc(v).replace(/\n/g,'<br>'); }
     function defaultNameFromEmail(email){ const local=String(email||'').split('@')[0]||'bạn'; return local.replace(/[._-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase()).trim() || 'bạn'; }
-    function adminSecret(){ return String(localStorage.getItem('ADMIN_SHARED_SECRET') || localStorage.getItem('ADMIN_SECRET_RESEARCH') || localStorage.getItem('ADMIN_SECRET') || localStorage.getItem('admin_settings_password') || DEFAULT_SECRET).trim() || DEFAULT_SECRET; }
+    function adminSecret(){ return String(SHARED_ADMIN_SECRET || DEFAULT_SECRET).trim() || DEFAULT_SECRET; }
     let toastTimer = null;
     function show(type, text){
       const el=$('msg');
@@ -258,7 +258,7 @@
       catch(e){ show('err', e.message || 'Gửi test thất bại.'); }
     }
     function reset(kind){ fillOne(kind); show('ok', kind==='admin' ? 'Đã khôi phục mẫu Admin, bấm Lưu để áp dụng.' : 'Đã khôi phục mẫu khách hàng, bấm Lưu để áp dụng.'); }
-    function syncSharedAdminSecret(value){ if(value){ localStorage.setItem('ADMIN_SHARED_SECRET', String(value)); localStorage.setItem('ADMIN_SECRET_RESEARCH', String(value)); } }
+    function syncSharedAdminSecret(value){ if(value){ SHARED_ADMIN_SECRET = String(value).trim(); } }
     window.syncSharedAdminSecret = syncSharedAdminSecret;
     window.addEventListener('message', (event)=>{ if(event.origin === location.origin && event.data?.type === 'ADMIN_SHARED_SECRET') syncSharedAdminSecret(event.data.value); });
     ['customer','admin'].forEach(kind => {
