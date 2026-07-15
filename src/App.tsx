@@ -7103,7 +7103,7 @@ Quy tắc:
                   <Search size={16} /> <span className="vtw-tab-full">TÌM KÊNH & ĐÁNH GIÁ TỪ KHÓA</span><span className="vtw-tab-short">Tìm kênh</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
-                  <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
+                  <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH KÊNH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
                 </div>
                 <div className="px-8 py-2.5 rounded-t-xl bg-[#bdc3c7] text-[#555] border-t border-x border-[#95a5a6] font-bold flex items-center gap-2">
                   <Video size={16} /> <span className="vtw-tab-full">KIỂM TRA LINK VIDEO</span><span className="vtw-tab-short">Video</span>
@@ -7257,7 +7257,7 @@ Quy tắc:
             onClick={() => setActiveTab(2)}
             className={`vtw-tab-btn px-8 py-2.5 rounded-t-xl flex items-center gap-2 transition-all font-bold border-t border-x ${activeTab === 2 ? 'bg-[#3498db] text-white border-[#2980b9] shadow-[0_-2px_5px_rgba(0,0,0,0.1)]' : 'bg-[#bdc3c7] text-[#555] border-[#95a5a6] hover:bg-[#b0b7bb]'}`}
           >
-            <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
+            <BarChart2 size={16} /> <span className="vtw-tab-full">PHÂN TÍCH KÊNH ĐỐI THỦ (SPY)</span><span className="vtw-tab-short">Spy</span>
           </button>
           <button 
             onClick={() => setActiveTab(4)}
