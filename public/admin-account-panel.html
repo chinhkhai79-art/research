@@ -325,6 +325,35 @@
       body.admin-mobile-view .users-cards{display:grid!important}
     }
 
+    /* v72: Tổng quan tài khoản */
+    .overview-filter-row{display:flex;gap:10px;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 14px}
+    .overview-filter-row .field{min-width:220px;max-width:280px;flex:0 0 auto}
+    .account-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px;margin:12px 0 14px}
+    .account-summary-card{background:#f8fbff;border:1px solid #d8e3ef;border-radius:16px;padding:14px 16px;box-shadow:0 8px 22px rgba(15,23,42,.05)}
+    .account-summary-label{font-size:12px;color:#64748b!important;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+    .account-summary-value{font-size:26px;line-height:1.1;color:#0f3b66!important}
+    .account-summary-card.pro .account-summary-value{color:#16a34a!important}
+    .account-summary-card.trial .account-summary-value{color:#d97706!important}
+    .account-summary-card.expired .account-summary-value{color:#ef4444!important}
+    .overview-table th,.overview-table td{font-size:11.5px!important;padding:10px 7px!important}
+    .overview-table th:nth-child(1),.overview-table td:nth-child(1){width:52px;text-align:center}
+    .overview-table th:nth-child(2),.overview-table td:nth-child(2){width:22%}
+    .overview-table th:nth-child(3),.overview-table td:nth-child(3){width:20%}
+    .overview-table th:nth-child(4),.overview-table td:nth-child(4){width:110px}
+    .overview-table th:nth-child(5),.overview-table td:nth-child(5){width:18%}
+    .overview-table th:nth-child(6),.overview-table td:nth-child(6){width:130px}
+    .overview-table th:nth-child(7),.overview-table td:nth-child(7){width:120px}
+    .overview-cards{display:none}
+    @media(max-width:760px){
+      .account-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .account-summary-card{padding:12px}
+      .account-summary-value{font-size:22px}
+      .overview-filter-row{align-items:stretch}
+      .overview-filter-row .field{max-width:none;width:100%;flex:1 1 100%}
+      body.admin-mobile-view .overview-table-wrap{display:none!important}
+      body.admin-mobile-view .overview-cards{display:grid!important;gap:10px;margin-top:12px}
+    }
+
     /* v63: mobile panel cao đúng nội dung, không bị che phần cuối */
     @media(max-width:760px){
       html,body{overflow-x:hidden!important;overflow-y:visible!important;min-height:auto!important}
@@ -343,6 +372,7 @@
     <div class="tabs-search-row">
       <div class="tabs">
         <button id="tabUsers" class="tab active" onclick="showTab('users')">Danh sách tài khoản</button>
+        <button id="tabOverview" class="tab" onclick="showTab('overview')">Tổng quan về tài khoản</button>
         <button id="tabAction" class="tab" onclick="showTab('action')">Kích hoạt / khóa PRO</button>
         <button id="tabRevenue" class="tab" onclick="showTab('revenue'); loadRevenue()">Đơn hàng & Doanh thu</button>
         <button id="tabLogs" class="tab" onclick="showTab('logs'); loadLogs()">Admin logs</button>
@@ -497,6 +527,45 @@
           </div>
     </div>
 
+    <div id="overviewPanel" class="card hidden">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+        <h2 style="margin:0;font-size:22px;">Tổng quan về tài khoản</h2>
+        <div class="muted" id="overviewCountText">0 tài khoản</div>
+      </div>
+      <div class="overview-filter-row">
+        <div class="field">
+          <label>Bộ lọc trạng thái</label>
+          <select id="overviewStatusFilter" onchange="loadOverview(1, true)">
+            <option value="all">Tất cả tài khoản</option>
+            <option value="PRO">PRO</option>
+            <option value="TRIAL">TRIAL</option>
+            <option value="HẾT HẠN">Hết hạn</option>
+            <option value="CHƯA KIỂM TRA">Chưa kiểm tra</option>
+          </select>
+        </div>
+        <div class="actions" style="gap:8px;">
+          <button class="btn-dark" onclick="loadOverview(1, true)">Tải lại tổng quan</button>
+        </div>
+      </div>
+      <div id="overviewStats" class="account-summary-grid"></div>
+      <div class="actions" id="overviewPager" style="justify-content:flex-end;margin-top:10px;gap:8px;">
+        <button class="btn-dark small" id="prevOverviewPage" onclick="changeOverviewPage(-1)">‹</button>
+        <span class="muted" id="overviewPageText">1 · 50/trang</span>
+        <button class="btn-dark small" id="nextOverviewPage" onclick="changeOverviewPage(1)">›</button>
+      </div>
+      <div class="scroll overview-table-wrap">
+        <table class="overview-table">
+          <thead>
+            <tr>
+              <th>STT</th><th>Email / Tên</th><th>UID</th><th>Trạng thái</th><th>Gói</th><th>Hết hạn</th><th>Còn lại</th><th>Đăng nhập cuối</th>
+            </tr>
+          </thead>
+          <tbody id="overviewBody"></tbody>
+        </table>
+      </div>
+      <div id="overviewCards" class="overview-cards" aria-label="Tổng quan tài khoản mobile"></div>
+    </div>
+
     <div id="usersPanel" class="card">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
         <h2 style="margin:0;font-size:22px;">Danh sách tài khoản</h2>
@@ -596,6 +665,8 @@
 const USERS_PAGE_SIZE = 50;
 let currentUsersPage = 1;
 let currentUsersHasNext = false;
+let overviewState = { page: 1, hasNext: false, loaded: false };
+let overviewSearchTimer = null;
 const REVENUE_PAGE_SIZE = 10;
 const revenueState = { orders: [], pending: [], issues: [], pages: { orders: 1, pending: 1, issues: 1 } };
 let revenueSearchTimer = null;
@@ -649,10 +720,16 @@ function resetSearchOnFreshLoad(){
 }
 function handleSearchKey(event){
   if(event && event.key !== 'Enter') return;
-  if(!qs('revenuePanel').classList.contains('hidden')) loadRevenue();
+  if(!qs('overviewPanel').classList.contains('hidden')) loadOverview(1, true);
+  else if(!qs('revenuePanel').classList.contains('hidden')) loadRevenue();
   else loadUsers(1, true);
 }
 function handleSearchInput(){
+  if(!qs('overviewPanel').classList.contains('hidden')){
+    clearTimeout(overviewSearchTimer);
+    overviewSearchTimer = setTimeout(function(){ loadOverview(1, true); }, 220);
+    return;
+  }
   if(qs('revenuePanel').classList.contains('hidden')) return;
   clearTimeout(revenueSearchTimer);
   revenueSearchTimer = setTimeout(function(){ applyRevenueSearchAndRender(true); }, 180);
@@ -671,6 +748,7 @@ syncMobileAccountLayout();
 
 function showTab(name){
   qs('usersPanel').classList.toggle('hidden', name !== 'users');
+  qs('overviewPanel').classList.toggle('hidden', name !== 'overview');
   qs('actionPanel').classList.toggle('hidden', name !== 'action');
   qs('logsPanel').classList.toggle('hidden', name !== 'logs');
   qs('revenuePanel').classList.toggle('hidden', name !== 'revenue');
@@ -678,10 +756,12 @@ function showTab(name){
   const bulkPanel = qs('bulkPanel');
   if (bulkPanel) bulkPanel.classList.toggle('hidden', name !== 'action');
   qs('tabUsers').classList.toggle('active', name === 'users');
+  qs('tabOverview').classList.toggle('active', name === 'overview');
   qs('tabAction').classList.toggle('active', name === 'action');
   qs('tabLogs').classList.toggle('active', name === 'logs');
   qs('tabRevenue').classList.toggle('active', name === 'revenue');
   if (name === 'action') loadTrialSettings(false);
+  if (name === 'overview' && !overviewState.loaded) loadOverview(1, false);
 }
 let trialSettingsLoaded = false;
 function setTrialStatus(msg, type=''){
@@ -837,6 +917,91 @@ function saveSecretOnly(){
   syncSharedAdminSecret(secret());
   setStatus('Đã đồng bộ mật khẩu quản trị dùng chung. Danh sách Supabase sẽ tự tải 50 tài khoản mỗi trang.', 'ok');
   loadUsers(1, true);
+}
+
+
+function formatNumber(n){ return Number(n || 0).toLocaleString('vi-VN'); }
+function updateOverviewPager(data){
+  overviewState.page = Number(data.page || overviewState.page || 1);
+  overviewState.hasNext = Boolean(data.hasNext);
+  const prevBtn = qs('prevOverviewPage');
+  const nextBtn = qs('nextOverviewPage');
+  const pageText = qs('overviewPageText');
+  if(prevBtn) prevBtn.disabled = overviewState.page <= 1;
+  if(nextBtn) nextBtn.disabled = !overviewState.hasNext;
+  if(pageText) pageText.textContent = `${overviewState.page} · 50/trang`;
+}
+function changeOverviewPage(delta){
+  const next = Math.max(1, overviewState.page + Number(delta || 0));
+  if(next === overviewState.page) return;
+  loadOverview(next, false);
+}
+async function loadOverview(page = 1, force = false){
+  try{
+    if(!secret()) return setStatus('Chưa nhập mật khẩu quản trị.', 'err');
+    overviewState.page = Math.max(1, Number(page || 1));
+    const q = currentSearch();
+    const status = String((qs('overviewStatusFilter') && qs('overviewStatusFilter').value) || 'all');
+    setStatus('Đang tải tổng quan tài khoản...', '');
+    const url = '/api/admin-account?action=overview&limit=50&page=' + overviewState.page + '&status=' + encodeURIComponent(status) + (force ? '&force=1' : '') + (q ? '&q=' + encodeURIComponent(q) : '');
+    const data = await api(url);
+    renderOverview(data.users || [], data);
+    updateOverviewPager(data);
+    overviewState.loaded = true;
+    setStatus(`Đã tải tổng quan tài khoản: ${formatNumber(data.total || 0)} tài khoản theo bộ lọc.`, 'ok');
+  }catch(e){ setStatus('Lỗi tải tổng quan: ' + esc(e.message), 'err'); }
+}
+function renderOverview(users, data={}){
+  const page = Number(data.page || overviewState.page || 1);
+  const summary = data.summary || {};
+  const total = Number(data.total || 0);
+  const filter = String(data.filterStatus || 'ALL');
+  const filterLabel = filter === 'ALL' ? 'Tất cả' : filter;
+  if(qs('overviewCountText')) qs('overviewCountText').textContent = `${formatNumber(total)} tài khoản · ${filterLabel} · trang ${page}`;
+  if(qs('overviewStats')) qs('overviewStats').innerHTML = `
+    <div class="account-summary-card"><div class="account-summary-label">Tổng tài khoản</div><div class="account-summary-value">${formatNumber(summary.total)}</div></div>
+    <div class="account-summary-card pro"><div class="account-summary-label">PRO</div><div class="account-summary-value">${formatNumber(summary.pro)}</div></div>
+    <div class="account-summary-card trial"><div class="account-summary-label">TRIAL</div><div class="account-summary-value">${formatNumber(summary.trial)}</div></div>
+    <div class="account-summary-card expired"><div class="account-summary-label">Hết hạn</div><div class="account-summary-value">${formatNumber(summary.expired)}</div></div>`;
+  const badgeFor = (u)=> u.status === 'PRO'
+      ? '<span class="badge pro">PRO</span>'
+      : u.status === 'TRIAL'
+        ? '<span class="badge trial">TRIAL</span>'
+        : u.status === 'CHƯA KIỂM TRA'
+          ? '<span class="badge" style="background:#e0f2fe;color:#075985">CHƯA KIỂM TRA</span>'
+          : '<span class="badge expired">HẾT HẠN</span>';
+  const empty = '<tr><td colspan="8" class="muted">Chưa có tài khoản theo bộ lọc này.</td></tr>';
+  const rows = users.map((u, index)=>{
+    const stt = ((page - 1) * 50) + index + 1;
+    const loginInfo = u.lastLoginAt ? `${esc(fmtDate(u.lastLoginAt))}<br><span class="muted">${Number(u.loginCount || 0)} lần</span>` : '<span class="muted">Chưa rõ</span>';
+    return `<tr>
+      <td class="stt-col">${stt}</td>
+      <td><div class="cell2"><span>${esc(u.email || '')}</span><br><span class="muted">${esc(u.name || '')}</span></div></td>
+      <td><span class="mono uid-cell" title="${esc(u.uid || '')}">${esc(u.uid || '')}</span></td>
+      <td>${badgeFor(u)}</td>
+      <td><span class="plan-cell">${esc(u.planName || 'Chưa có')}</span></td>
+      <td>${esc(fmtDate(u.expiresAt))}</td>
+      <td>${esc(u.remainingText || '---')}</td>
+      <td>${loginInfo}</td>
+    </tr>`;
+  });
+  if(qs('overviewBody')) qs('overviewBody').innerHTML = rows.join('') || empty;
+  const cards = users.map((u, index)=>{
+    const stt = ((page - 1) * 50) + index + 1;
+    const loginInfo = u.lastLoginAt ? `${esc(fmtDate(u.lastLoginAt))} · ${Number(u.loginCount || 0)} lần` : 'Chưa rõ';
+    return `<div class="user-card">
+      <div class="user-card-top"><div class="user-card-index">${stt}</div><div class="user-card-main"><div class="user-card-email">${esc(u.email || '')}</div>${u.name ? `<div class="user-card-name">${esc(u.name)}</div>` : ''}</div>${badgeFor(u)}</div>
+      <div class="user-card-grid">
+        <div class="user-card-field wide"><span class="user-card-label">UID</span><span class="user-card-value mono">${esc(u.uid || '---')}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Gói</span><span class="user-card-value">${esc(u.planName || 'Chưa có')}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Hết hạn</span><span class="user-card-value">${esc(fmtDate(u.expiresAt))}</span></div>
+        <div class="user-card-field"><span class="user-card-label">Còn lại</span><span class="user-card-value">${esc(u.remainingText || '---')}</span></div>
+        <div class="user-card-field wide"><span class="user-card-label">Đăng nhập</span><span class="user-card-value">${loginInfo}</span></div>
+      </div>
+    </div>`;
+  });
+  if(qs('overviewCards')) qs('overviewCards').innerHTML = cards.join('') || '<div class="user-card"><div class="user-card-value">Chưa có tài khoản theo bộ lọc này.</div></div>';
+  syncMobileAccountLayout();
 }
 
 function updateUsersPager(data){
