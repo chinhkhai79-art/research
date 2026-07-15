@@ -62,6 +62,8 @@
     .tab.active{box-shadow:0 8px 22px rgba(34,211,238,.22)}
 
     .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .top-actions .admin-btn,.top-actions .back,.top-actions .guide-header-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+    .top-actions .admin-btn{border-radius:12px;padding:10px 14px;font-weight:400}
     .guide-header-btn{display:inline-flex;align-items:center;gap:8px;color:#0f3b66;text-decoration:none;background:#fff7ed;border:1px solid #fed7aa;padding:10px 13px;border-radius:12px;white-space:nowrap;font-weight:500;cursor:pointer;box-shadow:0 8px 18px rgba(249,115,22,.08)}
     .guide-config{padding:14px 16px}
     .guide-config-title{margin:0 0 10px;color:#0f3b66;font-size:18px;font-weight:500;display:flex;align-items:center;gap:8px}
@@ -79,7 +81,7 @@
     .guide-close{width:36px;height:36px;border-radius:999px;border:0;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font-size:22px;line-height:1}
     .guide-video-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000}
     .guide-video-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
-    @media(max-width:750px){.top-actions{width:100%;justify-content:center}.guide-header-btn,.back{width:100%;justify-content:center;text-align:center}.guide-grid{grid-template-columns:1fr}.guide-config{padding:12px}.guide-config-title{font-size:16px}}
+    @media(max-width:750px){.top-actions{width:100%;justify-content:center}.guide-header-btn,.back,.top-actions .admin-btn{width:100%;justify-content:center;text-align:center}.guide-grid{grid-template-columns:1fr}.guide-config{padding:12px}.guide-config-title{font-size:16px}}
 
     /* v63: mobile admin không cắt nội dung iframe và có nút lên đầu trang */
     .admin-scroll-top{position:fixed;right:18px;bottom:18px;z-index:99990;display:none;align-items:center;justify-content:center;gap:7px;border:1px solid #bae6fd;background:#22d3ee;color:#00111f;border-radius:999px;padding:11px 14px;min-width:46px;min-height:46px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-size:14px;font-weight:500;cursor:pointer}
@@ -98,6 +100,8 @@
       <div class="top-actions">
         <button id="adminGuideVideoBtn" class="guide-header-btn" type="button">▶ Video hướng dẫn</button>
         <a class="back" href="https://www.tubekey.vn/">← Về tool</a>
+        <button id="refreshActivePanel" class="admin-btn gray header-action hidden" type="button">Làm mới trang hiện tại</button>
+        <button id="adminLogoutBtn" class="admin-btn gray logout-btn header-action hidden" type="button">Đăng xuất</button>
       </div>
     </div>
 
@@ -107,11 +111,11 @@
       <div class="login-grid">
         <div class="login-field">
           <label>Email quản trị</label>
-          <input id="adminLoginEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" name="admin_email_login_v71" placeholder="Nhập email quản trị" />
+          <input id="adminLoginEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" name="admin_email_login_v74" placeholder="Nhập email quản trị" />
         </div>
         <div class="login-field">
           <label>Mật khẩu</label>
-          <input id="adminLoginPassword" type="password" autocomplete="new-password" name="admin_password_login_v71" placeholder="Nhập mật khẩu quản trị" />
+          <input id="adminLoginPassword" type="password" autocomplete="new-password" name="admin_password_login_v74" placeholder="Nhập mật khẩu quản trị" />
         </div>
         <button id="adminLoginBtn" class="admin-btn" type="button">Đăng nhập</button>
       </div>
@@ -119,15 +123,7 @@
     </div>
 
     <div id="adminMain" class="hidden">
-      <div class="shared-secret admin-session">
-        <input id="sharedAdminSecret" type="hidden" value="ThanhCong2027###" />
-        <div class="shared-grid">
-          <div class="session-title">Đã đăng nhập quản trị: <b id="adminEmailLabel">vantheweb@gmail.com</b></div>
-          <button id="refreshActivePanel" class="admin-btn gray" type="button">Làm mới trang hiện tại</button>
-          <button id="adminLogoutBtn" class="admin-btn gray logout-btn" type="button">Đăng xuất</button>
-        </div>
-        <div id="sharedSecretNote" class="shared-note">Mật khẩu quản trị đã được đồng bộ cho các trang quản lý.</div>
-      </div>
+      <input id="sharedAdminSecret" type="hidden" value="ThanhCong2027###" />
 
       <div class="shared-secret guide-config">
         <h2 class="guide-config-title">🎬 Video hướng dẫn</h2>
@@ -149,13 +145,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=73" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=74" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=72" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=74" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=72" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=74" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -324,7 +320,7 @@
       ADMIN_RUNTIME_SECRET = v;
       if (input) input.value = v;
       var note = document.getElementById('sharedSecretNote');
-      if (note) note.textContent = 'Phiên quản trị tạm đang hoạt động trong tab hiện tại. Tải lại trang vẫn giữ đăng nhập, đóng tab hoặc đăng xuất sẽ cần login lại.';
+      if (note) note.textContent = '';
       syncSharedSecretToFrames();
     }
     function syncSharedSecretToFrame(frame){
@@ -451,8 +447,10 @@
     function showAdminMain(){
       document.getElementById('adminLoginCard').classList.add('hidden');
       document.getElementById('adminMain').classList.remove('hidden');
-      var lbl = document.getElementById('adminEmailLabel');
-      if (lbl) lbl.textContent = ADMIN_LOGIN_EMAIL;
+      var refreshBtn = document.getElementById('refreshActivePanel');
+      var logoutBtn = document.getElementById('adminLogoutBtn');
+      if (refreshBtn) refreshBtn.classList.remove('hidden');
+      if (logoutBtn) logoutBtn.classList.remove('hidden');
       saveSharedSecret(ADMIN_LOGIN_PASSWORD);
       loadGuideSettings();
       if (location.hash === '#settings') showAdminPanel('settings');
@@ -463,6 +461,10 @@
     function showAdminLogin(){
       document.getElementById('adminMain').classList.add('hidden');
       document.getElementById('adminLoginCard').classList.remove('hidden');
+      var refreshBtn = document.getElementById('refreshActivePanel');
+      var logoutBtn = document.getElementById('adminLogoutBtn');
+      if (refreshBtn) refreshBtn.classList.add('hidden');
+      if (logoutBtn) logoutBtn.classList.add('hidden');
       loadRememberedAdmin();
       var e = document.getElementById('adminLoginEmail');
       var p = document.getElementById('adminLoginPassword');
