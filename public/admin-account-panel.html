@@ -367,6 +367,19 @@
       .wrap,.page{padding-bottom:96px!important;min-height:auto!important}
     }
 
+
+
+    /* v79: mobile admin không dùng khung/overflow ẩn làm che phần cuối trang */
+    @media(max-width:760px){
+      html,body{overflow-x:hidden!important;overflow-y:visible!important;height:auto!important;min-height:auto!important;max-height:none!important;background:transparent!important}
+      .wrap,.page,.card,.body,.scroll,.preview,.grid-card,.login{overflow:visible!important;max-height:none!important;height:auto!important;min-height:0!important}
+      .wrap,.page{padding-bottom:180px!important}
+      .preview table,.preview tbody,.preview tr,.preview td{overflow:visible!important;max-height:none!important;height:auto!important}
+      .preview>div,.preview>div>div{overflow:visible!important;max-height:none!important;height:auto!important}
+      .users-table-wrap,.overview-table-wrap{overflow:visible!important;max-height:none!important;height:auto!important}
+      .user-card{overflow:visible!important}
+    }
+
   </style>
 </head>
 <body>
@@ -1452,5 +1465,49 @@ syncDaysFromPlan();
 setStatus('Đã đồng bộ mật khẩu quản trị dùng chung. Đang tải danh sách Supabase/Postgres 50 tài khoản mỗi trang...', 'ok');
 loadUsers(1, false);
 </script>
+
+  <script>
+    // v79: báo chiều cao thật về admin.html để mobile không bị khung iframe che/cắt phần cuối.
+    (function(){
+      function getPanelHeight(){
+        try {
+          var main = document.querySelector('.wrap') || document.querySelector('.page') || document.body;
+          var rect = main && main.getBoundingClientRect ? main.getBoundingClientRect() : null;
+          var bottom = rect ? Math.ceil(rect.bottom - Math.min(rect.top, 0)) : 0;
+          var nodes = main ? main.querySelectorAll('*') : [];
+          for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if (!el || el.offsetParent === null) continue;
+            var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+            if (r) bottom = Math.max(bottom, Math.ceil(r.bottom - Math.min(rect ? rect.top : 0, 0)));
+          }
+          return Math.max(
+            bottom,
+            main ? (main.scrollHeight || 0) : 0,
+            document.body ? (document.body.scrollHeight || 0) : 0,
+            document.documentElement ? (document.documentElement.scrollHeight || 0) : 0,
+            window.innerHeight || 0
+          );
+        } catch (_) { return 0; }
+      }
+      function postPanelHeight(){
+        try {
+          if (!window.parent || window.parent === window) return;
+          var h = getPanelHeight();
+          if (h) window.parent.postMessage({ type: 'ADMIN_PANEL_HEIGHT', height: h }, location.origin);
+        } catch (_) {}
+      }
+      window.__postAdminPanelHeight = postPanelHeight;
+      window.addEventListener('load', function(){ setTimeout(postPanelHeight, 80); setTimeout(postPanelHeight, 500); setTimeout(postPanelHeight, 1200); });
+      window.addEventListener('resize', function(){ setTimeout(postPanelHeight, 80); });
+      try {
+        var target = document.querySelector('.wrap') || document.querySelector('.page') || document.body;
+        if (window.ResizeObserver && target) new ResizeObserver(function(){ postPanelHeight(); }).observe(target);
+        if (window.MutationObserver && target) new MutationObserver(function(){ postPanelHeight(); }).observe(target, {childList:true, subtree:true, attributes:true, characterData:true});
+      } catch (_) {}
+      setInterval(postPanelHeight, 1500);
+    })();
+  </script>
+
 </body>
 </html>

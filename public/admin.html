@@ -38,7 +38,7 @@
     .tab.active{background:var(--cyan);color:#00111f;border-color:#67e8f9}
     .note{background:#eff8ff;border:1px solid #bfdbfe;color:#245078;border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
     .frame-card{background:#ffffff;border:0;border-radius:0;overflow:visible;box-shadow:none}
-    iframe{display:block;width:100%;border:0;background:transparent;min-height:0;height:0;overflow:hidden}
+    iframe{display:block;width:100%;border:0;background:transparent;min-height:0;height:0;overflow:visible}
     .shared-secret{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);padding:16px;margin:12px 0 16px}
     .shared-grid{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:12px;align-items:end}
     .shared-field label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px;font-weight:400}
@@ -58,7 +58,7 @@
     .session-title{font-size:15px;color:#000}.session-title b{color:#0f3b66;font-weight:500}
     .logout-btn{background:#fee2e2!important;color:#991b1b!important;border:1px solid #fecaca!important}
     @media(max-width:850px){.login-grid{grid-template-columns:1fr}.login-card{max-width:none}.admin-session .shared-grid{grid-template-columns:1fr}}
-    @media(max-width:750px){.top{flex-direction:column}.wrap{width:100%;padding:16px 8px 28px}h1{font-size:24px}.tab{flex:1;min-width:150px}.frame-card{border-radius:16px}iframe{min-height:0}}
+    @media(max-width:750px){.top{flex-direction:column}.wrap{width:100%;padding:16px 8px 140px}h1{font-size:24px}.tab{flex:1;min-width:150px}.frame-card{border-radius:16px;overflow:visible!important}iframe{min-height:0;overflow:visible!important}}
     /* v30: chữ trong admin dùng đen 100% để dễ đọc */
     body,.sub,.shared-field label,.shared-note,.tab,.back,.admin-btn.gray,input{color:#000 !important}
     h1{color:#000 !important}
@@ -152,13 +152,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=78" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=79" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=78" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=79" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=78" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=79" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -367,17 +367,23 @@
         if (!main) return 0;
         try {
           frame.setAttribute('scrolling', 'no');
-          frame.style.overflow = 'hidden';
+          frame.style.overflow = 'visible';
           doc.documentElement.style.minHeight = '0';
           doc.body.style.minHeight = '0';
-          doc.documentElement.style.overflow = 'hidden';
-          doc.body.style.overflow = 'hidden';
+          doc.documentElement.style.overflowX = 'hidden';
+          doc.body.style.overflowX = 'hidden';
+          doc.documentElement.style.overflowY = 'visible';
+          doc.body.style.overflowY = 'visible';
         } catch (_) {}
         var rect = main.getBoundingClientRect ? main.getBoundingClientRect() : null;
+        var docEl = doc.documentElement;
+        var body = doc.body;
         var h = Math.max(
           main.offsetHeight || 0,
           main.scrollHeight || 0,
-          rect ? Math.ceil(rect.height) : 0
+          rect ? Math.ceil(rect.height) : 0,
+          body ? (body.scrollHeight || 0) : 0,
+          docEl ? (docEl.scrollHeight || 0) : 0
         );
         var children = main.children || [];
         var bottom = 0;
@@ -387,7 +393,8 @@
           var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
           if (r && rect) bottom = Math.max(bottom, Math.ceil(r.bottom - rect.top));
         }
-        h = Math.max(h, bottom, 360) + 96;
+        var mobileExtra = (window.innerWidth || document.documentElement.clientWidth || 0) <= 760 ? 260 : 120;
+        h = Math.max(h, bottom, 360) + mobileExtra;
         return Math.min(Math.ceil(h), 50000);
       } catch (_) { return 0; }
     }
@@ -435,6 +442,24 @@
         if (item && item[0]) handleFrameLoad(item[0], item[1]);
       });
     } catch (_) {}
+    window.addEventListener('message', function(ev){
+      try {
+        if (ev.origin !== location.origin) return;
+        var data = ev.data || {};
+        if (data.type !== 'ADMIN_PANEL_HEIGHT') return;
+        var frames = [document.getElementById('accountsFrame'), document.getElementById('settingsFrame'), document.getElementById('emailFrame')];
+        for (var i = 0; i < frames.length; i++) {
+          var frame = frames[i];
+          if (!frame || frame.contentWindow !== ev.source) continue;
+          if (frame.closest && frame.closest('.hidden')) return;
+          var raw = Number(data.height || 0);
+          if (!raw || raw < 240) return;
+          var extra = (window.innerWidth || document.documentElement.clientWidth || 0) <= 760 ? 220 : 90;
+          frame.style.height = Math.min(Math.ceil(raw + extra), 50000) + 'px';
+          break;
+        }
+      } catch (_) {}
+    });
     function showAdminPanel(name){
       var isSettings = name === 'settings';
       var isEmail = name === 'email';
