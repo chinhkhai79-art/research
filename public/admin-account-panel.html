@@ -1481,12 +1481,14 @@ loadUsers(1, false);
             var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
             if (r) bottom = Math.max(bottom, Math.ceil(r.bottom - Math.min(rect ? rect.top : 0, 0)));
           }
+          // v81: chỉ báo chiều cao nội dung thật của .wrap/.page.
+          // Không dùng window.innerHeight/body/document scrollHeight vì chúng tăng theo
+          // chiều cao iframe cha và gây feedback loop làm trang tự kéo dài.
           return Math.max(
             bottom,
+            main ? (main.offsetHeight || 0) : 0,
             main ? (main.scrollHeight || 0) : 0,
-            document.body ? (document.body.scrollHeight || 0) : 0,
-            document.documentElement ? (document.documentElement.scrollHeight || 0) : 0,
-            window.innerHeight || 0
+            rect ? Math.ceil(rect.height) : 0
           );
         } catch (_) { return 0; }
       }
@@ -1505,7 +1507,7 @@ loadUsers(1, false);
         if (window.ResizeObserver && target) new ResizeObserver(function(){ postPanelHeight(); }).observe(target);
         if (window.MutationObserver && target) new MutationObserver(function(){ postPanelHeight(); }).observe(target, {childList:true, subtree:true, attributes:true, characterData:true});
       } catch (_) {}
-      setInterval(postPanelHeight, 1500);
+      // v81: bỏ setInterval resize liên tục để tránh tự mở rộng chiều cao trang.
     })();
   </script>
 

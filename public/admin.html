@@ -152,13 +152,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=79" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=81" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=79" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=81" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=79" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=81" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -376,14 +376,13 @@
           doc.body.style.overflowY = 'visible';
         } catch (_) {}
         var rect = main.getBoundingClientRect ? main.getBoundingClientRect() : null;
-        var docEl = doc.documentElement;
-        var body = doc.body;
+        // v81: chỉ đo chiều cao nội dung thật của .wrap/.page.
+        // Không dùng body/documentElement.scrollHeight vì chiều cao đó bị ảnh hưởng
+        // bởi chính iframe, gây vòng lặp tự kéo dài trang xuống khoảng trắng.
         var h = Math.max(
           main.offsetHeight || 0,
           main.scrollHeight || 0,
-          rect ? Math.ceil(rect.height) : 0,
-          body ? (body.scrollHeight || 0) : 0,
-          docEl ? (docEl.scrollHeight || 0) : 0
+          rect ? Math.ceil(rect.height) : 0
         );
         var children = main.children || [];
         var bottom = 0;
@@ -393,7 +392,7 @@
           var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
           if (r && rect) bottom = Math.max(bottom, Math.ceil(r.bottom - rect.top));
         }
-        var mobileExtra = (window.innerWidth || document.documentElement.clientWidth || 0) <= 760 ? 260 : 120;
+        var mobileExtra = (window.innerWidth || document.documentElement.clientWidth || 0) <= 760 ? 120 : 60;
         h = Math.max(h, bottom, 360) + mobileExtra;
         return Math.min(Math.ceil(h), 50000);
       } catch (_) { return 0; }
@@ -454,7 +453,7 @@
           if (frame.closest && frame.closest('.hidden')) return;
           var raw = Number(data.height || 0);
           if (!raw || raw < 240) return;
-          var extra = (window.innerWidth || document.documentElement.clientWidth || 0) <= 760 ? 220 : 90;
+          var extra = (window.innerWidth || document.documentElement.clientWidth || 0) <= 760 ? 90 : 45;
           frame.style.height = Math.min(Math.ceil(raw + extra), 50000) + 'px';
           break;
         }
@@ -475,9 +474,13 @@
       if (!isSettings && !isEmail && !af.getAttribute('src')) af.setAttribute('src', af.dataset.src);
       if (isSettings && !sf.getAttribute('src')) sf.setAttribute('src', sf.dataset.src);
       if (isEmail && !ef.getAttribute('src')) ef.setAttribute('src', ef.dataset.src);
-      if (isSettings) location.hash = 'settings';
-      else if (isEmail) location.hash = 'email';
+      // v81: đổi hash bằng replaceState để trình duyệt không tự cuộn theo hash.
+      if (isSettings) history.replaceState(null, '', location.pathname + location.search + '#settings');
+      else if (isEmail) history.replaceState(null, '', location.pathname + location.search + '#email');
       else history.replaceState(null, '', location.pathname + location.search);
+      [af, sf, ef].forEach(function(f){
+        if (f && f.closest && f.closest('.hidden')) f.style.height = '0px';
+      });
       setTimeout(function(){
         resizeFrame(isEmail ? ef : (isSettings ? sf : document.getElementById('accountsFrame')));
       }, 250);
