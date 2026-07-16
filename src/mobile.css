@@ -4163,3 +4163,128 @@ body .vtw-channel-trending-card {
     gap: 3px !important;
   }
 }
+
+/* §84 ─── Mobile header: hàng 1 Tài khoản + Đăng xuất; hàng 2 Video + Hỗ trợ + Nâng cấp + Làm mới ─── */
+@media (max-width: 900px) {
+  body .vtw-app-header .vtw-header-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body .vtw-app-header .vtw-user-header-row {
+    display: contents !important;
+  }
+
+  /* Hàng 1 */
+  body .vtw-app-header .vtw-account-box {
+    order: 1 !important;
+    flex: 0 0 calc(62% - 3px) !important;
+    width: calc(62% - 3px) !important;
+    max-width: calc(62% - 3px) !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 5px 8px !important;
+    overflow: hidden !important;
+  }
+
+  body .vtw-app-header .vtw-header-logout {
+    order: 2 !important;
+    flex: 0 0 calc(38% - 3px) !important;
+    width: calc(38% - 3px) !important;
+    max-width: calc(38% - 3px) !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 0 7px !important;
+  }
+
+  /* Hàng 2: 4 nút bằng nhau */
+  body .vtw-app-header .vtw-header-guide,
+  body .vtw-app-header .vtw-header-support,
+  body .vtw-app-header .vtw-header-upgrade,
+  body .vtw-app-header .vtw-header-refresh {
+    order: 10 !important;
+    flex: 0 0 calc(25% - 4.5px) !important;
+    width: calc(25% - 4.5px) !important;
+    max-width: calc(25% - 4.5px) !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 5px !important;
+    margin: 0 !important;
+    gap: 4px !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 9px !important;
+  }
+
+  body .vtw-app-header .vtw-header-guide,
+  body .vtw-app-header .vtw-header-support {
+    min-width: 0 !important;
+    max-width: calc(25% - 4.5px) !important;
+  }
+
+  body .vtw-app-header .vtw-header-guide svg,
+  body .vtw-app-header .vtw-header-support svg,
+  body .vtw-app-header .vtw-header-upgrade svg,
+  body .vtw-app-header .vtw-header-refresh svg,
+  body .vtw-app-header .vtw-header-logout svg {
+    width: 13px !important;
+    height: 13px !important;
+    flex: 0 0 13px !important;
+  }
+
+  body .vtw-app-header .vtw-account-box .vtw-account-text,
+  body .vtw-app-header .vtw-account-box > div {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body .vtw-app-header .vtw-account-box .vtw-user-email {
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+}
+
+@media (max-width: 400px) {
+  body .vtw-app-header .vtw-account-box,
+  body .vtw-app-header .vtw-header-logout {
+    min-height: 38px !important;
+    height: 38px !important;
+  }
+
+  body .vtw-app-header .vtw-header-guide,
+  body .vtw-app-header .vtw-header-support,
+  body .vtw-app-header .vtw-header-upgrade,
+  body .vtw-app-header .vtw-header-refresh {
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 0 3px !important;
+    gap: 3px !important;
+    font-size: 8.5px !important;
+  }
+
+  body .vtw-app-header .vtw-guide-label-mobile,
+  body .vtw-app-header .vtw-support-label-mobile,
+  body .vtw-app-header .vtw-upgrade-label-mobile,
+  body .vtw-app-header .vtw-refresh-label {
+    font-size: 8.5px !important;
+  }
+}
