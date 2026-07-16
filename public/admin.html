@@ -17,6 +17,13 @@
       }
     })();
   </script>
+  <script>
+    // v78: khai báo sớm để onload iframe không báo lỗi nếu iframe tải trước script cuối trang.
+    window.__pendingAdminFrameLoads = window.__pendingAdminFrameLoads || [];
+    window.handleFrameLoad = window.handleFrameLoad || function(frame, name){
+      window.__pendingAdminFrameLoads.push([frame, name]);
+    };
+  </script>
   <style>
     :root{--bg:#f4f8fd;--card:#ffffff;--card2:#eef5fc;--line:#d8e3ef;--text:#0f172a;--muted:#64748b;--cyan:#22d3ee;--cyan2:#0ea5e9}
     *{box-sizing:border-box}
@@ -145,13 +152,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=74" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=78" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=74" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=78" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=74" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=78" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -422,6 +429,12 @@
       syncSharedSecretToFrame(frame);
       setTimeout(function(){ resizeFrame(frame); attachFrameResizeWatcher(frame); }, name === 'settings' ? 500 : 300);
     }
+    window.handleFrameLoad = handleFrameLoad;
+    try {
+      (window.__pendingAdminFrameLoads || []).splice(0).forEach(function(item){
+        if (item && item[0]) handleFrameLoad(item[0], item[1]);
+      });
+    } catch (_) {}
     function showAdminPanel(name){
       var isSettings = name === 'settings';
       var isEmail = name === 'email';
