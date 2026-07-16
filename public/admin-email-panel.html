@@ -110,7 +110,8 @@
               <div class="field full"><label>Dòng mô tả ngay dưới tiêu đề</label><input id="customer_heroSubtitle" placeholder="Tài khoản của bạn đã nâng cấp PRO" /></div>
               <div class="field full"><label>Nội dung cảm ơn</label><textarea id="customer_introText" placeholder="Cảm ơn bạn đã mua hàng của chúng tôi..."></textarea></div>
               <div class="field"><label>Chữ trên nút</label><input id="customer_buttonText" placeholder="Truy cập công cụ" /></div>
-              <div class="field"><label>Dòng hỗ trợ cuối email</label><input id="customer_footerText" placeholder="Nếu bạn cần hỗ trợ, vui lòng phản hồi email này." /></div>
+              <div class="field"><label>Link nút Hướng dẫn lấy Key</label><input id="customer_keyGuideUrl" placeholder="Dán link hướng dẫn lấy Key" /></div>
+              <div class="field full"><label>Dòng hỗ trợ cuối email</label><input id="customer_footerText" placeholder="Nếu bạn cần hỗ trợ, vui lòng phản hồi email này." /></div>
             </div>
             <div class="actions">
               <button id="customer_saveBtn" class="green" type="button">Lưu mẫu khách hàng</button>
@@ -158,13 +159,14 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const DEFAULT_SECRET = 'ThanhCong2027###';
+    const DEFAULT_KEY_GUIDE_URL = 'https://drive.google.com/file/d/1CxCVSqGqH9ijg0rRBdTJciYoV5uABYW5/view?usp=drive_link';
     const DEFAULTS = {
       customer: {
         enabled: true,
         subjectBase: 'Thanh toán thành công', subjectHasOrder: true,
         heroTitle: 'Thanh toán thành công', heroSubtitle: 'Tài khoản của bạn đã nâng cấp PRO',
         introText: 'Cảm ơn bạn đã mua hàng của chúng tôi. Hệ thống đã xác nhận thanh toán và kích hoạt gói PRO cho tài khoản của bạn.',
-        buttonText: 'Truy cập công cụ', footerText: 'Nếu bạn cần hỗ trợ, vui lòng phản hồi email này.'
+        buttonText: 'Truy cập công cụ', keyGuideUrl: DEFAULT_KEY_GUIDE_URL, footerText: 'Nếu bạn cần hỗ trợ, vui lòng phản hồi email này.'
       },
       admin: {
         enabled: true,
@@ -196,15 +198,20 @@
     function sampleVars(){ return { name: 'User Test', email:'user@gmail.com', orderCode:'TUBEKEY040726100259', planName:'GÓI 1 THÁNG', amount:'299.000 VND', paidAt:'10:02:59 04/07/2026', expiresAt:'10:02:59 03/08/2026', toolUrl:'https://www.tubekey.vn' }; }
     function renderTemplate(t, vars){ return String(t||'').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_,k)=>esc(vars[k] || '')); }
     function ids(kind, name){ return $(kind + '_' + name); }
-    function getContent(kind){ const d=DEFAULTS[kind]; return {
-      subjectBase: ids(kind,'subjectBase').value.trim() || d.subjectBase,
-      subjectHasOrder: ids(kind,'subjectHasOrder').checked,
-      heroTitle: ids(kind,'heroTitle').value.trim() || d.heroTitle,
-      heroSubtitle: ids(kind,'heroSubtitle').value.trim() || d.heroSubtitle,
-      introText: ids(kind,'introText').value.trim() || d.introText,
-      buttonText: ids(kind,'buttonText').value.trim() || d.buttonText,
-      footerText: ids(kind,'footerText').value.trim() || d.footerText
-    }; }
+    function getContent(kind){
+      const d=DEFAULTS[kind];
+      const out = {
+        subjectBase: ids(kind,'subjectBase').value.trim() || d.subjectBase,
+        subjectHasOrder: ids(kind,'subjectHasOrder').checked,
+        heroTitle: ids(kind,'heroTitle').value.trim() || d.heroTitle,
+        heroSubtitle: ids(kind,'heroSubtitle').value.trim() || d.heroSubtitle,
+        introText: ids(kind,'introText').value.trim() || d.introText,
+        buttonText: ids(kind,'buttonText').value.trim() || d.buttonText,
+        footerText: ids(kind,'footerText').value.trim() || d.footerText
+      };
+      if(kind === 'customer') out.keyGuideUrl = ids(kind,'keyGuideUrl').value.trim() || d.keyGuideUrl || DEFAULT_KEY_GUIDE_URL;
+      return out;
+    }
     function subjectFromContent(c){ return c.subjectBase + (c.subjectHasOrder ? ' - {{orderCode}}' : ''); }
     function buildHtml(kind, c){
       const isAdmin = kind === 'admin';
@@ -229,7 +236,7 @@
         '<tr><td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#64748b">Ngày giờ thanh toán</td><td style="padding:10px;border-bottom:1px solid #e2e8f0"><b>{{paidAt}}</b></td></tr>',
         '<tr><td style="padding:10px;color:#64748b">Hạn sử dụng</td><td style="padding:10px"><b>{{expiresAt}}</b></td></tr>',
         '</table>',
-        '<p style="text-align:center;margin:26px 0 10px"><a href="{{toolUrl}}" style="display:inline-block;background:'+buttonColor+';color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:bold">'+esc(c.buttonText)+'</a></p>',
+        '<p style="text-align:center;margin:26px 0 10px"><a href="{{toolUrl}}" style="display:inline-block;background:'+buttonColor+';color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:bold;margin:4px 6px">'+esc(c.buttonText)+'</a>' + (!isAdmin && c.keyGuideUrl ? '<a href="'+esc(c.keyGuideUrl)+'" style="display:inline-block;background:#0f3b66;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:bold;margin:4px 6px">Hướng dẫn lấy Key</a>' : '') + '</p>',
         '<p style="margin:20px 0 0;color:#64748b">'+esc(c.footerText)+'</p>',
         '</div></div></div>'
       ].join('');
@@ -240,6 +247,7 @@
       if (!data.content && data.subject) { const raw=String(data.subject||''); c.subjectHasOrder=/{{\s*orderCode\s*}}/.test(raw); c.subjectBase=raw.replace(/\s*-?\s*{{\s*orderCode\s*}}/g,'').trim() || d.subjectBase; }
       ids(kind,'enabled').checked = data.enabled !== false;
       ['subjectBase','heroTitle','heroSubtitle','introText','buttonText','footerText'].forEach(k => { ids(kind,k).value = c[k] || d[k]; });
+      if(kind === 'customer') ids(kind,'keyGuideUrl').value = c.keyGuideUrl || d.keyGuideUrl || DEFAULT_KEY_GUIDE_URL;
       ids(kind,'subjectHasOrder').checked = c.subjectHasOrder !== false;
       renderPreview(kind);
     }
@@ -263,6 +271,7 @@
     window.addEventListener('message', (event)=>{ if(event.origin === location.origin && event.data?.type === 'ADMIN_SHARED_SECRET') syncSharedAdminSecret(event.data.value); });
     ['customer','admin'].forEach(kind => {
       ['subjectBase','subjectHasOrder','heroTitle','heroSubtitle','introText','buttonText','footerText'].forEach(id => ids(kind,id).addEventListener('input', () => renderPreview(kind)));
+      if(kind === 'customer') ids(kind,'keyGuideUrl').addEventListener('input', () => renderPreview(kind));
       ids(kind,'subjectHasOrder').addEventListener('change', () => renderPreview(kind));
       ids(kind,'saveBtn').addEventListener('click', () => save(kind));
       ids(kind,'testBtn').addEventListener('click', () => test(kind));
