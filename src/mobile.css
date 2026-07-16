@@ -3928,3 +3928,153 @@ body .vtw-channel-trending-card {
   }
   body .vtw-app-header .vtw-header-support .vtw-support-label-mobile { font-size: 9px !important; }
 }
+
+/* §82 ─── Fix v82: popup hỗ trợ chữ thường + mobile header 1 hàng account/video/hỗ trợ ─── */
+.vtw-support-modal,
+.vtw-support-modal * {
+  font-weight: 400 !important;
+}
+.vtw-support-modal h3,
+.vtw-support-modal .vtw-support-item span,
+.vtw-support-modal .vtw-support-item strong {
+  font-weight: 400 !important;
+}
+
+@media (max-width: 900px) {
+  /* Hàng 1: tài khoản + Video + Hỗ trợ cùng một hàng ngang */
+  body .vtw-app-header .vtw-header-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body .vtw-app-header .vtw-user-header-row {
+    display: contents !important;
+  }
+
+  body .vtw-app-header .vtw-account-box {
+    order: 1 !important;
+    flex: 1 1 calc(100% - 160px) !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 5px 8px !important;
+    gap: 6px !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+  }
+
+  body .vtw-app-header .vtw-account-box .vtw-account-text,
+  body .vtw-app-header .vtw-account-box > div {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    overflow: hidden !important;
+  }
+
+  body .vtw-app-header .vtw-account-box .vtw-user-email {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    font-size: 10.5px !important;
+    line-height: 1.05 !important;
+  }
+
+  body .vtw-app-header .vtw-account-box .vtw-account-plan {
+    display: inline-block !important;
+    align-self: flex-start !important;
+    font-size: 7.5px !important;
+    line-height: 1 !important;
+    padding: 1px 5px !important;
+  }
+
+  body .vtw-app-header .vtw-header-guide,
+  body .vtw-app-header .vtw-header-support {
+    order: 1 !important;
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+  }
+
+  body .vtw-app-header .vtw-header-guide svg,
+  body .vtw-app-header .vtw-header-support svg {
+    width: 13px !important;
+    height: 13px !important;
+    flex: 0 0 13px !important;
+  }
+
+  body .vtw-app-header .vtw-guide-label-full,
+  body .vtw-app-header .vtw-support-label-full {
+    display: none !important;
+  }
+  body .vtw-app-header .vtw-guide-label-mobile,
+  body .vtw-app-header .vtw-support-label-mobile {
+    display: inline !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Hàng 2: Đăng xuất / Nâng cấp / Làm mới giữ 3 cột đều bên dưới */
+  body .vtw-app-header .vtw-header-logout,
+  body .vtw-app-header .vtw-header-upgrade,
+  body .vtw-app-header .vtw-header-refresh {
+    order: 2 !important;
+    flex: 1 1 calc(33.333% - 4px) !important;
+  }
+}
+
+@media (max-width: 400px) {
+  body .vtw-app-header .vtw-account-box {
+    flex-basis: calc(100% - 142px) !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 4px 7px !important;
+  }
+  body .vtw-app-header .vtw-header-guide,
+  body .vtw-app-header .vtw-header-support {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 6px !important;
+    font-size: 8.5px !important;
+    gap: 3px !important;
+  }
+  body .vtw-app-header .vtw-guide-label-mobile,
+  body .vtw-app-header .vtw-support-label-mobile {
+    font-size: 8.5px !important;
+  }
+}
