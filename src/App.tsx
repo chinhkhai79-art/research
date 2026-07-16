@@ -597,6 +597,7 @@ export default function App() {
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   useEffect(() => {
@@ -6997,6 +6998,17 @@ Quy tắc:
               <span className="vtw-guide-label-full">Video hướng dẫn</span>
               <span className="vtw-guide-label-mobile">Video</span>
             </button>
+
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowSupportModal(true); }}
+              className="vtw-header-support vtw-header-icon-btn px-4 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              title="Hỗ trợ"
+            >
+              <MessageCircle size={15} />
+              <span className="vtw-support-label-full">Hỗ trợ</span>
+              <span className="vtw-support-label-mobile">Hỗ trợ</span>
+            </button>
             {user ? (
               <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
                 <button
@@ -10763,6 +10775,88 @@ Quy tắc:
 
               <div className="bg-white p-4 flex justify-center border-t border-gray-100 italic text-[11px] text-gray-400 font-medium">
                 Mẹo: chọn khu vực trước, bấm icon kính lúp ở từng chủ đề để tìm key đúng khu vực. Bấm key để dùng trực tiếp, hoặc bấm icon copy để copy từng key.
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSupportModal && (
+          <div
+            className="fixed inset-0 z-[100000] flex items-center justify-center bg-slate-950/55 backdrop-blur-[2px] p-4"
+            onClick={() => setShowSupportModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 18 }}
+              className="vtw-support-modal w-full max-w-md rounded-[28px] bg-white shadow-2xl border border-blue-100 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50">
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-500">Trung tâm hỗ trợ</div>
+                  <h3 className="text-2xl font-black text-slate-900 mt-1">Hỗ trợ tubekey.vn</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSupportModal(false)}
+                  className="w-10 h-10 rounded-full bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 flex items-center justify-center shadow-sm"
+                  title="Đóng"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <a
+                  href="tel:0386019486"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-blue-800 text-white flex items-center justify-center shadow-lg shrink-0"><Smartphone size={30} /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Điện thoại</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1">038.6019.486</span>
+                  </span>
+                </a>
+
+                <a
+                  href="https://zalo.me/0386019486"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-sky-50 border border-transparent hover:border-sky-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-sky-500 text-white flex items-center justify-center text-[17px] font-black shadow-lg shrink-0">Zalo</span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Zalo</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1">038.6019.486</span>
+                  </span>
+                </a>
+
+                <a
+                  href="https://www.facebook.com/vanthenguyenit"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-purple-50 border border-transparent hover:border-purple-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center shadow-lg shrink-0"><MessageCircle size={31} /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Facebook</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1">Chat qua fanpage</span>
+                  </span>
+                </a>
+
+                <a
+                  href="mailto:vantheweb@gmail.com"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-blue-800 text-white flex items-center justify-center shadow-lg shrink-0"><MessageSquare size={31} /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Gửi Email</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1 break-all">vantheweb@gmail.com</span>
+                  </span>
+                </a>
               </div>
             </motion.div>
           </div>

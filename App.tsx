@@ -56,7 +56,10 @@ import {
   Bot,
   Flame,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  ChevronUp,
+  Wrench,
+  Hash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -180,6 +183,10 @@ interface SubscriptionInfo {
   remainingMs?: number;
   remainingText?: string;
   userId?: string;
+  trialApiKeys?: {
+    youtubeApiKeys?: string[];
+    geminiApiKeys?: string[];
+  };
 }
 
 // --- Constants ---
@@ -193,7 +200,7 @@ const DEFAULT_CONFIG: YouTubeConfig = {
   minSub: 0,
   maxSub: 100000,
   minVideo: 1,
-  maxVideo: 0,
+  maxVideo: 1000,
   minViews: 10000,
   autoNiche: true,
   deepDrillSmallTrend: false,
@@ -590,6 +597,7 @@ export default function App() {
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [subscriptionTick, setSubscriptionTick] = useState(Date.now());
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   useEffect(() => {
@@ -620,6 +628,12 @@ export default function App() {
   };
 
   const getSubscriptionCacheKey = (uid: string) => `vtw_subscription_cache_${uid}`;
+
+  const stripTrialApiKeysForCache = (data: SubscriptionInfo) => {
+    const safe = { ...(data || {}) } as SubscriptionInfo;
+    delete (safe as any).trialApiKeys;
+    return safe;
+  };
 
   const readCachedSubscription = (uid: string) => {
     try {
@@ -655,7 +669,7 @@ export default function App() {
 
   const saveSubscriptionCache = (uid: string, data: SubscriptionInfo) => {
     try {
-      localStorage.setItem(getSubscriptionCacheKey(uid), JSON.stringify({ cachedAt: Date.now(), data }));
+      localStorage.setItem(getSubscriptionCacheKey(uid), JSON.stringify({ cachedAt: Date.now(), data: stripTrialApiKeysForCache(data) }));
     } catch (_) {}
   };
 
@@ -668,7 +682,7 @@ export default function App() {
 
     if (!force) {
       const cached = readCachedSubscription(targetUser.uid);
-      if (cached && cached.active) {
+      if (cached && cached.active && cached.accountType !== 'trial') {
         setSubscriptionInfo(cached);
         setSubscriptionError(null);
         return cached;
@@ -747,7 +761,7 @@ export default function App() {
       if (currentUser) {
         const force = shouldForceSubscriptionRefresh();
         const cached = !force ? readCachedSubscription(currentUser.uid) : null;
-        if (cached && cached.active) {
+        if (cached && cached.active && cached.accountType !== 'trial') {
           setSubscriptionInfo(cached);
           setSubscriptionError(null);
         } else {
@@ -787,6 +801,27 @@ export default function App() {
     };
   }, [user]);
 
+
+  useEffect(() => {
+    if (!subscriptionInfo || subscriptionInfo.accountType !== 'trial' || !subscriptionInfo.expiresAt) return;
+    const expires = new Date(subscriptionInfo.expiresAt).getTime();
+    if (Number.isNaN(expires)) return;
+    const delay = Math.max(0, expires - Date.now() + 500);
+    const timer = window.setTimeout(() => {
+      setSubscriptionTick(Date.now());
+      setSubscriptionInfo(prev => prev && prev.accountType === 'trial' ? {
+        ...prev,
+        active: false,
+        premium: false,
+        accountType: 'expired',
+        remainingMs: 0,
+        remainingText: 'Đã hết hạn',
+        trialApiKeys: undefined
+      } : prev);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [subscriptionInfo?.accountType, subscriptionInfo?.expiresAt]);
+
   // STEP_11: Loại bỏ hoàn toàn chip trạng thái/PRO nổi để không che giao diện web/mobile.
   // Vẫn giữ logic kiểm tra gói ở header/tài khoản, chỉ xóa DOM cũ nếu còn tồn tại sau deploy.
   useEffect(() => {
@@ -798,6 +833,7 @@ export default function App() {
   const [videoInput, setVideoInput] = useState('');
   const [videoResult, setVideoResult] = useState<any>(null);
   const [inlineVideoId, setInlineVideoId] = useState<string | null>(null);
+  const [guideVideoUrl, setGuideVideoUrl] = useState('');
   const [isAnalyzingVideo, setIsAnalyzingVideo] = useState(false);
   const [isVideoAuditAnalyzing, setIsVideoAuditAnalyzing] = useState(false);
   const [videoAuditProgress, setVideoAuditProgress] = useState(0);
@@ -956,6 +992,9 @@ export default function App() {
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   // Custom context menu state
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0, visible: false, channel: null as ChannelResult | null });
+  // Video thumbnail context menu (Kiểm Tra Video page)
+  const videoMenuRef = useRef<HTMLDivElement>(null);
+  const [videoMenuPos, setVideoMenuPos] = useState({ x: 0, y: 0, visible: false });
 
   // Click outside to close boards
   useEffect(() => {
@@ -975,10 +1014,13 @@ export default function App() {
       if (menuPos.visible && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuPos(prev => ({ ...prev, visible: false }));
       }
+      if (videoMenuPos.visible && videoMenuRef.current && !videoMenuRef.current.contains(event.target as Node)) {
+        setVideoMenuPos(prev => ({ ...prev, visible: false }));
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showRegionList, showKeyInputModal, showKeyHistory, showGeminiKeyHistory, menuPos.visible]);
+  }, [showRegionList, showKeyInputModal, showKeyHistory, showGeminiKeyHistory, menuPos.visible, videoMenuPos.visible]);
 
   // Đóng bảng thao tác khi cuộn/đổi màn hình để không bị dính sai kênh.
   useEffect(() => {
@@ -1005,11 +1047,58 @@ export default function App() {
     };
   }, [menuPos.visible]);
 
-  // Chỉ bản mobile: hiện nút lên đầu trang khi đã lướt xuống.
+  // Đóng video menu khi: cuộn ra khỏi khu vực thumbnail / title header,
+  // nhấn ESC, resize, đổi orientation. Tránh ấn nhầm khi menu fixed
+  // còn dính trên màn hình nhưng user đã cuộn xuống xa.
+  useEffect(() => {
+    if (!videoMenuPos.visible) return;
+
+    const closeVideoMenuSafe = () => {
+      setVideoMenuPos(prev => prev.visible ? ({ ...prev, visible: false }) : prev);
+    };
+
+    const closeOnScrollOut = () => {
+      // Tham chiếu: bao gồm thumbnail (vtw-video-thumb-wrapper) và title
+      // header (vtw-video-title-header). Nếu cả 2 đều ra khỏi viewport
+      // (kể cả 1 dải margin 40px) thì coi như user đã đi xa.
+      const targets = [
+        document.querySelector('.vtw-video-thumb-wrapper'),
+        document.querySelector('.vtw-video-title-header'),
+      ].filter(Boolean) as HTMLElement[];
+      if (targets.length === 0) {
+        closeVideoMenuSafe();
+        return;
+      }
+      const margin = 40;
+      const anyInView = targets.some(el => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > margin && r.top < (window.innerHeight - margin);
+      });
+      if (!anyInView) closeVideoMenuSafe();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeVideoMenuSafe();
+    };
+
+    window.addEventListener('scroll', closeOnScrollOut, { passive: true });
+    window.addEventListener('resize', closeVideoMenuSafe);
+    window.addEventListener('orientationchange', closeVideoMenuSafe);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('scroll', closeOnScrollOut);
+      window.removeEventListener('resize', closeVideoMenuSafe);
+      window.removeEventListener('orientationchange', closeVideoMenuSafe);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [videoMenuPos.visible]);
+
+  // Hiện nút lên đầu trang khi đã lướt xuống (cả desktop và mobile).
   useEffect(() => {
     const handleScrollTopVisibility = () => {
       const y = window.scrollY || document.documentElement.scrollTop || 0;
-      setShowScrollTop(window.innerWidth <= 900 && y > 420);
+      setShowScrollTop(y > 300);
     };
     handleScrollTopVisibility();
     window.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
@@ -1023,6 +1112,39 @@ export default function App() {
   }, []);
 
   const [status, setStatus] = useState('Sẵn sàng.');
+  // === TOAST NOTIFICATION ===
+  // Mirror các thông báo từ setStatus thành toast nổi giữa màn hình (3s auto-dismiss).
+  // Không stack - mỗi message mới sẽ thay thế cái cũ.
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    // Bỏ qua message ban đầu "Sẵn sàng." và các message rỗng
+    if (!status || status === 'Sẵn sàng.') return;
+    setToastMsg(status);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 3000);
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, [status]);
+
+  useEffect(() => {
+    let stopped = false;
+    const loadGuideVideo = async () => {
+      try {
+        const res = await fetch('/api/payment-config', { cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!stopped && res.ok && data?.success !== false) {
+          setGuideVideoUrl(String(data?.guide?.videoUrl || '').trim());
+        }
+      } catch (err) {
+        console.warn('Không tải được link video hướng dẫn:', err);
+      }
+    };
+    loadGuideVideo();
+    return () => { stopped = true; };
+  }, []);
+
   const [progress, setProgress] = useState(0);
   const [isHunting, setIsHunting] = useState(false);
   const [quotaUsed, setQuotaUsed] = useState(0);
@@ -1045,6 +1167,10 @@ export default function App() {
   const [showYoutubeApiKeys, setShowYoutubeApiKeys] = useState(true);
   const [keywordIdeas, setKeywordIdeas] = useState<KeywordIdea[]>([]);
   const [trackingChannels, setTrackingChannels] = useState<TrackingChannel[]>([]);
+  const [trackingAiInput, setTrackingAiInput] = useState('');
+  const [trackingAiReport, setTrackingAiReport] = useState('');
+  const [trackingAiLoading, setTrackingAiLoading] = useState(false);
+  const [trackingAiMeta, setTrackingAiMeta] = useState<{ name?: string; id?: string; icon?: string; generatedAt?: string } | null>(null);
   const [spyInput, setSpyInput] = useState('');
   const [spyResult, setSpyResult] = useState<SpyResult | null>(null);
   // --- Niche Research State ---
@@ -1052,10 +1178,17 @@ export default function App() {
   const [nicheRegion, setNicheRegion] = useState('VN');
   const [nicheTime, setNicheTime] = useState('month');
   const [nicheVideoCount, setNicheVideoCount] = useState(20);
+  const [nicheMinSub, setNicheMinSub] = useState(0);
   const [nicheMaxSub, setNicheMaxSub] = useState(250000);
 
-  // Ô nhập Sub cho phép nhập số tự do từ 0 trở lên.
-  // Chỉ thanh kéo mới dùng bước 10 để tránh số lẻ.
+  const SUB_RANGE_MIN = 0;
+  const SUB_RANGE_MAX = 10000000;
+  const SUB_MIN_MAX = 10000000;
+  const SUB_MAX_MIN = 1;
+  const SUB_RANGE_GAP = 1;
+
+  // Phạm vi Sub: 2 ô nhập + thanh kéo 2 nút.
+  // Min: 0–10 triệu. Max: 1–10 triệu và luôn lớn hơn Min.
   const normalizeSubManualValue = (value: string | number) => {
     const raw = String(value ?? '').replace(/[^0-9]/g, '');
     if (!raw) return 0;
@@ -1064,19 +1197,36 @@ export default function App() {
     return Math.max(0, Math.floor(parsed));
   };
 
+  const clampSubValue = (value: number, min: number, max: number) => {
+    return Math.max(min, Math.min(max, Math.floor(value)));
+  };
+
+  const updateNicheMinSub = (value: string | number) => {
+    const parsed = clampSubValue(normalizeSubManualValue(value), SUB_RANGE_MIN, SUB_MIN_MAX);
+    const safeMin = Math.min(parsed, Math.max(SUB_RANGE_MIN, nicheMaxSub - SUB_RANGE_GAP));
+    setNicheMinSub(safeMin);
+    if (nicheMaxSub <= safeMin) setNicheMaxSub(Math.min(SUB_RANGE_MAX, safeMin + SUB_RANGE_GAP));
+  };
+
   const updateNicheMaxSubManual = (value: string | number) => {
-    setNicheMaxSub(normalizeSubManualValue(value));
+    const parsed = clampSubValue(normalizeSubManualValue(value), SUB_MAX_MIN, SUB_RANGE_MAX);
+    const safeMax = Math.max(parsed, Math.min(SUB_RANGE_MAX, nicheMinSub + SUB_RANGE_GAP));
+    setNicheMaxSub(safeMax);
+    if (nicheMinSub >= safeMax) setNicheMinSub(Math.max(SUB_RANGE_MIN, safeMax - SUB_RANGE_GAP));
+  };
+
+  const updateNicheMinSubSlider = (value: string | number) => {
+    const parsed = clampSubValue(Math.round(normalizeSubManualValue(value) / 10) * 10, SUB_RANGE_MIN, SUB_RANGE_MAX);
+    updateNicheMinSub(parsed);
   };
 
   const updateNicheMaxSubSlider = (value: string | number) => {
-    const parsed = normalizeSubManualValue(value);
-    const safeValue = Math.max(0, Math.min(10000000, Math.round(parsed / 10) * 10));
-    setNicheMaxSub(safeValue);
+    const parsed = clampSubValue(Math.round(normalizeSubManualValue(value) / 10) * 10, SUB_MAX_MIN, SUB_RANGE_MAX);
+    updateNicheMaxSubManual(parsed);
   };
 
-  const stepNicheMaxSub = (delta: number) => {
-    updateNicheMaxSubManual(nicheMaxSub + delta);
-  };
+  const subRangeLeftPercent = Math.max(0, Math.min(100, (nicheMinSub / SUB_RANGE_MAX) * 100));
+  const subRangeRightPercent = Math.max(0, Math.min(100, (nicheMaxSub / SUB_RANGE_MAX) * 100));
   const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
@@ -1089,6 +1239,8 @@ export default function App() {
     shorts: any[];
     channels: any[];
     thumbnails: any[];
+    suggestions?: any[];
+    suggestionMeta?: any;
   } | null>(null);
   const [nicheActiveSubTab, setNicheActiveSubTab] = useState('videos');
   const [nicheHistory, setNicheHistory] = useState<any[]>([]);
@@ -1140,7 +1292,7 @@ export default function App() {
         if (prev.apiKeys.length > 0 && (!parsed.apiKeys || parsed.apiKeys.length === 0)) {
           next.apiKeys = prev.apiKeys;
         }
-        return next;
+        return normalizeHunterFilterConfig(next);
       });
     }
     if (savedResults) {
@@ -1193,7 +1345,9 @@ export default function App() {
         localStorage.removeItem(key);
       }
     });
-    setSuggestedNiches(getLocalizedNicheTemplate(trendingRegion || config.region || 'VN'));
+    const hydratedTrendingNiches = getHydratedTrendingNiches(trendingRegion || config.region || 'VN');
+    setSuggestedNiches(hydratedTrendingNiches.categories);
+    setTrendingCacheMeta(hydratedTrendingNiches.meta);
 
     const savedGeminiKey = localStorage.getItem('youtube_gemini_api_key');
     if (savedGeminiKey) {
@@ -1319,11 +1473,74 @@ export default function App() {
   }, [exhaustedGeminiKeys]);
 
   // --- API Helpers ---
-  const getActiveApiKey = () => config.apiKeys[apiKeyIndex] || '';
+  const isActiveTrialWithServerKeys = () => {
+    if (!subscriptionInfo || subscriptionInfo.accountType !== 'trial' || !subscriptionInfo.active) return false;
+    if (subscriptionInfo.expiresAt) {
+      const expires = new Date(subscriptionInfo.expiresAt).getTime();
+      if (!Number.isNaN(expires) && expires <= Date.now()) return false;
+    }
+    const ytCount = (subscriptionInfo.trialApiKeys?.youtubeApiKeys || []).map(k => String(k || '').trim()).filter(Boolean).length;
+    const geminiCount = (subscriptionInfo.trialApiKeys?.geminiApiKeys || []).map(k => String(k || '').trim()).filter(Boolean).length;
+    return ytCount > 0 || geminiCount > 0;
+  };
+
+  const getLocalYoutubeApiKeys = () => {
+    const fromTextarea = manualKeysInput
+      .split(/\r?\n/)
+      .map(k => String(k || '').trim())
+      .filter(Boolean);
+    const fromConfig = config.apiKeys
+      .map(k => String(k || '').trim())
+      .filter(Boolean);
+    return Array.from(new Set([...fromTextarea, ...fromConfig]));
+  };
+
+  const getLocalGeminiApiKeys = () => parseGeminiKeyText(geminiApiKey);
+
+  const hasUserYoutubeApiKeys = () => getLocalYoutubeApiKeys().length > 0;
+  const hasUserGeminiApiKeys = () => getLocalGeminiApiKeys().length > 0;
+
+  const getTrialYoutubeApiKeys = () => {
+    // Tài khoản trial chỉ dùng key do Admin cấp khi người dùng chưa tự nhập key riêng.
+    // Khi user dán/check key hợp lệ của họ, key riêng được ưu tiên và loại bỏ key trial khỏi luồng gọi API.
+    if (hasUserYoutubeApiKeys() || !isActiveTrialWithServerKeys()) return [] as string[];
+    return Array.from(new Set((subscriptionInfo?.trialApiKeys?.youtubeApiKeys || []).map(k => String(k || '').trim()).filter(Boolean)));
+  };
+
+  const getTrialGeminiApiKeys = () => {
+    // Tài khoản trial chỉ dùng key do Admin cấp khi người dùng chưa tự nhập key riêng.
+    if (hasUserGeminiApiKeys() || !isActiveTrialWithServerKeys()) return [] as string[];
+    return Array.from(new Set((subscriptionInfo?.trialApiKeys?.geminiApiKeys || []).map(k => String(k || '').trim()).filter(Boolean)));
+  };
+
+  const isUsingTrialYoutubeKeys = () => !hasUserYoutubeApiKeys() && getTrialYoutubeApiKeys().length > 0;
+  const isUsingTrialGeminiKeys = () => !hasUserGeminiApiKeys() && getTrialGeminiApiKeys().length > 0;
+
+  const enforceTrialIpLimit = async (apiType: 'youtube' | 'gemini') => {
+    const shouldGuard = apiType === 'youtube' ? isUsingTrialYoutubeKeys() : isUsingTrialGeminiKeys();
+    if (!shouldGuard) return;
+    const response = await fetch(`/api/payment-config?action=trial-ip-guard&apiType=${apiType}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiType })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.success === false || data?.allowed === false) {
+      const message = data?.message || 'Hệ thống dùng thử đang quá tải (Đạt giới hạn 20 người dùng cùng lúc). Vui lòng thử lại sau ít phút!';
+      setStatus(message);
+      throw new Error(message);
+    }
+  };
+
+  const getActiveApiKey = () => {
+    const keys = getMergedYoutubeKeys();
+    return keys[apiKeyIndex] || keys[0] || '';
+  };
 
   const rotateApiKey = () => {
+    const keys = getMergedYoutubeKeys();
     // Find next available key that isn't exhausted
-    const nextIndex = config.apiKeys.findIndex((key, idx) => 
+    const nextIndex = keys.findIndex((key, idx) => 
       idx > apiKeyIndex && !exhaustedKeys.includes(key)
     );
     
@@ -1333,7 +1550,7 @@ export default function App() {
     }
 
     // Wrap around to start if needed
-    const wrapIndex = config.apiKeys.findIndex((key) => !exhaustedKeys.includes(key));
+    const wrapIndex = keys.findIndex((key) => !exhaustedKeys.includes(key));
     if (wrapIndex !== -1 && wrapIndex !== apiKeyIndex) {
       setApiKeyIndex(wrapIndex);
       return true;
@@ -1342,7 +1559,11 @@ export default function App() {
     return false;
   };
 
-  const getActiveGeminiKeys = () => parseGeminiKeyText(geminiApiKey);
+  const getActiveGeminiKeys = () => {
+    const userKeys = getLocalGeminiApiKeys();
+    if (userKeys.length) return userKeys;
+    return getTrialGeminiApiKeys();
+  };
 
   const getActiveGeminiKey = () => {
     const keys = getActiveGeminiKeys();
@@ -1414,6 +1635,10 @@ export default function App() {
       return;
     }
 
+    if (isUsingTrialGeminiKeys()) {
+      await enforceTrialIpLimit('gemini');
+    }
+
     setIsCheckingGeminiKeys(true);
     const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
 
@@ -1478,6 +1703,9 @@ export default function App() {
   const callGeminiGenerateContent = async (prompt: string) => {
     const keys = getActiveGeminiKeys();
     if (keys.length === 0) throw new Error('Thiếu Gemini API Key. Vui lòng dán ít nhất 1 key.');
+    if (isUsingTrialGeminiKeys()) {
+      await enforceTrialIpLimit('gemini');
+    }
 
     // Logic AI phân tích: ưu tiên xoay model bên trong key hiện tại trước.
     // Nếu key đó lỗi/hết quota ở toàn bộ model thì mới chuyển sang key tiếp theo.
@@ -1561,10 +1789,46 @@ export default function App() {
     return acc;
   }, {} as Record<string, string>);
 
+
+  const EXTRA_COUNTRY_NAME_MAP: Record<string, string> = {
+    BD: 'Bangladesh',
+    PK: 'Pakistan',
+    LK: 'Sri Lanka',
+    NP: 'Nepal',
+    KH: 'Campuchia',
+    LA: 'Lào',
+    MM: 'Myanmar',
+    CN: 'Trung Quốc',
+    TW: 'Đài Loan',
+    HK: 'Hồng Kông',
+    SA: 'Ả Rập Xê Út',
+    AE: 'Các Tiểu vương quốc Ả Rập Thống nhất',
+    TR: 'Thổ Nhĩ Kỳ',
+    IT: 'Ý',
+    NL: 'Hà Lan',
+    SE: 'Thụy Điển',
+    NO: 'Na Uy',
+    DK: 'Đan Mạch',
+    FI: 'Phần Lan',
+    PL: 'Ba Lan',
+    AR: 'Argentina',
+    CO: 'Colombia',
+    CL: 'Chile',
+    PE: 'Peru',
+    ZA: 'Nam Phi',
+    NG: 'Nigeria',
+    EG: 'Ai Cập'
+  };
+
   const getCountryFullName = (code?: string) => {
     const normalized = String(code || '').trim().toUpperCase();
     if (!normalized || normalized === 'N/A') return 'Không rõ';
-    return REGION_NAME_MAP[normalized] || normalized;
+    return REGION_NAME_MAP[normalized] || EXTRA_COUNTRY_NAME_MAP[normalized] || normalized;
+  };
+  const getCountryDisplayName = (code?: string) => {
+    const normalized = String(code || '').trim().toUpperCase();
+    if (!normalized || normalized === 'N/A') return 'Không rõ';
+    return getCountryFullName(normalized);
   };
 
   const cleanTrendKeyword = (value?: string) => {
@@ -1651,9 +1915,32 @@ export default function App() {
   };
 
 
-  const parseRangeNumber = (value: string, fallback = 0) => {
-    const n = Number(String(value || '').replace(/[^0-9]/g, ''));
+  const parseRangeNumber = (value: string | number, fallback = 0) => {
+    const n = Number(String(value ?? '').replace(/[^0-9]/g, ''));
     return Number.isFinite(n) ? n : fallback;
+  };
+
+  const normalizeHunterFilterConfig = (cfg: YouTubeConfig): YouTubeConfig => {
+    const minSub = Math.max(0, parseRangeNumber(cfg.minSub, 0));
+    const maxSubRaw = Math.max(1, parseRangeNumber(cfg.maxSub, 100000));
+    const maxSub = Math.max(maxSubRaw, minSub + 1);
+    const minVideo = Math.max(0, parseRangeNumber(cfg.minVideo, 1));
+    const maxVideoRaw = Math.max(1, parseRangeNumber(cfg.maxVideo, 1000));
+    const maxVideo = Math.max(maxVideoRaw, minVideo + 1);
+
+    return {
+      ...cfg,
+      minSub,
+      maxSub,
+      minVideo,
+      maxVideo,
+      maxVideos: Math.max(1, parseRangeNumber(cfg.maxVideos, 30)),
+      minViews: Math.max(0, parseRangeNumber(cfg.minViews, 0)),
+    };
+  };
+
+  const updateHunterFilters = (patch: Partial<YouTubeConfig>) => {
+    setConfig(prev => normalizeHunterFilterConfig({ ...prev, ...patch }));
   };
 
   const clampRangePair = (min: number, max: number, absoluteMin: number, absoluteMax: number): [number, number] => {
@@ -1856,6 +2143,47 @@ export default function App() {
     return viewCount / hours;
   };
 
+  const getIsoDurationSeconds = (pt: string) => {
+    if (!pt || typeof pt !== 'string') return 0;
+    const hours = Number((pt.match(/(\d+)H/) || [])[1] || 0);
+    const minutes = Number((pt.match(/(\d+)M/) || [])[1] || 0);
+    const seconds = Number((pt.match(/(\d+)S/) || [])[1] || 0);
+    return (hours * 3600) + (minutes * 60) + seconds;
+  };
+
+  const isLikelyYoutubeShort = (video: any) => {
+    const seconds = getIsoDurationSeconds(video?.contentDetails?.duration || '');
+    // YouTube Data API chỉ có videoDuration=short (<4 phút). Giữ ngưỡng 3 phút để đủ Shorts mới nhưng vẫn loại video dài.
+    return seconds > 0 && seconds <= 180;
+  };
+
+  const sortNewestVideos = (items: any[]) => {
+    return [...items].sort((a: any, b: any) => {
+      const tb = new Date(b?.snippet?.publishedAt || 0).getTime();
+      const ta = new Date(a?.snippet?.publishedAt || 0).getTime();
+      return tb - ta;
+    });
+  };
+
+  const buildShortsExpansionSeeds = (keyword: string, topKeywords: any[] = []) => {
+    const base = cleanNichePhrase(keyword || '').trim();
+    const topicWords = topKeywords
+      .map((k: any) => cleanNichePhrase(k?.text || ''))
+      .filter((k: string) => k && k.length >= 3 && k.length <= 32)
+      .filter((k: string) => !/^(video|shorts|youtube|official|subscribe|like|part|full|new|mới|nhất)$/i.test(k))
+      .slice(0, 5);
+    const seeds = [
+      base,
+      `${base} shorts`,
+      `${base} viral shorts`,
+      `${base} mới nhất`,
+      `${base} trending`,
+      ...topicWords.map((k: string) => `${base} ${k}`),
+      ...topicWords.map((k: string) => `${k} shorts`)
+    ].map(v => v.trim()).filter(Boolean);
+    return Array.from(new Set(seeds)).slice(0, 10);
+  };
+
   const calculateTrendScore = (video: any, channel: any) => {
     if (!video || !video.snippet) return 0;
     let score = 0;
@@ -1923,8 +2251,9 @@ export default function App() {
   };
 
   const fetchDailyTrendingFromYouTube = async () => {
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setStatus('Vui lòng nhập API Key YouTube V3 để cập nhật Trending.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -2369,7 +2698,11 @@ Rules:
       setStatus(`Đã cập nhật key cho ${regionLabel}. ${preservedCount ? `Đã giữ nguyên ${preservedCount} chủ đề đã quét bằng kính lúp, không ghi đè.` : 'Chưa có chủ đề kính lúp nào cần giữ.'}`);
     } catch (error: any) {
       console.error(error);
-      setStatus(`Lỗi cập nhật Trending: ${error?.message || 'Không xác định'}`);
+      const trendErrMsg = error?.message || 'Không xác định';
+      setStatus(`Lỗi cập nhật Trending: ${trendErrMsg}`);
+      if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(trendErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsFetchingDailyTrending(false);
     }
@@ -2384,6 +2717,156 @@ Rules:
   const normalizeRegionCode = (regionCode?: string) => {
     const code = String(regionCode || 'VN').trim().toUpperCase();
     return REGION_AI_CONFIG[code] ? code : 'VN';
+  };
+
+  const getRealTrendHotStorageKey = (regionCode?: string) =>
+    `youtube_real_trend_hot_${normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN')}`;
+
+  const getRegionCacheKey = (regionCode?: string) =>
+    `cache_${normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN')}`;
+
+  const getNicheScanHistoryKey = (regionCode: string, index: number) =>
+    `youtube_niche_scan_history_${normalizeRegionCode(regionCode)}_${index}`;
+
+  const readNicheScanHistory = (regionCode: string, index: number) => {
+    try {
+      const raw = localStorage.getItem(getNicheScanHistoryKey(regionCode, index));
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.map((x: any) => String(x || '').trim()).filter(Boolean).slice(-80) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeNicheScanHistory = (regionCode: string, index: number, keywords: string[]) => {
+    try {
+      const normalized = Array.from(new Set((keywords || []).map((x: any) => String(x || '').trim()).filter(Boolean)));
+      localStorage.setItem(getNicheScanHistoryKey(regionCode, index), JSON.stringify(normalized.slice(-80)));
+    } catch (_) {}
+  };
+
+  const rotateListBy = <T,>(items: T[], offset: number) => {
+    const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    if (!list.length) return list;
+    const safeOffset = Math.abs(Number(offset || 0)) % list.length;
+    return [...list.slice(safeOffset), ...list.slice(0, safeOffset)];
+  };
+
+  const normalizeTrendCachePayload = (value: any, regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    if (!value) return null;
+
+    // Shape mới: { categories: [...] }
+    if (Array.isArray(value?.categories)) {
+      return {
+        ...value,
+        region: value.region || selectedRegion,
+        updatedAt: value.updatedAt || new Date().toISOString(),
+        categories: value.categories
+      };
+    }
+
+    // Shape dự phòng: localStorage cũ chỉ lưu mảng key. Không đủ thông tin index/chủ đề,
+    // nên chỉ dùng như metadata, không ghi đè UI.
+    if (Array.isArray(value) && value.every((x: any) => typeof x === 'string')) {
+      return null;
+    }
+
+    return null;
+  };
+
+  const readTrendCachePayload = (storageKey: string, regionCode?: string) => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return normalizeTrendCachePayload(parsed, regionCode);
+    } catch {
+      return null;
+    }
+  };
+
+  const getSavedRealTrendHotPayload = (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+
+    // Ưu tiên cache_VN/cache_US... vì đây là cache đồng bộ trực tiếp với UI sau khi bấm kính lúp.
+    const fromRegionCache = readTrendCachePayload(getRegionCacheKey(selectedRegion), selectedRegion);
+    if (fromRegionCache) return fromRegionCache;
+
+    // Fallback: key lưu cũ.
+    const fromSavedHot = readTrendCachePayload(getRealTrendHotStorageKey(selectedRegion), selectedRegion);
+    if (fromSavedHot) return fromSavedHot;
+
+    return null;
+  };
+
+  const persistTrendHotToRegionCache = (categories: any[], regionCode?: string, source: string = 'youtube_v3_real_scan') => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    const payload = {
+      region: selectedRegion,
+      updatedAt: new Date().toISOString(),
+      source,
+      categories: (Array.isArray(categories) ? categories : [])
+        .map((item: any, index: number) => ({
+          category: item.category,
+          localCategory: item.localCategory,
+          viCategory: item.viCategory,
+          items: Array.isArray(item.items) ? item.items.slice(0, 6) : [],
+          realScanned: item.realScanned === true || item.source === 'youtube_v3_real_scan',
+          realScannedAt: item.realScannedAt || (item.realScanned ? new Date().toISOString() : undefined),
+          source: item.source,
+          index: Number.isFinite(Number(item.index)) ? Number(item.index) : index,
+          region: selectedRegion
+        }))
+        .slice(0, 15)
+    };
+
+    localStorage.setItem(getRegionCacheKey(selectedRegion), JSON.stringify(payload));
+    localStorage.setItem(getRealTrendHotStorageKey(selectedRegion), JSON.stringify(payload));
+    return payload;
+  };
+
+  const mergeSavedRealTrendHot = (baseCategories: any[], regionCode?: string) => {
+    const payload = getSavedRealTrendHotPayload(regionCode);
+    const categories = Array.isArray(baseCategories) ? baseCategories.map((item: any) => ({ ...item })) : [];
+    const savedCategories = Array.isArray(payload?.categories) ? payload.categories : [];
+
+    savedCategories.forEach((saved: any) => {
+      let targetIndex = Number.isFinite(Number(saved?.index)) ? Number(saved.index) : -1;
+      if (targetIndex < 0 || targetIndex >= categories.length) {
+        const savedKey = String(saved?.viCategory || saved?.localCategory || saved?.category || '').toLowerCase();
+        targetIndex = categories.findIndex((item: any) =>
+          String(item?.viCategory || item?.localCategory || item?.category || '').toLowerCase() === savedKey
+        );
+      }
+      if (targetIndex < 0 || targetIndex >= categories.length) return;
+
+      categories[targetIndex] = {
+        ...categories[targetIndex],
+        ...saved,
+        category: saved?.category || categories[targetIndex]?.category,
+        localCategory: saved?.localCategory || categories[targetIndex]?.localCategory,
+        viCategory: saved?.viCategory || categories[targetIndex]?.viCategory,
+        items: Array.isArray(saved?.items) && saved.items.length ? saved.items.slice(0, 6) : categories[targetIndex]?.items,
+        realScanned: true,
+        source: saved?.source || 'youtube_v3_real_scan',
+        realScannedAt: saved?.realScannedAt || payload?.updatedAt || new Date().toISOString(),
+        index: targetIndex
+      };
+    });
+
+    return categories;
+  };
+
+  const getHydratedTrendingNiches = (regionCode?: string) => {
+    const selectedRegion = normalizeRegionCode(regionCode || trendingRegion || config.region || 'VN');
+    const payload = getSavedRealTrendHotPayload(selectedRegion);
+    const categories = mergeSavedRealTrendHot(getLocalizedNicheTemplate(selectedRegion), selectedRegion);
+    const hasSaved = Array.isArray(payload?.categories) && payload.categories.length > 0;
+    return {
+      categories,
+      meta: hasSaved ? { updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source || 'youtube_v3_real_scan_saved' } : null
+    };
   };
 
   const parseGeminiJson = (text: string) => {
@@ -2516,7 +2999,7 @@ JSON mẫu:
           index: item.index
         }))
       };
-      localStorage.setItem(`youtube_real_trend_hot_${selectedRegion}`, JSON.stringify(payload));
+      persistTrendHotToRegionCache(payload.categories, selectedRegion, payload.source);
       setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
       setStatus(`Đã lưu ${scannedCategories.length} chủ đề trend hot đã quét thật tại ${regionName}. Chủ đề chưa bấm kính lúp sẽ không được lưu.`);
     } catch (err: any) {
@@ -2659,8 +3142,9 @@ JSON mẫu:
   const fetchTrendingKeysForCategory = async (category: string, index: number) => {
     quotaUsedRef.current = 0;
     setQuotaUsed(0);
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setStatus('Vui lòng nhập YouTube API Key V3 trước khi quét ngách thật.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -2672,6 +3156,8 @@ JSON mẫu:
     const publishedAfter3Months = getPublishedAfterDate('3months');
     const publishedAfterYear = getPublishedAfterDate('year');
     const scanningKey = `${category}-${index}`;
+    const previousScanItems = readNicheScanHistory(selectedRegion, index);
+    const currentScanRound = Number((suggestedNiches[index] as any)?.scanRound || previousScanItems.length || 0);
 
     const hasVietnamese = (value: string) => /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value)
       || /\b(của|cho|với|không|cách|hướng dẫn|việt nam|người|làm|món|ngách|bóng đá|thể thao)\b/i.test(value);
@@ -2728,51 +3214,74 @@ JSON mẫu:
     try {
       setScanningNicheCategory(scanningKey);
       setIsFetchingDailyTrending(true);
-      setStatus(`Đang quét ${category} tại ${regionName}: ưu tiên video 30 ngày, VPH/View cao...`);
+      setStatus(`Đang quét nhanh ${category} tại ${regionName}: lấy ít video hơn để tránh đứng, ưu tiên key mới chưa quét...`);
 
-      const seedQueries = getCategorySeedQueries(category, index, selectedRegion, currentItems);
+      const seedQueries = rotateListBy(getCategorySeedQueries(category, index, selectedRegion, currentItems), currentScanRound).slice(0, 3);
       const scores = new Map<string, number>();
       let totalVideos = 0;
 
-      const runSearch = async (query: string, usePublishedAfter: boolean) => {
-        const searchRes = await youtubeFetch('search', {
+      const withQuickTimeout = async (promise: Promise<any>, timeoutMs = 9500, fallback: any = null) => {
+        let timer: any;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise(resolve => { timer = setTimeout(() => resolve(fallback), timeoutMs); })
+          ]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      };
+
+      const runSearch = async (query: string, publishedAfterOverride?: string, order: 'date' | 'relevance' | 'viewCount' = 'date') => {
+        const searchRes = await withQuickTimeout(youtubeFetch('search', {
           part: 'snippet',
           q: query,
           type: 'video',
           regionCode: regionCfg.regionCode,
           relevanceLanguage: regionCfg.relevanceLanguage,
-          ...(usePublishedAfter ? { publishedAfter } : {}),
-          order: 'viewCount',
-          maxResults: 30,
-        });
+          ...(publishedAfterOverride ? { publishedAfter: publishedAfterOverride } : {}),
+          order,
+          maxResults: 10,
+        }), 9500, { items: [] });
         return (searchRes?.items || []).map((item: any) => item?.id?.videoId).filter(Boolean);
       };
 
       let effectiveVideoIds: string[] = [];
-      for (const query of seedQueries) {
-        if (effectiveVideoIds.length >= 45) break;
-        const ids = await runSearch(query, true).catch(() => []);
-        effectiveVideoIds.push(...ids);
-      }
+      const scanWindows = [
+        { after: publishedAfter, order: 'date' as const },
+        { after: publishedAfter3Months, order: 'date' as const },
+        { after: publishedAfterYear, order: 'date' as const },
+        { after: undefined, order: 'relevance' as const },
+      ];
 
-      // Nếu 30 ngày không đủ dữ liệu, mở rộng toàn thời gian nhưng vẫn giữ regionCode + relevanceLanguage.
-      if (effectiveVideoIds.length < 8) {
-        for (const query of seedQueries.slice(0, 5)) {
-          if (effectiveVideoIds.length >= 45) break;
-          const ids = await runSearch(query, false).catch(() => []);
+      for (const windowCfg of scanWindows) {
+        if (effectiveVideoIds.length >= 28) break;
+        for (const query of seedQueries.slice(0, windowCfg.after ? 4 : 2)) {
+          if (effectiveVideoIds.length >= 28) break;
+          const ids = await runSearch(query, windowCfg.after, windowCfg.order).catch(() => []);
           effectiveVideoIds.push(...ids);
         }
+        effectiveVideoIds = [...new Set(effectiveVideoIds)];
+        if (effectiveVideoIds.length >= 10) break;
       }
 
-      effectiveVideoIds = [...new Set(effectiveVideoIds)].slice(0, 50);
+      effectiveVideoIds = [...new Set(effectiveVideoIds)].slice(0, 30);
 
       if (effectiveVideoIds.length > 0) {
-        const videoDetail = await youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') });
+        const videoDetail = await withQuickTimeout(
+          youtubeFetch('videos', { part: 'snippet,statistics,contentDetails', id: effectiveVideoIds.join(',') }),
+          11000,
+          { items: [] }
+        );
         const videos = Array.isArray(videoDetail?.items) ? videoDetail.items : [];
         totalVideos = videos.length;
 
         const channelIds = [...new Set(videos.map((v: any) => v?.snippet?.channelId).filter(Boolean))];
-        const channelDetail = channelIds.length ? await youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.join(',') }) : { items: [] };
+        const channelDetail = channelIds.length ? await withQuickTimeout(
+          youtubeFetch('channels', { part: 'snippet,statistics', id: channelIds.slice(0, 24).join(',') }),
+          11000,
+          { items: [] }
+        ) : { items: [] };
         const channelMap = new Map((channelDetail?.items || []).map((ch: any) => [ch.id, ch]));
 
         videos.forEach((video: any) => {
@@ -2815,29 +3324,55 @@ JSON mẫu:
         }
       });
 
-      const nextItems = [...scores.entries()]
+      const rankedItems = [...scores.entries()]
         .sort((a, b) => b[1] - a[1])
         .map(([keyword]) => keyword)
         .filter(keyword => isKeywordRelevantToCategory(keyword, category, index))
-        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx)
-        .slice(0, 6);
+        .filter((keyword, idx, arr) => arr.findIndex(x => x.toLowerCase() === keyword.toLowerCase()) === idx);
 
-      const finalItems = nextItems.length > 0 ? nextItems : getStrictCategorySeedItems(category, index, selectedRegion).slice(0, 6);
+      const previousSet = new Set([...previousScanItems, ...currentItems].map(k => cleanKeyword(k)).filter(Boolean));
+      const finalItems: string[] = [];
+      const usedFinal = new Set<string>();
+      const addFinal = (keyword: string, avoidPrevious: boolean) => {
+        const cleaned = cleanKeyword(keyword);
+        if (!cleaned || usedFinal.has(cleaned)) return;
+        if (avoidPrevious && previousSet.has(cleaned)) return;
+        finalItems.push(cleaned);
+        usedFinal.add(cleaned);
+      };
+      const fallbackItems = rotateListBy(getStrictCategorySeedItems(category, index, selectedRegion), currentScanRound + 1);
+
+      rankedItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, true); });
+      fallbackItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, true); });
+      rankedItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, false); });
+      fallbackItems.forEach(keyword => { if (finalItems.length < 6) addFinal(keyword, false); });
+
+      if (!finalItems.length) {
+        getStrictCategorySeedItems(category, index, selectedRegion).slice(0, 6).forEach(keyword => addFinal(keyword, false));
+      }
+
+      writeNicheScanHistory(selectedRegion, index, [...previousScanItems, ...finalItems]);
 
       setSuggestedNiches(prev => {
+        const now = new Date().toISOString();
         const next = prev.map((item: any, i: number) => i === index ? {
           ...item,
-          items: finalItems,
+          items: finalItems.slice(0, 6),
           source: 'youtube_v3_real_scan',
           realScanned: true,
-          realScannedAt: new Date().toISOString(),
-          region: selectedRegion
+          realScannedAt: now,
+          scanRound: currentScanRound + 1,
+          region: selectedRegion,
+          index
         } : item).slice(0, 15);
+
+        // Ghi ngay xuống cache_VN/cache_US... để UI và localStorage đồng bộ ngay sau khi bấm kính lúp.
+        const payload = persistTrendHotToRegionCache(next, selectedRegion, 'manual_region_scan');
+        setTrendingCacheMeta({ updatedAt: payload.updatedAt, region: selectedRegion, source: payload.source });
         return next;
       });
 
-      setTrendingCacheMeta({ updatedAt: new Date().toISOString(), region: selectedRegion, source: 'manual_region_scan' });
-      setStatus(`Đã quét xong ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video và lấy key theo đúng chủ đề, ưu tiên trend/VPH/View.`);
+      setStatus(`Đã quét nhanh ${category} tại ${regionName}. Đã đọc ${totalVideos || 0} video, ưu tiên key mới khác lần quét trước để tránh trùng và tránh đứng.`);
     } catch (error: any) {
       console.error(error);
       setStatus(getFriendlyApiError(error));
@@ -2874,6 +3409,253 @@ JSON mẫu:
     }
   };
 
+  const detectNicheLanguage = (texts: string[] = []) => {
+    const sample = texts.join(' ').toLowerCase();
+    if (!sample.trim()) return 'Tự động';
+    const vietnameseMarks = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+    if (vietnameseMarks.test(sample)) return 'Tiếng Việt';
+    if (/^[\x00-\x7F\s\p{P}\p{N}]+$/u.test(sample)) return 'Tiếng Anh';
+    return 'Tự động';
+  };
+
+  const getRegionLabel = (code?: string) => {
+    const map: Record<string, string> = {
+      VN: 'Việt Nam', US: 'Hoa Kỳ', GB: 'Anh', CA: 'Canada', AU: 'Úc', IN: 'Ấn Độ', JP: 'Nhật Bản', KR: 'Hàn Quốc', TH: 'Thái Lan', ID: 'Indonesia', PH: 'Philippines', MY: 'Malaysia', SG: 'Singapore', FR: 'Pháp', DE: 'Đức', BR: 'Brazil', MX: 'Mexico'
+    };
+    const safe = String(code || nicheRegion || config.region || 'VN').toUpperCase();
+    return map[safe] || safe;
+  };
+
+  const cleanNichePhrase = (value: any) => {
+    const text = String(value || '')
+      .replace(/https?:\/\/\S+/gi, ' ')
+      .replace(/[|•]/g, ' ')
+      .replace(/[#@]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!text || text.length < 3 || text.length > 80) return '';
+    const banned = /^(the|and|for|you|your|this|that|with|from|official|video|shorts|youtube|new|full|part|clip|subscribe|like|share|kênh|chủ đề|ngách)$/i;
+    if (banned.test(text)) return '';
+    if (/^\d+$/.test(text)) return '';
+    return text;
+  };
+
+  const extractNicheCandidatePhrases = (video: any, seedKeyword: string) => {
+    const phrases: string[] = [];
+    const snippet = video?.snippet || {};
+    const title = String(snippet.title || '');
+    const tags = Array.isArray(snippet.tags) ? snippet.tags : [];
+    tags.forEach((tag: string) => {
+      const cleaned = cleanNichePhrase(tag);
+      if (cleaned) phrases.push(cleaned);
+    });
+    title.split(/[-–—:;,.!?()[\]{}]+/g).forEach(part => {
+      const cleaned = cleanNichePhrase(part);
+      if (cleaned && cleaned.split(/\s+/).length >= 2) phrases.push(cleaned);
+    });
+    const hashtagMatches = title.match(/#[\p{L}\p{N}_-]+/gu) || [];
+    hashtagMatches.forEach(tag => {
+      const cleaned = cleanNichePhrase(tag.replace('#', ''));
+      if (cleaned) phrases.push(cleaned);
+    });
+    const seed = cleanNichePhrase(seedKeyword).toLowerCase();
+    return Array.from(new Set(phrases))
+      .filter((phrase) => phrase.toLowerCase() !== seed)
+      .filter((phrase) => phrase.split(/\s+/).length <= 8);
+  };
+
+  const buildSuggestionsFromProcessedVideos = (videos: any[], seedKeyword: string, channelList: any[] = [], metaOverride: any = {}) => {
+    const channelCountry = channelList.find((c: any) => c?.snippet?.country)?.snippet?.country;
+    const regionCode = String(metaOverride.regionCode || channelCountry || nicheRegion || config.region || 'VN').toUpperCase();
+    const titleTexts = videos.slice(0, 50).map((v: any) => v?.snippet?.title || '');
+    const detectedLanguage = metaOverride.language || detectNicheLanguage(titleTexts);
+    const baseChannelIds = new Set((metaOverride.baseChannelIds || []).map((id: any) => String(id)));
+    const channelTitleMap = new Map(channelList.map((c: any) => [c.id, c?.snippet?.title || c.id]));
+    const seedText = cleanNichePhrase(seedKeyword).toLowerCase();
+    const bucket = new Map<string, any>();
+
+    videos
+      .filter((video: any) => video?.id && video?.snippet?.channelId)
+      .sort((a: any, b: any) => (Number(b.vph || 0) + Number(b.trendScore || 0) * 20) - (Number(a.vph || 0) + Number(a.trendScore || 0) * 20))
+      .forEach((video: any) => {
+        const channelId = String(video?.snippet?.channelId || '');
+        const phrases = extractNicheCandidatePhrases(video, seedKeyword)
+          .filter((phrase) => {
+            const key = phrase.toLowerCase();
+            if (!key || key === seedText) return false;
+            if (key.length < 3 || key.length > 70) return false;
+            if (/^(official|channel|shorts|video|youtube|subscribe|like|views|watch)$/i.test(key)) return false;
+            return true;
+          })
+          .slice(0, 8);
+
+        phrases.forEach((phrase) => {
+          const key = phrase.toLowerCase();
+          const current = bucket.get(key) || { text: phrase, relatedVideos: [], totalViews: 0, totalVPH: 0, channels: new Set<string>(), externalChannels: new Set<string>() };
+          const views = Number(video?.statistics?.viewCount || 0);
+          current.relatedVideos.push(video);
+          current.totalViews += views;
+          current.totalVPH += Number(video?.vph || 0);
+          current.channels.add(channelId);
+          if (!baseChannelIds.has(channelId)) current.externalChannels.add(channelId);
+          bucket.set(key, current);
+        });
+      });
+
+    const allSuggestions = Array.from(bucket.values()).map((item: any) => {
+      const uniqueVideos = Array.from(new Map(item.relatedVideos.map((v: any) => [v.id, v])).values()) as any[];
+      const sortedVideos = uniqueVideos
+        .sort((a: any, b: any) => (Number(b.trendScore || 0) + Number(b.vph || 0) / 100) - (Number(a.trendScore || 0) + Number(a.vph || 0) / 100));
+      const primaryVideo = sortedVideos.find((v: any) => !baseChannelIds.has(String(v?.snippet?.channelId || ''))) || sortedVideos[0];
+      const primaryChannelId = String(primaryVideo?.snippet?.channelId || '');
+      const avgVPH = item.totalVPH / Math.max(1, uniqueVideos.length);
+      const trendVideoCount = uniqueVideos.filter((v: any) => Number(v.trendScore || 0) >= 60 || Number(v.vph || 0) >= avgVPH).length;
+      const channelCount = item.channels.size || 1;
+      const score = Math.min(100, Math.max(1, Math.round((Math.log10(Math.max(10, item.totalViews)) * 9) + (avgVPH / 120) + (trendVideoCount * 5) + (channelCount * 3))));
+      const competition = channelCount >= 10 || uniqueVideos.length >= 16 ? 'Cao' : channelCount >= 5 || uniqueVideos.length >= 8 ? 'Trung bình' : 'Thấp';
+      const potential = score >= 80 ? 'Rất cao' : score >= 65 ? 'Cao' : score >= 45 ? 'Trung bình' : 'Thấp';
+      return {
+        keyword: item.text,
+        score,
+        avgVPH,
+        totalViews: item.totalViews,
+        trendVideoCount,
+        potential,
+        competition,
+        primaryChannelId,
+        primaryChannelTitle: primaryVideo?.snippet?.channelTitle || channelTitleMap.get(primaryChannelId) || 'Kênh liên quan',
+        isFromExternalChannel: !baseChannelIds.has(primaryChannelId),
+        relatedVideos: sortedVideos.slice(0, 6)
+      };
+    })
+      .filter((item: any) => item.relatedVideos.length >= 1)
+      .sort((a: any, b: any) => Number(b.isFromExternalChannel) - Number(a.isFromExternalChannel) || b.score - a.score || b.avgVPH - a.avgVPH);
+
+    const selected: any[] = [];
+    const usedChannels = new Set<string>();
+    const usedKeywords = new Set<string>();
+
+    const pushUnique = (item: any, requireNewChannel: boolean) => {
+      const keywordKey = String(item.keyword || '').toLowerCase();
+      const channelKey = String(item.primaryChannelId || '');
+      if (!keywordKey || usedKeywords.has(keywordKey)) return false;
+      if (requireNewChannel && channelKey && usedChannels.has(channelKey)) return false;
+      selected.push(item);
+      usedKeywords.add(keywordKey);
+      if (channelKey) usedChannels.add(channelKey);
+      return true;
+    };
+
+    allSuggestions.filter((item: any) => item.isFromExternalChannel).forEach((item: any) => {
+      if (selected.length < 10) pushUnique(item, true);
+    });
+    allSuggestions.forEach((item: any) => {
+      if (selected.length < 10) pushUnique(item, true);
+    });
+    allSuggestions.forEach((item: any) => {
+      if (selected.length < 10) pushUnique(item, false);
+    });
+
+    return {
+      meta: {
+        currentTopic: cleanNichePhrase(seedKeyword) || 'Chủ đề hiện tại',
+        regionCode,
+        regionLabel: getRegionLabel(regionCode),
+        language: detectedLanguage,
+        timeframe: metaOverride.timeframe || '3 tháng gần nhất',
+        sampleVideos: videos.length
+      },
+      suggestions: selected.slice(0, 10)
+    };
+  };
+
+  const buildChannelTopicSuggestions = async (seedKeyword: string, baseVideos: any[], baseChannels: any[], topKeywords: any[]) => {
+    const channelCountry = baseChannels.find((c: any) => c?.snippet?.country)?.snippet?.country;
+    const regionCode = String(channelCountry || nicheRegion || config.region || 'VN').toUpperCase();
+    const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Giảm tải API riêng cho khối GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH:
+    // - Không gọi nhiều search API cùng lúc.
+    // - Chỉ dùng vài seed mạnh nhất, mỗi seed lấy ít video hơn.
+    // - Chèn delay ngẫu nhiên 300–700ms giữa các request để tránh dồn quota/rate limit.
+    const suggestionDelay = () => new Promise(resolve => setTimeout(resolve, 300 + Math.floor(Math.random() * 401)));
+    const limitedYoutubeFetch = async (endpoint: string, params: Record<string, any>) => {
+      await suggestionDelay();
+      return youtubeFetch(endpoint, params);
+    };
+
+    const seedList = Array.from(new Set([
+      seedKeyword,
+      ...topKeywords.slice(0, 4).map((k: any) => k.text)
+    ].map(v => cleanNichePhrase(v)).filter(Boolean))).slice(0, 4);
+
+    const fetchSuggestionVideos = async (publishedAfter?: string) => {
+      let searchItems: any[] = [];
+      for (const seed of seedList) {
+        const res = await limitedYoutubeFetch('search', {
+          q: seed,
+          type: 'video',
+          regionCode,
+          relevanceLanguage: (REGION_SEARCH_CONFIG as any)[regionCode]?.relevanceLanguage || undefined,
+          publishedAfter,
+          maxResults: 10,
+          order: 'viewCount'
+        });
+        if (res?.items) searchItems = [...searchItems, ...res.items];
+      }
+      const ids = Array.from(new Set(searchItems.map((item: any) => item?.id?.videoId).filter(Boolean))).slice(0, 30);
+      if (!ids.length) return { videos: [], channels: [] };
+      let detailedVideos: any[] = [];
+      for (let i = 0; i < ids.length; i += 50) {
+        const res = await limitedYoutubeFetch('videos', { id: ids.slice(i, i + 50).join(','), part: 'snippet,statistics,contentDetails' });
+        if (res?.items) detailedVideos = [...detailedVideos, ...res.items];
+      }
+      const channelIds = Array.from(new Set(detailedVideos.map((v: any) => v?.snippet?.channelId).filter(Boolean))).slice(0, 30);
+      let channels: any[] = [];
+      for (let i = 0; i < channelIds.length; i += 50) {
+        const res = await limitedYoutubeFetch('channels', { id: channelIds.slice(i, i + 50).join(','), part: 'snippet,statistics,topicDetails' });
+        if (res?.items) channels = [...channels, ...res.items];
+      }
+      const channelsMap = new Map(channels.map((c: any) => [c.id, c]));
+      const processed = detailedVideos.map((v: any) => {
+        const chan = channelsMap.get(v.snippet.channelId);
+        const stats = v.statistics || {};
+        const views = parseInt(stats.viewCount) || 0;
+        const vph = calculateVPH(views, v.snippet.publishedAt);
+        return {
+          ...v,
+          vph,
+          trendScore: calculateTrendScore(v, chan),
+          channelStats: chan?.statistics || {},
+          channelSubscriberCount: parseInt(chan?.statistics?.subscriberCount) || 0,
+          engagementRate: calculateEngagementRate(stats),
+          viewPerDay: views / Math.max(1, (Date.now() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
+        };
+      });
+      return { videos: processed, channels };
+    };
+
+    try {
+      setStatus('Đang tạo Gợi ý ngách & chủ đề kênh từ dữ liệu 3 tháng gần nhất...');
+      let { videos, channels } = await fetchSuggestionVideos(threeMonthsAgo);
+      let timeframe = '3 tháng gần nhất';
+      if (!videos.length) {
+        setStatus('3 tháng gần nhất chưa có dữ liệu phù hợp. Đang quét mở rộng toàn thời gian...');
+        const fallback = await fetchSuggestionVideos(undefined);
+        videos = fallback.videos;
+        channels = fallback.channels;
+        timeframe = 'Toàn thời gian';
+      }
+      if (!videos.length) {
+        return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có', baseChannelIds: baseChannels.map((c: any) => c.id) });
+      }
+      return buildSuggestionsFromProcessedVideos(videos, seedKeyword, channels, { regionCode, timeframe, baseChannelIds: baseChannels.map((c: any) => c.id) });
+    } catch (error) {
+      console.warn('buildChannelTopicSuggestions fallback:', error);
+      return buildSuggestionsFromProcessedVideos(baseVideos, seedKeyword, baseChannels, { regionCode, timeframe: 'Dữ liệu hiện có', baseChannelIds: baseChannels.map((c: any) => c.id) });
+    }
+  };
+
     const runNicheResearch = async (customKeyword?: string) => {
     let kw = (customKeyword || nicheInput || '').trim();
     if (!kw) {
@@ -2885,8 +3667,9 @@ JSON mẫu:
       localStorage.setItem('youtube_last_niche_keyword', kw);
     }
 
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setStatus('Vui lòng thêm ít nhất một API Key trong phần cài đặt.');
+      setShowKeyInputModal(true);
       return;
     }
 
@@ -2959,7 +3742,7 @@ JSON mẫu:
         const chunk = channelIds.slice(i, i + 50);
         const res = await youtubeFetch('channels', {
           id: chunk.join(','),
-          part: 'snippet,statistics'
+          part: 'snippet,statistics,topicDetails'
         });
         if (res.items) allChannels = [...allChannels, ...res.items];
       }
@@ -2970,11 +3753,14 @@ JSON mẫu:
       // 4. Process data
       const subLimitedChannelIds = new Set(
         allChannels
-          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub)
+          .filter((c: any) => { const sub = parseInt(c.statistics?.subscriberCount) || 0; return sub >= nicheMinSub && sub <= nicheMaxSub; })
           .map((c: any) => c.id)
       );
       const videosForProcessing = allDetailedVideos.filter((v: any) => subLimitedChannelIds.has(v.snippet.channelId));
-      const sourceVideosForProcessing = videosForProcessing.length > 0 ? videosForProcessing : allDetailedVideos;
+      if (videosForProcessing.length === 0) {
+        setStatus(`Không tìm thấy video/kênh phù hợp trong phạm vi sub ${formatVNNumber(nicheMinSub)} → ${formatVNNumber(nicheMaxSub)}. Hãy mở rộng phạm vi Sub rồi phân tích lại.`);
+      }
+      const sourceVideosForProcessing = videosForProcessing;
       const processedVideos = sourceVideosForProcessing.map((v: any) => {
         const chan = channelsMap.get(v.snippet.channelId);
         const stats = v.statistics || {};
@@ -2992,22 +3778,6 @@ JSON mẫu:
           engagementRate: calculateEngagementRate(stats),
           viewPerDay: views / Math.max(1, (new Date().getTime() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
         };
-      });
-
-      // Simple Shorts filter
-      const shorts = processedVideos.filter((v: any) => {
-        const d = v.contentDetails?.duration;
-        if (!d) return false;
-        if (d.includes('H')) return false;
-        if (d.includes('M')) {
-          const match = d.match(/PT(\d+)M/);
-          if (match && parseInt(match[1]) > 1) return false;
-          if (match && parseInt(match[1]) === 1 && d.includes('S')) {
-             const sMatch = d.match(/(\d+)S/);
-             if (sMatch && parseInt(sMatch[1]) > 0) return false;
-          }
-        }
-        return true;
       });
 
       // 5. Keyword analysis
@@ -3051,6 +3821,97 @@ JSON mẫu:
           };
         });
 
+      const collectExpandedNewestShorts = async () => {
+        const targetCount = 15;
+        const searchSeeds = buildShortsExpansionSeeds(kw, topKeywords);
+        const videoIdSet = new Set<string>();
+        const keepSearchIds = (items: any[] = []) => {
+          items.forEach((item: any) => {
+            const id = item?.id?.videoId;
+            if (id && videoIdSet.size < 45) videoIdSet.add(id);
+          });
+        };
+
+        for (const seed of searchSeeds) {
+          if (videoIdSet.size >= 30) break;
+          setStatus(`Đang tìm Shorts mới nhất: ${seed}...`);
+          try {
+            const res = await youtubeFetch('search', {
+              q: seed,
+              type: 'video',
+              regionCode: nicheRegion,
+              relevanceLanguage: (REGION_SEARCH_CONFIG as any)[nicheRegion]?.relevanceLanguage || undefined,
+              publishedAfter,
+              maxResults: 15,
+              order: 'date',
+              videoDuration: 'short'
+            });
+            keepSearchIds(res?.items || []);
+          } catch (shortSearchError) {
+            console.warn('shorts expansion search error:', shortSearchError);
+          }
+          if (videoIdSet.size >= targetCount + 5) break;
+        }
+
+        const shortIds = Array.from(videoIdSet);
+        if (!shortIds.length) return [];
+
+        let detailedShorts: any[] = [];
+        for (let i = 0; i < shortIds.length; i += 50) {
+          const res = await youtubeFetch('videos', {
+            id: shortIds.slice(i, i + 50).join(','),
+            part: 'snippet,statistics,contentDetails'
+          });
+          if (res?.items) detailedShorts = [...detailedShorts, ...res.items];
+        }
+
+        const shortChannelIds = Array.from(new Set(detailedShorts.map((v: any) => v?.snippet?.channelId).filter(Boolean)));
+        let shortChannels: any[] = [];
+        for (let i = 0; i < shortChannelIds.length; i += 50) {
+          const res = await youtubeFetch('channels', {
+            id: shortChannelIds.slice(i, i + 50).join(','),
+            part: 'snippet,statistics,topicDetails'
+          });
+          if (res?.items) shortChannels = [...shortChannels, ...res.items];
+        }
+
+        const shortChannelMap = new Map(shortChannels.map((c: any) => [c.id, c]));
+        const enrichedShorts = detailedShorts
+          .filter((v: any) => isLikelyYoutubeShort(v))
+          .map((v: any) => {
+            const chan: any = shortChannelMap.get(v.snippet.channelId);
+            const stats = v.statistics || {};
+            const views = parseInt(stats.viewCount) || 0;
+            const channelSubscriberCount = parseInt(chan?.statistics?.subscriberCount) || 0;
+            return {
+              ...v,
+              vph: calculateVPH(views, v.snippet.publishedAt),
+              trendScore: calculateTrendScore(v, chan),
+              channelStats: chan?.statistics || {},
+              channelSubscriberCount,
+              engagementRate: calculateEngagementRate(stats),
+              viewPerDay: views / Math.max(1, (Date.now() - new Date(v.snippet.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
+            };
+          });
+
+        const inSubRange = enrichedShorts.filter((v: any) => {
+          const sub = Number(v.channelSubscriberCount || 0);
+          return sub >= nicheMinSub && sub <= nicheMaxSub;
+        });
+        const source = inSubRange.length >= 10 ? inSubRange : enrichedShorts;
+        return sortNewestVideos(source).slice(0, targetCount);
+      };
+
+      let shorts = sortNewestVideos(processedVideos.filter((v: any) => isLikelyYoutubeShort(v))).slice(0, 15);
+      if (nicheActiveSubTab === 'shorts' || nicheVideoType === 'short' || shorts.length < 10) {
+        const expandedShorts = await collectExpandedNewestShorts();
+        const mergedShorts = new Map<string, any>();
+        [...expandedShorts, ...shorts].forEach((v: any) => {
+          if (v?.id && !mergedShorts.has(v.id)) mergedShorts.set(v.id, v);
+        });
+        shorts = sortNewestVideos(Array.from(mergedShorts.values())).slice(0, 15);
+      }
+
       // 6. Summary metrics
       const avgVPH = processedVideos.reduce((acc, curr) => acc + curr.vph, 0) / Math.max(1, processedVideos.length);
       const trendVideos = processedVideos.filter(v => v.trendScore > 60).length;
@@ -3068,13 +3929,17 @@ JSON mẫu:
         totalViews: processedVideos.reduce((acc, curr) => acc + (parseInt(curr.statistics.viewCount) || 0), 0)
       };
 
+      const suggestionData = await buildChannelTopicSuggestions(kw, processedVideos, allChannels, topKeywords);
+
       const finalResults = {
         summary,
         keywords: topKeywords,
         videos: processedVideos,
         shorts,
+        suggestions: suggestionData.suggestions,
+        suggestionMeta: suggestionData.meta,
         channels: allChannels
-          .filter((c: any) => (parseInt(c.statistics?.subscriberCount) || 0) <= nicheMaxSub || videosForProcessing.length === 0)
+          .filter((c: any) => { const sub = parseInt(c.statistics?.subscriberCount) || 0; return sub >= nicheMinSub && sub <= nicheMaxSub; })
           .map((c: any) => {
           const chanVideos = processedVideos.filter(v => v.snippet.channelId === c.id);
           return {
@@ -3099,7 +3964,12 @@ JSON mẫu:
       setStatus(`Đã phân tích xong ngách: ${kw}`);
     } catch (err) {
       console.error(err);
+      const errMsg = (err as any)?.message || '';
       setStatus('Có lỗi xảy ra khi gọi YouTube API. Vui lòng kiểm tra API Key hoặc Quota.');
+      // Tự mở bảng nhập key khi lỗi liên quan tới key/quota để user nhập/thay key ngay
+      if (!errMsg || /api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(errMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsNicheSearching(false);
     }
@@ -3108,6 +3978,7 @@ JSON mẫu:
   const analyzeWithAI = async () => {
     if (getActiveGeminiKeys().length === 0) {
       setStatus('Lỗi: Vui lòng nhập ít nhất 1 Gemini API Key ở Cài đặt API.');
+      setShowKeyInputModal(true);
       return;
     }
     if (!nicheResults) return;
@@ -3149,8 +4020,12 @@ JSON mẫu:
       setStatus('AI đã phân tích xong. Xem báo cáo chi tiết bên dưới.');
     } catch (error: any) {
       console.error(error);
-      setStatus(`Lỗi khi gọi AI: ${error.message}`);
+      const aiErrMsg = error?.message || '';
+      setStatus(`Lỗi khi gọi AI: ${aiErrMsg}`);
       setProgress(0);
+      if (/api key|quota|key đều lỗi|gemini|forbidden|invalid|chưa có/i.test(aiErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsAiAnalyzing(false);
     }
@@ -3162,14 +4037,9 @@ JSON mẫu:
   ]);
 
   const getMergedYoutubeKeys = () => {
-    const fromTextarea = manualKeysInput
-      .split(/\r?\n/)
-      .map(k => String(k || '').trim())
-      .filter(Boolean);
-    const fromConfig = config.apiKeys
-      .map(k => String(k || '').trim())
-      .filter(Boolean);
-    return Array.from(new Set([...fromTextarea, ...fromConfig]));
+    const userKeys = getLocalYoutubeApiKeys();
+    if (userKeys.length) return userKeys;
+    return getTrialYoutubeApiKeys();
   };
 
   const getYoutubeErrorText = (data: any, httpStatus?: number, err?: any) => {
@@ -3217,6 +4087,9 @@ JSON mẫu:
       setYoutubeKeyCheckResults([{ key: '', ok: false, label: 'Thiếu key', detail: 'Vui lòng dán ít nhất 1 YouTube API Key V3, mỗi key một dòng.' }]);
       return;
     }
+    if (isUsingTrialYoutubeKeys()) {
+      await enforceTrialIpLimit('youtube');
+    }
     setIsCheckingYoutubeKeys(true);
     const results: Array<{ key: string; ok: boolean; label: string; detail: string }> = [];
     for (const key of keys) {
@@ -3245,11 +4118,15 @@ JSON mẫu:
       setExhaustedKeys(nextFailed);
     }
     if (goodKeys.length) {
-      setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      if (!isUsingTrialYoutubeKeys()) {
+        setConfig(prev => ({ ...prev, apiKeys: Array.from(new Set([...goodKeys, ...keys.filter(k => !goodKeys.includes(k))])) }));
+      }
       setApiKeyIndex(Math.max(0, keys.findIndex(k => k === goodKeys[0])));
       setExhaustedKeys(prev => prev.filter(k => !goodKeys.includes(k)));
       exhaustedKeysRef.current = exhaustedKeysRef.current.filter(k => !goodKeys.includes(k));
-      setStatus(`YouTube: tìm thấy ${goodKeys.length}/${results.length} key hợp lệ. Tool sẽ dùng key hợp lệ để quét dữ liệu.`);
+      setStatus(isUsingTrialYoutubeKeys()
+        ? `YouTube: key dùng thử do Admin cấp đang hoạt động. Tài khoản trial sẽ tự khóa key khi hết hạn dùng thử.`
+        : `YouTube: tìm thấy ${goodKeys.length}/${results.length} key hợp lệ. Tool sẽ dùng key hợp lệ để quét dữ liệu.`);
     } else {
       setStatus('YouTube: chưa có key hợp lệ. Xem lỗi chi tiết ở phần Check YouTube Key.');
     }
@@ -3260,10 +4137,13 @@ JSON mẫu:
     if (keys.length === 0) {
       throw new Error('Chưa có YouTube API Key. Vui lòng nhập Key trong phần cài đặt.');
     }
+    if (isUsingTrialYoutubeKeys()) {
+      await enforceTrialIpLimit('youtube');
+    }
 
     // Đồng bộ ngay danh sách key đang nhập để hệ thống xoay vòng đủ key, không cần bấm lưu lại.
     const currentConfigKeys = config.apiKeys.map(k => String(k || '').trim()).filter(Boolean);
-    if (keys.join('\n') !== currentConfigKeys.join('\n')) {
+    if (!isUsingTrialYoutubeKeys() && keys.join('\n') !== currentConfigKeys.join('\n')) {
       setConfig(prev => ({ ...prev, apiKeys: keys }));
       localStorage.setItem('youtube_api_keys', JSON.stringify(keys));
       localStorage.setItem('youtube_api_keys_text_draft', keys.join('\n'));
@@ -3533,8 +4413,10 @@ JSON mẫu:
     localStorage.setItem('youtube_api_keys', JSON.stringify(config.apiKeys.map(k => k.trim()).filter(Boolean)));
     setManualKeysInput(config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
     localStorage.setItem('youtube_api_keys_text_draft', config.apiKeys.map(k => k.trim()).filter(Boolean).join('\n'));
+    const safeConfig = normalizeHunterFilterConfig(config);
+    setConfig(safeConfig);
     localStorage.setItem('youtube_hunter_config', JSON.stringify({
-      ...config,
+      ...safeConfig,
       apiKeys: [] // Don't double save keys
     }));
     setStatus('Đã lưu cấu hình.');
@@ -3742,13 +4624,136 @@ JSON mẫu:
     return /(giai tri|entertainment|am thuc|food|cooking|nau an|mukbang|suc khoe|health|fitness|lam dep|beauty)/i.test(text);
   };
 
+
+  const buildKeywordPhrasesFromTitle = (title: string, baseKeyword: string) => {
+    const clean = String(title || '')
+      .replace(/[|()[\]{}"“”'’.,!?;:]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!clean) return [];
+
+    const lowerBase = normalizeHunterKeyword(baseKeyword);
+    const words = clean.split(' ').filter(w => w && w.length > 1);
+    const phrases: string[] = [];
+
+    // Ưu tiên cụm có chứa từ khóa gốc hoặc các từ gần từ khóa gốc.
+    for (let size = 2; size <= 5; size++) {
+      for (let i = 0; i <= words.length - size; i++) {
+        const phrase = words.slice(i, i + size).join(' ').trim();
+        const normalizedPhrase = normalizeHunterKeyword(phrase);
+        if (!normalizedPhrase || normalizedPhrase.length < 4) continue;
+        if (normalizedPhrase.includes(lowerBase) || lowerBase.split(' ').some(w => w.length > 2 && normalizedPhrase.includes(w))) {
+          phrases.push(phrase);
+        }
+      }
+    }
+
+    // Nếu tiêu đề không có cụm rõ, lấy 4-5 từ đầu làm key phụ.
+    if (phrases.length === 0 && words.length >= 3) {
+      phrases.push(words.slice(0, Math.min(5, words.length)).join(' '));
+    }
+
+    return phrases;
+  };
+
+  const fetchYoutubeV3RelatedKeywordsForAutoSwitch = async (baseKeyword: string, regionCode: string, publishedAfter?: string) => {
+    const relatedMap = new Map<string, { text: string; score: number; source: string }>();
+    const addKeyword = (text: string, score: number, source: string) => {
+      const cleaned = String(text || '')
+        .replace(/^#/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const normalized = normalizeHunterKeyword(cleaned);
+      if (!cleaned || normalized.length < 3) return;
+      if (cleaned.length > 70) return;
+      if (/^(http|www\.|youtube|shorts|video|official)$/i.test(cleaned)) return;
+      const old = relatedMap.get(normalized);
+      if (!old || score > old.score) relatedMap.set(normalized, { text: cleaned, score, source });
+    };
+
+    addKeyword(baseKeyword, 999, 'base');
+
+    const seedQueries = Array.from(new Set([
+      baseKeyword,
+      `${baseKeyword} hôm nay`,
+      `${baseKeyword} mới nhất`,
+      `${baseKeyword} 2026`,
+      `${baseKeyword} tin tức`,
+      `${baseKeyword} phân tích`
+    ].map(x => x.trim()).filter(Boolean)));
+
+    for (const seed of seedQueries.slice(0, 6)) {
+      if (!isHuntingRef.current) break;
+
+      const searchRes = await youtubeFetch('search', {
+        part: 'snippet',
+        type: 'video',
+        q: seed,
+        regionCode,
+        maxResults: 10,
+        order: 'relevance',
+        ...(publishedAfter ? { publishedAfter } : {})
+      });
+
+      const videoIds = (searchRes.items || [])
+        .map((item: any) => item?.id?.videoId)
+        .filter(Boolean)
+        .slice(0, 10);
+
+      if (!videoIds.length) continue;
+
+      const videoRes = await youtubeFetch('videos', {
+        part: 'snippet,statistics',
+        id: videoIds.join(',')
+      });
+
+      (videoRes.items || []).forEach((video: any) => {
+        const views = Number(video?.statistics?.viewCount || 0);
+        const likes = Number(video?.statistics?.likeCount || 0);
+        const baseScore = Math.log10(Math.max(10, views)) + (likes / Math.max(1, views)) * 10;
+
+        buildKeywordPhrasesFromTitle(video?.snippet?.title || '', baseKeyword).forEach((phrase, idx) => {
+          addKeyword(phrase, baseScore - idx * 0.05, 'title');
+        });
+
+        (video?.snippet?.tags || []).slice(0, 12).forEach((tag: string, idx: number) => {
+          addKeyword(tag, baseScore + 1 - idx * 0.03, 'tag');
+        });
+
+        const channelTitle = video?.snippet?.channelTitle || '';
+        if (channelTitle && normalizeHunterKeyword(channelTitle).includes(normalizeHunterKeyword(baseKeyword).split(' ')[0] || '')) {
+          addKeyword(channelTitle, baseScore - 0.5, 'channel');
+        }
+      });
+    }
+
+    return Array.from(relatedMap.values())
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.text)
+      .slice(0, 24);
+  };
+
+
   const startHunter = async () => {
-    if (config.apiKeys.length === 0) {
+    if (getMergedYoutubeKeys().length === 0) {
       setLastError('Vui lòng nhập ít nhất một YouTube API Key trong phần Cấu hình.');
+      setShowKeyInputModal(true);
       return;
     }
 
-    const rawKeyword = (config.keyword || '').trim();
+    const hunterConfig = normalizeHunterFilterConfig(config);
+    if (
+      hunterConfig.minSub !== config.minSub ||
+      hunterConfig.maxSub !== config.maxSub ||
+      hunterConfig.minVideo !== config.minVideo ||
+      hunterConfig.maxVideo !== config.maxVideo ||
+      hunterConfig.maxVideos !== config.maxVideos ||
+      hunterConfig.minViews !== config.minViews
+    ) {
+      setConfig(hunterConfig);
+    }
+
+    const rawKeyword = (hunterConfig.keyword || '').trim();
     const isAutoHunt = !rawKeyword;
 
     quotaUsedRef.current = 0;
@@ -3758,7 +4763,7 @@ JSON mẫu:
     setIsHunting(true);
     isHuntingRef.current = true;
     setLastError(null);
-    setStatus(config.deepDrillSmallTrend ? 'Đang bật Deep Drill: săn kênh nhỏ/mới trend trong 30 ngày...' : (isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...'));
+    setStatus(hunterConfig.deepDrillSmallTrend ? 'Đang bật Deep Drill: săn kênh nhỏ/mới trend trong 30 ngày...' : (isAutoHunt ? 'Đang tự động lọc kênh hot theo khu vực/thời gian...' : 'Đang khởi tạo...'));
     setProgress(5);
     if (typeof AbortController !== 'undefined') {
       try {
@@ -3777,15 +4782,16 @@ JSON mẫu:
     }
 
     try {
-      const cycles = config.regions.includes('ALL')
+      const cycles = hunterConfig.regions.includes('ALL')
         ? REGIONS.map(r => r.code).filter(Boolean)
-        : config.regions;
-      const currentRegion = cycles.length > 0 ? cycles[0] : (config.region || 'VN');
+        : hunterConfig.regions;
+      const currentRegion = cycles.length > 0 ? cycles[0] : (hunterConfig.region || 'VN');
       const regionTag = currentRegion ? ' [QG: ' + currentRegion + ']' : '';
-      const effectivePublishedAfter = config.deepDrillSmallTrend ? 'month' : config.publishedAfter;
+      const effectivePublishedAfter = hunterConfig.deepDrillSmallTrend ? 'month' : hunterConfig.publishedAfter;
       const publishedAfter = getPublishedAfterDate(effectivePublishedAfter);
 
       let scanKeywords: string[] = [];
+      const shouldAutoSwitchKeywords = !!hunterConfig.autoNiche;
       if (isAutoHunt) {
         scanKeywords = diversifySeedsByTopic(shuffleList(getAutoHuntSeeds(currentRegion))).slice(0, 16);
       } else {
@@ -3794,7 +4800,17 @@ JSON mẫu:
           const targetLang = getLanguageForRegion(currentRegion);
           searchKeyword = translateKeywordSimple(rawKeyword, targetLang);
         }
-        scanKeywords = [searchKeyword];
+
+        if (shouldAutoSwitchKeywords) {
+          setStatus(`Đang tạo danh sách từ khóa liên quan bằng YouTube API V3 cho "${rawKeyword}"...`);
+          const relatedKeywords = await fetchYoutubeV3RelatedKeywordsForAutoSwitch(searchKeyword, currentRegion, publishedAfter);
+          scanKeywords = Array.from(new Set([searchKeyword, rawKeyword, ...relatedKeywords].map(k => String(k || '').trim()).filter(Boolean))).slice(0, 24);
+          // Khi bật tự động chuyển từ khóa, bảng gợi ý vẫn phải hiển thị như chế độ thường:
+          // cột Cạnh tranh là Thấp/Trung bình/Cao và cột Điểm SEO là x/10, không hiển thị trạng thái quét.
+          setKeywordIdeas(buildKeywordIdeasForAutoSwitch(scanKeywords, rawKeyword));
+        } else {
+          scanKeywords = [searchKeyword];
+        }
       }
 
       const addedChannelIds = new Set<string>(resultsRef.current.map(r => r.id));
@@ -3803,12 +4819,15 @@ JSON mẫu:
       for (let k = 0; k < scanKeywords.length; k++) {
         if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
         const searchKeyword = scanKeywords[k];
-        const shownKeyword = isAutoHunt ? `tự động: ${searchKeyword}` : rawKeyword;
+        const shownKeyword = isAutoHunt ? `tự động: ${searchKeyword}` : searchKeyword;
+        const autoSwitchMode = !isAutoHunt && !!hunterConfig.autoNiche && scanKeywords.length > 1;
 
         setStatus(
           isAutoHunt
             ? `Tự động lọc kênh hot ${regionTag}: cụm "${searchKeyword}" (${resultsRef.current.length}/${STOP_LIMIT})`
-            : `Đang quét: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
+            : autoSwitchMode
+              ? `Tự động chuyển từ khóa bằng YouTube API V3: "${searchKeyword}" (${k + 1}/${scanKeywords.length}) — đã có ${resultsRef.current.length}/${STOP_LIMIT} kênh${regionTag}`
+              : `Đang quét: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
         );
 
         const searchRes = await youtubeFetch('search', {
@@ -3816,7 +4835,7 @@ JSON mẫu:
           type: 'video',
           q: searchKeyword,
           regionCode: currentRegion,
-          maxResults: config.deepDrillSmallTrend ? 50 : Math.min(Math.max(config.maxVideos, 20), 50),
+          maxResults: hunterConfig.deepDrillSmallTrend ? 50 : Math.min(Math.max(hunterConfig.maxVideos, 20), 50),
           order: 'viewCount',
           publishedAfter
         });
@@ -3858,19 +4877,19 @@ JSON mẫu:
             const bestVideoViews = parseInt(video.statistics?.viewCount) || 0;
             const metrics = calculateHunterCandidateScore(video, channel, searchKeyword);
 
-            const deepDrillActive = !!config.deepDrillSmallTrend;
+            const deepDrillActive = !!hunterConfig.deepDrillSmallTrend;
             const deepDrillMaxSub = 50000;
             const hardExcludedByTopic = deepDrillActive && subs > 500000 && isBroadHighSubExcludedTopic(video, channel, searchKeyword);
-            const effectiveMinSub = deepDrillActive ? 0 : config.minSub;
-            const effectiveMaxSub = deepDrillActive ? Math.min(config.maxSub || deepDrillMaxSub, deepDrillMaxSub) : config.maxSub;
-            const effectiveMinViews = deepDrillActive ? Math.max(500, Math.floor(config.minViews / 4)) : config.minViews;
+            const effectiveMinSub = deepDrillActive ? 0 : hunterConfig.minSub;
+            const effectiveMaxSub = deepDrillActive ? Math.min(hunterConfig.maxSub || deepDrillMaxSub, deepDrillMaxSub) : hunterConfig.maxSub;
+            const effectiveMinViews = deepDrillActive ? Math.max(500, Math.floor(hunterConfig.minViews / 4)) : hunterConfig.minViews;
 
             const passed =
               !hardExcludedByTopic &&
               subs >= effectiveMinSub &&
               subs <= effectiveMaxSub &&
-              videoCount >= config.minVideo &&
-              (config.maxVideo ? videoCount <= config.maxVideo : true) &&
+              videoCount >= hunterConfig.minVideo &&
+              (hunterConfig.maxVideo ? videoCount <= hunterConfig.maxVideo : true) &&
               views >= effectiveMinViews;
 
             // Khi ô từ khóa trống hoặc Deep Drill, ưu tiên video mới có hiệu suất vượt trội hơn tổng view toàn kênh.
@@ -3891,7 +4910,7 @@ JSON mẫu:
           })
           .filter(Boolean)
           .sort((a: any, b: any) => b.rankScore - a.rankScore)
-          .slice(0, isAutoHunt ? 4 : STOP_LIMIT);
+          .slice(0, (isAutoHunt || (!isAutoHunt && hunterConfig.autoNiche)) ? 4 : STOP_LIMIT);
 
         for (const candidate of candidates as any[]) {
           if (!isHuntingRef.current || resultsRef.current.length >= STOP_LIMIT) break;
@@ -3920,7 +4939,7 @@ JSON mẫu:
             score: scoreText,
             keywordTitle: isAutoHunt
               ? `Auto ${currentRegion || 'Global'} · ${searchKeyword} · VPH ${Math.round(candidate.metrics.vph).toLocaleString('vi-VN')}`
-              : rawKeyword,
+              : (hunterConfig.autoNiche && searchKeyword !== rawKeyword ? `${rawKeyword} → ${searchKeyword}` : rawKeyword),
             lastVideoId: candidate.video.id
           };
 
@@ -3941,6 +4960,8 @@ JSON mẫu:
         setStatus('Đã dừng bởi người dùng.');
       } else if (isAutoHunt) {
         setStatus(`Hoàn tất tự động lọc theo khu vực/thời gian. Tìm được ${resultsRef.current.length} kênh.`);
+      } else if (hunterConfig.autoNiche && scanKeywords.length > 1) {
+        setStatus(`Đã quét hết danh sách từ khóa liên quan bằng YouTube API V3. Tìm được ${resultsRef.current.length}/${STOP_LIMIT} kênh đạt điều kiện.`);
       } else {
         setStatus(`Hoàn tất quét. Tìm được ${resultsRef.current.length} kênh.`);
       }
@@ -3950,6 +4971,9 @@ JSON mẫu:
         const errMsg = `Lỗi: ${err.message}`;
         setStatus(errMsg);
         setLastError(errMsg);
+        if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(err.message || '')) {
+          setShowKeyInputModal(true);
+        }
       }
     } finally {
       setIsHunting(false);
@@ -3994,30 +5018,6 @@ JSON mẫu:
     const tzStr = isVN ? 'VN - GMT+7' : 'UTC';
     
     return `${dateStr} - ${timeStr} (${tzStr})`;
-  };
-
-  const extractYouTubeVideoIdForEmbed = (input?: string | null) => {
-    if (!input || typeof input !== 'string') return '';
-    let text = input.trim();
-    text = text.split('&t=')[0].split('?t=')[0];
-    const patterns = [
-      /(?:v=|v\/|embed\/|shorts\/|live\/|youtu\.be\/|\/v\/|watch\?v%3D|watch\?feature=player_embedded&v=|watch\?v=)([^"&?\/\s]{11})/i,
-      /^[a-zA-Z0-9_-]{11}$/
-    ];
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match && match[1]) return match[1];
-      if (match && !pattern.source.includes('(')) return match[0];
-    }
-    const advancedMatch = text.match(/(?:[\/v=])([a-zA-Z0-9_-]{11})(?:[&?\/]|$)/);
-    if (advancedMatch) return advancedMatch[1];
-    const coarseMatch = text.match(/[a-zA-Z0-9_-]{11}/);
-    return coarseMatch ? coarseMatch[0] : '';
-  };
-
-  const openInlineVideo = (input?: string | null) => {
-    const videoId = extractYouTubeVideoIdForEmbed(input || '');
-    if (videoId) setInlineVideoId(videoId);
   };
 
   const analyzeSpy = async (targetId?: string | any) => {
@@ -4137,7 +5137,7 @@ JSON mẫu:
       const topKeywordsStr = topKeywordsArr.map(k => `${k.text} (${k.count})`).join(', ');
       const topTagsStr = topTagsArr.map(k => `${k.text} (${k.count})`).join(', ');
 
-      const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${channel.snippet.country || 'N/A'} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
+      const report = `Kênh: ${channel.snippet.title} (${channel.id}) | Quốc gia: ${getCountryDisplayName(channel.snippet.country)} | Tuổi kênh: ${calculateChannelAge(channel.snippet.publishedAt)} ngày
  Đăng ký: ${parseInt(channel.statistics.subscriberCount).toLocaleString()} | Tổng lượt xem: ${parseInt(channel.statistics.viewCount).toLocaleString()} | Video: ${channel.statistics.videoCount}
  Phân tích gần đây: ${processedVideos.length} | View/ngày: tb ${avgViews} • cao nhất ${maxViews.toLocaleString()}
  Video mới nhất: ${topVideo?.url} (lượt xem=${topVideo?.views.toLocaleString()})
@@ -4172,7 +5172,11 @@ ${topKeywordsStr}`;
 
       setStatus('Phân tích đối thủ hoàn tất!');
     } catch (err: any) {
-      setStatus(`Lỗi: ${err.message}`);
+      const spyErrMsg = err?.message || '';
+      setStatus(`Lỗi: ${spyErrMsg}`);
+      if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(spyErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     }
   };
 
@@ -4274,7 +5278,7 @@ ${topKeywordsStr}`;
         content += `【${idx + 1}】 KÊNH: ${r.name.toUpperCase()}\n`;
         content += `   ID Kênh: ${r.id}\n`;
         content += `   Đường dẫn: ${r.url}\n`;
-        content += `   Thông tin: ${r.country || 'N/A'} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
+        content += `   Thông tin: ${getCountryDisplayName(r.country)} | Tạo: ${r.publishedAt} (${r.age} ngày tuổi)\n`;
         content += `   Chỉ số: ${formatVNNumber(r.subs)} Subs | ${formatVNNumber(r.views)} Views | ${formatVNNumber(r.videos)} Videos\n`;
         content += `   Từ khóa/ngách: ${getChannelTrendKeyword(r)}\n`;
         content += `   Chủ đề: ${getTopicFromKeyword(getChannelTrendKeyword(r))}\n`;
@@ -4382,6 +5386,363 @@ ${topKeywordsStr}`;
 
   const closeMenu = () => setMenuPos({ ...menuPos, visible: false });
 
+  // --- Video Thumbnail Context Menu Handlers (Kiểm Tra Video) ---
+  const openVideoMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    // Right-click case có clientX/Y; click trên nút ⋮ thì dùng vị trí nút.
+    const hasMouseCoords = e.clientX > 0 || e.clientY > 0;
+    if (hasMouseCoords && e.type === 'contextmenu') {
+      setVideoMenuPos({ x: e.clientX, y: e.clientY, visible: true });
+      return;
+    }
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    setVideoMenuPos({
+      x: isMobile ? Math.max(8, window.innerWidth - 270) : rect.right - 280,
+      y: isMobile ? Math.min(rect.bottom + 6, window.innerHeight - 240) : rect.bottom + 6,
+      visible: true
+    });
+  };
+  const closeVideoMenu = () => setVideoMenuPos(prev => ({ ...prev, visible: false }));
+
+  const getMaxResThumbUrl = (videoId: string) =>
+    `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+  const getHqDefaultThumbUrl = (videoId: string) =>
+    `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+  // Tải ảnh thumbnail về máy. Ưu tiên maxres; nếu video không có maxres
+  // (YouTube không upscale) thì fallback hqdefault.
+  const downloadVideoThumb = async (videoId: string) => {
+    const maxUrl = getMaxResThumbUrl(videoId);
+    const fallbackUrl = getHqDefaultThumbUrl(videoId);
+    const tryDownload = async (url: string, suffix: string) => {
+      const r = await fetch(url, { mode: 'cors' });
+      if (!r.ok) throw new Error('http ' + r.status);
+      const blob = await r.blob();
+      if (!blob || blob.size < 1000) throw new Error('blob nhỏ — có thể là placeholder 120x90');
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `thumbnail_${videoId}_${suffix}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+    };
+    try {
+      await tryDownload(maxUrl, '1280x720');
+    } catch (_) {
+      try {
+        await tryDownload(fallbackUrl, '480x360');
+      } catch (_2) {
+        // CORS chặn fetch — mở tab mới để user lưu thủ công.
+        window.open(maxUrl, '_blank');
+      }
+    }
+  };
+
+  const openVideoThumb = (videoId: string) => {
+    // Thử maxres; nếu YouTube trả 404 (video không có maxres) thì
+    // browser hiển thị ảnh nhỏ — user sẽ tự thấy. Đây là hành vi
+    // tiêu chuẩn.
+    window.open(getMaxResThumbUrl(videoId), '_blank', 'noopener,noreferrer');
+  };
+
+  const copyVideoLink = (videoId: string) => {
+    copyToClipboard(`https://www.youtube.com/watch?v=${videoId}`);
+  };
+
+  const extractYouTubeVideoIdForEmbed = (input?: string | null) => {
+    if (!input || typeof input !== 'string') return '';
+    let text = input.trim();
+    text = text.split('&t=')[0].split('?t=')[0];
+    const patterns = [
+      /(?:v=|v\/|embed\/|shorts\/|live\/|youtu\.be\/|\/v\/|watch\?v%3D|watch\?feature=player_embedded&v=|watch\?v=)([^"&?\/\s]{11})/i,
+      /^[a-zA-Z0-9_-]{11}$/
+    ];
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) return match[1];
+      if (match && !pattern.source.includes('(')) return match[0];
+    }
+    const advancedMatch = text.match(/(?:[\/v=])([a-zA-Z0-9_-]{11})(?:[&?\/]|$)/);
+    if (advancedMatch) return advancedMatch[1];
+    const coarseMatch = text.match(/[a-zA-Z0-9_-]{11}/);
+    return coarseMatch ? coarseMatch[0] : '';
+  };
+
+  const openInlineVideo = (input?: string | null) => {
+    const videoId = extractYouTubeVideoIdForEmbed(input || '');
+    if (videoId) setInlineVideoId(videoId);
+  };
+
+  const openGuideVideo = () => {
+    const videoId = extractYouTubeVideoIdForEmbed(guideVideoUrl);
+    if (!videoId) {
+      setStatus('Admin chưa cấu hình link Video hướng dẫn hoặc link YouTube chưa hợp lệ.');
+      return;
+    }
+    setInlineVideoId(videoId);
+  };
+
+
+  const extractTrackingAiChannelQuery = (input: string) => {
+    const raw = String(input || '').trim();
+    if (!raw) return '';
+    const channelIdMatch = raw.match(/(UC[a-zA-Z0-9_-]{20,})/);
+    if (channelIdMatch) return channelIdMatch[1];
+
+    const handleMatch = raw.match(/youtube\.com\/@([^/?#\s]+)/i) || raw.match(/^@([^/?#\s]+)$/);
+    if (handleMatch) return `@${handleMatch[1]}`;
+
+    const customMatch = raw.match(/youtube\.com\/(?:c|user)\/([^/?#\s]+)/i);
+    if (customMatch) return customMatch[1];
+
+    return raw.replace(/^https?:\/\//i, '').replace(/^www\./i, '').trim();
+  };
+
+  const resolveTrackingAiChannelId = async (input: string) => {
+    const query = extractTrackingAiChannelQuery(input);
+    if (!query) throw new Error('Vui lòng nhập link kênh, @handle hoặc Channel ID.');
+
+    if (/^UC[a-zA-Z0-9_-]{20,}$/.test(query)) return query;
+
+    const search = await youtubeFetch('search', {
+      part: 'snippet',
+      q: query,
+      type: 'channel',
+      maxResults: 1
+    });
+
+    const foundId = search?.items?.[0]?.snippet?.channelId;
+    if (!foundId) throw new Error('Không tìm thấy kênh từ link/handle đã nhập.');
+    return foundId;
+  };
+
+  const buildTrackingAiFallbackReport = (channel: any, videos: any[]) => {
+    const stats = channel?.statistics || {};
+    const snippet = channel?.snippet || {};
+    const subs = Number(stats.subscriberCount || 0);
+    const views = Number(stats.viewCount || 0);
+    const videoCount = Number(stats.videoCount || 0);
+    const recentViews = videos.map(v => Number(v.statistics?.viewCount || 0));
+    const avgRecentViews = recentViews.length ? Math.round(recentViews.reduce((a, b) => a + b, 0) / recentViews.length) : 0;
+    const maxRecentViews = recentViews.length ? Math.max(...recentViews) : 0;
+    const viewSubRate = subs ? Math.round((avgRecentViews / subs) * 1000) / 10 : 0;
+    const uploadSpanText = videos.length ? `${formatDetailedDate(videos[videos.length - 1]?.snippet?.publishedAt)} → ${formatDetailedDate(videos[0]?.snippet?.publishedAt)}` : 'Chưa có dữ liệu video gần đây';
+
+    const verdict = viewSubRate >= 35 && maxRecentViews >= Math.max(5000, subs * 0.2)
+      ? '🚀 KÊNH NGON NÊN SPY. Kênh đang có lực kéo thật, có video gần đây bùng tốt và đáng bóc tách format để học cách làm nội dung.'
+      : viewSubRate >= 15 && maxRecentViews >= Math.max(2000, subs * 0.08)
+        ? '🎯 ĐÁNG BÓC TÁCH. Kênh chưa phải quá mạnh nhưng có tín hiệu đủ rõ để lấy ý tưởng tiêu đề, format và cách triển khai video.'
+        : viewSubRate >= 5
+          ? '⚠️ CẦN TEST THÊM. Kênh có tín hiệu nhưng chưa đủ chắc, chỉ nên theo dõi thêm vài video mới trước khi nhân bản.'
+          : '💀 BỎ QUA DO QUÁ NÁT. Kênh đang thiếu lực kéo rõ ràng, video gần đây không chứng minh được sức hút đủ mạnh để ưu tiên spy.';
+
+    return `ĐÁNH GIÁ TỔNG QUAN:
+Kênh ${snippet.title || ''} có ${formatVNNumber(subs)} sub, ${formatVNNumber(views)} tổng lượt xem và ${formatVNNumber(videoCount)} video. Nhóm video gần đây có trung bình khoảng ${formatVNNumber(avgRecentViews)} lượt xem/video, video cao nhất đạt ${formatVNNumber(maxRecentViews)} lượt xem; giai đoạn phân tích: ${uploadSpanText}.
+
+PHÂN TÍCH CHUYÊN SÂU:
+- Bắt bệnh View & Sub: Tỉ lệ view/sub gần đây khoảng ${viewSubRate}%, cho thấy mức độ khai thác tệp người xem hiện tại ${viewSubRate >= 30 ? 'khá tốt' : viewSubRate >= 8 ? 'trung bình' : 'còn yếu'}.
+- Hiệu quả nội dung: Nếu các video mới có xu hướng thấp hơn video cũ, kênh có dấu hiệu mất đà; nếu các video mới vẫn đều view, có thể tiếp tục theo dõi để tìm format thắng.
+- Tiềm năng faceless/AI: Chủ đề "${getTopicFromKeyword(getTrackingKeywordFromApiItem(channel, snippet.title))}" có thể khai thác bằng giọng đọc, stock footage, ảnh minh họa và kịch bản tóm tắt nếu nội dung không phụ thuộc quá nhiều vào KOL.
+- Điểm cần kiểm tra thêm: Cần xem thumbnail, tiêu đề, tần suất đăng và video top gần nhất để xác định kênh tăng nhờ chủ đề, nhờ format hay chỉ nhờ một video viral đơn lẻ.
+
+KẾT LUẬN CHỐT:
+${verdict}`;
+  };
+
+  const analyzeTrackingAiChannel = async () => {
+    if (trackingAiLoading) return;
+    setTrackingAiLoading(true);
+    setTrackingAiReport('');
+    setTrackingAiMeta(null);
+    setStatus('Đang lấy dữ liệu kênh từ YouTube API và gọi AI đánh giá...');
+
+    try {
+      const channelId = await resolveTrackingAiChannelId(trackingAiInput);
+      const channelRes = await youtubeFetch('channels', {
+        part: 'snippet,statistics,contentDetails,topicDetails',
+        id: channelId
+      });
+
+      const channel = channelRes?.items?.[0];
+      if (!channel) throw new Error('Không tìm thấy dữ liệu kênh.');
+
+      const uploadsId = channel?.contentDetails?.relatedPlaylists?.uploads;
+      let videos: any[] = [];
+      if (uploadsId) {
+        const playlistRes = await youtubeFetch('playlistItems', {
+          part: 'snippet,contentDetails',
+          playlistId: uploadsId,
+          maxResults: 15
+        });
+        const ids = (playlistRes?.items || []).map((item: any) => item?.contentDetails?.videoId).filter(Boolean);
+        if (ids.length) {
+          const videoRes = await youtubeFetch('videos', {
+            part: 'snippet,statistics,contentDetails',
+            id: ids.join(',')
+          });
+          videos = videoRes?.items || [];
+        }
+      }
+
+      const stats = channel.statistics || {};
+      const recentStats = videos.map((v: any) => ({
+        title: v.snippet?.title || '',
+        publishedAt: v.snippet?.publishedAt || '',
+        views: Number(v.statistics?.viewCount || 0),
+        likes: Number(v.statistics?.likeCount || 0),
+        comments: Number(v.statistics?.commentCount || 0),
+        duration: formatDuration(v.contentDetails?.duration),
+        vph: calculateVPH(Number(v.statistics?.viewCount || 0), v.snippet?.publishedAt)
+      }));
+
+      const compactData = {
+        channel: {
+          id: channel.id,
+          title: channel.snippet?.title,
+          description: String(channel.snippet?.description || '').slice(0, 900),
+          country: getCountryDisplayName(channel.snippet?.country),
+          publishedAt: channel.snippet?.publishedAt,
+          subscribers: Number(stats.subscriberCount || 0),
+          totalViews: Number(stats.viewCount || 0),
+          totalVideos: Number(stats.videoCount || 0),
+          topic: getTopicFromKeyword(getTrackingKeywordFromApiItem(channel, channel.snippet?.title)),
+          keyword: getTrackingKeywordFromApiItem(channel, channel.snippet?.title),
+          income: estimateIncomeFromTracking(Number(stats.viewCount || 0), channel.snippet?.country)
+        },
+        recentVideos: recentStats
+      };
+
+      let report = '';
+      try {
+        const prompt = `Bạn là chuyên gia phân tích kênh YouTube cho tool tracking đối thủ.
+Dựa HOÀN TOÀN trên số liệu YouTube API sau, hãy đánh giá kênh ngắn gọn, dứt khoát, giống mẫu:
+
+DỮ LIỆU:
+${JSON.stringify(compactData, null, 2)}
+
+Yêu cầu trả lời bằng tiếng Việt, chỉ văn bản thuần, đúng 3 phần:
+🔘 ĐÁNH GIÁ TỔNG QUAN:
+1 đoạn ngắn 2-3 câu. Phải nhận định rõ kênh đang tăng, đang ổn định, đang hụt hơi hay đã mất đà. Không nói chung chung.
+
+🔍 PHÂN TÍCH CHUYÊN SÂU:
+- Bắt bệnh View & Sub: nhận xét chắc chắn dựa trên view/sub và video gần đây.
+- Hiệu quả Nội dung: nói rõ kênh sống nhờ format nào, chủ đề nào, có đều phong độ không.
+- Tiềm năng Faceless/AI: kết luận có dễ tự động hóa bằng AI/stock/giọng đọc không.
+- Rủi ro cần lưu ý: nói thẳng rủi ro lớn nhất nếu spy kênh này.
+
+🎯 KẾT LUẬN CHỐT:
+Bắt buộc viết 1 câu IN HOA, dứt khoát, có emoji mạnh ở đầu. Chỉ chọn một trong các hướng:
+🚀 KÊNH NGON NÊN SPY / 🎯 ĐÁNG BÓC TÁCH / ⚠️ CẦN TEST THÊM / 💀 BỎ QUA DO QUÁ NÁT.
+Câu kết luận phải giống mẫu: "🚀 KÊNH NGON NÊN SPY. Kênh có phong độ ổn định, nhiều video bùng nổ và nội dung rất tiềm năng để áp dụng quy trình tự động hóa faceless."
+Không viết chung chung kiểu "đáng bóc tách để học thuật toán". Không bịa số liệu ngoài dữ liệu đã cung cấp.`;
+
+        const ai = await callGeminiGenerateContent(prompt);
+        report = String(ai?.text || '').trim();
+      } catch (geminiErr) {
+        console.warn('Tracking AI Gemini failed, using fallback:', geminiErr);
+        report = buildTrackingAiFallbackReport(channel, videos);
+      }
+
+      if (!report) report = buildTrackingAiFallbackReport(channel, videos);
+
+      setTrackingAiReport(report);
+      setTrackingAiMeta({
+        name: channel.snippet?.title || 'Kênh YouTube',
+        id: channel.id,
+        icon: channel.snippet?.thumbnails?.default?.url || channel.snippet?.thumbnails?.medium?.url || '',
+        generatedAt: new Date().toLocaleString('vi-VN')
+      });
+      setStatus('AI đã đánh giá kênh tracking xong.');
+    } catch (err: any) {
+      const msg = err?.message || 'Không phân tích được kênh.';
+      setStatus(`Lỗi AI đánh giá kênh: ${msg}`);
+    } finally {
+      setTrackingAiLoading(false);
+    }
+  };
+
+  const renderTrackingAiReport = () => {
+    if (!trackingAiReport.trim()) return null;
+
+    let conclusionNext = false;
+    return trackingAiReport.split('\n').map((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={index} className="h-3" />;
+
+      const isConclusionTitle = /kết luận chốt/i.test(trimmed);
+      if (isConclusionTitle) {
+        conclusionNext = true;
+        return (
+          <div key={index} className="mt-5 mb-2 text-[16px] font-black text-orange-700 uppercase tracking-tight">
+            {trimmed}
+          </div>
+        );
+      }
+
+      if (conclusionNext) {
+        conclusionNext = false;
+        return (
+          <div key={index} className="text-[20px] md:text-[24px] leading-snug font-black text-red-600 uppercase tracking-tight">
+            {trimmed}
+          </div>
+        );
+      }
+
+      const isMainTitle = /đánh giá tổng quan|phân tích chuyên sâu/i.test(trimmed);
+      if (isMainTitle) {
+        return (
+          <div key={index} className="mt-3 mb-2 text-[14px] font-black text-slate-700 uppercase">
+            {trimmed}
+          </div>
+        );
+      }
+
+      return (
+        <div key={index} className="text-[12px] md:text-[13px] leading-6 text-slate-700">
+          {trimmed}
+        </div>
+      );
+    });
+  };
+
+  const scrollToTrackingAiReview = () => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('tracking-ai-review-box');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const downloadTrackingAiReport = () => {
+    if (!trackingAiReport.trim()) {
+      setStatus('Chưa có nội dung AI đánh giá kênh để tải.');
+      return;
+    }
+    const safeName = String(trackingAiMeta?.name || 'AI_Danh_Gia_Kenh')
+      .normalize('NFC')
+      .replace(/[\\/:*?"<>|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 100)
+      .replace(/\s+/g, '_') || 'AI_Danh_Gia_Kenh';
+    const content = [
+      'AI ĐÁNH GIÁ KÊNH YOUTUBE',
+      '==================================================',
+      `Kênh: ${trackingAiMeta?.name || ''}`,
+      `Channel ID: ${trackingAiMeta?.id || ''}`,
+      `Thời gian: ${trackingAiMeta?.generatedAt || new Date().toLocaleString('vi-VN')}`,
+      '==================================================',
+      '',
+      trackingAiReport
+    ].join('\n');
+    downloadAsTxt(content, `${safeName}_AI_Danh_Gia_Kenh`);
+  };
+
+
   const addToTracking = (channel: ChannelResult) => {
     if (trackingChannels.some(c => c.id === channel.id)) {
       setStatus('Kênh này đã có trong danh sách theo dõi.');
@@ -4479,6 +5840,44 @@ ${topKeywordsStr}`;
       '43': 'Shows', '44': 'Trailers'
     };
     return cats[id] || 'Unknown';
+  };
+
+  const getCategoryNameVi = (id: string) => {
+    const cats: Record<string, string> = {
+      '1': 'Phim & Hoạt hình',
+      '2': 'Ô tô & Phương tiện',
+      '10': 'Âm nhạc',
+      '15': 'Thú cưng & Động vật',
+      '17': 'Thể thao',
+      '18': 'Phim ngắn',
+      '19': 'Du lịch & Sự kiện',
+      '20': 'Trò chơi',
+      '21': 'Video blog',
+      '22': 'Con người & Blog',
+      '23': 'Hài kịch',
+      '24': 'Giải trí',
+      '25': 'Tin tức & Chính trị',
+      '26': 'Hướng dẫn & Phong cách',
+      '27': 'Giáo dục',
+      '28': 'Khoa học & Công nghệ',
+      '29': 'Phi lợi nhuận & Hoạt động xã hội',
+      '30': 'Phim',
+      '31': 'Anime / Hoạt hình',
+      '32': 'Hành động / Phiêu lưu',
+      '33': 'Kinh điển',
+      '34': 'Hài kịch',
+      '35': 'Tài liệu',
+      '36': 'Chính kịch',
+      '37': 'Gia đình',
+      '38': 'Nước ngoài',
+      '39': 'Kinh dị',
+      '40': 'Khoa học viễn tưởng / Giả tưởng',
+      '41': 'Giật gân',
+      '42': 'Shorts',
+      '43': 'Chương trình',
+      '44': 'Trailer'
+    };
+    return cats[id] || 'Không xác định';
   };
 
 
@@ -4601,18 +6000,27 @@ ${topKeywordsStr}`;
       ],
       contentStyle: {
         contentBullets: [
-          'Nội dung cần bám sát lời hứa trong tiêu đề để giữ chân người xem.',
-          `Hiệu suất hiện tại: ${formatVNNumber(views)} views, ${formatVNNumber(likes)} likes, ${formatVNNumber(comments)} comments.`,
-          engagementRate > 1 ? 'Tỷ lệ tương tác đang có tín hiệu tốt.' : 'Tỷ lệ tương tác còn thấp, nên tăng câu hỏi/CTA trong video.',
-          'Nên đưa lợi ích chính trong 5–10 giây đầu.'
+          'Phần mở đầu cần làm rõ ngay nội dung chính của video để người xem hiểu video đang giải quyết vấn đề gì.',
+          'Nội dung nên đi theo mạch rõ ràng: mở vấn đề, triển khai ý chính, minh họa bằng ví dụ và chốt lại thông điệp.',
+          'Thông điệp trung tâm cần được nhấn mạnh xuyên suốt, tránh chuyển ý quá nhanh khiến người xem khó nắm trọng tâm.',
+          'Nếu video là dạng kể chuyện hoặc phân tích, nên có các mốc nội dung rõ để người xem theo dõi diễn biến dễ hơn.',
+          'Các ý quan trọng nên được diễn đạt bằng câu ngắn, dễ hiểu và có ví dụ cụ thể thay vì chỉ nêu nhận xét chung.',
+          'Nội dung cần bổ sung thêm các đoạn giải thích nguyên nhân, bối cảnh hoặc bài học rút ra để tăng chiều sâu.',
+          'Ở phần giữa video nên có điểm nhấn mới liên tục để giữ sự tò mò, tránh cảm giác lặp lại cùng một ý.',
+          'Phần kết nên tóm tắt lại giá trị chính và dẫn người xem sang hành động tiếp theo một cách tự nhiên.'
         ],
         styleBullets: [
-          'Phong cách nên rõ ràng, vào thẳng vấn đề và có nhịp dựng nhanh hơn ở đoạn mở đầu.',
-          'Cần thêm pattern interrupt, chữ nhấn mạnh hoặc B-roll nếu phần trình bày dài.',
-          'Âm thanh, ánh sáng và bố cục thumbnail nên đồng bộ với tệp người xem mục tiêu.'
+          'Phong cách thể hiện nên giữ nhịp rõ ràng, dễ nghe và có điểm nhấn ở những đoạn quan trọng.',
+          'Hook đầu video cần mạnh hơn bằng câu hỏi, tình huống gây tò mò hoặc kết quả cuối cùng để kéo người xem vào nội dung.',
+          'Cách dẫn chuyện nên có sự chuyển đoạn mượt, giúp người xem hiểu vì sao ý sau nối tiếp ý trước.',
+          'Nên dùng chữ nhấn mạnh, hình minh họa hoặc cảnh phụ trợ đúng lúc để làm rõ các ý quan trọng.',
+          'Giọng điệu cần tự tin, gần gũi và phù hợp với nhóm người xem mục tiêu của chủ đề video.',
+          'Nhịp dựng nên thay đổi theo từng đoạn: nhanh ở phần hook, ổn định ở phần giải thích và chậm hơn ở phần kết luận.',
+          'CTA nên được lồng ghép tự nhiên vào nội dung, gắn với lợi ích cụ thể thay vì chỉ kêu gọi chung chung.',
+          'Âm thanh, hình ảnh, màu sắc và nhịp cắt cần đồng bộ để tạo cảm giác chuyên nghiệp và dễ theo dõi.'
         ],
-        strengths: ['Có dữ liệu thật từ YouTube API để đối chiếu hiệu suất.', hasHashtag ? 'Có dùng từ khóa/hashtag.' : 'Có thể tối ưu thêm từ khóa.'],
-        warnings: [titleTooLong ? 'Tiêu đề dài dễ bị cắt.' : 'Cần kiểm tra CTR thực tế trong YouTube Studio.', vph < 20 ? 'VPH chưa cao, cần cải thiện hook và thumbnail.' : 'Nên nhân bản chủ đề nếu retention tốt.']
+        strengths: ['Nội dung có thể phát triển thành format rõ ràng nếu phần mở đầu, mạch kể và CTA được làm sắc hơn.', hasHashtag ? 'Có tín hiệu từ khóa/hashtag hỗ trợ định hướng nội dung.' : 'Có thể bổ sung từ khóa để làm rõ nội dung hơn.'],
+        warnings: [titleTooLong ? 'Tiêu đề dài dễ làm người xem mất trọng tâm, nên rút gọn thông điệp chính.' : 'Cần kiểm tra lại độ rõ của lời hứa nội dung trong tiêu đề và phần mở đầu.', 'Tránh để phần phân tích nội dung/phong cách biến thành liệt kê số liệu; cần tập trung vào cách kể, thông điệp và trải nghiệm xem.']
       },
       conclusion: {
         headline: vph > 100 ? 'Video có tín hiệu tốt, nên nhân bản chủ đề và tối ưu thêm để tăng chuyển đổi.' : 'Video có nền tảng dữ liệu nhưng cần tối ưu lại hook, thumbnail và CTA để tăng hiệu suất.',
@@ -4668,28 +6076,49 @@ Yêu cầu trả về DUY NHẤT một JSON object hợp lệ, không markdown, 
     {"key":"pinned","title":"BÌNH LUẬN GHIM","current":"...","strengths":["..."],"improvements":["..."],"suggestions":["..."]}
   ],
   "contentStyle": {
-    "contentBullets":["ít nhất 8 ý chi tiết, cụ thể, dựa vào title/description/comment/tags/thống kê"],
-    "styleBullets":["ít nhất 8 ý chi tiết, cụ thể, nêu rõ nhịp dựng, hook, CTA, âm thanh, hình ảnh, cách trình bày"],
-    "strengths":["..."],
-    "warnings":["..."]
+    "contentBullets":["ít nhất 8 ý chi tiết về NỘI DUNG VIDEO: video đang nói gì, thông điệp chính, cấu trúc mở-thân-kết, cách triển khai ý, ví dụ minh họa, độ rõ ràng, CTA, giá trị người xem nhận được. KHÔNG nhắc số liệu view/like/comment/VPH/sub/categoryId/channelCountry."],
+    "styleBullets":["ít nhất 8 ý chi tiết về PHONG CÁCH THỂ HIỆN: nhịp dựng, hook, giọng điệu, cách dẫn chuyện, hình ảnh minh họa, chữ trên màn hình, âm thanh, chuyển cảnh, cảm xúc người xem. KHÔNG nhắc số liệu view/like/comment/VPH/sub/categoryId/channelCountry."],
+    "strengths":["điểm mạnh về nội dung/phong cách, không nói số liệu"],
+    "warnings":["vấn đề cần lưu ý về nội dung/phong cách, không nói số liệu"]
   },
   "conclusion": {"headline":"...", "badges":["...", "..."]}
 }
 
 Quy tắc:
-- Không bịa view/sub/like/comment; nếu nhắc số phải lấy đúng từ JSON dữ liệu.
+- Hai phần contentStyle.contentBullets và contentStyle.styleBullets TUYỆT ĐỐI KHÔNG được nhắc số liệu hoặc trường kỹ thuật như view, like, comment, VPH, sub, categoryId, channelCountry, thời lượng, timestamps.
+- PHÂN TÍCH NỘI DUNG chỉ được phân tích nội dung video: chủ đề, thông điệp, mạch kể, cấu trúc ý, hook, phần thân, phần kết, ví dụ, CTA và giá trị người xem nhận được.
+- PHÂN TÍCH PHONG CÁCH chỉ được phân tích cách thể hiện: nhịp dựng, giọng điệu, cách dẫn chuyện, hình ảnh, text overlay, âm thanh, chuyển cảnh, cảm xúc người xem.
+- Nếu muốn dùng số liệu, chỉ dùng ở overview; không đưa vào contentBullets/styleBullets/strengths/warnings.
+- Không bịa view/sub/like/comment; nếu nhắc số ở mục khác phải lấy đúng từ JSON dữ liệu.
 - Phân tích thumbnail dựa theo tiêu đề, chủ đề và thumbnail URL, không khẳng định chi tiết hình ảnh nếu không chắc.
 - Gợi ý phải cụ thể, có thể hành động, hợp với ngách và dữ liệu hiện có.
-- Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.
-- Với tags và bình luận, phải ưu tiên hiển thị/nhận xét từ dữ liệu YouTube API đã cung cấp.`;
+- Phần PHÂN TÍCH NỘI DUNG và PHÂN TÍCH PHONG CÁCH phải chi tiết, không viết chung chung; mỗi phần tối thiểu 8 ý.`;
 
       const response = await callGeminiGenerateContent(prompt);
       const parsed = parseGeminiJsonObject(response.text || '');
       if (!parsed) return fallback;
+
+      const bannedMetricPattern = /(view|views|lượt xem|like|thích|comment|bình luận|vph|sub|subscriber|đăng ký|categoryid|channelcountry|thời lượng|duration|timestamp|\d{1,2}:\d{2}|\d+[\.,]?\d*)/i;
+      const cleanContentStyleList = (items: any[], fallbackItems: string[]) => {
+        const cleaned = asArrayText(items)
+          .map(x => String(x || '').trim())
+          .filter(Boolean)
+          .filter(x => !bannedMetricPattern.test(x))
+          .slice(0, 10);
+        return cleaned.length >= 4 ? cleaned : fallbackItems;
+      };
+      const parsedContentStyle = parsed.contentStyle || {};
+      const safeContentStyle = {
+        contentBullets: cleanContentStyleList(parsedContentStyle.contentBullets, fallback.contentStyle.contentBullets),
+        styleBullets: cleanContentStyleList(parsedContentStyle.styleBullets, fallback.contentStyle.styleBullets),
+        strengths: cleanContentStyleList(parsedContentStyle.strengths, fallback.contentStyle.strengths),
+        warnings: cleanContentStyleList(parsedContentStyle.warnings, fallback.contentStyle.warnings)
+      };
+
       return {
         source: 'gemini_youtube_v3',
         overview: Array.isArray(parsed.overview) ? parsed.overview : fallback.overview,
-        contentStyle: parsed.contentStyle || fallback.contentStyle,
+        contentStyle: safeContentStyle,
         conclusion: parsed.conclusion || fallback.conclusion,
       };
     } catch (err) {
@@ -4703,15 +6132,17 @@ Quy tắc:
     const query = (typeof targetId === 'string' && targetId) ? targetId : videoInput;
     if (!query || typeof query !== 'string') return;
     
+    // LUÔN chuyển sang tab KIỂM TRA LINK VIDEO khi bấm "Phân tích video" từ bất kỳ chỗ nào
     if (typeof targetId === 'string') {
       setVideoInput(targetId);
-      setActiveTab(4); // Switch to Video Analysis tab
+      setActiveTab(4); // Switch to Video Analysis tab (KIỂM TRA LINK VIDEO)
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
     quotaUsedRef.current = 0;
     setQuotaUsed(0);
     setIsAnalyzingVideo(true);
-    setStatus('Đang kiểm tra thông tin video...');
+    setStatus('Đang kiểm tra video & gọi Gemini AI phân tích tự động...');
     setVideoResult(null);
     setIsVideoAuditAnalyzing(false);
     setVideoAuditProgress(0);
@@ -4840,7 +6271,11 @@ Quy tắc:
       }
     } catch (error) {
       console.error(error);
+      const videoErrMsg = (error as any)?.message || '';
       setStatus('Lỗi khi kiểm tra video.');
+      if (/api key|quota|key đều lỗi|forbidden|invalid|chưa có/i.test(videoErrMsg)) {
+        setShowKeyInputModal(true);
+      }
     } finally {
       setIsAnalyzingVideo(false);
     }
@@ -4976,6 +6411,341 @@ Quy tắc:
     };
 
     const exportAuditText = () => downloadAsTxt(buildAuditText(), `Video_Audit_${videoResult?.id || 'video'}`);
+
+    const makeSafeVietnameseFilename = (name: string) => {
+      const cleaned = String(name || 'video')
+        .normalize('NFC')
+        .replace(/[\\/:*?"<>|]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
+      return cleaned || 'video';
+    };
+
+    const downloadPlainTextFile = (text: string, filename: string) => {
+      const element = document.createElement('a');
+      const file = new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' });
+      element.href = URL.createObjectURL(file);
+      element.download = filename;
+      document.body.appendChild(element);
+      element.click();
+      URL.revokeObjectURL(element.href);
+      document.body.removeChild(element);
+    };
+
+    const buildFullVideoInfoText = () => {
+      const stats = videoResult?.statistics || {};
+      const channelInfo = videoResult?._channelInfo || {};
+      const channelStats = channelInfo?.statistics || {};
+      const snippet = videoResult?.snippet || {};
+      const description = snippet.description || '';
+      const tags = Array.isArray(snippet.tags) ? snippet.tags : [];
+      const comments = Array.isArray(videoResult?._comments) ? videoResult._comments : [];
+      const separator = '------------------------------------------------------------';
+      const lines: string[] = [];
+
+      lines.push('TOÀN BỘ THÔNG TIN VIDEO ĐÃ KIỂM TRA');
+      lines.push(separator);
+      lines.push(`Thời gian xuất file: ${new Date().toLocaleString('vi-VN')}`);
+      lines.push(`Tên video: ${snippet.title || ''}`);
+      lines.push(`Link video: https://www.youtube.com/watch?v=${videoResult?.id || ''}`);
+      lines.push(`Video ID: ${videoResult?.id || ''}`);
+      lines.push(`Kênh: ${snippet.channelTitle || ''}`);
+      lines.push(`Channel ID: ${snippet.channelId || ''}`);
+      lines.push(`Quốc gia kênh: ${getCountryDisplayName(channelInfo?.snippet?.country)}`);
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('1. THÔNG TIN KỸ THUẬT');
+      lines.push(separator);
+      lines.push(`Category ID: ${snippet.categoryId || ''}`);
+      lines.push(`Category Name: ${getCategoryName(snippet.categoryId)}`);
+      lines.push(`Category tiếng Việt: ${getCategoryNameVi(snippet.categoryId)}`);
+      lines.push(`Ngày đăng UTC: ${snippet.publishedAt ? new Date(snippet.publishedAt).toISOString() : ''}`);
+      lines.push(`Giờ Việt Nam: ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''}`);
+      lines.push(`Thời lượng: ${formatDuration(videoResult?.contentDetails?.duration)}`);
+      lines.push(`Lượt xem: ${formatVNNumber(parseInt(stats.viewCount || '0') || 0)}`);
+      lines.push(`Lượt thích: ${formatVNNumber(parseInt(stats.likeCount || '0') || 0)}`);
+      lines.push(`Bình luận: ${formatVNNumber(parseInt(stats.commentCount || '0') || 0)}`);
+      lines.push(`VPH: ${formatVNNumber(videoResult?._vph || calculateVideoVph(parseInt(stats.viewCount || '0') || 0, snippet.publishedAt))}`);
+      lines.push(`RPM ước tính: ${videoResult?._estimatedRpmRange || getVideoRpmRange(snippet.categoryId, channelInfo?.snippet?.country)}`);
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('2. THÔNG TIN KÊNH');
+      lines.push(separator);
+      lines.push(`Tên kênh: ${channelInfo?.snippet?.title || snippet.channelTitle || ''}`);
+      lines.push(`Mô tả kênh: ${cleanHtmlText(channelInfo?.snippet?.description || '')}`);
+      lines.push(`Ngày tạo kênh: ${channelInfo?.snippet?.publishedAt || ''}`);
+      lines.push(`Quốc gia: ${getCountryDisplayName(channelInfo?.snippet?.country)}`);
+      lines.push(`Subscriber: ${formatVNNumber(parseInt(channelStats.subscriberCount || '0') || 0)}`);
+      lines.push(`Tổng lượt xem kênh: ${formatVNNumber(parseInt(channelStats.viewCount || '0') || 0)}`);
+      lines.push(`Tổng video: ${formatVNNumber(parseInt(channelStats.videoCount || '0') || 0)}`);
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('3. TIÊU ĐỀ VIDEO');
+      lines.push(separator);
+      lines.push(snippet.title || '');
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('4. MÔ TẢ VIDEO');
+      lines.push(separator);
+      lines.push(description ? cleanHtmlText(description) : 'Video này không có mô tả.');
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('5. DÀN TAGS VIDEO');
+      lines.push(separator);
+      if (tags.length) {
+        tags.forEach((tag: string, index: number) => lines.push(`${index + 1}. ${tag}`));
+      } else {
+        lines.push('Video này không có tags.');
+      }
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('6. BÌNH LUẬN');
+      lines.push(separator);
+      if (comments.length) {
+        comments.slice(0, 20).forEach((comment: any, index: number) => {
+          lines.push(`${index + 1}. @${comment.authorDisplayName || ''}`);
+          lines.push(`   Like: ${comment.likeCount ?? 0}`);
+          lines.push(`   Nội dung: ${cleanHtmlText(comment.textDisplay)}`);
+          lines.push('');
+        });
+      } else {
+        lines.push('Không tìm thấy bình luận nào hoặc video bị tắt bình luận.');
+        lines.push('');
+      }
+
+      lines.push(separator);
+      lines.push('7. ĐÁNH GIÁ TỔNG QUAN - CẢI TIẾN VIDEO');
+      lines.push(separator);
+      overview.forEach((item: any, index: number) => {
+        lines.push(`${index + 1}. ${item.title || item.key || 'PHÂN TÍCH'}`);
+        lines.push(`Hiện tại: ${item.current || ''}`);
+        if (item.key === 'tags' && tags.length) lines.push(`Tags API: ${tags.join(', ')}`);
+        if (item.key === 'pinned' && comments.length) {
+          comments.slice(0, 5).forEach((c: any, i: number) => lines.push(`Bình luận ${i + 1}: @${c.authorDisplayName || ''} - ${cleanHtmlText(c.textDisplay)}`));
+        }
+        lines.push(`Điểm mạnh: ${asArrayText(item.strengths).join(' | ')}`);
+        lines.push(`Cần cải thiện: ${asArrayText(item.improvements).join(' | ')}`);
+        lines.push(`Gợi ý: ${asArrayText(item.suggestions).join(' | ')}`);
+        lines.push('');
+      });
+
+      lines.push(separator);
+      lines.push('8. PHÂN TÍCH NỘI DUNG');
+      lines.push(separator);
+      asArrayText(contentStyle.contentBullets, ['Chưa có dữ liệu phân tích nội dung.']).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('9. PHÂN TÍCH PHONG CÁCH');
+      lines.push(separator);
+      asArrayText(contentStyle.styleBullets, ['Chưa có dữ liệu phân tích phong cách.']).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('10. ĐIỂM MẠNH NỔI BẬT');
+      lines.push(separator);
+      asArrayText(contentStyle.strengths).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('11. VẤN ĐỀ CẦN LƯU Ý');
+      lines.push(separator);
+      asArrayText(contentStyle.warnings).forEach((x, i) => lines.push(`${i + 1}. ${x}`));
+      lines.push('');
+
+      lines.push(separator);
+      lines.push('12. KẾT LUẬN CUỐI CÙNG');
+      lines.push(separator);
+      lines.push(conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.');
+      const badges = asArrayText(conclusion.badges);
+      if (badges.length) lines.push(`Nhãn: ${badges.join(' | ')}`);
+      lines.push('');
+
+      return lines.join('\n');
+    };
+
+    const exportFullVideoInfoTxt = () => {
+      const baseName = makeSafeVietnameseFilename(videoResult?.snippet?.title || videoResult?.id || 'video');
+      downloadPlainTextFile(buildFullVideoInfoText(), `${baseName}_Toan_bo_thong_tin.txt`);
+      setStatus('Đã tải toàn bộ thông tin video dạng TXT.');
+    };
+
+    const xmlEscape = (value: any) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+
+    const makeCrcTable = () => {
+      const table = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n] = c >>> 0;
+      }
+      return table;
+    };
+
+    const crc32 = (data: Uint8Array) => {
+      const table = makeCrcTable();
+      let crc = 0xffffffff;
+      for (let i = 0; i < data.length; i++) crc = table[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+      return (crc ^ 0xffffffff) >>> 0;
+    };
+
+    const createZipBlob = (files: Array<{ name: string; content: string }>) => {
+      const encoder = new TextEncoder();
+      const chunks: Uint8Array[] = [];
+      const central: Uint8Array[] = [];
+      let offset = 0;
+
+      const pushU16 = (arr: number[], value: number) => {
+        arr.push(value & 0xff, (value >>> 8) & 0xff);
+      };
+      const pushU32 = (arr: number[], value: number) => {
+        arr.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+      };
+      const dosTime = () => {
+        const d = new Date();
+        const time = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
+        const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+        return { time, date };
+      };
+
+      files.forEach(file => {
+        const nameBytes = encoder.encode(file.name);
+        const data = encoder.encode(file.content);
+        const crc = crc32(data);
+        const { time, date } = dosTime();
+
+        const local: number[] = [];
+        pushU32(local, 0x04034b50);
+        pushU16(local, 20);
+        pushU16(local, 0);
+        pushU16(local, 0);
+        pushU16(local, time);
+        pushU16(local, date);
+        pushU32(local, crc);
+        pushU32(local, data.length);
+        pushU32(local, data.length);
+        pushU16(local, nameBytes.length);
+        pushU16(local, 0);
+        const localBytes = new Uint8Array(local.length + nameBytes.length + data.length);
+        localBytes.set(local, 0);
+        localBytes.set(nameBytes, local.length);
+        localBytes.set(data, local.length + nameBytes.length);
+        chunks.push(localBytes);
+
+        const centralHeader: number[] = [];
+        pushU32(centralHeader, 0x02014b50);
+        pushU16(centralHeader, 20);
+        pushU16(centralHeader, 20);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, time);
+        pushU16(centralHeader, date);
+        pushU32(centralHeader, crc);
+        pushU32(centralHeader, data.length);
+        pushU32(centralHeader, data.length);
+        pushU16(centralHeader, nameBytes.length);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU16(centralHeader, 0);
+        pushU32(centralHeader, 0);
+        pushU32(centralHeader, offset);
+        const centralBytes = new Uint8Array(centralHeader.length + nameBytes.length);
+        centralBytes.set(centralHeader, 0);
+        centralBytes.set(nameBytes, centralHeader.length);
+        central.push(centralBytes);
+
+        offset += localBytes.length;
+      });
+
+      const centralSize = central.reduce((sum, item) => sum + item.length, 0);
+      const end: number[] = [];
+      pushU32(end, 0x06054b50);
+      pushU16(end, 0);
+      pushU16(end, 0);
+      pushU16(end, files.length);
+      pushU16(end, files.length);
+      pushU32(end, centralSize);
+      pushU32(end, offset);
+      pushU16(end, 0);
+
+      return new Blob([...chunks, ...central, new Uint8Array(end)], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+    };
+
+    const paragraphXml = (text: string, options: { bold?: boolean; heading?: boolean; center?: boolean; size?: number } = {}) => {
+      const safe = xmlEscape(text);
+      const size = options.size || (options.heading ? 28 : 22);
+      const bold = options.bold || options.heading;
+      return `<w:p>${options.center ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : ''}<w:r><w:rPr>${bold ? '<w:b/>' : ''}<w:color w:val="111827"/><w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${safe}</w:t></w:r></w:p>`;
+    };
+
+    const buildFullVideoInfoDocxBlob = () => {
+      const lines = buildFullVideoInfoText().split('\n');
+      const body = lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return '<w:p/>';
+        if (/^-{5,}$/.test(trimmed)) return '<w:p><w:r><w:rPr><w:color w:val="CBD5E1"/></w:rPr><w:t>────────────────────────────────────────</w:t></w:r></w:p>';
+        if (index === 0) return paragraphXml(trimmed.toUpperCase(), { bold: true, center: true, size: 34 });
+        if (/^\d+\.\s/.test(trimmed) || trimmed === 'KẾT LUẬN CUỐI CÙNG') return paragraphXml(trimmed.toUpperCase(), { heading: true, size: 28 });
+        return paragraphXml(trimmed, { size: 22 });
+      }).join('');
+
+      const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${body}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+      const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+      const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+      return createZipBlob([
+        { name: '[Content_Types].xml', content: contentTypes },
+        { name: '_rels/.rels', content: rels },
+        { name: 'word/document.xml', content: documentXml }
+      ]);
+    };
+
+    const exportFullVideoInfoDocx = () => {
+      const baseName = makeSafeVietnameseFilename(videoResult?.snippet?.title || videoResult?.id || 'video');
+      const element = document.createElement('a');
+      const file = buildFullVideoInfoDocxBlob();
+      element.href = URL.createObjectURL(file);
+      element.download = `${baseName}_Toan_bo_thong_tin.docx`;
+      document.body.appendChild(element);
+      element.click();
+      URL.revokeObjectURL(element.href);
+      document.body.removeChild(element);
+      setStatus('Đã tải toàn bộ thông tin video dạng DOCX.');
+    };
+
     const copyOverviewCard = (item: any) => {
       const lines = [
         item.title || 'PHÂN TÍCH',
@@ -5162,13 +6932,39 @@ Quy tắc:
           </div>
         </div>
 
-        <div className="bg-[#0f172a] text-white rounded-3xl p-7 shadow-xl relative overflow-hidden text-left">
-          <div className="absolute right-6 top-6 opacity-10"><Star size={90} /></div>
+        <div className="bg-gradient-to-br from-sky-50 via-indigo-50 to-orange-50 text-slate-900 border border-sky-100 rounded-3xl p-7 shadow-lg relative overflow-hidden text-left">
+          <div className="absolute -right-8 -top-10 w-44 h-44 rounded-full bg-blue-200/30 blur-2xl" />
+          <div className="absolute right-6 top-6 opacity-10 text-blue-500"><Star size={90} /></div>
           <div className="relative z-10">
-            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-200 mb-3">KẾT LUẬN CUỐI CÙNG</div>
-            <h2 className="text-2xl font-black leading-tight max-w-5xl">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
-            <div className="flex flex-wrap gap-2 mt-5">
-              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-orange-500/20 text-orange-200 border border-orange-400/20 rounded-full text-[10px] font-black">{badge}</span>)}
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-3">KẾT LUẬN CUỐI CÙNG</div>
+            <h2 className="text-lg xl:text-xl 2xl:text-2xl font-black leading-snug max-w-none w-full">{conclusion.headline || 'Gemini đã phân tích dựa trên dữ liệu YouTube API V3.'}</h2>
+            <div className="flex flex-wrap gap-2 mt-5 pr-0 md:pr-64">
+              {asArrayText(conclusion.badges).map((badge, i) => <span key={i} className="px-3 py-1 bg-white/75 text-orange-700 border border-orange-200 rounded-full text-[10px] font-black shadow-sm">{badge}</span>)}
+            </div>
+            <div className="mt-5 md:mt-0 md:absolute md:right-0 md:bottom-0 group">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-[12px] font-black shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                title="Bấm để chọn tải TXT hoặc DOCX"
+              >
+                <Download size={16} /> TẢI TOÀN BỘ THÔNG TIN
+              </button>
+              <div className="hidden group-focus-within:block absolute right-0 bottom-full mb-2 w-44 max-w-[calc(100vw-40px)] rounded-xl border border-blue-100 bg-white shadow-xl p-1.5 z-30">
+                <button
+                  type="button"
+                  onClick={exportFullVideoInfoTxt}
+                  className="w-full text-left px-3 py-2 rounded-lg text-[11px] font-black text-slate-800 hover:bg-blue-50 flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Download size={13} /> Tải file TXT
+                </button>
+                <button
+                  type="button"
+                  onClick={exportFullVideoInfoDocx}
+                  className="w-full text-left px-3 py-2 rounded-lg text-[11px] font-black text-slate-800 hover:bg-purple-50 flex items-center gap-2 whitespace-nowrap"
+                >
+                  <FileText size={13} /> Tải file DOCX
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -5180,46 +6976,60 @@ Quy tắc:
     <div className="vtw-mobile-app min-h-screen bg-[#f4f4f4] text-[12px] font-[Tahoma,Arial,sans-serif] selection:bg-[#9fc8ff]" onClick={closeMenu}>
       {/* Header */}
       <div className="vtw-app-header bg-white border-b border-[#ccc] px-3 py-1.5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0" style={isMobileViewport ? { flexBasis: '100%', width: '100%' } : undefined}>
+        <div className="flex items-center justify-between gap-3 vtw-app-header-row">
+          <h1 className="vtw-app-title text-[16px] font-bold text-[#333] flex items-center gap-2 shrink-0">
             <img
               src="https://yt3.googleusercontent.com/Gug5UDLjPMRBto68HqZvJCSryebEkqiI2_9qV_8y16ZKIVLgxYBFx_PyUYZStcTzSc3v7TLq=s900-c-k-c0x00ffffff-no-rj"
-              className="w-7 h-7 rounded-full"
+              className="w-9 h-9 rounded-full vtw-app-title-img"
               referrerPolicy="no-referrer"
               alt="Văn Thế Web"
             />
-            {isMobileViewport ? (
-              <span className="vtw-title-mobile whitespace-nowrap">YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB</span>
-            ) : (
-              <span className="vtw-title-full whitespace-nowrap">YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB</span>
-            )}
+            <span className="vtw-app-title-text">YOUTUBE NICHE RESEARCH PRO - VĂN THẾ WEB</span>
           </h1>
 
-          <div
-            className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end"
-            style={isMobileViewport ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px 66px 28px', gap: 3, width: '100%', maxWidth: '100%', flex: '0 0 100%', alignItems: 'stretch', overflow: 'visible' } : undefined}
-          >
+          <div className="vtw-header-actions flex items-center gap-2 min-w-0 flex-1 justify-end">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); openGuideVideo(); }}
+              className="vtw-header-guide vtw-header-icon-btn px-4 py-2 rounded-xl bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              title="Video hướng dẫn"
+            >
+              <Video size={15} />
+              <span className="vtw-guide-label-full">Video hướng dẫn</span>
+              <span className="vtw-guide-label-mobile">Video</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowSupportModal(true); }}
+              className="vtw-header-support vtw-header-icon-btn px-4 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
+              title="Hỗ trợ"
+            >
+              <MessageCircle size={15} />
+              <span className="vtw-support-label-full">Hỗ trợ</span>
+              <span className="vtw-support-label-mobile">Hỗ trợ</span>
+            </button>
             {user ? (
-              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0" style={isMobileViewport ? { display: 'contents' } : undefined}>
+              <div className="vtw-user-header-row flex items-center gap-2 min-w-0 shrink-0">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowAccountModal(true);
+                    refreshSubscription(user, true, true);
                   }}
                   className="vtw-account-box flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 shadow-sm shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-95"
-                  style={isMobileViewport ? { gridColumn: 'auto', width: '100%', maxWidth: '100%', minWidth: 0, justifyContent: 'flex-start', paddingLeft: 3, paddingRight: 3, gap: 4 } : undefined}
                   title="Tài khoản & hạn sử dụng"
                 >
                   <img
                     src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
                     alt="avatar"
-                    className="w-6 h-6 rounded-full shadow-sm"
+                    className="w-6 h-6 rounded-full shadow-sm vtw-account-avatar"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="leading-tight text-left" style={isMobileViewport ? { minWidth: 0, flex: '1 1 auto' } : undefined}>
+                  <div className="leading-tight text-left vtw-account-text">
                     <div className="vtw-user-email text-[10px] font-black text-gray-800 whitespace-nowrap" title={user.email || user.displayName || 'Tài khoản'}>{user.email || user.displayName || 'Tài khoản'}</div>
-                    <div className={`text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
+                    <div className={`vtw-account-plan text-[8px] font-black uppercase ${isPremiumAccount ? 'text-blue-600' : subscriptionInfo?.active ? 'text-amber-600' : 'text-red-600'}`}>
                       {subscriptionLoading ? 'Kiểm tra...' : isPremiumAccount ? 'PRO' : subscriptionInfo?.active ? 'Trial' : 'Hết hạn'}
                     </div>
                   </div>
@@ -5234,8 +7044,8 @@ Quy tắc:
                       console.error('Lỗi đăng xuất:', err);
                     }
                   }}
-                  className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase whitespace-nowrap transition-all active:scale-95"
-                  style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
+                  className="vtw-header-logout vtw-header-icon-btn px-3 py-2 rounded-xl bg-white text-red-600 border border-red-200 hover:bg-red-50 shadow-sm font-black text-[10px] uppercase transition-all active:scale-95"
+                  title="Đăng xuất"
                 >
                   <LogOut size={14} />
                   <span className="vtw-logout-label">Đăng xuất</span>
@@ -5264,32 +7074,31 @@ Quy tắc:
                 target="_blank"
                 rel="noreferrer"
                 className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md hover:from-orange-600 hover:to-red-600 flex items-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] shrink-0"
-                style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 title="Nâng cấp thêm / cộng dồn hạn dùng"
               >
                 <Crown size={15} />
-                <span>{isMobileViewport ? 'Nâng cấp' : (isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói')}</span>
+                <span className="vtw-upgrade-label-full">{isPremiumAccount ? 'Nâng cấp thêm' : 'Nâng cấp gói'}</span>
+                <span className="vtw-upgrade-label-mobile">Nâng cấp</span>
               </a>
             ) : (
               <button
                 onClick={() => setStatus('Vui lòng đăng nhập Google trước khi nâng cấp gói!')}
                 className="vtw-header-upgrade vtw-header-icon-btn px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md opacity-80 cursor-not-allowed flex items-center gap-2 font-black uppercase text-[10px] shrink-0"
-                style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
                 title="Cần đăng nhập để Nâng cấp Gói"
               >
                 <Crown size={15} />
-                <span>{isMobileViewport ? 'Nâng cấp' : 'NÂNG CẤP GÓI'}</span>
+                <span className="vtw-upgrade-label-full">NÂNG CẤP GÓI</span>
+                <span className="vtw-upgrade-label-mobile">Nâng cấp</span>
               </button>
             )}
 
             <button
               onClick={resetConfig}
               className="vtw-header-refresh vtw-header-icon-btn px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-2 transition-all active:scale-95 shadow-sm font-black uppercase text-[10px] shrink-0"
-              style={isMobileViewport ? { width: '100%', minWidth: 0 } : undefined}
               title="Làm mới cài đặt & kết quả"
             >
               <RotateCcw size={15} />
-              <span className="vtw-mobile-hide-label">{isMobileViewport ? '' : 'LÀM MỚI'}</span>
+              <span className="vtw-refresh-label">LÀM MỚI</span>
             </button>
           </div>
         </div>
@@ -5328,9 +7137,9 @@ Quy tắc:
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng trong:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center justify-between">Tuần này <span>▼</span></div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
@@ -5351,7 +7160,7 @@ Quy tắc:
 
                 <div className="flex justify-between items-center bg-[#f9f9f9] p-3 border border-[#ccc] rounded shadow-sm mt-4">
                   <div className="font-bold text-[12px] text-[#d35400]">☑ Tự động chuyển từ khóa cho đến khi đủ 10 Kênh</div>
-                  <div className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_0_#a04a00]">▶ BẮT ĐẦU SĂN KÊNH</div>
+                  <div className="min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 shadow-[0_4px_0_#a04a00]">▶ BẮT ĐẦU TÌM KÊNH</div>
                 </div>
 
                 <div className="mt-4 bg-white border border-[#999] shadow-sm min-h-[450px] overflow-hidden">
@@ -5364,7 +7173,7 @@ Quy tắc:
                       <div key={i} className="px-2 py-2 border-r border-[#ddd] text-center">{h}</div>
                     ))}
                   </div>
-                  <div className="text-center py-28 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm “Bắt đầu săn kênh” để bắt đầu...</div>
+                  <div className="text-center py-28 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm “Bắt đầu tìm kênh” để bắt đầu...</div>
                 </div>
               </div>
             </div>
@@ -5426,15 +7235,25 @@ Quy tắc:
             <p className="text-gray-500 mb-8 max-w-md mx-auto text-[14px]">
               Tài khoản Google mới được dùng thử 1 giờ. Vui lòng nâng cấp gói để tiếp tục sử dụng công cụ.
             </p>
-            <a
-              href={buildPaymentUrl(user)}
-              target="_blank"
-              rel="noreferrer"
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 inline-flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
-            >
-              <Crown size={20} />
-              <span>NÂNG CẤP GÓI</span>
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={buildPaymentUrl(user)}
+                target="_blank"
+                rel="noreferrer"
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 inline-flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+              >
+                <Crown size={20} />
+                <span>NÂNG CẤP GÓI</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => user && refreshSubscription(user, true, true)}
+                className="px-7 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg font-black uppercase mx-auto"
+              >
+                <RefreshCw size={18} />
+                <span>Kiểm tra lại PRO</span>
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -5486,6 +7305,12 @@ Quy tắc:
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2 outline-none focus:border-blue-500 shadow-sm"
                         value={config.keyword}
                         onChange={(e) => setConfig({ ...config, keyword: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !isHunting) {
+                            e.preventDefault();
+                            startHunter();
+                          }
+                        }}
                         placeholder="Ví dụ: công cụ AI, ChatGPT, tạo video bằng AI"
                       />
                     </div>
@@ -5541,15 +7366,6 @@ Quy tắc:
 
                   {/* Group 2 */}
                   <div className="space-y-2 border-l border-[#ccc] pl-4">
-                    <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
-                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
-                      <input 
-                        type="number" 
-                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
-                        value={config.maxVideos}
-                        onChange={(e) => setConfig({ ...config, maxVideos: parseInt(e.target.value) })}
-                      />
-                    </div>
                     <div className="vtw-field-row vtw-row-minsub flex items-center gap-2">
                       <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</label>
                       <input
@@ -5557,7 +7373,7 @@ Quy tắc:
                         inputMode="numeric"
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minSub}
-                        onChange={(e) => setConfig({ ...config, minSub: parseRangeNumber(e.target.value, 0) })}
+                        onChange={(e) => updateHunterFilters({ minSub: parseRangeNumber(e.target.value, 0) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-maxsub flex items-center gap-2">
@@ -5567,7 +7383,16 @@ Quy tắc:
                         inputMode="numeric"
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxSub}
-                        onChange={(e) => setConfig({ ...config, maxSub: parseRangeNumber(e.target.value, 10000000) })}
+                        onChange={(e) => updateHunterFilters({ maxSub: parseRangeNumber(e.target.value, 100000) })}
+                      />
+                    </div>
+                    <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
+                      <label className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</label>
+                      <input 
+                        type="number" 
+                        className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
+                        value={config.maxVideos}
+                        onChange={(e) => updateHunterFilters({ maxVideos: parseRangeNumber(e.target.value, 30) })}
                       />
                     </div>
                   </div>
@@ -5580,7 +7405,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minVideo}
-                        onChange={(e) => setConfig({ ...config, minVideo: parseInt(e.target.value) })}
+                        onChange={(e) => updateHunterFilters({ minVideo: parseRangeNumber(e.target.value, 1) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-maxvideo flex items-center gap-2">
@@ -5589,7 +7414,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideo}
-                        onChange={(e) => setConfig({ ...config, maxVideo: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => updateHunterFilters({ maxVideo: parseRangeNumber(e.target.value, 1000) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-minviews flex items-center gap-2">
@@ -5598,7 +7423,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.minViews}
-                        onChange={(e) => setConfig({ ...config, minViews: parseInt(e.target.value) })}
+                        onChange={(e) => updateHunterFilters({ minViews: parseRangeNumber(e.target.value, 10000) })}
                       />
                     </div>
                   </div>
@@ -5619,19 +7444,19 @@ Quy tắc:
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight">Hệ thống API</span>
                           <div className="flex gap-1.5">
-                             <div className={`w-2 h-2 rounded-full ${config.apiKeys.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
-                             <div className={`w-2 h-2 rounded-full ${geminiApiKey ? 'bg-indigo-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                             <div className={`w-2 h-2 rounded-full ${getMergedYoutubeKeys().length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-400'}`}></div>
+                             <div className={`w-2 h-2 rounded-full ${getActiveGeminiKeys().length ? 'bg-indigo-500 animate-pulse' : 'bg-gray-300'}`}></div>
                           </div>
                         </div>
 
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Video size={12} className="text-red-500" /> YouTube V3:</span>
-                            <span className="text-[10px] font-black text-blue-600">{config.apiKeys.length} Keys ({exhaustedKeys.length} Lỗi)</span>
+                            <span className="text-[10px] font-black text-blue-600">{isUsingTrialYoutubeKeys() ? `Trial ${getMergedYoutubeKeys().length} Key` : `${getMergedYoutubeKeys().length} Keys (${exhaustedKeys.length} Lỗi)`}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1"><Bot size={12} className="text-indigo-500" /> Gemini AI:</span>
-                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)` : 'Chưa có'}</span>
+                            <span className={`text-[10px] font-black ${getActiveGeminiKeys().length ? 'text-green-600' : 'text-gray-400'}`}>{getActiveGeminiKeys().length ? (isUsingTrialGeminiKeys() ? `Trial ${getActiveGeminiKeys().length} Key` : `${getActiveGeminiKeys().length} Keys (${exhaustedGeminiKeys.length} Lỗi)`) : 'Chưa có'}</span>
                           </div>
                         </div>
                       </div>
@@ -5693,7 +7518,7 @@ Quy tắc:
                       onClick={startHunter}
                       className="vtw-start-button min-w-[200px] bg-[#e67e22] text-white py-2.5 px-6 rounded font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#d35400] active:scale-95 shadow-[0_4px_0_#a04a00] transition-all"
                     >
-                      <Play size={20} fill="white" /> BẮT ĐẦU SĂN KÊNH {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : ""}
+                      <Play size={20} fill="white" /> BẮT ĐẦU TÌM KÊNH {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : ""}
                     </button>
                   ) : (
                     <button 
@@ -5853,13 +7678,13 @@ Quy tắc:
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-24">SUB</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-28">VIEWS</th>
                           <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-right w-20">VIDEOS</th>
-                          <th className="px-2 py-2 font-bold text-[11px] text-center w-24 text-orange-600">★ ĐIỂM NGÁCH</th>
+                          <th className="px-2 py-2 font-bold text-[11px] border-r border-[#ddd] text-center w-24 text-gray-900">★ ĐIỂM NGÁCH</th>
                           <th className="px-2 py-2 font-bold text-[11px] text-center min-w-[150px]">THAO TÁC</th>
                         </tr>
                       </thead>
                       <tbody>
                         {results.length === 0 && (
-                          <tr><td colSpan={16} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu săn kênh" để bắt đầu...</td></tr>
+                          <tr><td colSpan={16} className="text-center py-20 text-gray-400 italic">Chưa có kết quả nào được tìm thấy. Bấm "Bắt đầu tìm kênh" để bắt đầu...</td></tr>
                         )}
                         {results.map((r, i) => (
                           <tr 
@@ -5880,13 +7705,13 @@ Quy tắc:
                             <td className="px-2 py-1 text-[10px] font-bold text-gray-800 max-w-[145px] whitespace-normal">{getTopicFromKeyword(getChannelTrendKeyword(r))}</td>
                             <td className="px-2 py-1 text-[10px] font-black text-gray-800 whitespace-nowrap" title="Ước tính từ views thật của YouTube Data API v3 × RPM tham khảo, không phải doanh thu thật YouTube trả.">{estimateIncomeFromApiViews(r)}</td>
                             <td className="px-2 py-1 text-[9px] text-blue-600 underline hover:text-blue-800 max-w-[110px]"><a href={r.url} target="_blank" rel="noreferrer" title={r.url}>{formatChannelUrlShort(r.url, r.id)}</a></td>
-                            <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryFullName(r.country)}</td>
+                            <td className="px-2 py-1 text-center font-bold text-gray-700 whitespace-normal">{getCountryDisplayName(r.country)}</td>
                             <td className="px-2 py-1 text-center text-gray-500 whitespace-nowrap">{r.publishedAt}</td>
                             <td className="px-2 py-1 text-right text-green-700 font-medium">{formatVNNumber(r.age)}</td>
                             <td className="px-2 py-1 text-right text-black font-bold">{formatVNNumber(r.subs)}</td>
                             <td className="px-2 py-1 text-right text-blue-800 font-bold">{formatVNNumber(r.views)}</td>
                             <td className="px-2 py-1 text-right text-gray-800">{formatVNNumber(r.videos)}</td>
-                            <td className="px-2 py-1 text-center font-black text-[#e67e22] text-[13px] bg-orange-50">{r.score}</td>
+                            <td className="px-2 py-1 text-center font-black text-black text-[13px] border-r border-[#ddd]">{r.score}</td>
                             <td className="px-2 py-1 text-center">
                               <div className="vtw-channel-actions flex items-center justify-center gap-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, alignItems: 'center', width: '100%' }}>
                                 <button
@@ -6110,7 +7935,7 @@ Quy tắc:
                       <div className="space-y-1">
                         <div className="flex flex-wrap gap-x-2">
                           <span className="font-bold">Quốc gia:</span>
-                          <span className="text-black">{spyResult.channelInfo.snippet.country || 'N/A'}</span>
+                          <span className="text-black">{getCountryDisplayName(spyResult.channelInfo.snippet.country)}</span>
                           <span className="text-gray-400">|</span>
                           <span className="font-bold">Tuổi kênh:</span>
                           <span className="text-black">{calculateChannelAge(spyResult.channelInfo.snippet.publishedAt)} ngày</span>
@@ -6308,6 +8133,14 @@ Quy tắc:
                   >
                     <Download size={16} /> Tải TXT
                   </button>
+                  <button
+                    type="button"
+                    onClick={scrollToTrackingAiReview}
+                    className="vtw-tracking-ai-jump-btn bg-orange-500 text-white h-10 px-5 rounded font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-orange-600 active:scale-95 shadow whitespace-nowrap transition-all"
+                    title="Chuyển xuống phần AI đánh giá kênh"
+                  >
+                    <Bot size={16} /> AI ĐÁNH GIÁ KÊNH
+                  </button>
                   <div className="ml-2 h-10 px-4 bg-white border border-blue-200 rounded shadow-inner flex items-center gap-3 shrink-0">
                     <BarChart2 size={16} className="text-blue-600" />
                     <span className="text-[12px] font-black text-gray-700 whitespace-nowrap uppercase">
@@ -6494,6 +8327,109 @@ Quy tắc:
                 </table>
               </div>
             </div>
+
+              <div id="tracking-ai-review-box" className="bg-white border border-[#999] shadow-sm rounded p-4 scroll-mt-24">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-[14px] font-black text-slate-800 uppercase">
+                      <Bot size={18} className="text-orange-600" /> AI ĐÁNH GIÁ KÊNH
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      Nhập link kênh / @handle / Channel ID. AI sẽ dựa trên số liệu YouTube API để đánh giá tổng quan, phân tích chuyên sâu và kết luận chốt.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadTrackingAiReport}
+                    disabled={!trackingAiReport.trim()}
+                    className={`vtw-tracking-ai-download-btn h-9 px-4 rounded font-bold text-[12px] flex items-center gap-2 shadow transition-all ${trackingAiReport.trim() ? 'bg-green-600 text-white hover:bg-green-700 active:scale-95' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    title="Tải TXT nội dung AI đánh giá kênh"
+                  >
+                    <Download size={15} /> <span className="vtw-tracking-ai-download-label">Tải TXT</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 items-center mb-3">
+                  <div className="col-span-12 lg:col-span-8 flex items-center gap-2">
+                    <label className="text-[12px] font-bold text-slate-700 whitespace-nowrap">Link Kênh (ID hoặc @handle):</label>
+                    <input
+                      type="text"
+                      value={trackingAiInput}
+                      onChange={(e) => setTrackingAiInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !trackingAiLoading) {
+                          e.preventDefault();
+                          analyzeTrackingAiChannel();
+                        }
+                      }}
+                      placeholder="Dán link kênh, @handle hoặc UC..."
+                      className="flex-1 h-9 px-3 border border-[#aaa] rounded bg-white text-[12px] font-bold outline-none focus:border-orange-500 shadow-inner"
+                    />
+                  </div>
+                  <div className="col-span-12 lg:col-span-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={analyzeTrackingAiChannel}
+                      disabled={trackingAiLoading || !trackingAiInput.trim()}
+                      className={`h-9 px-4 rounded font-bold text-[12px] flex items-center justify-center gap-2 shadow transition-all ${trackingAiLoading || !trackingAiInput.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'}`}
+                    >
+                      {trackingAiLoading ? <Loader2 size={15} className="animate-spin" /> : <Bot size={15} />}
+                      {trackingAiLoading ? 'ĐANG ĐÁNH GIÁ...' : 'AI ĐÁNH GIÁ KÊNH'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTrackingAiInput('');
+                        setTrackingAiReport('');
+                        setTrackingAiMeta(null);
+                      }}
+                      className="h-9 px-3 rounded border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 text-[12px] font-bold"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+
+                {trackingAiMeta?.id && (
+                  <div className="mb-3 flex items-center justify-between gap-3 rounded border border-orange-100 bg-orange-50/70 px-3 py-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {trackingAiMeta.icon ? (
+                        <img src={trackingAiMeta.icon} alt={trackingAiMeta.name || 'Kênh'} className="w-10 h-10 rounded-full border border-orange-200 object-cover bg-white" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full border border-orange-200 bg-white flex items-center justify-center text-[12px] font-black text-orange-600">
+                          {(trackingAiMeta.name || 'K').slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-black text-slate-900 truncate">{trackingAiMeta.name}</div>
+                        <div className="text-[10px] font-bold text-slate-500 truncate">ID: {trackingAiMeta.id}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => trackingAiMeta.id && goToSpy(trackingAiMeta.id)}
+                      className="h-9 px-4 rounded bg-blue-600 text-white text-[12px] font-black hover:bg-blue-700 active:scale-95 shadow flex items-center gap-2 shrink-0"
+                      title="Chuyển sang mục SPY và phân tích kênh này"
+                    >
+                      <BarChart2 size={15} /> SPY
+                    </button>
+                  </div>
+                )}
+
+                <div className="min-h-[190px] max-h-[360px] overflow-auto bg-white border border-gray-200 rounded p-4 font-[Arial,Tahoma,sans-serif]">
+                  {trackingAiLoading ? (
+                    <div className="flex items-center gap-2 text-orange-600 font-bold">
+                      <Loader2 size={16} className="animate-spin" /> Đang lấy số liệu YouTube API và tạo đánh giá AI...
+                    </div>
+                  ) : trackingAiReport ? (
+                    <div>{renderTrackingAiReport()}</div>
+                  ) : (
+                    <div className="text-gray-400 italic text-[12px]">
+                      Chưa có nội dung AI đánh giá. Nhập link kênh rồi bấm “AI ĐÁNH GIÁ KÊNH”.
+                    </div>
+                  )}
+                </div>
+              </div>
           </div>
           ) : null}
 
@@ -6581,50 +8517,68 @@ Quy tắc:
                     </div>
                   </div>
 
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-3 mt-2 vtw-sub-range-control">
                     <label className="text-[10px] uppercase font-black text-gray-400 flex justify-between items-center gap-2">
                       <span>Phạm vi Sub</span>
-                      <div className="flex items-center gap-2">
-                        <div className="vtw-sub-stepper flex items-center rounded-xl border border-[#4d6b87] bg-[#223548] overflow-hidden h-8 shadow-sm">
-                          <button
-                            type="button"
-                            onClick={() => stepNicheMaxSub(-10)}
-                            className="w-8 h-8 flex items-center justify-center text-white/90 hover:bg-blue-500/30 active:bg-blue-500 transition-all border-r border-[#4d6b87]"
-                            title="Giảm 10 sub"
-                          >
-                            <Minus size={14} strokeWidth={3} />
-                          </button>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={String(nicheMaxSub)}
-                            onChange={(e) => updateNicheMaxSubManual(e.target.value)}
-                            onBlur={(e) => updateNicheMaxSubManual(e.target.value)}
-                            className="w-[86px] h-8 bg-transparent px-1 text-center text-[10px] font-black text-white outline-none"
-                            title="Nhập số sub tối đa, ví dụ 100000"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => stepNicheMaxSub(10)}
-                            className="w-8 h-8 flex items-center justify-center text-white/90 hover:bg-blue-500/30 active:bg-blue-500 transition-all border-l border-[#4d6b87]"
-                            title="Tăng 10 sub"
-                          >
-                            <Plus size={14} strokeWidth={3} />
-                          </button>
-                        </div>
-                        <span>0 → {formatVNNumber(nicheMaxSub)}</span>
-                      </div>
+                      <span className="text-[9px] text-[#95a5a6] font-black">{formatVNNumber(nicheMinSub)} → {formatVNNumber(nicheMaxSub)}</span>
                     </label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={10000000}
-                      step={10}
-                      value={Math.min(nicheMaxSub, 10000000)}
-                      onChange={(e) => updateNicheMaxSubSlider(e.target.value)}
-                      className="vtw-niche-slider w-full accent-blue-500"
-                    />
+
+                    <div className="vtw-sub-range-inputs grid grid-cols-2 gap-2">
+                      <label className="vtw-sub-range-field">
+                        <span>Tối thiểu</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9.]*"
+                          value={formatVNNumber(nicheMinSub)}
+                          onChange={(e) => updateNicheMinSub(e.target.value)}
+                          onBlur={(e) => updateNicheMinSub(e.target.value)}
+                          title="Nhập Sub tối thiểu từ 0 đến 10 triệu"
+                        />
+                      </label>
+                      <label className="vtw-sub-range-field">
+                        <span>Tối đa</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9.]*"
+                          value={formatVNNumber(nicheMaxSub)}
+                          onChange={(e) => updateNicheMaxSubManual(e.target.value)}
+                          onBlur={(e) => updateNicheMaxSubManual(e.target.value)}
+                          title="Nhập Sub tối đa từ 1 đến 10 triệu và phải lớn hơn Sub tối thiểu"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      className="vtw-dual-sub-slider"
+                      style={{
+                        '--sub-left': `${subRangeLeftPercent}%`,
+                        '--sub-right': `${subRangeRightPercent}%`
+                      } as React.CSSProperties}
+                    >
+                      <div className="vtw-dual-sub-track" />
+                      <div className="vtw-dual-sub-active" />
+                      <input
+                        type="range"
+                        min={SUB_RANGE_MIN}
+                        max={SUB_RANGE_MAX}
+                        step={10}
+                        value={nicheMinSub}
+                        onChange={(e) => updateNicheMinSubSlider(e.target.value)}
+                        aria-label="Sub tối thiểu"
+                      />
+                      <input
+                        type="range"
+                        min={SUB_MAX_MIN}
+                        max={SUB_RANGE_MAX}
+                        step={10}
+                        value={nicheMaxSub}
+                        onChange={(e) => updateNicheMaxSubSlider(e.target.value)}
+                        aria-label="Sub tối đa"
+                      />
+                    </div>
+
                     <div className="vtw-niche-range-scale vtw-sub-scale text-[8px] text-[#95a5a6] font-bold">
                       <span style={{ left: '0%' }}>0</span>
                       <span style={{ left: '10%' }}>1M</span>
@@ -6937,8 +8891,8 @@ Quy tắc:
                             </div>
                          </div>
 
-                         <div className="overflow-x-auto">
-                            <table className="w-full text-left">
+                         <div className="vtw-keyword-table-wrap overflow-x-auto">
+                            <table className="vtw-keyword-table w-full text-left min-w-[1040px]">
                                <thead className="bg-gray-50 border-b border-gray-200">
                                   <tr>
                                      <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Từ khóa</th>
@@ -7026,7 +8980,7 @@ Quy tắc:
                             <button
                                type="button"
                                onClick={() => setInlineVideoId(v.id)}
-                               title="Bấm thumbnail để xem video trực tiếp trong app"
+                               title="Xem video"
                                className="vtw-video-thumb vtw-thumb-priority w-full h-[56%] bg-[#0b1220] overflow-hidden shrink-0 cursor-pointer block p-0 border-0"
                             >
                                <img
@@ -7065,22 +9019,22 @@ Quy tắc:
                                      className="w-full bg-orange-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-orange-700"
                                      title="Phân tích video"
                                   >
-                                     <Video size={12} /> Phân tích video
+                                     <Video size={12} /> <span className="vtw-btn-label">Phân tích video</span>
                                   </button>
                                   <button 
                                      type="button"
                                      onClick={() => setInlineVideoId(v.id)}
                                      className="w-full bg-blue-600 text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-blue-700"
-                                     title="Xem video trực tiếp trong app"
+                                     title="Xem video"
                                   >
-                                     <Play size={12} /> Xem video
+                                     <Play size={12} /> <span className="vtw-btn-label">Xem video</span>
                                   </button>
                                   <button 
                                      onClick={() => { setSpyInput(v.snippet.channelId); setActiveTab(2); analyzeSpy(v.snippet.channelId); }}
                                      className="w-full bg-[#2c3e50] text-white py-1.5 rounded-xl text-[8px] font-black flex items-center justify-center gap-1 uppercase tracking-tight hover:bg-[#1f2d3a]"
                                      title="Bóc tách kênh này"
                                   >
-                                     <BarChart2 size={12} /> Bóc tách kênh
+                                     <BarChart2 size={12} /> <span className="vtw-btn-label">Bóc tách kênh</span>
                                   </button>
                                </div>
                                <div className="vtw-video-stat-grid grid grid-cols-3 gap-1 border-t pt-1.5 mt-auto" style={isMobileViewport ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 4 } : undefined}>
@@ -7122,7 +9076,9 @@ Quy tắc:
                         <div className="col-span-full py-20 text-center text-gray-400 italic">Không tìm thấy video Shorts nào trong danh sách được tải. Thử phân tích lại với số lượng items lớn hơn.</div>
                       ) : nicheResults.shorts.map((v: any, i: number) => (
                          <div key={i} className="vtw-shorts-card aspect-[9/16] bg-black rounded-2xl overflow-hidden relative group border border-gray-800 shadow-2xl">
-                            <img src={v.snippet.thumbnails.high.url} className="vtw-shorts-thumb w-full h-full object-contain bg-black opacity-90" />
+                            <button type="button" onClick={() => openInlineVideo(v.id)} className="absolute inset-0 w-full h-full p-0 border-0 bg-black" title="Mở Shorts trong popup">
+                               <img src={v.snippet.thumbnails.high.url} className="vtw-shorts-thumb w-full h-full object-cover bg-black opacity-90" />
+                            </button>
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
                             <div className="absolute top-3 left-3 bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded animate-pulse">SHORTS</div>
                             <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -7153,7 +9109,12 @@ Quy tắc:
                                   <button type="button" onClick={() => openInlineVideo(v.id)} className="text-left hover:underline" title="Mở Shorts trong popup">{v.snippet.title}</button>
                                </h4>
                                <div className="flex gap-2">
-                                 <a href={`https://youtube.com/shorts/${v.id}`} target="_blank" rel="noreferrer" className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md">Phát Shorts</a>
+                                 <button
+                                    type="button"
+                                    onClick={() => setInlineVideoId(v.id)}
+                                    className="flex-1 bg-white/20 hover:bg-white text-white hover:text-black py-2 rounded-lg text-center text-[10px] font-black uppercase transition-all backdrop-blur-md"
+                                    title="Xem video Shorts"
+                                 >Phát Shorts</button>
                                  <button 
                                     onClick={() => analyzeVideo(v.id)}
                                     className="bg-orange-600 hover:bg-orange-700 text-white px-2 rounded-lg text-[10px] font-black uppercase transition-all"
@@ -7170,10 +9131,10 @@ Quy tắc:
 
                 {nicheActiveSubTab === 'channels' && nicheResults && (
                    <div className="animate-in slide-in-from-left duration-500">
-                   <div className="space-y-4">
+                   <div className="space-y-8">
                       {nicheResults.channels.map((c: any, i: number) => (
-                         <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
-                            <div className="flex items-center gap-6">
+                         <div key={i} className="vtw-niche-channel-card bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-lg transition-all">
+                            <div className="vtw-niche-channel-main flex items-center gap-6">
                                <div className="relative">
                                   <img src={c.snippet.thumbnails.default.url} className="w-16 h-16 rounded-full border-2 border-white shadow-xl" />
                                   <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-1 border-2 border-white">
@@ -7181,11 +9142,11 @@ Quy tắc:
                                   </div>
                                </div>
                                <div className="flex flex-col">
-                                  <div className="flex items-center gap-2">
+                                  <div className="vtw-niche-channel-title flex items-center gap-2">
                                      <a href={`https://youtube.com/channel/${c.id}`} target="_blank" rel="noreferrer" className="hover:text-blue-600 transition-colors"><h5 className="text-[18px] font-black text-gray-900 uppercase">{c.snippet.title}</h5></a>
-                                     <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 rounded-full uppercase tracking-tighter">ID: {c.id}</span>
+                                     <span className="vtw-niche-channel-id text-[11px] font-bold text-gray-400 bg-gray-100 px-2 rounded-full uppercase tracking-tighter">ID: {c.id}</span>
                                   </div>
-                                  <div className="flex gap-4 mt-1 items-center">
+                                  <div className="vtw-niche-channel-stats flex gap-4 mt-1 items-center">
                                      <div className="flex gap-2 items-center">
                                         <Users size={14} className="text-gray-400" />
                                         <span className="text-[12px] font-bold text-gray-600">{(parseInt(c.statistics.subscriberCount) || 0).toLocaleString()} <span className="font-medium text-gray-400 lowercase">subs</span></span>
@@ -7203,7 +9164,7 @@ Quy tắc:
                                   </div>
                                </div>
                             </div>
-                            <div className="flex items-center gap-10">
+                            <div className="vtw-niche-channel-actions flex items-center gap-10">
                                <button 
                                  onClick={() => setModalTrendingVideos({ title: c.snippet.title, subtitle: 'Danh sách các video của kênh này lọt top trending', videos: c.chanVideos })}
                                  className="flex flex-col items-center bg-blue-50/50 px-4 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 cursor-pointer transition-colors"
@@ -7229,18 +9190,121 @@ Quy tắc:
                             </div>
                          </div>
                       ))}
+                      <div className="vtw-channel-topic-suggestions bg-gradient-to-br from-emerald-50 via-white to-cyan-50 border border-emerald-100 rounded-3xl p-5 md:p-7 shadow-sm">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <Hash size={26} strokeWidth={3} />
+                            </div>
+                            <div>
+                              <h3 className="vtw-channel-topic-title text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-tight">GỢI Ý NGÁCH & CHỦ ĐỀ KÊNH</h3>
+                              <p className="text-[11px] md:text-[12px] font-bold text-slate-400 uppercase tracking-wide mt-1">Lấy chủ đề hiện tại, khu vực, ngôn ngữ và video liên quan theo dữ liệu thật.</p>
+                            </div>
+                          </div>
+                          <div className="vtw-channel-topic-meta grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[280px]">
+                            {[
+                              { label: 'Chủ đề', value: nicheResults.suggestionMeta?.currentTopic || nicheResults.summary.keyword },
+                              { label: 'Khu vực', value: nicheResults.suggestionMeta?.regionLabel || getRegionLabel(nicheRegion) },
+                              { label: 'Ngôn ngữ', value: nicheResults.suggestionMeta?.language || 'Tự động' },
+                              { label: 'Thời gian', value: nicheResults.suggestionMeta?.timeframe || '3 tháng gần nhất' },
+                            ].map((meta: any, idx: number) => (
+                              <div key={idx} className="bg-white/80 border border-emerald-100 rounded-xl px-3 py-2 shadow-sm">
+                                <div className="text-[8px] font-black uppercase text-slate-400 tracking-wider">{meta.label}</div>
+                                <div className="text-[11px] font-black text-slate-900 truncate" title={meta.value}>{meta.value}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Số ngách</div><div className="text-2xl font-black text-slate-950">{nicheResults.suggestions?.length || 0}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">VPH cao nhất</div><div className="text-2xl font-black text-blue-600">{formatVNNumber(Math.round(Math.max(0, ...(nicheResults.suggestions || []).map((x: any) => Number(x.avgVPH || 0)))))}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Tổng view mẫu</div><div className="text-2xl font-black text-slate-950">{formatVNNumber((nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + Number(x.totalViews || 0), 0))}</div></div>
+                          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm"><div className="text-[10px] text-slate-400 font-black uppercase">Video liên quan</div><div className="text-2xl font-black text-slate-950">{(nicheResults.suggestions || []).reduce((sum: number, x: any) => sum + (x.relatedVideos?.length || 0), 0)}</div></div>
+                        </div>
+
+                        {(!nicheResults.suggestions || nicheResults.suggestions.length === 0) ? (
+                          <div className="bg-white/70 rounded-2xl border border-dashed border-emerald-200 py-10 text-center text-slate-400 font-bold">Chưa có dữ liệu gợi ý ngách phù hợp. Hãy thử tăng số lượng phân tích hoặc đổi từ khóa.</div>
+                        ) : (
+                          <div className="space-y-6">
+                            {nicheResults.suggestions.slice(0, 10).map((ngach: any, idx: number) => (
+                              <div key={`${ngach.keyword}-${idx}`} className="bg-white/90 rounded-3xl border border-emerald-100 shadow-sm overflow-hidden">
+                                <div className="p-4 md:p-5 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                  <div className="flex items-start gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[12px] font-black shrink-0">#{idx + 1}</div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-xl md:text-2xl font-black text-slate-950 truncate" title={ngach.keyword}>{ngach.keyword}</h4>
+                                        <button onClick={() => navigator.clipboard?.writeText(ngach.keyword)} className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center shrink-0" title="Copy từ khóa"><Copy size={15} /></button>
+                                      </div>
+                                      <p className="text-[11px] font-bold text-slate-400 mt-1">Ngách lấy ưu tiên từ kênh khác cùng chủ đề. <span className="text-blue-600">Nguồn: {ngach.primaryChannelTitle}</span></p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-black">Tiềm năng: {ngach.potential}</span>
+                                    <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-[11px] font-black">Cạnh tranh: {ngach.competition}</span>
+                                  </div>
+                                </div>
+                                <div className="px-4 md:px-5 pb-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Điểm</div><div className="text-xl font-black text-emerald-600">{ngach.score}/100</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">VPH TB</div><div className="text-xl font-black text-blue-600">{formatVNNumber(Math.round(ngach.avgVPH || 0))}</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Tổng view</div><div className="text-xl font-black text-slate-950">{formatVNNumber(ngach.totalViews || 0)}</div></div>
+                                  <div className="bg-white rounded-2xl border border-slate-100 p-3"><div className="text-[9px] text-slate-400 font-black uppercase">Video trend</div><div className="text-xl font-black text-orange-600">{ngach.trendVideoCount || 0}</div></div>
+                                </div>
+                                <div className="border-t border-emerald-50 p-4 md:p-5 bg-emerald-50/20">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="text-[11px] font-black uppercase text-slate-400 tracking-widest">Video liên quan</div>
+                                    <div className="text-[10px] font-bold text-slate-400">Hiển thị tối đa 6 video</div>
+                                  </div>
+                                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                    {(ngach.relatedVideos || []).map((v: any) => (
+                                      <div key={v.id} className="vtw-related-video-card bg-white rounded-2xl border border-slate-100 p-3 flex gap-3 shadow-sm min-w-0">
+                                        <div className="vtw-related-video-thumb relative w-32 md:w-36 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                                          <img src={v.snippet?.thumbnails?.medium?.url || v.snippet?.thumbnails?.default?.url} className="w-full h-full object-cover" />
+                                          <button onClick={() => setInlineVideoId(v.id)} className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/30 transition-colors" title="Xem video"><span className="w-10 h-10 rounded-full bg-white/90 text-slate-900 flex items-center justify-center shadow-lg"><Play size={17} fill="currentColor" /></span></button>
+                                        </div>
+                                        <div className="vtw-related-video-info min-w-0 flex-1">
+                                          <h5 className="text-[13px] font-black text-slate-950 line-clamp-2 leading-tight" title={v.snippet?.title}>
+                                            <button type="button" onClick={() => openInlineVideo(v.id)} className="text-left hover:text-blue-600 transition-colors">{v.snippet?.title}</button>
+                                          </h5>
+                                          <div className="text-[10px] font-bold text-slate-500 mt-1 truncate">{v.snippet?.channelTitle}</div>
+                                          <div className="vtw-related-video-stats grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-[10px] font-black">
+                                            <span>Views: <b>{formatVNNumber(Number(v.statistics?.viewCount || 0))}</b></span>
+                                            <span className="text-blue-600">VPH: {formatVNNumber(Math.round(v.vph || 0))}</span>
+                                            <span className={(v.trendScore || 0) >= 70 ? 'text-emerald-600' : 'text-orange-600'}>Score: {v.trendScore || 0}</span>
+                                            <span className="truncate text-slate-500">{formatDetailedDate(v.snippet?.publishedAt)}</span>
+                                          </div>
+                                          <div className="vtw-related-video-actions flex flex-wrap gap-2 mt-3">
+                                            <button onClick={() => setInlineVideoId(v.id)} className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-900 hover:text-white text-[10px] font-black transition-all flex items-center gap-1"><Play size={12} /> Xem</button>
+                                            <button onClick={() => analyzeVideo(v.id)} className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-[10px] font-black transition-all">Phân tích video này</button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+
                    </div>
                   </div>
                 )}
 
                 {nicheActiveSubTab === 'thumbnails' && nicheResults && (
-                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in zoom-in duration-500">
-                      {nicheResults.thumbnails.map((v: any, i: number) => (
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in zoom-in duration-500">
+                      {nicheResults.thumbnails.map((v: any, i: number) => {
+                         const bestThumb = v.snippet.thumbnails.maxres?.url || v.snippet.thumbnails.standard?.url || v.snippet.thumbnails.high?.url || v.snippet.thumbnails.medium?.url || v.snippet.thumbnails.default?.url;
+                         const origThumb = `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg`;
+                         return (
                          <div key={i} className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 group transition-all">
-                            <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
-                               <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                            <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-black">
+                               <img src={bestThumb} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform" onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (img.src !== v.snippet.thumbnails.high?.url) img.src = v.snippet.thumbnails.high?.url || v.snippet.thumbnails.default?.url; }} />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                  <button onClick={() => window.open(v.snippet.thumbnails.high.url, '_blank')} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Xem ảnh gốc"><Eye size={18} /></button>
+                                  <button onClick={() => { const win = window.open(origThumb, '_blank'); setTimeout(() => { try { if (win && win.document && win.document.images[0] && win.document.images[0].naturalWidth < 200) win.location.href = bestThumb; } catch (_) {} }, 1500); }} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Xem ảnh gốc (chất lượng cao nhất)"><Eye size={18} /></button>
                                   <button type="button" onClick={() => openInlineVideo(v.id)} className="bg-white p-2 rounded-full text-black hover:bg-blue-500 hover:text-white transition-colors" title="Mở video trong popup"><Play size={18} /></button>
                                </div>
                             </div>
@@ -7252,7 +9316,7 @@ Quy tắc:
                                </div>
                             </div>
                          </div>
-                      ))}
+                      );})}
                    </div>
                 )}
 
@@ -7425,28 +9489,42 @@ Quy tắc:
               {videoResult && (
                 <div className="space-y-6 text-gray-900 pb-20">
                   {/* Video Title Header */}
-                  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex-1">
+                  <div className="vtw-video-title-header bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="vtw-video-title-text flex-1 min-w-0">
                       <div className="text-[12px] text-blue-600 font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                         <Video size={14} /> TIÊU ĐỀ VIDEO
                       </div>
-                      <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
+                      <h1
+                        className="vtw-video-title-h1 text-xl md:text-2xl font-black text-gray-900 leading-tight truncate max-w-full"
+                        title={videoResult.snippet.title}
+                      >
                         {videoResult.snippet.title}
                       </h1>
                     </div>
-                    <button 
-                      onClick={() => setInlineVideoId(videoResult.id)}
-                      className="bg-red-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 active:scale-95 transition-all shadow-lg shadow-red-100 shrink-0"
-                    >
-                      <Play fill="currentColor" size={18} /> XEM TRONG APP
-                    </button>
+                    <div className="vtw-video-title-actions flex flex-row items-center gap-2 shrink-0">
+                      <button 
+                        onClick={() => setInlineVideoId(videoResult.id)}
+                        className="vtw-video-watch-btn bg-red-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-red-700 active:scale-95 transition-all shadow-lg shadow-red-100 shrink-0"
+                      >
+                        <Play fill="currentColor" size={18} /> <span className="vtw-video-watch-btn-label">XEM VIDEO</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => openVideoMenu(e)}
+                        className="vtw-video-menu-btn bg-gray-100 hover:bg-gray-200 text-gray-700 w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                        title="Thao tác khác"
+                        aria-label="Thao tác khác"
+                      >
+                        <Wrench size={18} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Image 1: Overview Summary */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column: Thumbnail and RPM */}
                     <div className="lg:col-span-4 space-y-4">
-                      <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
+                      <div className="vtw-video-thumb-wrapper relative aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-100 group cursor-pointer" role="button" tabIndex={0} onClick={() => setInlineVideoId(videoResult.id)} onContextMenu={(e) => openVideoMenu(e)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ' ) setInlineVideoId(videoResult.id); }}>
                         <img 
                           src={videoResult.snippet.thumbnails.maxres?.url || videoResult.snippet.thumbnails.high?.url} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -7456,8 +9534,9 @@ Quy tắc:
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setInlineVideoId(videoResult.id); }}
-                          title="Bấm vào ảnh để xem video trực tiếp trong app"
-                          aria-label="Xem video trực tiếp trong app"
+                          onContextMenu={(e) => openVideoMenu(e)}
+                          title="Xem video (chuột phải để mở menu thao tác)"
+                          aria-label="Xem video"
                           className="absolute inset-0 z-10 transition-colors cursor-pointer bg-transparent border-0"
                         />
 
@@ -7477,18 +9556,17 @@ Quy tắc:
                     </div>
 
                     {/* Right Column: Metrics and Channels */}
-                    <div className="lg:col-span-8 flex flex-col gap-4">
-                      {/* Metrics Card Row */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="lg:col-span-8 flex flex-col gap-3">
+                      {/* Hàng 2: Lượt xem - Lượt thích - Bình luận */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {[
                           { label: 'LƯỢT XEM', value: videoResult.statistics?.viewCount ? parseInt(videoResult.statistics.viewCount).toLocaleString('vi-VN') : '0', icon: Eye, color: 'text-blue-600', iconBg: 'bg-blue-50' },
                           { label: 'LƯỢT THÍCH', value: videoResult.statistics?.likeCount ? parseInt(videoResult.statistics.likeCount).toLocaleString('vi-VN') : '0', icon: ThumbsUp, color: 'text-red-500', iconBg: 'bg-red-50' },
-                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' },
-                          { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration), icon: Clock, color: 'text-indigo-600', iconBg: 'bg-indigo-50' }
+                          { label: 'BÌNH LUẬN', value: videoResult.statistics?.commentCount ? parseInt(videoResult.statistics.commentCount).toLocaleString('vi-VN') : '0', icon: MessageCircle, color: 'text-green-600', iconBg: 'bg-green-50' }
                         ].map((stat, i) => (
-                          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
                             <div className={`p-2 rounded-lg ${stat.iconBg} ${stat.color}`}>
-                              <stat.icon size={20} />
+                              <stat.icon size={18} />
                             </div>
                             <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{stat.label}</div>
                             <div className="text-xl font-black text-gray-900">{stat.value}</div>
@@ -7496,12 +9574,59 @@ Quy tắc:
                         ))}
                       </div>
 
-                      {/* Time Info Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Hàng 3: Thời lượng - VPH - Score */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Thời lượng */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                            <Clock size={18} />
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">THỜI LƯỢNG</div>
+                          <div className="text-xl font-black text-gray-900">{formatDuration(videoResult.contentDetails?.duration)}</div>
+                        </div>
+                        {/* VPH */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
+                            <TrendingUp size={18} />
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">VPH</div>
+                          <div className="text-xl font-black text-gray-900">
+                            {(() => { const v = parseInt(videoResult.statistics?.viewCount || '0'); const h = Math.max(1, (Date.now() - new Date(videoResult.snippet.publishedAt).getTime()) / 3600000); return Math.round(v / h).toLocaleString('vi-VN'); })()}
+                          </div>
+                        </div>
+                        {/* Score */}
+                        <div className="bg-white p-4 rounded-2xl border border-gray-100 flex flex-col items-start gap-2 shadow-sm">
+                          <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+                            <BarChart2 size={18} />
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">TREND SCORE</div>
+                          <div className="text-xl font-black text-gray-900">
+                            {(() => {
+                              const stats = videoResult.statistics || {};
+                              const views = parseInt(stats.viewCount) || 0;
+                              const vph = (() => { const h = Math.max(1, (Date.now() - new Date(videoResult.snippet.publishedAt).getTime()) / 3600000); return views / h; })();
+                              const ageDays = (Date.now() - new Date(videoResult.snippet.publishedAt).getTime()) / 86400000;
+                              const likes = parseInt(stats.likeCount) || 0;
+                              const comments = parseInt(stats.commentCount) || 0;
+                              const engagement = views > 0 ? ((likes + comments) / views) * 100 : 0;
+                              const viewPerDay = ageDays < 1 ? views : views / ageDays;
+                              let sc = 0;
+                              if (vph >= 100) sc += 40; else if (vph >= 50) sc += 32; else if (vph >= 20) sc += 24; else if (vph >= 10) sc += 16; else if (vph >= 1) sc += 8; else sc += 3;
+                              if (viewPerDay >= 10000) sc += 25; else if (viewPerDay >= 5000) sc += 20; else if (viewPerDay >= 1000) sc += 15; else if (viewPerDay >= 300) sc += 10; else if (viewPerDay >= 50) sc += 5; else sc += 2;
+                              if (ageDays <= 3) sc += 15; else if (ageDays <= 7) sc += 12; else if (ageDays <= 14) sc += 9; else if (ageDays <= 30) sc += 6; else if (ageDays <= 90) sc += 3; else sc += 1;
+                              if (engagement >= 5) sc += 10; else if (engagement >= 2) sc += 7; else if (engagement >= 0.5) sc += 4; else sc += 1;
+                              return `${Math.min(100, sc)}/100`;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hàng 4: Giờ đăng VN - Giờ đăng Quốc tế */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                           <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">GIỜ ĐĂNG (VIỆT NAM)</div>
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center font-black text-[14px]">VN</div>
+                            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center font-black text-[14px] shrink-0">VN</div>
                             <div className="text-left">
                               <div className="text-[15px] font-black text-gray-800">
                                 {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'long', timeZone: 'Asia/Ho_Chi_Minh' })}, lúc {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} (GMT+7)
@@ -7512,7 +9637,7 @@ Quy tắc:
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                           <div className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-4">GIỜ ĐĂNG (QUỐC TẾ)</div>
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-[14px]">UTC</div>
+                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-[14px] shrink-0">UTC</div>
                             <div className="text-left">
                               <div className="text-[15px] font-black text-gray-800">
                                 {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { weekday: 'long', timeZone: 'UTC' })}, lúc {new Date(videoResult.snippet.publishedAt).toLocaleTimeString('vi-VN', { hour12: false, timeZone: 'UTC' })} ngày {new Date(videoResult.snippet.publishedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' })} (UTC)
@@ -7554,10 +9679,11 @@ Quy tắc:
                             ['LINK VIDEO', `https://www.youtube.com/watch?v=${videoResult.id}`],
                             ['TÊN KÊNH', videoResult.snippet.channelTitle],
                             ['CHANNEL ID', videoResult.snippet?.channelId],
-                            ['QUỐC GIA KÊNH', videoResult._channelInfo?.snippet?.country || 'N/A'],
+                            ['QUỐC GIA KÊNH', getCountryDisplayName(videoResult._channelInfo?.snippet?.country)],
                             ['VIDEO ID', videoResult.id],
                             ['CATEGORY ID', videoResult.snippet?.categoryId],
                             ['CATEGORY NAME', getCategoryName(videoResult.snippet?.categoryId)],
+                            ['CATEGORY TIẾNG VIỆT', getCategoryNameVi(videoResult.snippet?.categoryId)],
                             ['GIỜ UTC (GỐC)', new Date(videoResult.snippet?.publishedAt).toISOString()],
                             ['THỜI LƯỢNG', formatDuration(videoResult.contentDetails?.duration)],
                             ['GIỜ VN (GMT+7)', new Date(videoResult.snippet?.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })],
@@ -7580,11 +9706,11 @@ Quy tắc:
                         { label: 'LINK VIDEO', value: `https://www.youtube.com/watch?v=${videoResult.id}`, isLink: true },
                         { label: 'TÊN KÊNH', value: videoResult.snippet.channelTitle },
                         { label: 'CHANNEL ID', value: videoResult.snippet.channelId },
-                        { label: 'QUỐC GIA KÊNH', value: videoResult._channelInfo?.snippet?.country || 'N/A' },
+                        { label: 'QUỐC GIA KÊNH', value: getCountryDisplayName(videoResult._channelInfo?.snippet?.country) },
                         { label: 'VIDEO ID', value: videoResult.id },
                         { label: 'CATEGORY ID', value: videoResult.snippet.categoryId },
                         { label: 'CATEGORY NAME', value: getCategoryName(videoResult.snippet.categoryId) },
-                        { label: 'CATEGORY TIẾNG VIỆT', value: getCategoryName(videoResult.snippet.categoryId) }, 
+                        { label: 'CATEGORY TIẾNG VIỆT', value: getCategoryNameVi(videoResult.snippet.categoryId) }, 
                         { label: 'GIỜ UTC (GỐC)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toISOString().replace('T', ' ').split('.')[0] : 'N/A' },
                         { label: 'THỜI LƯỢNG', value: formatDuration(videoResult.contentDetails?.duration) },
                         { label: 'GIỜ VN (GMT+7)', value: videoResult.snippet?.publishedAt ? new Date(videoResult.snippet.publishedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'N/A' },
@@ -7757,7 +9883,7 @@ Quy tắc:
       {/* Modal Lịch sử Key */}
       <AnimatePresence>
         {showKeyHistory && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-transparent">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px]">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -7914,7 +10040,7 @@ Quy tắc:
 
 
         {showGeminiKeyHistory && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-transparent">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px]">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -8021,7 +10147,7 @@ Quy tắc:
         )}
 
         {showKeyInputModal && (
-          <div className="vtw-api-modal-overlay fixed inset-0 z-[99990] flex items-center justify-center p-4 bg-transparent shadow-2xl">
+          <div className="vtw-api-modal-overlay fixed inset-0 z-[99990] flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px] shadow-2xl">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -8114,12 +10240,6 @@ Quy tắc:
                         {showGeminiApiKeys ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold text-indigo-600">
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Gemini: {getActiveGeminiKeys().length} key</span>
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Đang dùng #{Math.min(geminiKeyIndex + 1, Math.max(getActiveGeminiKeys().length, 1))}</span>
-                      <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1">Lỗi/hết quota: {exhaustedGeminiKeys.length}</span>
-                    </div>
-
                     <div className="mt-3 flex flex-col gap-2">
                       <button
                         type="button"
@@ -8130,9 +10250,6 @@ Quy tắc:
                         {isCheckingGeminiKeys ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                         Check Gemini Key
                       </button>
-                      <div className="text-[10px] font-bold text-slate-500 leading-snug">
-                        Gemini API Key là chìa khóa gọi phân tích. Key có thể lấy từ Gmail/dự án Google AI Studio khác nếu còn quota và được quyền dùng model đã chọn.
-                      </div>
                       {geminiKeyCheckResults.length > 0 && (
                         <div className="space-y-2">
                           <button
@@ -8148,7 +10265,7 @@ Quy tắc:
                                 {item.ok ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> : <XCircle size={15} className="shrink-0 mt-0.5" />}
                                 <div>
                                   <div className="font-black">{item.key ? maskGeminiKey(item.key) : 'Gemini key'} — {item.label}</div>
-                                  <div className="mt-0.5 leading-snug opacity-90 whitespace-pre-line">{item.detail}</div>
+                                  <div className="mt-0.5 leading-snug opacity-90">{item.detail}</div>
                                 </div>
                               </div>
                             </div>
@@ -8160,8 +10277,13 @@ Quy tắc:
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-3 mb-2">
                         <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Chọn model</span>
-                        <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[190px]">
-                          Đang dùng: {geminiModel}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1 text-[9px] font-black text-indigo-600 whitespace-nowrap">
+                            🔄 Tự động xoay vòng key & model khi hết quota
+                          </span>
+                          <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[190px]">
+                            Đang dùng: {geminiModel}
+                          </div>
                         </div>
                       </div>
 
@@ -8260,9 +10382,6 @@ Quy tắc:
                       {isCheckingYoutubeKeys ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                       Check YouTube Key
                     </button>
-                    <div className="text-[10px] font-bold text-slate-500 leading-snug">
-                      YouTube API Key V3 dùng để gọi dữ liệu thật. Key có thể lấy từ Gmail/dự án Google Cloud khác, miễn là đã bật YouTube Data API v3 và còn quota.
-                    </div>
                     {youtubeKeyCheckResults.length > 0 && (
                       <div className="space-y-2">
                         <button
@@ -8278,7 +10397,7 @@ Quy tắc:
                               {item.ok ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> : <XCircle size={15} className="shrink-0 mt-0.5" />}
                               <div>
                                 <div className="font-black">{item.key ? maskYoutubeKey(item.key) : 'YouTube key'} — {item.label}</div>
-                                <div className="mt-0.5 leading-snug opacity-90 whitespace-pre-line">{item.detail}</div>
+                                <div className="mt-0.5 leading-snug opacity-90">{item.detail}</div>
                               </div>
                             </div>
                           </div>
@@ -8437,10 +10556,69 @@ Quy tắc:
         </div>
       )}
 
+      {/* Video Thumbnail Context Menu (Kiểm Tra Video) */}
+      {videoMenuPos.visible && videoResult && (
+        <div 
+          ref={videoMenuRef}
+          className="fixed z-[1000] bg-white border border-gray-200 shadow-[0_8px_24px_rgba(0,0,0,0.18)] w-[280px] text-[13px] rounded-xl overflow-hidden select-none"
+          style={{ 
+            top: Math.min(videoMenuPos.y, window.innerHeight - 240), 
+            left: Math.min(videoMenuPos.x, window.innerWidth - 296) 
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-800 text-white border-b border-white/10">
+            <div className="min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-wide text-blue-200">Thao tác video</div>
+              <div className="truncate text-[12px] font-bold">{videoResult.snippet?.title || 'Video đã chọn'}</div>
+            </div>
+            <button
+              type="button"
+              onClick={closeVideoMenu}
+              className="shrink-0 w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white text-lg leading-none flex items-center justify-center"
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+          </div>
+          <div className="py-1">
+            <button
+              onClick={() => { downloadVideoThumb(videoResult.id); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <Download size={18} className="text-blue-600 shrink-0" />
+              <span className="font-medium leading-tight">Tải ảnh thumbnail <span className="text-[10px] text-gray-400 font-normal">(gốc 1280×720)</span></span>
+            </button>
+            <button
+              onClick={() => { openVideoThumb(videoResult.id); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <Image size={18} className="text-purple-600 shrink-0" />
+              <span className="font-medium leading-tight">Mở ảnh thumbnail <span className="text-[10px] text-gray-400 font-normal">(gốc 1280×720)</span></span>
+            </button>
+            <button
+              onClick={() => { copyVideoLink(videoResult.id); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <Copy size={18} className="text-gray-500 shrink-0" />
+              <span className="font-medium">Sao chép link video</span>
+            </button>
+            <div className="border-t border-gray-100 my-1"></div>
+            <button
+              onClick={() => { goToSpy(videoResult.snippet.channelId); closeVideoMenu(); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-gray-100 flex items-center gap-3 text-gray-700 transition-colors"
+            >
+              <BarChart2 size={18} className="text-green-600 shrink-0" />
+              <span className="font-medium">Phân tích kênh này (Spy)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal */}
       <AnimatePresence>
         {confirmModal.isOpen && (
-          <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-transparent p-4 pointer-events-auto">
+          <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 pointer-events-auto">
             <motion.div 
               className="bg-white rounded-xl shadow-[0_18px_55px_rgba(0,0,0,0.35)] max-w-sm w-full overflow-hidden border border-gray-200"
               initial={{ scale: 0.9, opacity: 0 }}
@@ -8488,7 +10666,7 @@ Quy tắc:
 
       <AnimatePresence>
         {showNicheModal && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent p-4" onClick={() => setShowNicheModal(false)}>
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4" onClick={() => setShowNicheModal(false)}>
             <motion.div 
               onClick={(e) => e.stopPropagation()}
               className="bg-[#f8f9fa] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
@@ -8530,7 +10708,7 @@ Quy tắc:
                          <div className="relative">
                            <select
                               value={trendingRegion}
-                              onChange={(e) => { const nextRegion = e.target.value; setTrendingRegion(nextRegion); setSuggestedNiches(getLocalizedNicheTemplate(nextRegion)); setTrendingCacheMeta(null); }}
+                              onChange={(e) => { const nextRegion = e.target.value; const hydrated = getHydratedTrendingNiches(nextRegion); setTrendingRegion(nextRegion); setSuggestedNiches(hydrated.categories); setTrendingCacheMeta(hydrated.meta); }}
                               className="appearance-none w-full h-12 bg-gray-50 border border-gray-200 text-gray-700 font-bold text-[12px] px-4 pr-9 rounded-xl outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 shadow-sm cursor-pointer"
                            >
                               {REGIONS.filter(r => r.code).map(r => (
@@ -8604,6 +10782,88 @@ Quy tắc:
       </AnimatePresence>
 
       <AnimatePresence>
+        {showSupportModal && (
+          <div
+            className="fixed inset-0 z-[100000] flex items-center justify-center bg-slate-950/55 backdrop-blur-[2px] p-4"
+            onClick={() => setShowSupportModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 18 }}
+              className="vtw-support-modal w-full max-w-md rounded-[28px] bg-white shadow-2xl border border-blue-100 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50">
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-blue-500">Trung tâm hỗ trợ</div>
+                  <h3 className="text-2xl font-black text-slate-900 mt-1">Hỗ trợ tubekey.vn</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSupportModal(false)}
+                  className="w-10 h-10 rounded-full bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 flex items-center justify-center shadow-sm"
+                  title="Đóng"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <a
+                  href="tel:0386019486"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-blue-800 text-white flex items-center justify-center shadow-lg shrink-0"><Smartphone size={30} /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Điện thoại</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1">038.6019.486</span>
+                  </span>
+                </a>
+
+                <a
+                  href="https://zalo.me/0386019486"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-sky-50 border border-transparent hover:border-sky-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-sky-500 text-white flex items-center justify-center text-[17px] font-black shadow-lg shrink-0">Zalo</span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Zalo</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1">038.6019.486</span>
+                  </span>
+                </a>
+
+                <a
+                  href="https://www.facebook.com/vanthenguyenit"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-purple-50 border border-transparent hover:border-purple-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center shadow-lg shrink-0"><MessageCircle size={31} /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Facebook</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1">Chat qua fanpage</span>
+                  </span>
+                </a>
+
+                <a
+                  href="mailto:vantheweb@gmail.com"
+                  className="vtw-support-item flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all"
+                >
+                  <span className="w-16 h-16 rounded-full bg-blue-800 text-white flex items-center justify-center shadow-lg shrink-0"><MessageSquare size={31} /></span>
+                  <span className="min-w-0">
+                    <span className="block text-xl font-black text-slate-900 leading-tight">Gửi Email</span>
+                    <span className="block text-lg font-bold text-slate-500 mt-1 break-all">vantheweb@gmail.com</span>
+                  </span>
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {inlineVideoId && (
           <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 p-3">
             <motion.div
@@ -8613,7 +10873,7 @@ Quy tắc:
               className="bg-black rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-white/10"
             >
               <div className="flex items-center justify-between bg-slate-950 text-white px-4 py-3">
-                <div className="text-[12px] font-black uppercase tracking-wide">Xem video trực tiếp trong app</div>
+                <div className="text-[12px] font-black uppercase tracking-wide">BẠN ĐANG XEM VIDEO</div>
                 <button type="button" onClick={() => setInlineVideoId(null)} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center">
                   <X size={20} />
                 </button>
@@ -8634,7 +10894,7 @@ Quy tắc:
 
       <AnimatePresence>
         {modalTrendingVideos && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-transparent p-4">
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4">
             <motion.div 
               className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -8666,46 +10926,54 @@ Quy tắc:
                 {modalTrendingVideos.videos.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 font-medium italic">Không tìm thấy video nào.</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {modalTrendingVideos.videos.map((v: any, i: number) => (
                       <div
                         key={i}
-                        className="vtw-niche-video-card vtw-square-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group aspect-square flex flex-col"
+                        className="vtw-trending-video-card bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all group flex flex-col"
                       >
-                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Bấm thumbnail để xem video trực tiếp trong app" className="relative h-[48%] bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
-                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500" />
-                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                               {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : ''}
+                         <button type="button" onClick={() => setInlineVideoId(v.id)} title="Xem video" className="vtw-trending-video-thumb relative bg-black shrink-0 cursor-pointer block p-0 border-0 overflow-hidden">
+                            <img src={v.snippet.thumbnails.high.url} className="w-full h-full object-cover bg-black group-hover:scale-105 transition-transform duration-500" />
+                            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[11px] font-black px-2 py-1 rounded-lg shadow-lg">
+                               {v.contentDetails?.duration ? formatDuration(v.contentDetails.duration) : 'N/A'}
                             </div>
                             <div className="absolute top-2 left-2 flex gap-1">
-                               <div className="bg-orange-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg border border-orange-400">
-                                  SCORE {v.trendScore}
+                               <div className="bg-orange-600 text-white text-[11px] font-black px-3 py-1.5 rounded-lg shadow-lg border border-orange-400">
+                                  SCORE {v.trendScore || 0}
                                </div>
                             </div>
                          </button>
-                         <div className="p-4">
-                            <h4 className="text-[10px] font-black text-gray-900 leading-snug line-clamp-2 uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
-                            <div className="mt-3 bg-gray-50 p-2 rounded-lg">
-                               <div className="flex flex-col mb-2">
-                                  <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
-                                  <span className="text-[10px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
+                         <div className="vtw-trending-video-info p-4 flex-1 min-w-0">
+                            <h4 className="text-[14px] font-black text-gray-900 leading-snug uppercase group-hover:text-blue-600 transition-colors" title={v.snippet.title}>{v.snippet.title}</h4>
+                            <div className="mt-3 bg-gray-50 p-3 rounded-xl">
+                               <div className="flex flex-col mb-3 min-w-0">
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Người đăng</span>
+                                  <span className="text-[13px] font-black text-blue-600 truncate">{v.snippet.channelTitle}</span>
                                </div>
-                               <div className="grid grid-cols-3 gap-2" style={isMobileViewport ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
+                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
-                                     <span className="text-[10px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Views</span>
+                                     <span className="text-[13px] font-black text-gray-800">{formatVNNumber(Number(v.statistics.viewCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Likes</span>
-                                     <span className="text-[10px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Likes</span>
+                                     <span className="text-[13px] font-black text-red-500">{formatVNNumber(Number(v.statistics.likeCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">Comments</span>
-                                     <span className="text-[10px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Comments</span>
+                                     <span className="text-[13px] font-black text-emerald-600">{formatVNNumber(Number(v.statistics.commentCount || 0))}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                     <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tight">VPH</span>
-                                     <span className="text-[10px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">VPH</span>
+                                     <span className="text-[13px] font-black text-orange-500">+{formatVNNumber(Math.round(v.vph || 0))}</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Trend Score</span>
+                                     <span className="text-[13px] font-black text-orange-600">{v.trendScore || 0}/100</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Ngày đăng</span>
+                                     <span className="text-[13px] font-black text-gray-800">{v.snippet.publishedAt ? new Date(v.snippet.publishedAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
                                   </div>
                                </div>
                             </div>
@@ -8720,265 +10988,105 @@ Quy tắc:
         )}
       </AnimatePresence>
 
-      <style>{`
-        @media (max-width: 900px) {
-          .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
-          .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; justify-content: center !important; display: flex !important; align-items: center !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-          .vtw-results-table-wrap table, .vtw-results-table-wrap thead, .vtw-results-table-wrap tbody, .vtw-results-table-wrap th, .vtw-results-table-wrap td, .vtw-results-table-wrap tr { display: block; }
-          .vtw-results-table-wrap thead { display: none; }
-          .vtw-results-table-wrap .vtw-results-table { min-width: 0 !important; width: 100% !important; }
-          .vtw-results-table-wrap tbody tr { margin: 12px 10px !important; padding: 16px !important; border-radius: 18px !important; background: white !important; box-shadow: 0 8px 22px rgba(15,23,42,.08) !important; border: 1px solid #dbeafe !important; height: auto !important; display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; column-gap: 14px !important; }
-          .vtw-results-table-wrap tbody tr td { border-right: 0 !important; border-bottom: 1px dashed #e5edf7 !important; padding: 10px 0 !important; width: 100% !important; text-align: left !important; display: grid !important; grid-template-columns: 1fr !important; gap: 4px !important; align-items: start !important; min-width: 0 !important; }
-          .vtw-results-table-wrap tbody tr td:before { content: ''; font-size: 11px; font-weight: 900; color: #64748b; text-transform: uppercase; }
-          .vtw-results-table-wrap tbody tr td:nth-child(3):before { content: 'Tên kênh'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(4):before { content: 'Mã kênh'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(5):before { content: 'Từ khóa/ngách'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(6):before { content: 'Chủ đề'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(7):before { content: 'Thu nhập ($)'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(8):before { content: 'URL'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(9):before { content: 'Quốc gia'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(10):before { content: 'Ngày tạo'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(11):before { content: 'Tuổi kênh'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(12):before { content: 'Sub'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(13):before { content: 'Views'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(14):before { content: 'Videos'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(15):before { content: 'Điểm'; }
-          .vtw-results-table-wrap tbody tr td:nth-child(16):before { content: 'Thao tác'; }
+      {user && (
+        <nav className="vtw-mobile-bottom-nav" aria-label="Menu chức năng mobile" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 1 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(1)}
+            aria-label="Tìm kênh"
+            title="Tìm kênh"
+          >
+            <Search size={22} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 2 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(2)}
+            aria-label="Spy"
+            title="Spy"
+          >
+            <BarChart2 size={22} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 4 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(4)}
+            aria-label="Video"
+            title="Video"
+          >
+            <Video size={22} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 3 ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(3)}
+            aria-label="Tracking"
+            title="Tracking"
+          >
+            <UserRoundSearch size={22} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            className={`vtw-mobile-bottom-nav-item ${activeTab === 5 ? 'is-active' : ''}`}
+            onClick={() => { setActiveTab(5); setNicheActiveSubTab('videos'); }}
+            aria-label="Ngách"
+            title="Ngách"
+          >
+            <LayoutGrid size={22} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            className="vtw-mobile-bottom-nav-item vtw-mobile-bottom-nav-account"
+            onClick={() => { setShowAccountModal(true); refreshSubscription(user, true, true); }}
+            aria-label="Tài khoản"
+            title="Tài khoản"
+          >
+            <img
+              src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}`}
+              alt="Tài khoản"
+              referrerPolicy="no-referrer"
+            />
+          </button>
+        </nav>
+      )}
 
-          .vtw-results-table-wrap tbody tr td:nth-child(1), .vtw-results-table-wrap tbody tr td:nth-child(2) { grid-column: span 1 !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(3) { grid-column: 1 / 2 !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(4) { grid-column: 2 / 3 !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(5),
-          .vtw-results-table-wrap tbody tr td:nth-child(6),
-          .vtw-results-table-wrap tbody tr td:nth-child(7),
-          .vtw-results-table-wrap tbody tr td:nth-child(8),
-          .vtw-results-table-wrap tbody tr td:nth-child(9),
-          .vtw-results-table-wrap tbody tr td:nth-child(10),
-          .vtw-results-table-wrap tbody tr td:nth-child(11),
-          .vtw-results-table-wrap tbody tr td:nth-child(12),
-          .vtw-results-table-wrap tbody tr td:nth-child(13),
-          .vtw-results-table-wrap tbody tr td:nth-child(14),
-          .vtw-results-table-wrap tbody tr td:nth-child(15) { grid-column: span 1 !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-column: 1 / -1 !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(16) { grid-template-columns: 1fr !important; }
-          textarea[placeholder*='Key 1'] { white-space: pre !important; overflow-x: auto !important; word-break: normal !important; font-size: 11px !important; line-height: 1.55 !important; }
-          .vtw-spy-report { text-align: left !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(3), .vtw-results-table-wrap tbody tr td:nth-child(4) { display: grid !important; grid-template-columns: 1fr !important; }
-          .vtw-results-table-wrap tbody tr td:nth-child(3) a, .vtw-results-table-wrap tbody tr td:nth-child(4) { font-size: 12px !important; line-height: 1.25 !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
-          .vtw-results-table-wrap .vtw-channel-actions { display: grid !important; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) !important; gap: 6px !important; align-items: center !important; width: 100% !important; }
-          .vtw-results-table-wrap .vtw-channel-actions button { min-width: 0 !important; min-height: 40px !important; padding: 6px 3px !important; font-size: 9px !important; border-radius: 10px !important; }
-          .api-settings-modal h1, .api-modal-title, [class*="api"] h1 { font-size: 22px !important; line-height: 1.05 !important; letter-spacing: -0.02em !important; }
-          textarea[placeholder*='Key 1'] { font-size: 10px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; word-break: normal !important; }
-          .vtw-sub-stepper { transform: scale(.95); transform-origin: right center; }
-          textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 12px !important; line-height: 1.55 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
-          .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
-        }
+      {/* === Mobile/responsive CSS đã được tách ra ./mobile.css (import trong main.tsx) === */}
 
-          @media (max-width: 900px) {
-            .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 8px !important; }
-            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
-            .vtw-header-actions { flex: 0 0 100% !important; width: 100% !important; overflow: visible !important; justify-content: stretch !important; flex-wrap: nowrap !important; gap: 5px !important; padding-bottom: 4px !important; display: grid !important; grid-template-columns: minmax(0, 1.7fr) 42px minmax(64px, .95fr) 42px !important; align-items: stretch !important; }
-            .vtw-user-header-row { flex-shrink: 1 !important; min-width: 0 !important; display: contents !important; }
-            .vtw-account-box { grid-column: auto !important; max-width: none !important; width: 100% !important; min-width: 0 !important; padding: 5px 6px !important; justify-content: flex-start !important; }
-            .vtw-account-box > div { min-width: 0 !important; flex: 1 1 auto !important; }
-            .vtw-account-box img { width: 25px !important; height: 25px !important; }
-            .vtw-user-email { max-width: calc(100vw - 110px) !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; vertical-align: bottom !important; font-size: 9px !important; }
-            .vtw-header-actions a, .vtw-header-actions button { min-height: 31px !important; padding: 4px 3px !important; font-size: 6px !important; border-radius: 10px !important; white-space: normal !important; }
-            .vtw-header-actions svg { width: 13px !important; height: 13px !important; }
-            .vtw-header-icon-btn { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 2px !important; text-align: center !important; line-height: 1.05 !important; }
-            .vtw-header-icon-btn span { display: block !important; font-size: 5.4px !important; line-height: 1.05 !important; }
-            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; grid-column: auto !important; }
-            .vtw-niche-content { padding: 12px !important; }
-            .vtw-niche-video-card { width: 100% !important; max-width: 100% !important; display: flex !important; flex-direction: column !important; }
-            .vtw-square-video-card { aspect-ratio: 1 / 1 !important; min-height: 0 !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; padding: 9px 10px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
-            .vtw-niche-video-card .vtw-video-thumb { width: 100% !important; height: 25% !important; aspect-ratio: auto !important; border-radius: 16px 16px 0 0 !important; position: relative !important; }
-            .vtw-niche-video-card .vtw-video-thumb img { width: 100% !important; height: 100% !important; object-fit: contain !important; background: #000 !important; }
-            .vtw-niche-video-card .vtw-thumb-play, .vtw-thumb-play * { display: none !important; }
-            .vtw-niche-video-card .vtw-thumb-play span { width: 36px !important; height: 36px !important; }
-            .vtw-niche-video-card .vtw-thumb-play svg { width: 17px !important; height: 17px !important; }
-            .vtw-niche-video-card .vtw-video-title { min-height: 0 !important; font-size: 6.4px !important; line-height: 1.05 !important; margin-bottom: 0 !important; display: -webkit-box !important; -webkit-line-clamp: 2 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; }
-            .vtw-niche-video-card .vtw-video-actions { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3px !important; margin-bottom: 0 !important; }
-            .vtw-niche-video-card .vtw-video-actions button { padding: 3px 2px !important; min-height: 21px !important; font-size: 5.4px !important; border-radius: 9px !important; gap: 1px !important; flex-direction: column !important; }
-            .vtw-niche-video-card .vtw-video-actions button svg { width: 9px !important; height: 9px !important; }
-            .vtw-niche-video-card .vtw-video-actions button span { line-height: 1.02 !important; }
-            .vtw-niche-video-card .vtw-video-info { padding: 5px !important; display: flex !important; flex-direction: column !important; gap: 3px !important; }
-            .vtw-niche-video-card .vtw-video-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 3px !important; padding-top: 3px !important; margin-top: auto !important; }
-            .vtw-niche-video-card .vtw-video-stat { min-height: 24px !important; padding: 2px 3px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; border-radius: 8px !important; gap: 3px !important; }
-            .vtw-niche-video-card .vtw-video-stat svg { width: 8px !important; height: 8px !important; flex: 0 0 auto !important; }
-            .vtw-niche-video-card .vtw-video-stat span { font-size: 5.4px !important; line-height: 1.05 !important; text-align: left !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child { margin-bottom: 0 !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child img { width: 16px !important; height: 16px !important; }
-            .vtw-niche-video-card .vtw-video-info > div:first-child span { font-size: 5.8px !important; line-height: 1.05 !important; }
-            .vtw-niche-video-card .vtw-video-stat:nth-child(1) span { font-size: 4.8px !important; }
-
-            /* VTW FINAL HARD FIX 20260525: mobile portrait header one horizontal row */
-            .vtw-app-header > div { flex-wrap: wrap !important; align-items: center !important; row-gap: 7px !important; }
-            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; justify-content: flex-start !important; }
-            .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1.35fr) 40px 58px 40px !important; width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; gap: 4px !important; overflow: visible !important; align-items: stretch !important; }
-            .vtw-user-header-row { display: contents !important; }
-            .vtw-account-box { grid-column: auto !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 4px 4px !important; }
-            .vtw-account-box img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
-            .vtw-user-email { max-width: 68px !important; font-size: 7px !important; line-height: 1.05 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; padding: 3px 1px !important; }
-            .vtw-header-icon-btn { min-height: 30px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
-            .vtw-header-icon-btn svg { width: 12px !important; height: 12px !important; }
-            .vtw-header-icon-btn span { font-size: 5px !important; line-height: 1 !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; word-break: normal !important; overflow-wrap: normal !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; padding: 9px 10px !important; }
-            .vtw-shorts-card { aspect-ratio: auto !important; min-height: 0 !important; background: #fff !important; border-color: #e5e7eb !important; color: #0f172a !important; }
-            .vtw-shorts-card .vtw-shorts-thumb { position: relative !important; height: auto !important; aspect-ratio: 9 / 16 !important; max-height: 520px !important; object-fit: contain !important; opacity: 1 !important; }
-
-            /* VTW PORTRAIT HEADER FORCE FIT 20260525 */
-            @media (max-width: 430px) {
-              .vtw-app-header { padding-left: 6px !important; padding-right: 6px !important; }
-              .vtw-app-header > div { gap: 4px !important; row-gap: 5px !important; }
-              .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; max-width: 100% !important; }
-              .vtw-app-title img { width: 24px !important; height: 24px !important; }
-              .vtw-title-mobile { font-size: 13px !important; max-width: calc(100vw - 72px) !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-              .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) 34px 46px 34px !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 100% !important; gap: 3px !important; justify-content: stretch !important; align-items: stretch !important; overflow: visible !important; }
-              .vtw-user-header-row { display: contents !important; }
-              .vtw-account-box { grid-column: 1 !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; padding: 3px !important; gap: 3px !important; border-radius: 10px !important; }
-              .vtw-account-box img { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
-              .vtw-user-email { max-width: 100% !important; font-size: 6.5px !important; line-height: 1.05 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-              .vtw-account-box .text-\[8px\] { font-size: 5.5px !important; }
-              .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { width: 100% !important; min-width: 0 !important; max-width: 100% !important; padding: 2px 1px !important; border-radius: 10px !important; }
-              .vtw-header-icon-btn { min-height: 29px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
-              .vtw-header-icon-btn svg { width: 11px !important; height: 11px !important; }
-              .vtw-header-icon-btn span { display: block !important; font-size: 4.8px !important; line-height: 1 !important; white-space: nowrap !important; }
-              textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; letter-spacing: 0 !important; padding: 9px 10px !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; overflow-x: auto !important; overflow-y: auto !important; }
-            }
-          }
-
-
-          /* VTW ABSOLUTE FINAL: portrait header one-line actions + readable Gemini key */
-          @media (max-width: 768px) {
-            .vtw-app-header { padding: 6px 6px 7px !important; overflow: visible !important; }
-            .vtw-app-header > div { display: flex !important; flex-wrap: wrap !important; gap: 5px !important; align-items: center !important; }
-            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; margin: 0 !important; min-width: 0 !important; }
-            .vtw-app-title img { width: 24px !important; height: 24px !important; }
-            .vtw-title-mobile { font-size: 14px !important; line-height: 1.1 !important; max-width: calc(100vw - 62px) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
-            .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) 36px 56px 36px !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 100% !important; gap: 3px !important; align-items: stretch !important; justify-content: stretch !important; overflow: visible !important; }
-            .vtw-user-header-row { display: contents !important; }
-            .vtw-account-box { display: flex !important; grid-column: 1 / 2 !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 34px !important; padding: 3px 5px !important; gap: 4px !important; border-radius: 11px !important; justify-content: flex-start !important; }
-            .vtw-account-box img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
-            .vtw-user-email { display: block !important; max-width: 100% !important; font-size: 7px !important; line-height: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            .vtw-account-box .text-\[8px\] { font-size: 5.5px !important; line-height: 1 !important; }
-            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { display: flex !important; visibility: visible !important; opacity: 1 !important; position: static !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 34px !important; padding: 2px 1px !important; margin: 0 !important; border-radius: 11px !important; }
-            .vtw-header-logout { grid-column: 2 / 3 !important; }
-            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
-            .vtw-header-refresh { grid-column: 4 / 5 !important; }
-            .vtw-header-icon-btn { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; text-align: center !important; }
-            .vtw-header-icon-btn svg { width: 11px !important; height: 11px !important; flex: 0 0 auto !important; }
-            .vtw-header-icon-btn span { display: block !important; font-size: 4.6px !important; line-height: 1 !important; white-space: nowrap !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 11px !important; line-height: 1.45 !important; letter-spacing: 0 !important; font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; word-break: normal !important; overflow-wrap: normal !important; overflow-x: auto !important; }
-
-
-          /* VTW OVERRIDE: ưu tiên mobile dọc - cùng 1 hàng, nút nâng cấp luôn hiện */
-          @media (max-width: 768px) {
-            .vtw-app-header { padding: 5px 6px 7px !important; overflow: visible !important; }
-            .vtw-app-header > div { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 4px !important; }
-            .vtw-app-title { flex: 0 0 100% !important; width: 100% !important; min-width: 0 !important; margin: 0 !important; }
-            .vtw-app-title img { width: 22px !important; height: 22px !important; flex: 0 0 22px !important; }
-            .vtw-title-mobile { display: inline-block !important; max-width: calc(100vw - 64px) !important; font-size: 10.5px !important; line-height: 1.05 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            .vtw-header-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) 28px 66px 28px !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 100% !important; gap: 3px !important; align-items: stretch !important; overflow: visible !important; }
-            .vtw-user-header-row { display: contents !important; }
-            .vtw-account-box { grid-column: 1 / 2 !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; height: 32px !important; padding: 2px 4px !important; gap: 3px !important; border-radius: 10px !important; }
-            .vtw-account-box img { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
-            .vtw-user-email { max-width: 100% !important; font-size: 6.2px !important; line-height: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-            .vtw-account-box .text-\[8px\] { font-size: 5px !important; line-height: 1 !important; }
-            .vtw-header-logout { grid-column: 2 / 3 !important; }
-            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
-            .vtw-header-refresh { grid-column: 4 / 5 !important; }
-            .vtw-header-logout, .vtw-header-upgrade, .vtw-header-refresh { display: flex !important; visibility: visible !important; opacity: 1 !important; position: static !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: 32px !important; margin: 0 !important; padding: 2px 1px !important; border-radius: 10px !important; }
-            .vtw-header-icon-btn { flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 1px !important; }
-            .vtw-header-icon-btn svg { width: 12px !important; height: 12px !important; flex: 0 0 auto !important; }
-            .vtw-header-icon-btn span { font-size: 5.4px !important; line-height: 1 !important; white-space: nowrap !important; display: block !important; }
-            .vtw-header-logout span, .vtw-header-refresh span, .vtw-mobile-hide-label { display: none !important; }
-            .vtw-header-upgrade span { display: block !important; font-size: 5.8px !important; line-height: 1 !important; white-space: nowrap !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 18px !important; line-height: 1.45 !important; letter-spacing: 0 !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; white-space: pre !important; word-break: normal !important; overflow-wrap: normal !important; overflow-x: auto !important; padding: 10px 12px !important; }
-          }
-
-          @media (min-width: 769px) {
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input { font-size: 18px !important; line-height: 1.45 !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
-          }
-          }
-
-
-          /* VTW FINAL 20260525: status key mask + logout horizontal + Gemini font sync */
-          @media (max-width: 768px) {
-            .vtw-header-actions {
-              display: grid !important;
-              grid-template-columns: minmax(0, 1fr) 74px 66px 30px !important;
-              width: 100% !important;
-              max-width: 100% !important;
-              gap: 3px !important;
-              align-items: stretch !important;
-              overflow: visible !important;
-            }
-            .vtw-header-logout {
-              grid-column: 2 / 3 !important;
-              display: flex !important;
-              flex-direction: row !important;
-              align-items: center !important;
-              justify-content: center !important;
-              gap: 3px !important;
-              height: 32px !important;
-              padding: 2px 4px !important;
-              white-space: nowrap !important;
-            }
-            .vtw-header-logout svg { width: 12px !important; height: 12px !important; flex: 0 0 auto !important; }
-            .vtw-header-logout .vtw-logout-label {
-              display: inline-block !important;
-              font-size: 6.8px !important;
-              line-height: 1 !important;
-              white-space: nowrap !important;
-            }
-            .vtw-header-upgrade { grid-column: 3 / 4 !important; }
-            .vtw-header-refresh { grid-column: 4 / 5 !important; }
-            .vtw-header-refresh span, .vtw-mobile-hide-label { display: none !important; }
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input {
-              font-size: 14px !important;
-              line-height: 1.45 !important;
-              letter-spacing: 0 !important;
-              font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-              white-space: pre !important;
-              word-break: normal !important;
-              overflow-wrap: normal !important;
-              overflow-x: auto !important;
-              padding: 10px 12px !important;
-            }
-          }
-
-          @media (min-width: 769px) {
-            textarea.vtw-gemini-keys-input, .vtw-gemini-keys-input {
-              font-size: 14px !important;
-              line-height: 1.45 !important;
-              letter-spacing: 0 !important;
-              font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
-            }
-          }
-
-      `}
-
-</style>
-
+      {/* === TOAST NOTIFICATION giữa màn hình — auto-dismiss 3s, không stack === */}
+      {toastMsg && (
+        <div className="vtw-toast-overlay" aria-live="polite" role="status">
+          <div className="vtw-toast-box">
+            <span className="vtw-toast-icon">ℹ️</span>
+            <span className="vtw-toast-text">{toastMsg}</span>
+            <button
+              type="button"
+              className="vtw-toast-close"
+              onClick={() => setToastMsg(null)}
+              aria-label="Đóng"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {showScrollTop && (
         <button
           type="button"
-          className="vtw-scroll-top-mobile"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           aria-label="Lên đầu trang"
           title="Lên đầu trang"
+          className="fixed bottom-12 right-5 z-[4000] w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center transition-all hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-300 md:bottom-14 md:right-6 md:w-14 md:h-14"
         >
-          ↑
+          <ChevronUp size={26} strokeWidth={3} />
         </button>
       )}
 
       <AnimatePresence>
         {showAccountModal && user && (
           <div
-            className="vtw-account-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center bg-transparent p-4"
+            className="vtw-account-modal-overlay fixed inset-0 z-[5000] flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4"
             onClick={() => setShowAccountModal(false)}
           >
             <motion.div
