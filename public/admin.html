@@ -75,6 +75,7 @@
     .guide-config{padding:14px 16px}
     .guide-config-title{margin:0 0 10px;color:#0f3b66;font-size:18px;font-weight:500;display:flex;align-items:center;gap:8px}
     .guide-grid{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:10px;align-items:end}
+    .guide-fields{display:grid;grid-template-columns:1fr;gap:12px}
     .guide-field label{display:block;color:#000;font-size:13px;margin-bottom:7px;font-weight:400}
     .guide-field input{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:12px 14px;font-size:15px;outline:none;color:#000}
     .guide-msg{display:none;margin-top:10px;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4}
@@ -135,9 +136,15 @@
       <div class="shared-secret guide-config">
         <h2 class="guide-config-title">🎬 Video hướng dẫn</h2>
         <div class="guide-grid">
-          <div class="guide-field">
-            <label>Link video hướng dẫn YouTube</label>
-            <input id="adminGuideVideoUrl" type="url" placeholder="Dán link YouTube hướng dẫn vào đây" />
+          <div class="guide-fields">
+            <div class="guide-field">
+              <label>Link video hướng dẫn YouTube</label>
+              <input id="adminGuideVideoUrl" type="url" placeholder="Dán link YouTube hướng dẫn vào đây" />
+            </div>
+            <div class="guide-field">
+              <label>Link nút Hướng dẫn lấy Key</label>
+              <input id="adminKeyGuideVideoUrl" type="url" placeholder="Dán link video YouTube hướng dẫn lấy API Key" />
+            </div>
           </div>
           <button id="saveGuideVideoBtn" class="admin-btn" type="button">Lưu link</button>
           <button id="previewGuideVideoBtn" class="admin-btn gray" type="button">Xem thử</button>
@@ -152,13 +159,13 @@
     </div>
 
     <div id="accountsCard" class="frame-card">
-      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=81" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+      <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=85" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
-      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=81" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
+      <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=85" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
     </div>
     <div id="emailCard" class="frame-card hidden">
-      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=81" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
+      <iframe id="emailFrame" scrolling="no" data-src="/admin-email-panel.html?v=85" title="Mẫu email" onload="handleFrameLoad(this, 'email')"></iframe>
     </div>
     </div>
   </div>
@@ -187,6 +194,7 @@
     var ADMIN_SAVED_EMAIL_KEY = 'TUBEKEY_ADMIN_SAVED_EMAIL';
     var ADMIN_SAVED_PASS_KEY = 'TUBEKEY_ADMIN_SAVED_PASSWORD';
     var ADMIN_GUIDE_VIDEO_URL = '';
+    var ADMIN_KEY_GUIDE_VIDEO_URL = '';
     function setGuideMsg(text, ok){
       var el = document.getElementById('guideVideoMsg');
       if (!el) return;
@@ -238,19 +246,30 @@
         var res = await fetch('/api/admin-settings?action=get', { cache:'no-store', headers:{ 'x-admin-password': getSharedSecret() } });
         var data = await res.json().catch(function(){ return {}; });
         if (!res.ok || data.success === false) throw new Error(data.error || 'Không tải được cấu hình video hướng dẫn.');
-        var url = String((data.settings && data.settings.guide && data.settings.guide.videoUrl) || '').trim();
+        var guide = (data.settings && data.settings.guide) || {};
+        var url = String(guide.videoUrl || '').trim();
+        var keyGuideUrl = String(guide.keyGuideVideoUrl || '').trim();
         ADMIN_GUIDE_VIDEO_URL = url;
+        ADMIN_KEY_GUIDE_VIDEO_URL = keyGuideUrl;
         var input = document.getElementById('adminGuideVideoUrl');
+        var keyInput = document.getElementById('adminKeyGuideVideoUrl');
         if (input) input.value = url;
+        if (keyInput) keyInput.value = keyGuideUrl;
       } catch (e) {
         setGuideMsg(e && e.message ? e.message : 'Không tải được cấu hình video hướng dẫn.', false);
       }
     }
     async function saveGuideSettings(){
       var input = document.getElementById('adminGuideVideoUrl');
+      var keyInput = document.getElementById('adminKeyGuideVideoUrl');
       var url = String((input && input.value) || '').trim();
+      var keyGuideUrl = String((keyInput && keyInput.value) || '').trim();
       if (url && !extractGuideYoutubeId(url)) {
-        setGuideMsg('Vui lòng dán link YouTube hợp lệ trước khi lưu.', false);
+        setGuideMsg('Link video hướng dẫn chính phải là link YouTube hợp lệ.', false);
+        return;
+      }
+      if (keyGuideUrl && !extractGuideYoutubeId(keyGuideUrl)) {
+        setGuideMsg('Link nút Hướng dẫn lấy Key phải là link YouTube hợp lệ.', false);
         return;
       }
       try {
@@ -258,13 +277,16 @@
         var res = await fetch('/api/admin-settings?action=save-guide', {
           method:'POST',
           headers:{ 'Content-Type':'application/json', 'x-admin-password': getSharedSecret() },
-          body: JSON.stringify({ guide:{ videoUrl:url } })
+          body: JSON.stringify({ guide:{ videoUrl:url, keyGuideVideoUrl:keyGuideUrl } })
         });
         var data = await res.json().catch(function(){ return {}; });
         if (!res.ok || data.success === false) throw new Error(data.error || 'Không lưu được link video hướng dẫn.');
-        ADMIN_GUIDE_VIDEO_URL = String((data.settings && data.settings.guide && data.settings.guide.videoUrl) || url).trim();
+        var savedGuide = (data.settings && data.settings.guide) || {};
+        ADMIN_GUIDE_VIDEO_URL = String(savedGuide.videoUrl || url).trim();
+        ADMIN_KEY_GUIDE_VIDEO_URL = String(savedGuide.keyGuideVideoUrl || keyGuideUrl).trim();
         if (input) input.value = ADMIN_GUIDE_VIDEO_URL;
-        setGuideMsg(ADMIN_GUIDE_VIDEO_URL ? 'Đã lưu link video hướng dẫn.' : 'Đã xóa link video hướng dẫn.', true);
+        if (keyInput) keyInput.value = ADMIN_KEY_GUIDE_VIDEO_URL;
+        setGuideMsg('Đã lưu link video hướng dẫn và link nút Hướng dẫn lấy Key.', true);
       } catch (e) {
         setGuideMsg(e && e.message ? e.message : 'Không lưu được link video hướng dẫn.', false);
       }
