@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giữ Supabase hoạt động</title>
+  <style>
+    :root{--bg:#f4f8fd;--card:#fff;--line:#d8e3ef;--text:#000;--muted:#334155;--cyan:#22d3ee;--blue:#0f3b66;--green:#16a34a;--red:#dc2626;--amber:#d97706}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:0!important;overflow:visible!important;background:transparent;color:#000;font-family:Arial,"Helvetica Neue",sans-serif;font-weight:400}
+    .page{padding:24px 24px 120px;max-width:1280px;margin:0 auto;overflow:visible!important}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+    h1{margin:0;color:var(--blue);font-size:28px;font-weight:400;letter-spacing:-.2px}
+    .sub{margin-top:7px;font-size:14px;line-height:1.55;color:#000;max-width:850px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 38px rgba(15,23,42,.07);margin-bottom:18px;overflow:visible}
+    .head{padding:16px 20px;border-bottom:1px solid var(--line)}
+    .head h2{margin:0;font-size:20px;font-weight:400;color:var(--blue);border-left:4px solid var(--cyan);padding-left:10px}
+    .body{padding:18px 20px}
+    .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+    .field{display:flex;flex-direction:column;gap:7px}
+    label{font-size:13px;color:#000}
+    input,select{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#000;padding:12px 13px;font-size:15px;outline:none}
+    input:focus,select:focus{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+    .toggle{display:flex;align-items:center;gap:10px;min-height:47px;border:1px solid #cbd5e1;border-radius:12px;padding:10px 13px;background:#fff}
+    .toggle input{width:19px;height:19px;margin:0}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    button{border:0;border-radius:12px;padding:12px 17px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:400}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .primary{background:var(--cyan);color:#00111f}.green{background:var(--green);color:#fff}.gray{background:#f1f5f9;color:#000;border:1px solid #cbd5e1}
+    .notice{border:1px solid #bae6fd;background:#effaff;border-radius:14px;padding:13px 15px;line-height:1.55;font-size:14px;color:#000;margin-bottom:16px}
+    .notice.warn{border-color:#fed7aa;background:#fff7ed}
+    .status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .status{border:1px solid #dbe7f3;border-radius:14px;background:#f8fbff;padding:14px;min-height:92px}
+    .status .k{font-size:12px;color:#334155;margin-bottom:8px}
+    .status .v{font-size:15px;line-height:1.4;color:#000;word-break:break-word}
+    .ok{color:#087a3d!important}.bad{color:var(--red)!important}.pending{color:var(--amber)!important}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;padding:7px 11px;font-size:13px;border:1px solid #bbf7d0;background:#ecfdf5;color:#065f46}
+    .badge.off{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+    .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:680px;background:#fff}
+    th,td{padding:12px 13px;border-bottom:1px solid #e5edf5;text-align:left;font-size:13px;vertical-align:top;color:#000}
+    th{background:#f8fbff;font-weight:400;color:var(--blue)}
+    tr:last-child td{border-bottom:0}
+    .empty{text-align:center;padding:24px;color:#475569}
+    .msg{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;width:max-content;max-width:calc(100vw - 28px);border-radius:14px;padding:14px 18px;font-size:15px;line-height:1.45;text-align:center;box-shadow:0 18px 55px rgba(15,23,42,.18)}
+    .msg.show.okmsg{display:block;background:#ecfdf5;border:1px solid #86efac;color:#000}.msg.show.errmsg{display:block;background:#fef2f2;border:1px solid #fecaca;color:#000}
+    .small{font-size:13px;line-height:1.55;color:#000;margin-top:12px}
+    @media(max-width:900px){.status-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:700px){
+      .page{padding:12px 8px 170px}.top{flex-direction:column}.top button{width:100%}h1{font-size:25px}.grid,.status-grid{grid-template-columns:1fr}.head{padding:14px 12px}.body{padding:14px 12px}.actions{display:grid;grid-template-columns:1fr}.actions button{width:100%}.card{border-radius:16px}.table-wrap{overflow-x:auto}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="top">
+      <div>
+        <h1>Giữ Supabase hoạt động</h1>
+        <div class="sub">Trang riêng này tạo hoạt động đọc và ghi thật trên cơ sở dữ liệu theo lịch, giúp hạn chế dự án Supabase Free bị xem là ít hoạt động trong khoảng 7 ngày.</div>
+      </div>
+      <button id="reloadBtn" class="gray" type="button">Tải lại trạng thái</button>
+    </div>
+
+    <div class="notice">
+      Vercel Cron gọi hệ thống mỗi ngày lúc khoảng <b>08:00–08:59 giờ Việt Nam</b>. Nếu đến chu kỳ đã chọn, hệ thống sẽ ghi heartbeat vào bảng <code>app_settings</code> rồi đọc lại để xác minh kết nối.
+    </div>
+
+    <section class="card">
+      <div class="head"><h2>Thiết lập tự động</h2></div>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label>Trạng thái</label>
+            <label class="toggle"><input id="enabled" type="checkbox" checked /> Bật tự động giữ Supabase hoạt động</label>
+          </div>
+          <div class="field">
+            <label>Chu kỳ kích hoạt</label>
+            <select id="intervalDays">
+              <option value="1">Mỗi 1 ngày</option>
+              <option value="2">Mỗi 2 ngày</option>
+              <option value="3">Mỗi 3 ngày</option>
+              <option value="4">Mỗi 4 ngày</option>
+              <option value="5">Mỗi 5 ngày</option>
+              <option value="6">Mỗi 6 ngày</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Giờ chạy</label>
+            <input value="08:00 giờ Việt Nam" readonly />
+          </div>
+          <div class="field">
+            <label>Giới hạn Serverless Function</label>
+            <input id="functionCount" value="10 / 12" readonly />
+          </div>
+        </div>
+        <div class="actions">
+          <button id="saveBtn" class="primary" type="button">Lưu thiết lập</button>
+          <button id="runBtn" class="green" type="button">Kích hoạt ngay</button>
+        </div>
+        <div class="small">Khuyến nghị để mặc định mỗi 1 ngày. Chu kỳ tối đa được giới hạn 6 ngày để luôn có hoạt động trước mốc 7 ngày.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head"><h2>Trạng thái hệ thống</h2></div>
+      <div class="body">
+        <div class="status-grid">
+          <div class="status"><div class="k">Supabase</div><div id="databaseStatus" class="v pending">Đang kiểm tra...</div></div>
+          <div class="status"><div class="k">Tự động</div><div id="enabledStatus" class="v">—</div></div>
+          <div class="status"><div class="k">CRON_SECRET</div><div id="cronSecretStatus" class="v">—</div></div>
+          <div class="status"><div class="k">Lần thành công gần nhất</div><div id="lastSuccessAt" class="v">Chưa chạy</div></div>
+          <div class="status"><div class="k">Lần dự kiến tiếp theo</div><div id="nextRunAt" class="v">Chưa xác định</div></div>
+          <div class="status"><div class="k">Tổng lần thành công</div><div id="totalSuccess" class="v">0</div></div>
+          <div class="status"><div class="k">Nguồn chạy gần nhất</div><div id="lastSource" class="v">—</div></div>
+          <div class="status"><div class="k">Xác minh đọc lại</div><div id="lastVerifiedAt" class="v">Chưa có</div></div>
+          <div class="status"><div class="k">Lỗi gần nhất</div><div id="lastError" class="v ok">Không có lỗi</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head"><h2>Lịch sử gần đây</h2></div>
+      <div class="body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Thời gian</th><th>Nguồn</th><th>Trạng thái</th><th>Kết quả</th></tr></thead>
+            <tbody id="historyBody"><tr><td colspan="4" class="empty">Chưa có lịch sử kích hoạt.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="message" class="msg"></div>
+
+  <script>
+    const API = '/api/supabase-keepalive';
+    const DEFAULT_ADMIN_SECRET = 'ThanhCong2027###';
+    let SHARED_ADMIN_SECRET = '';
+    const $ = id => document.getElementById(id);
+
+    function syncSharedAdminSecret(value){
+      if (value) SHARED_ADMIN_SECRET = String(value).trim();
+    }
+    window.syncSharedAdminSecret = syncSharedAdminSecret;
+    window.addEventListener('message', event => {
+      if (event.origin === location.origin && event.data?.type === 'ADMIN_SHARED_SECRET') {
+        syncSharedAdminSecret(event.data.value);
+      }
+    });
+
+    function adminSecret(){ return String(SHARED_ADMIN_SECRET || DEFAULT_ADMIN_SECRET).trim(); }
+    function headers(){ return { 'Content-Type':'application/json', 'x-admin-password': adminSecret() }; }
+    function fmt(value){
+      if (!value) return 'Chưa có';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleString('vi-VN', { timeZone:'Asia/Ho_Chi_Minh', hour12:false });
+    }
+    function sourceLabel(value){
+      if (value === 'vercel-cron') return 'Vercel Cron';
+      if (value === 'admin-manual') return 'Admin chạy thủ công';
+      return value || '—';
+    }
+    function show(text, ok=true){
+      const el = $('message');
+      el.textContent = text;
+      el.className = 'msg show ' + (ok ? 'okmsg' : 'errmsg');
+      clearTimeout(show.timer);
+      show.timer = setTimeout(() => { el.className = 'msg'; }, 3600);
+    }
+    function busy(btn, active, label){
+      if (!btn) return;
+      if (active) { btn.dataset.old = btn.textContent; btn.textContent = label || 'Đang xử lý...'; btn.disabled = true; }
+      else { btn.textContent = btn.dataset.old || btn.textContent; btn.disabled = false; }
+    }
+    async function request(action, method='GET', body=null){
+      const res = await fetch(`${API}?action=${encodeURIComponent(action)}`, {
+        method,
+        cache:'no-store',
+        headers: headers(),
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { data = { error:text || `HTTP ${res.status}` }; }
+      if (!res.ok || data.success === false) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+    function render(state={}){
+      $('enabled').checked = state.enabled !== false;
+      $('intervalDays').value = String(state.intervalDays || 1);
+      $('functionCount').value = `${state.serverlessFunctions || 10} / ${state.serverlessLimitHobby || 12}`;
+      $('databaseStatus').textContent = state.databaseConfigured ? 'Đã kết nối' : 'Chưa cấu hình';
+      $('databaseStatus').className = 'v ' + (state.databaseConfigured ? 'ok' : 'bad');
+      $('enabledStatus').innerHTML = `<span class="badge ${state.enabled === false ? 'off' : ''}">${state.enabled === false ? 'Đang tắt' : 'Đang bật'}</span>`;
+      $('cronSecretStatus').textContent = state.cronSecretConfigured ? 'Đã cấu hình' : 'Chưa đặt (nên thêm trên Vercel)';
+      $('cronSecretStatus').className = 'v ' + (state.cronSecretConfigured ? 'ok' : 'pending');
+      $('lastSuccessAt').textContent = state.lastSuccessAt ? fmt(state.lastSuccessAt) : 'Chưa chạy';
+      $('nextRunAt').textContent = state.nextRunAt ? fmt(state.nextRunAt) : 'Sẽ chạy ở Cron gần nhất';
+      $('totalSuccess').textContent = String(state.totalSuccess || 0);
+      $('lastSource').textContent = sourceLabel(state.lastSource);
+      $('lastVerifiedAt').textContent = state.lastVerifiedAt ? fmt(state.lastVerifiedAt) : 'Chưa có';
+      $('lastError').textContent = state.lastError || 'Không có lỗi';
+      $('lastError').className = 'v ' + (state.lastError ? 'bad' : 'ok');
+      const history = Array.isArray(state.history) ? state.history : [];
+      $('historyBody').innerHTML = history.length ? history.map(item => `
+        <tr>
+          <td>${fmt(item.at)}</td>
+          <td>${sourceLabel(item.source)}</td>
+          <td class="${item.status === 'success' ? 'ok' : 'bad'}">${item.status === 'success' ? 'Thành công' : 'Lỗi'}</td>
+          <td>${String(item.message || '').replace(/[<>]/g,'')}</td>
+        </tr>`).join('') : '<tr><td colspan="4" class="empty">Chưa có lịch sử kích hoạt.</td></tr>';
+      if (window.__postAdminPanelHeight) setTimeout(window.__postAdminPanelHeight, 80);
+    }
+    async function loadStatus(showNotice=false){
+      try {
+        const data = await request('status');
+        render(data.state || {});
+        if (showNotice) show('Đã tải trạng thái mới nhất.');
+      } catch (error) {
+        show(error.message || 'Không tải được trạng thái.', false);
+        $('databaseStatus').textContent = 'Lỗi kết nối';
+        $('databaseStatus').className = 'v bad';
+      }
+    }
+    async function save(){
+      const btn = $('saveBtn'); busy(btn, true, 'Đang lưu...');
+      try {
+        const data = await request('save', 'POST', { enabled:$('enabled').checked, intervalDays:Number($('intervalDays').value || 1) });
+        render(data.state || {});
+        show('Đã lưu thiết lập giữ Supabase hoạt động.');
+      } catch (error) { show(error.message || 'Lưu thất bại.', false); }
+      finally { busy(btn, false); }
+    }
+    async function runNow(){
+      const btn = $('runBtn'); busy(btn, true, 'Đang kích hoạt...');
+      try {
+        const data = await request('run-now', 'POST', {});
+        render(data.state || {});
+        show('Đã ghi và đọc xác minh dữ liệu Supabase thành công.');
+      } catch (error) { show(error.message || 'Kích hoạt thất bại.', false); }
+      finally { busy(btn, false); }
+    }
+    $('reloadBtn').addEventListener('click', () => loadStatus(true));
+    $('saveBtn').addEventListener('click', save);
+    $('runBtn').addEventListener('click', runNow);
+    loadStatus(false);
+  </script>
+
+  <script>
+    (function(){
+      function getPanelHeight(){
+        try {
+          var main = document.querySelector('.page') || document.body;
+          var rect = main.getBoundingClientRect();
+          var bottom = Math.max(main.offsetHeight || 0, main.scrollHeight || 0, Math.ceil(rect.height || 0));
+          var nodes = main.querySelectorAll('*');
+          for (var i=0;i<nodes.length;i++){
+            var el=nodes[i]; if(!el || el.offsetParent===null) continue;
+            var r=el.getBoundingClientRect(); if(r) bottom=Math.max(bottom,Math.ceil(r.bottom-rect.top));
+          }
+          return bottom;
+        } catch(_){ return 0; }
+      }
+      function post(){
+        try { if(window.parent && window.parent!==window){ var h=getPanelHeight(); if(h) window.parent.postMessage({type:'ADMIN_PANEL_HEIGHT',height:h},location.origin); } } catch(_){}
+      }
+      window.__postAdminPanelHeight=post;
+      window.addEventListener('load',function(){setTimeout(post,80);setTimeout(post,500)});
+      window.addEventListener('resize',function(){setTimeout(post,80)});
+      try { var target=document.querySelector('.page')||document.body; if(window.ResizeObserver)new ResizeObserver(post).observe(target); if(window.MutationObserver)new MutationObserver(post).observe(target,{childList:true,subtree:true,attributes:true,characterData:true}); } catch(_){}
+    })();
+  </script>
+</body>
+</html>
