@@ -4301,11 +4301,11 @@ JSON mẫu:
   };
 
   const fetchRealKeywordIdeas = async (base: string): Promise<KeywordIdea[]> => {
-    setStatus('Đang lấy từ khóa liên quan sát chủ đề từ YouTube...');
+    setStatus('Đang lấy dữ liệu từ khóa thật từ YouTube API V3...');
     const baseText = normalizeKeywordIdeaText(base);
     if (!baseText) return [];
 
-    const candidateMap = new Map<string, { text: string; relevance: number; source: string; views?: number }>();
+    const candidateMap = new Map<string, { text: string; relevance: number; source: string; views: number; hits: number }>();
     const addCandidate = (value: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0, views = 0) => {
       const cleaned = normalizeKeywordIdeaText(String(value || '').replace(/^#/, ''));
       if (!cleaned || cleaned.length < 2 || cleaned.length > 70) return;
@@ -4315,73 +4315,69 @@ JSON mẫu:
       if (source !== 'base' && relevance < getKeywordRelevanceThreshold(source)) return;
       const finalScore = Math.min(100, relevance + bonus);
       const old = candidateMap.get(normalized);
-      if (!old || finalScore > old.relevance) {
-        candidateMap.set(normalized, { text: cleaned, relevance: finalScore, source, views });
+      if (!old) {
+        candidateMap.set(normalized, { text: cleaned, relevance: finalScore, source, views: Number(views || 0), hits: 1 });
+      } else {
+        old.relevance = Math.max(old.relevance, finalScore);
+        old.views = Math.max(old.views, Number(views || 0));
+        old.hits += 1;
+        const rank = (s: string) => s === 'base' ? 5 : s === 'title' ? 4 : s === 'tag' ? 3 : 2;
+        if (rank(source) > rank(old.source)) old.source = source;
       }
     };
 
     addCandidate(baseText, 'base');
 
     try {
-      // Nguồn ưu tiên: YouTube autocomplete qua proxy cùng miền. Nguồn này sát ý định tìm kiếm hơn tag thô.
-      const autocomplete = await fetchYoutubeAutocompleteSuggestions(baseText, config.region || 'VN');
-      autocomplete.slice(0, 18).forEach((suggestion, idx) => {
-        addCandidate(suggestion, 'autocomplete', Math.max(0, 6 - idx * 0.35));
+      // NGUỒN CHÍNH: YouTube Data API V3 thật.
+      const searchRes = await youtubeFetch('search', {
+        q: baseText,
+        type: 'video',
+        maxResults: 25,
+        part: 'id,snippet',
+        order: 'relevance',
+        regionCode: config.region || 'VN'
       });
 
-      // Chỉ dùng 1 lượt search YouTube làm nguồn bổ sung khi autocomplete chưa đủ.
-      // Tag/tiêu đề bắt buộc đi qua bộ lọc độ liên quan token, không được đẩy thẳng vào bảng.
-      if (candidateMap.size < 14) {
-        const searchRes = await youtubeFetch('search', {
-          q: baseText,
-          type: 'video',
-          maxResults: 8,
-          part: 'id,snippet',
-          order: 'relevance',
-          regionCode: config.region || 'VN'
+      const ids = (searchRes.items || []).map((item: any) => item?.id?.videoId).filter(Boolean).slice(0, 25);
+      if (ids.length) {
+        const videoRes = await youtubeFetch('videos', { id: ids.join(','), part: 'snippet,statistics' });
+        (videoRes.items || []).forEach((v: any) => {
+          const views = Number(v?.statistics?.viewCount || 0);
+          const likes = Number(v?.statistics?.likeCount || 0);
+          const popularityBonus = Math.min(8, Math.log10(Math.max(10, views)) * 0.55 + (likes / Math.max(1, views)) * 18);
+
+          buildKeywordPhrasesFromTitle(v?.snippet?.title || '', baseText).slice(0, 12).forEach((phrase: string, idx: number) => {
+            addCandidate(phrase, 'title', popularityBonus - idx * 0.08, views);
+          });
+          (v?.snippet?.tags || []).slice(0, 14).forEach((tag: string, idx: number) => {
+            addCandidate(tag, 'tag', popularityBonus - idx * 0.06, views);
+          });
         });
-
-        const ids = (searchRes.items || []).map((item: any) => item?.id?.videoId).filter(Boolean).slice(0, 8);
-        if (ids.length) {
-          const videoRes = await youtubeFetch('videos', {
-            id: ids.join(','),
-            part: 'snippet,statistics'
-          });
-
-          (videoRes.items || []).forEach((v: any) => {
-            const views = Number(v?.statistics?.viewCount || 0);
-            const viewBonus = Math.min(4, Math.log10(Math.max(10, views)) * 0.45);
-            buildKeywordPhrasesFromTitle(v?.snippet?.title || '', baseText).slice(0, 10).forEach((phrase: string, idx: number) => {
-              addCandidate(phrase, 'title', viewBonus - idx * 0.12, views);
-            });
-            (v?.snippet?.tags || []).slice(0, 10).forEach((tag: string, idx: number) => {
-              addCandidate(tag, 'tag', viewBonus - idx * 0.1, views);
-            });
-          });
-        }
       }
 
+      // NGUỒN PHỤ: autocomplete chỉ bổ sung nếu dữ liệu V3 chưa đủ.
+      if (candidateMap.size < 20) {
+        setStatus('Đã lấy dữ liệu YouTube V3, đang bổ sung một ít gợi ý tìm kiếm còn thiếu...');
+        const autocomplete = await fetchYoutubeAutocompleteSuggestions(baseText, config.region || 'VN');
+        autocomplete.slice(0, 20).forEach((suggestion, idx) => addCandidate(suggestion, 'autocomplete', Math.max(0, 3 - idx * 0.2)));
+      }
+
+      const sourceWeight = (s: string) => s === 'base' ? 5 : s === 'title' ? 4 : s === 'tag' ? 3 : 2;
       return Array.from(candidateMap.values())
-        .sort((a, b) => {
-          const sourceWeight = (s: string) => s === 'base' ? 4 : s === 'autocomplete' ? 3 : s === 'title' ? 2 : 1;
-          return sourceWeight(b.source) - sourceWeight(a.source) || b.relevance - a.relevance || Number(b.views || 0) - Number(a.views || 0);
-        })
+        .sort((a, b) => sourceWeight(b.source) - sourceWeight(a.source) || b.hits - a.hits || b.relevance - a.relevance || b.views - a.views)
         .slice(0, 20)
         .map((item, idx) => {
           const normalized = normalizeHunterKeyword(item.text);
           const isMain = idx === 0 || normalized === normalizeHunterKeyword(baseText);
           const wordCount = getKeywordTokens(item.text).length;
+          const evidenceBoost = Math.min(1.2, Math.max(0, item.hits - 1) * 0.18);
           const competition = isMain ? 'Trung bình' : wordCount <= 2 ? 'Cao' : wordCount <= 4 ? 'Trung bình' : 'Thấp';
-          const seoScore = isMain ? 10 : Math.max(4.5, Math.min(9.8, item.relevance / 10));
-          return {
-            text: item.text,
-            competition,
-            score: isMain ? '10/10' : `${seoScore.toFixed(1)}/10`,
-            status: 'idle' as const
-          };
+          const seoScore = isMain ? 10 : Math.max(4.5, Math.min(9.8, item.relevance / 10 + evidenceBoost));
+          return { text: item.text, competition, score: isMain ? '10/10' : `${seoScore.toFixed(1)}/10`, status: 'idle' as const };
         });
     } catch (error) {
-      console.error('Error fetching related keywords:', error);
+      console.error('Error fetching YouTube V3 keyword ideas:', error);
       return [{ text: baseText, competition: 'Trung bình', score: '10/10', status: 'idle' }];
     }
   };
@@ -4783,12 +4779,9 @@ JSON mẫu:
   };
 
   const fetchYoutubeV3RelatedKeywordsForAutoSwitch = async (baseKeyword: string, regionCode: string, publishedAfter?: string) => {
-    const relatedMap = new Map<string, { text: string; score: number; source: string }>();
-    const addKeyword = (text: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0) => {
-      const cleaned = String(text || '')
-        .replace(/^#/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    const relatedMap = new Map<string, { text: string; score: number; source: string; views: number; hits: number }>();
+    const addKeyword = (text: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0, views = 0) => {
+      const cleaned = String(text || '').replace(/^#/, '').replace(/\s+/g, ' ').trim();
       const normalized = normalizeHunterKeyword(cleaned);
       if (!cleaned || normalized.length < 2 || cleaned.length > 70) return;
       if (/^(http|www\.|youtube|shorts|video|official)$/i.test(cleaned)) return;
@@ -4797,67 +4790,46 @@ JSON mẫu:
       if (source !== 'base' && relevance < getKeywordRelevanceThreshold(source)) return;
       const score = Math.min(120, relevance + bonus);
       const old = relatedMap.get(normalized);
-      if (!old || score > old.score) relatedMap.set(normalized, { text: cleaned, score, source });
+      if (!old) {
+        relatedMap.set(normalized, { text: cleaned, score, source, views: Number(views || 0), hits: 1 });
+      } else {
+        old.score = Math.max(old.score, score);
+        old.views = Math.max(old.views, Number(views || 0));
+        old.hits += 1;
+        const rank = (s: string) => s === 'base' ? 5 : s === 'title' ? 4 : s === 'tag' ? 3 : 2;
+        if (rank(source) > rank(old.source)) old.source = source;
+      }
     };
 
     addKeyword(baseKeyword, 'base', 20);
 
-    // Autocomplete là nguồn chính: sát truy vấn người dùng thực sự gõ và không tốn quota YouTube Data API.
-    const autocomplete = await fetchYoutubeAutocompleteSuggestions(baseKeyword, regionCode);
-    autocomplete.slice(0, 20).forEach((suggestion, idx) => {
-      addKeyword(suggestion, 'autocomplete', Math.max(0, 12 - idx * 0.45));
+    // NGUỒN CHÍNH: YouTube Data API V3 theo đúng từ khóa gốc.
+    const searchRes = await youtubeFetch('search', {
+      part: 'snippet', type: 'video', q: baseKeyword, regionCode, maxResults: 25, order: 'relevance',
+      ...(publishedAfter ? { publishedAfter } : {})
     });
 
-    // YouTube Data API chỉ bổ sung bằng seed gốc + tối đa 2 autocomplete tốt nhất.
-    // Bỏ hoàn toàn các biến thể "hôm nay / mới nhất / 2026 / tin tức / phân tích" vì làm loãng chủ đề.
-    const rankedAutocomplete = autocomplete
-      .filter(s => getKeywordRelevanceScore(s, baseKeyword, 'autocomplete') >= 70)
-      .slice(0, 2);
-    const seedQueries = Array.from(new Set([baseKeyword, ...rankedAutocomplete].map(x => String(x || '').trim()).filter(Boolean))).slice(0, 3);
-
-    for (const seed of seedQueries) {
-      if (!isHuntingRef.current) break;
-
-      const searchRes = await youtubeFetch('search', {
-        part: 'snippet',
-        type: 'video',
-        q: seed,
-        regionCode,
-        maxResults: 8,
-        order: 'relevance',
-        ...(publishedAfter ? { publishedAfter } : {})
-      });
-
-      const videoIds = (searchRes.items || [])
-        .map((item: any) => item?.id?.videoId)
-        .filter(Boolean)
-        .slice(0, 8);
-      if (!videoIds.length) continue;
-
-      const videoRes = await youtubeFetch('videos', {
-        part: 'snippet,statistics',
-        id: videoIds.join(',')
-      });
-
+    const videoIds = (searchRes.items || []).map((item: any) => item?.id?.videoId).filter(Boolean).slice(0, 25);
+    if (videoIds.length) {
+      const videoRes = await youtubeFetch('videos', { part: 'snippet,statistics', id: videoIds.join(',') });
       (videoRes.items || []).forEach((video: any) => {
         const views = Number(video?.statistics?.viewCount || 0);
         const likes = Number(video?.statistics?.likeCount || 0);
         const popularityBonus = Math.min(8, Math.log10(Math.max(10, views)) * 0.7 + (likes / Math.max(1, views)) * 15);
-
-        buildKeywordPhrasesFromTitle(video?.snippet?.title || '', baseKeyword).forEach((phrase, idx) => {
-          addKeyword(phrase, 'title', popularityBonus - idx * 0.08);
-        });
-
-        // Tag chỉ là nguồn bổ sung, bắt buộc đạt ngưỡng relevance cao; không lấy tag YouTube thô nữa.
-        (video?.snippet?.tags || []).slice(0, 10).forEach((tag: string, idx: number) => {
-          addKeyword(tag, 'tag', popularityBonus - idx * 0.07);
-        });
+        buildKeywordPhrasesFromTitle(video?.snippet?.title || '', baseKeyword).forEach((phrase, idx) => addKeyword(phrase, 'title', popularityBonus - idx * 0.08, views));
+        (video?.snippet?.tags || []).slice(0, 14).forEach((tag: string, idx: number) => addKeyword(tag, 'tag', popularityBonus - idx * 0.07, views));
       });
     }
 
-    const sourceWeight = (source: string) => source === 'base' ? 4 : source === 'autocomplete' ? 3 : source === 'title' ? 2 : 1;
+    // Autocomplete chỉ là fallback, không còn là nguồn chính.
+    if (relatedMap.size < 18) {
+      const autocomplete = await fetchYoutubeAutocompleteSuggestions(baseKeyword, regionCode);
+      autocomplete.slice(0, 20).forEach((suggestion, idx) => addKeyword(suggestion, 'autocomplete', Math.max(0, 3 - idx * 0.2)));
+    }
+
+    const sourceWeight = (source: string) => source === 'base' ? 5 : source === 'title' ? 4 : source === 'tag' ? 3 : 2;
     return Array.from(relatedMap.values())
-      .sort((a, b) => sourceWeight(b.source) - sourceWeight(a.source) || b.score - a.score)
+      .sort((a, b) => sourceWeight(b.source) - sourceWeight(a.source) || b.hits - a.hits || b.score - a.score || b.views - a.views)
       .map(item => item.text)
       .slice(0, 24);
   };
@@ -4933,7 +4905,7 @@ JSON mẫu:
         }
 
         if (shouldAutoSwitchKeywords) {
-          setStatus(`Đang tạo danh sách từ khóa liên quan bằng YouTube API V3 cho "${rawKeyword}"...`);
+          setStatus(`Đang lấy danh sách từ khóa ưu tiên dữ liệu thật YouTube API V3 cho "${rawKeyword}"...`);
           const relatedKeywords = await fetchYoutubeV3RelatedKeywordsForAutoSwitch(searchKeyword, currentRegion, publishedAfter);
           scanKeywords = Array.from(new Set([searchKeyword, rawKeyword, ...relatedKeywords].map(k => String(k || '').trim()).filter(Boolean))).slice(0, 24);
           // Khi bật tự động chuyển từ khóa, bảng gợi ý vẫn phải hiển thị như chế độ thường:
