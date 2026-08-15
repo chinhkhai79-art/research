@@ -285,33 +285,29 @@ function getFriendlyApiError(error: any): string {
 }
 
 const GEMINI_MODELS = [
-  { id: 'gemini-3.1-flash-lite', name: '3.1 Flash-Lite — mặc định, tiết kiệm' },
-  { id: 'gemini-2.5-flash', name: '2.5 Flash — ổn định, mạnh' },
+  { id: 'gemini-3.5-flash-lite', name: '3.5 Flash-Lite — mặc định, tiết kiệm' },
+  { id: 'gemini-3.7-flash', name: '3.7 Flash — mới nhất, mạnh' },
+  { id: 'gemini-3.6-flash', name: '3.6 Flash — mới, cân bằng' },
+  { id: 'gemini-3.5-flash', name: '3.5 Flash — ổn định, thông minh' },
+  { id: 'gemini-3.1-flash-lite', name: '3.1 Flash-Lite — nhẹ, ổn định' },
+  { id: 'gemini-3.1-pro-preview', name: '3.1 Pro Preview — phân tích sâu' },
+  { id: 'gemini-3-flash-preview', name: '3 Flash Preview — bản xem trước' },
+  { id: 'gemini-2.5-flash', name: '2.5 Flash — tương thích cũ' },
   { id: 'gemini-2.5-flash-lite', name: '2.5 Flash-Lite — tiết kiệm quota' },
-  { id: 'gemini-3-flash-preview', name: '3 Flash Preview — phân tích sâu' },
   { id: 'gemini-2.5-pro', name: '2.5 Pro — phân tích sâu' },
-  { id: 'gemini-3.5-flash', name: '3.5 Flash — mới nhất, ổn định' },
-  { id: 'gemini-3.1-pro-preview', name: '3.1 Pro Preview — Pro mới nhất' },
 ];
 
-const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
-
-const GEMINI_FALLBACK_MODEL_IDS = [
-  'gemini-3.1-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-3-flash-preview',
-  'gemini-2.5-pro',
-  'gemini-3.5-flash',
-  'gemini-3.1-pro-preview',
-];
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
 const getGeminiModelName = (modelId: string) => GEMINI_MODELS.find(model => model.id === modelId)?.name || modelId;
 
-const getOrderedGeminiModels = (selectedModel: string) => [
-  selectedModel,
-  ...GEMINI_FALLBACK_MODEL_IDS.filter(model => model !== selectedModel)
-];
+const getOrderedGeminiModels = (selectedModel: string, rotationEnabled: boolean, rotationModelIds: string[]) => {
+  if (!rotationEnabled) return [selectedModel];
+  const validRotationModels = rotationModelIds
+    .filter(modelId => modelId !== selectedModel)
+    .filter(modelId => GEMINI_MODELS.some(model => model.id === modelId));
+  return [selectedModel, ...Array.from(new Set(validRotationModels))];
+};
 
 const isTemporaryGeminiDemandError = (error: any) => {
   const raw = typeof error === 'string' ? error : error?.message || error?.error?.message || JSON.stringify(error || '');
@@ -887,6 +883,17 @@ export default function App() {
   const [exhaustedGeminiKeys, setExhaustedGeminiKeys] = useState<string[]>([]);
   const exhaustedGeminiKeysRef = useRef<string[]>([]);
   const [geminiModel, setGeminiModel] = useState(DEFAULT_GEMINI_MODEL);
+  const [activeGeminiModel, setActiveGeminiModel] = useState(DEFAULT_GEMINI_MODEL);
+  const [geminiModelRotationEnabled, setGeminiModelRotationEnabled] = useState(() => {
+    try { return localStorage.getItem('youtube_gemini_model_rotation_enabled') === 'true'; }
+    catch { return false; }
+  });
+  const [geminiRotationModels, setGeminiRotationModels] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('youtube_gemini_rotation_models') || '[]');
+      return Array.isArray(saved) ? saved.filter((id: any) => typeof id === 'string') : [];
+    } catch { return []; }
+  });
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<string | null>(null);
@@ -1360,10 +1367,11 @@ export default function App() {
       localStorage.setItem('youtube_gemini_api_keys_history', JSON.stringify(nextGeminiHistory));
     }
     
-    // Luôn mặc định Gemini 3.1 Flash-Lite sau khi tải lại/làm mới trang.
-    // Người dùng vẫn có thể đổi model trong phiên hiện tại, nhưng reload sẽ quay về mặc định này.
+    // Luôn mặc định Gemini 3.5 Flash-Lite sau khi tải lại/làm mới trang.
+    // Xoay vòng model không tự bật; chỉ dùng các model người dùng tự chọn khi đã bật tính năng.
     localStorage.setItem('youtube_gemini_model', DEFAULT_GEMINI_MODEL);
     setGeminiModel(DEFAULT_GEMINI_MODEL);
+    setActiveGeminiModel(DEFAULT_GEMINI_MODEL);
 
     // Khôi phục danh sách key YouTube đã hết quota trong ngày để tự động bỏ qua, không cần xóa thủ công.
     try {
@@ -1455,6 +1463,16 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('youtube_gemini_model', geminiModel);
   }, [geminiModel]);
+
+  useEffect(() => {
+    localStorage.setItem('youtube_gemini_model_rotation_enabled', String(geminiModelRotationEnabled));
+  }, [geminiModelRotationEnabled]);
+
+  useEffect(() => {
+    const validIds = geminiRotationModels.filter(modelId => GEMINI_MODELS.some(model => model.id === modelId));
+    localStorage.setItem('youtube_gemini_rotation_models', JSON.stringify(validIds));
+    if (validIds.length !== geminiRotationModels.length) setGeminiRotationModels(validIds);
+  }, [geminiRotationModels]);
 
   // Save exhausted keys whenever they change
   useEffect(() => {
@@ -1604,7 +1622,7 @@ export default function App() {
       return { label: 'Hết quota/giới hạn', detail: `Key/project bị hết quota hoặc vượt giới hạn tốc độ với model ${modelName}.` };
     }
     if (text.includes('model') && (text.includes('not found') || text.includes('not supported') || text.includes('unsupported') || text.includes('not available'))) {
-      return { label: 'Model không được hỗ trợ', detail: `Key/project này chưa hỗ trợ model ${modelName}. Hãy chọn model khác để check hoặc để tính năng AI tự xoay vòng.` };
+      return { label: 'Model không được hỗ trợ', detail: `Key/project này chưa hỗ trợ model ${modelName}. Hãy chọn model khác để check hoặc bật xoay vòng model và tự chọn model dự phòng.` };
     }
     if (text.includes('permission_denied') || text.includes('denied access') || text.includes('403')) {
       return { label: 'Project chưa có quyền model', detail: `Project tạo key bị từ chối quyền hoặc chưa được cấp quyền dùng model ${modelName}.` };
@@ -1677,9 +1695,9 @@ export default function App() {
       setGeminiKeyIndex(Math.max(0, idx));
       setExhaustedGeminiKeys(prev => prev.filter(k => k !== firstGood.key));
       exhaustedGeminiKeysRef.current = exhaustedGeminiKeysRef.current.filter(k => k !== firstGood.key);
-      setStatus(`Gemini: model ${selectedModelName} dùng được với ${results.filter(r => r.ok).length}/${results.length} key. Khi AI phân tích, tool vẫn tự xoay model/key nếu gặp lỗi quota hoặc quá tải.`);
+      setStatus(`Gemini: model ${selectedModelName} dùng được với ${results.filter(r => r.ok).length}/${results.length} key. Xoay vòng model chỉ chạy khi anh bật và tự chọn model dự phòng; key vẫn được chuyển khi key lỗi/hết quota.`);
     } else {
-      setStatus(`Gemini: chưa có key dùng được với model ${selectedModelName}. Có thể chọn model khác để check, hoặc để tính năng AI tự xoay vòng khi phân tích.`);
+      setStatus(`Gemini: chưa có key dùng được với model ${selectedModelName}. Có thể chọn model khác để check hoặc bật xoay vòng model và tự chọn model dự phòng.`);
     }
   };
 
@@ -1709,9 +1727,9 @@ export default function App() {
       await enforceTrialIpLimit('gemini');
     }
 
-    // Logic AI phân tích: ưu tiên xoay model bên trong key hiện tại trước.
-    // Nếu key đó lỗi/hết quota ở toàn bộ model thì mới chuyển sang key tiếp theo.
-    const modelOrder = getOrderedGeminiModels(geminiModel);
+    // Model chính luôn chạy trước. Chỉ xoay sang model khác khi người dùng bật
+    // và tự tích chọn các model dự phòng; không còn tự động đưa toàn bộ model vào vòng xoay.
+    const modelOrder = getOrderedGeminiModels(geminiModel, geminiModelRotationEnabled, geminiRotationModels);
     const safeIndex = Math.max(0, Math.min(geminiKeyIndex, keys.length - 1));
     const orderedIndexes = [
       ...keys.map((_, idx) => idx).slice(safeIndex),
@@ -1735,10 +1753,9 @@ export default function App() {
             contents: [{ role: 'user', parts: [{ text: prompt }] }]
           });
 
-          if (modelId !== geminiModel) {
-            setGeminiModel(modelId);
-            localStorage.setItem('youtube_gemini_model', modelId);
-          }
+          // Không tự đổi "Model đang chọn" khi fallback thành công.
+          // Chỉ cập nhật model thực tế đang dùng để người dùng theo dõi.
+          setActiveGeminiModel(modelId);
           setStatus(`Gemini AI: dùng Key #${idx + 1} với model ${getGeminiModelName(modelId)} thành công.`);
           return response;
         } catch (error: any) {
@@ -1757,7 +1774,13 @@ export default function App() {
           }
 
           if (isRotatableGeminiError(error)) {
-            setStatus(`Gemini Key #${idx + 1} / ${getGeminiModelName(modelId)} lỗi: ${info.label}. Đang thử model khác trong cùng key...`);
+            const currentModelIndex = modelOrder.indexOf(modelId);
+            const hasAnotherSelectedModel = currentModelIndex >= 0 && currentModelIndex < modelOrder.length - 1;
+            setStatus(
+              hasAnotherSelectedModel
+                ? `Gemini Key #${idx + 1} / ${getGeminiModelName(modelId)} lỗi: ${info.label}. Đang thử model dự phòng anh đã chọn...`
+                : `Gemini Key #${idx + 1} / ${getGeminiModelName(modelId)} lỗi: ${info.label}. Đang chuyển sang key tiếp theo nếu có...`
+            );
             continue;
           }
 
@@ -1771,12 +1794,12 @@ export default function App() {
           exhaustedGeminiKeysRef.current = next;
           return next;
         });
-        setStatus(`Gemini Key #${idx + 1} đã lỗi/hết quota trên toàn bộ model. Đang chuyển sang key tiếp theo nếu có...`);
+        setStatus(`Gemini Key #${idx + 1} đã lỗi/hết quota trên các model được phép dùng. Đang chuyển sang key tiếp theo nếu có...`);
       }
     }
 
     const finalInfo = classifyGeminiError(lastError, geminiModel);
-    throw new Error(`Tất cả Gemini API Key đều lỗi sau khi thử toàn bộ model. ${finalInfo.label}: ${finalInfo.detail}`);
+    throw new Error(`Tất cả Gemini API Key đều lỗi sau khi thử các model được phép dùng. ${finalInfo.label}: ${finalInfo.detail}`);
   };
 
   const formatVNNumber = (value: any) => {
@@ -10397,12 +10420,12 @@ Quy tắc:
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-3 mb-2">
                         <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Chọn model</span>
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap justify-end">
                           <span className="bg-white/80 border border-indigo-100 rounded-full px-2 py-1 text-[9px] font-black text-indigo-600 whitespace-nowrap">
-                            🔄 Tự động xoay vòng key & model khi hết quota
+                            Key: tự chuyển khi lỗi/quota
                           </span>
-                          <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[190px]">
-                            Đang dùng: {geminiModel}
+                          <div className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-bold truncate max-w-[230px]">
+                            Đang dùng: {activeGeminiModel}
                           </div>
                         </div>
                       </div>
@@ -10437,6 +10460,7 @@ Quy tắc:
                                   type="button"
                                   onClick={() => {
                                     setGeminiModel(model.id);
+                                    setActiveGeminiModel(model.id);
                                     setShowModelOptions(false);
                                   }}
                                   className={`text-left px-3 py-2 rounded-xl border text-[10px] font-bold transition-all active:scale-95 ${
@@ -10453,6 +10477,77 @@ Quy tắc:
                           </motion.div>
                         )}
                       </AnimatePresence>
+
+                      <div className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3">
+                        <button
+                          type="button"
+                          onClick={() => setGeminiModelRotationEnabled(prev => !prev)}
+                          className="w-full flex items-center justify-between gap-3 text-left"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-[10px] font-black text-indigo-800 uppercase tracking-wide">Xoay vòng model khi lỗi/quota</div>
+                            <div className="mt-0.5 text-[9px] font-semibold text-gray-500">Không tự chọn model. Chỉ xoay qua các model anh tích thủ công bên dưới.</div>
+                          </div>
+                          <span className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${geminiModelRotationEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${geminiModelRotationEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                          </span>
+                        </button>
+
+                        <AnimatePresence>
+                          {geminiModelRotationEnabled && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0, y: -4 }}
+                              animate={{ opacity: 1, height: 'auto', y: 0 }}
+                              exit={{ opacity: 0, height: 0, y: -4 }}
+                              transition={{ duration: 0.16 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-3 border-t border-indigo-100 pt-3">
+                                <div className="mb-2 text-[9px] font-black text-indigo-700 uppercase tracking-wide">Chọn model được phép xoay vòng</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {GEMINI_MODELS.map(model => {
+                                    const isPrimary = model.id === geminiModel;
+                                    const isChecked = isPrimary || geminiRotationModels.includes(model.id);
+                                    return (
+                                      <label
+                                        key={`rotation-${model.id}`}
+                                        className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[9px] font-bold transition-colors ${
+                                          isChecked ? 'border-blue-300 bg-white text-blue-700' : 'border-gray-200 bg-white/70 text-gray-600 hover:border-blue-200'
+                                        } ${isPrimary ? 'cursor-default' : 'cursor-pointer'}`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          disabled={isPrimary}
+                                          onChange={(event) => {
+                                            const checked = event.target.checked;
+                                            setGeminiRotationModels(prev => {
+                                              const next = checked
+                                                ? [...new Set([...prev, model.id])]
+                                                : prev.filter(id => id !== model.id);
+                                              return next;
+                                            });
+                                          }}
+                                          className="mt-0.5 h-4 w-4 accent-blue-600"
+                                        />
+                                        <span className="min-w-0 leading-snug">
+                                          {model.name}
+                                          {isPrimary && <span className="block text-[8px] text-indigo-500 mt-0.5">Model chính — luôn chạy trước</span>}
+                                        </span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                                {geminiRotationModels.filter(modelId => modelId !== geminiModel).length === 0 && (
+                                  <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9px] font-bold text-amber-700">
+                                    Chưa chọn model dự phòng. Hệ thống hiện chỉ dùng model chính {geminiModel}.
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                   </div>
                 </div>
