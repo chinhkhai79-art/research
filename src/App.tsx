@@ -4316,13 +4316,13 @@ JSON mẫu:
     return Math.min(score, 10).toFixed(1);
   };
 
-  const fetchRealKeywordIdeas = async (base: string): Promise<KeywordIdea[]> => {
-    setStatus('Đang lấy dữ liệu từ khóa thật từ YouTube API V3...');
+  const fetchRealKeywordIdeas = async (base: string, regionCode?: string, publishedAfter?: string): Promise<KeywordIdea[]> => {
+    setStatus('Đang lấy video thật từ YouTube API V3 theo khu vực và thời gian đã chọn...');
     const baseText = normalizeKeywordIdeaText(base);
     if (!baseText) return [];
 
-    const candidateMap = new Map<string, { text: string; relevance: number; source: string; views: number; hits: number }>();
-    const addCandidate = (value: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0, views = 0) => {
+    const candidateMap = new Map<string, { text: string; relevance: number; source: string; views: number; totalViews: number; hits: number; maxVph: number; likeRate: number; samples: string[]; localHits: number }>();
+    const addCandidate = (value: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0, views = 0, vph = 0, likeRate = 0, sampleTitle = '', localHit = 0) => {
       const cleaned = normalizeKeywordIdeaText(String(value || '').replace(/^#/, ''));
       if (!cleaned || cleaned.length < 2 || cleaned.length > 70) return;
       const normalized = normalizeHunterKeyword(cleaned);
@@ -4332,10 +4332,15 @@ JSON mẫu:
       const finalScore = Math.min(100, relevance + bonus);
       const old = candidateMap.get(normalized);
       if (!old) {
-        candidateMap.set(normalized, { text: cleaned, relevance: finalScore, source, views: Number(views || 0), hits: 1 });
+        candidateMap.set(normalized, { text: cleaned, relevance: finalScore, source, views: Number(views || 0), totalViews: Number(views || 0), hits: 1, maxVph: Number(vph || 0), likeRate: Number(likeRate || 0), samples: sampleTitle ? [sampleTitle] : [], localHits: Number(localHit || 0) });
       } else {
         old.relevance = Math.max(old.relevance, finalScore);
         old.views = Math.max(old.views, Number(views || 0));
+        old.totalViews += Number(views || 0);
+        old.maxVph = Math.max(old.maxVph, Number(vph || 0));
+        old.likeRate = Math.max(old.likeRate, Number(likeRate || 0));
+        if (sampleTitle && !old.samples.includes(sampleTitle) && old.samples.length < 3) old.samples.push(sampleTitle);
+        old.localHits += Number(localHit || 0);
         old.hits += 1;
         const rank = (s: string) => s === 'base' ? 5 : s === 'title' ? 4 : s === 'tag' ? 3 : 2;
         if (rank(source) > rank(old.source)) old.source = source;
@@ -4346,31 +4351,52 @@ JSON mẫu:
 
     try {
       // NGUỒN CHÍNH: YouTube Data API V3 thật.
-      const primaryKeywordRegion = getPrimaryHunterRegion(config);
+      const primaryKeywordRegion = String(regionCode || getPrimaryHunterRegion(config) || 'VN').toUpperCase();
       const primaryKeywordRegionCfg = REGION_YT_CONFIG[primaryKeywordRegion] || REGION_YT_CONFIG.VN;
       const searchRes = await youtubeFetch('search', {
         q: baseText,
         type: 'video',
-        maxResults: 25,
+        maxResults: 30,
         part: 'id,snippet',
-        order: 'relevance',
+        // Ưu tiên video đang có lượt xem cao trong đúng khoảng thời gian người dùng chọn.
+        order: 'viewCount',
         regionCode: primaryKeywordRegion,
-        relevanceLanguage: primaryKeywordRegionCfg.relevanceLanguage
+        relevanceLanguage: primaryKeywordRegionCfg.relevanceLanguage,
+        ...(publishedAfter ? { publishedAfter } : {})
       });
 
       const ids = (searchRes.items || []).map((item: any) => item?.id?.videoId).filter(Boolean).slice(0, 25);
       if (ids.length) {
         const videoRes = await youtubeFetch('videos', { id: ids.join(','), part: 'snippet,statistics' });
-        (videoRes.items || []).forEach((v: any) => {
+        const videoItems = videoRes.items || [];
+        const channelIds = Array.from(new Set(videoItems.map((v: any) => v?.snippet?.channelId).filter(Boolean))).slice(0, 50);
+        const channelCountryMap = new Map<string, string>();
+        if (channelIds.length) {
+          try {
+            const channelRes = await youtubeFetch('channels', { id: channelIds.join(','), part: 'snippet' });
+            (channelRes.items || []).forEach((ch: any) => channelCountryMap.set(String(ch?.id || ''), String(ch?.snippet?.country || '').toUpperCase()));
+          } catch (channelErr) {
+            console.warn('Không lấy được country của channel, tiếp tục bằng region/language của search:', channelErr);
+          }
+        }
+
+        videoItems.forEach((v: any) => {
           const views = Number(v?.statistics?.viewCount || 0);
           const likes = Number(v?.statistics?.likeCount || 0);
-          const popularityBonus = Math.min(8, Math.log10(Math.max(10, views)) * 0.55 + (likes / Math.max(1, views)) * 18);
+          const publishedMs = new Date(v?.snippet?.publishedAt || Date.now()).getTime();
+          const ageHours = Math.max(1, (Date.now() - publishedMs) / 3600000);
+          const vph = views / ageHours;
+          const likeRate = views > 0 ? (likes / views) * 100 : 0;
+          const title = String(v?.snippet?.title || '');
+          const channelCountry = channelCountryMap.get(String(v?.snippet?.channelId || '')) || '';
+          const localHit = channelCountry && channelCountry === primaryKeywordRegion ? 1 : 0;
+          const popularityBonus = Math.min(10, Math.log10(Math.max(10, views)) * 0.45 + Math.log10(Math.max(1, vph)) * 1.1 + likeRate * 0.35 + localHit * 0.8);
 
-          buildKeywordPhrasesFromTitle(v?.snippet?.title || '', baseText).slice(0, 12).forEach((phrase: string, idx: number) => {
-            addCandidate(phrase, 'title', popularityBonus - idx * 0.08, views);
+          buildKeywordPhrasesFromTitle(title, baseText).slice(0, 12).forEach((phrase: string, idx: number) => {
+            addCandidate(phrase, 'title', popularityBonus - idx * 0.08, views, vph, likeRate, title, localHit);
           });
-          (v?.snippet?.tags || []).slice(0, 14).forEach((tag: string, idx: number) => {
-            addCandidate(tag, 'tag', popularityBonus - idx * 0.06, views);
+          (v?.snippet?.tags || []).slice(0, 18).forEach((tag: string, idx: number) => {
+            addCandidate(tag, 'tag', popularityBonus - idx * 0.06, views, vph, likeRate, title, localHit);
           });
         });
       }
@@ -4382,22 +4408,123 @@ JSON mẫu:
         autocomplete.slice(0, 20).forEach((suggestion, idx) => addCandidate(suggestion, 'autocomplete', Math.max(0, 3 - idx * 0.2)));
       }
 
-      const sourceWeight = (s: string) => s === 'base' ? 5 : s === 'title' ? 4 : s === 'tag' ? 3 : 2;
-      return Array.from(candidateMap.values())
-        .sort((a, b) => sourceWeight(b.source) - sourceWeight(a.source) || b.hits - a.hits || b.relevance - a.relevance || b.views - a.views)
-        .slice(0, 20)
-        .map((item, idx) => {
-          const normalized = normalizeHunterKeyword(item.text);
-          const isMain = idx === 0 || normalized === normalizeHunterKeyword(baseText);
-          const wordCount = getKeywordTokens(item.text).length;
-          const evidenceBoost = Math.min(1.2, Math.max(0, item.hits - 1) * 0.18);
-          const competition = isMain ? 'Trung bình' : wordCount <= 2 ? 'Cao' : wordCount <= 4 ? 'Trung bình' : 'Thấp';
-          const seoScore = isMain ? 10 : Math.max(4.5, Math.min(9.8, item.relevance / 10 + evidenceBoost));
-          return { text: item.text, competition, score: isMain ? '10/10' : `${seoScore.toFixed(1)}/10`, status: 'idle' as const };
-        });
+      const sourceWeight = (source: string) => source === 'base' ? 5 : source === 'tag' ? 4 : source === 'title' ? 3 : 2;
+      const rawCandidates = Array.from(candidateMap.values())
+        .sort((a, b) => b.localHits - a.localHits || b.hits - a.hits || b.maxVph - a.maxVph || b.totalViews - a.totalViews || sourceWeight(b.source) - sourceWeight(a.source) || b.relevance - a.relevance)
+        .slice(0, 45);
+
+      const aiRanked = await rankYoutubeV3KeywordCandidatesWithAI(baseText, primaryKeywordRegion, publishedAfter, rawCandidates);
+      if (aiRanked.length) return aiRanked;
+
+      // Nếu Gemini chưa cấu hình hoặc tạm lỗi: vẫn dùng dữ liệu V3 thật, không bịa search volume.
+      return rawCandidates.slice(0, 20).map((item, idx) => {
+        const normalized = normalizeHunterKeyword(item.text);
+        const isMain = idx === 0 || normalized === normalizeHunterKeyword(baseText);
+        const trendSignal = Math.min(10, Math.log10(Math.max(1, item.maxVph + 1)) * 1.35 + Math.min(2.5, item.hits * 0.35));
+        const evidenceScore = isMain ? 10 : Math.max(4.5, Math.min(9.8, item.relevance / 12 + trendSignal / 3));
+        const competition = item.hits >= 5 ? 'Cao' : item.hits >= 3 ? 'Trung bình' : 'Thấp';
+        return { text: item.text, competition, score: isMain ? '10/10' : `${evidenceScore.toFixed(1)}/10`, status: 'idle' as const };
+      });
     } catch (error) {
       console.error('Error fetching YouTube V3 keyword ideas:', error);
       return [{ text: baseText, competition: 'Trung bình', score: '10/10', status: 'idle' }];
+    }
+  };
+
+
+  const rankYoutubeV3KeywordCandidatesWithAI = async (
+    baseKeyword: string,
+    regionCode: string,
+    publishedAfter: string | undefined,
+    candidates: Array<{ text: string; relevance: number; source: string; views: number; totalViews: number; hits: number; maxVph: number; likeRate: number; samples: string[]; localHits: number }>
+  ): Promise<KeywordIdea[]> => {
+    if (!candidates.length || getActiveGeminiKeys().length === 0) return [];
+
+    const regionName = REGIONS.find(item => item.code === regionCode)?.name || regionCode;
+    const regionCfg = REGION_YT_CONFIG[regionCode] || REGION_YT_CONFIG.VN;
+    const periodText = publishedAfter ? `từ ${new Date(publishedAfter).toLocaleDateString('vi-VN')} đến hiện tại` : 'toàn thời gian';
+    const rows = candidates.slice(0, 45).map((item, idx) => ({
+      id: idx + 1,
+      keyword: item.text,
+      source: item.source,
+      videosMatched: item.hits,
+      maxVideoViews: Math.round(item.views),
+      totalObservedViews: Math.round(item.totalViews),
+      maxVPH: Math.round(item.maxVph),
+      bestLikeRatePct: Number(item.likeRate.toFixed(2)),
+      tokenRelevance: item.relevance,
+      localChannelMatches: item.localHits,
+      sampleTitles: item.samples.slice(0, 2)
+    }));
+
+    const prompt = `Bạn là bộ lọc/rerank từ khóa YouTube dựa trên DỮ LIỆU THẬT, không được bịa dữ liệu.
+
+Từ khóa gốc: "${baseKeyword}"
+Khu vực ưu tiên: ${regionName} (${regionCode})
+Ngôn ngữ ưu tiên: ${regionCfg.language}
+Khoảng thời gian quan sát: ${periodText}
+
+Dữ liệu dưới đây được trích từ YouTube Data API V3: search.list theo từ khóa + khu vực + thời gian, sau đó videos.list lấy title, tags, views, likes và thời điểm đăng. YouTube API KHÔNG cung cấp search volume từ khóa, vì vậy tuyệt đối không được giả lập search volume.
+
+NHIỆM VỤ:
+- Chỉ chọn từ khóa có trong danh sách candidates, KHÔNG tự sáng tạo từ khóa ngoài danh sách.
+- Loại cụm vô nghĩa do cắt n-gram từ tiêu đề, tên riêng lạc đề, câu nói, tiêu đề dài và từ khóa chỉ trùng chữ nhưng sai ý định tìm kiếm.
+- Ưu tiên: cùng chủ đề thật với từ khóa gốc; tự nhiên trong ngôn ngữ khu vực; xuất hiện ở nhiều video; video có VPH/lượt xem tốt trong giai đoạn; tag/title lặp lại ở nhiều video; có thêm bằng chứng channel khai báo country đúng khu vực nếu có.
+- Không coi một cụm là tốt chỉ vì chứa đủ chữ của từ khóa gốc.
+- Với khu vực Việt Nam, ưu tiên cụm tiếng Việt tự nhiên hoặc thuật ngữ tiếng Anh thực sự phổ biến trong chủ đề; loại câu tiếng Việt vô nghĩa.
+- Xếp tối đa 20 từ khóa tốt nhất. Từ khóa gốc phải đứng đầu nếu vẫn đúng chủ đề.
+- competition chỉ là ước lượng tương đối từ mức độ lặp và mật độ video quan sát: "Thấp", "Trung bình", "Cao".
+- opportunityScore 0-100 là điểm cơ hội nội bộ dựa trên bằng chứng YouTube V3 + độ liên quan, KHÔNG phải Search Volume/vidIQ score.
+
+Candidates JSON:
+${JSON.stringify(rows)}
+
+Chỉ trả về JSON hợp lệ, không Markdown, đúng schema:
+{"keywords":[{"id":1,"competition":"Trung bình","opportunityScore":92}]}
+Trong đó id phải đúng với candidate đã cung cấp.`;
+
+    try {
+      setStatus(`YouTube V3 đã lấy xong dữ liệu. Gemini đang lọc và xếp hạng từ khóa thật tại ${regionName}...`);
+      const response = await callGeminiGenerateContent(prompt);
+      const raw = String(response?.text || '').trim();
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(cleaned);
+      const items = Array.isArray(parsed?.keywords) ? parsed.keywords : [];
+      const byId = new Map(rows.map(row => [row.id, row]));
+      const seen = new Set<number>();
+      const result: KeywordIdea[] = [];
+
+      for (const item of items) {
+        const id = Number(item?.id);
+        if (!Number.isFinite(id) || seen.has(id) || !byId.has(id)) continue;
+        seen.add(id);
+        const row = byId.get(id)!;
+        const score = Math.max(0, Math.min(100, Number(item?.opportunityScore || 0)));
+        const competition = ['Thấp', 'Trung bình', 'Cao'].includes(String(item?.competition)) ? String(item.competition) : 'Trung bình';
+        result.push({
+          text: row.keyword,
+          competition,
+          score: `${Math.max(1, score / 10).toFixed(1)}/10`,
+          status: 'idle' as const
+        });
+        if (result.length >= 20) break;
+      }
+
+      const mainKey = normalizeHunterKeyword(baseKeyword);
+      const mainIdx = result.findIndex(item => normalizeHunterKeyword(item.text) === mainKey);
+      if (mainIdx > 0) {
+        const [main] = result.splice(mainIdx, 1);
+        result.unshift({ ...main, score: '10/10' });
+      } else if (mainIdx === 0) {
+        result[0] = { ...result[0], score: '10/10' };
+      } else {
+        const baseRow = rows.find(row => normalizeHunterKeyword(row.keyword) === mainKey);
+        if (baseRow) result.unshift({ text: baseRow.keyword, competition: 'Trung bình', score: '10/10', status: 'idle' as const });
+      }
+      return result.slice(0, 20);
+    } catch (error) {
+      console.warn('Gemini keyword rerank failed, fallback to YouTube V3 evidence:', error);
+      return [];
     }
   };
 
@@ -4798,8 +4925,8 @@ JSON mẫu:
   };
 
   const fetchYoutubeV3RelatedKeywordsForAutoSwitch = async (baseKeyword: string, regionCode: string, publishedAfter?: string) => {
-    const relatedMap = new Map<string, { text: string; score: number; source: string; views: number; hits: number }>();
-    const addKeyword = (text: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0, views = 0) => {
+    const relatedMap = new Map<string, { text: string; score: number; relevance: number; source: string; views: number; totalViews: number; hits: number; maxVph: number; likeRate: number; samples: string[]; localHits: number }>();
+    const addKeyword = (text: string, source: 'base' | 'autocomplete' | 'title' | 'tag', bonus = 0, views = 0, vph = 0, likeRate = 0, sampleTitle = '', localHit = 0) => {
       const cleaned = String(text || '').replace(/^#/, '').replace(/\s+/g, ' ').trim();
       const normalized = normalizeHunterKeyword(cleaned);
       if (!cleaned || normalized.length < 2 || cleaned.length > 70) return;
@@ -4810,10 +4937,16 @@ JSON mẫu:
       const score = Math.min(120, relevance + bonus);
       const old = relatedMap.get(normalized);
       if (!old) {
-        relatedMap.set(normalized, { text: cleaned, score, source, views: Number(views || 0), hits: 1 });
+        relatedMap.set(normalized, { text: cleaned, score, relevance, source, views: Number(views || 0), totalViews: Number(views || 0), hits: 1, maxVph: Number(vph || 0), likeRate: Number(likeRate || 0), samples: sampleTitle ? [sampleTitle] : [], localHits: Number(localHit || 0) });
       } else {
         old.score = Math.max(old.score, score);
+        old.relevance = Math.max(old.relevance, relevance);
         old.views = Math.max(old.views, Number(views || 0));
+        old.totalViews += Number(views || 0);
+        old.maxVph = Math.max(old.maxVph, Number(vph || 0));
+        old.likeRate = Math.max(old.likeRate, Number(likeRate || 0));
+        if (sampleTitle && !old.samples.includes(sampleTitle) && old.samples.length < 3) old.samples.push(sampleTitle);
+        old.localHits += Number(localHit || 0);
         old.hits += 1;
         const rank = (s: string) => s === 'base' ? 5 : s === 'title' ? 4 : s === 'tag' ? 3 : 2;
         if (rank(source) > rank(old.source)) old.source = source;
@@ -4830,20 +4963,39 @@ JSON mẫu:
       q: baseKeyword,
       regionCode,
       relevanceLanguage: regionCfg.relevanceLanguage,
-      maxResults: 25,
-      order: 'relevance',
+      maxResults: 30,
+      order: 'viewCount',
       ...(publishedAfter ? { publishedAfter } : {})
     });
 
     const videoIds = (searchRes.items || []).map((item: any) => item?.id?.videoId).filter(Boolean).slice(0, 25);
     if (videoIds.length) {
       const videoRes = await youtubeFetch('videos', { part: 'snippet,statistics', id: videoIds.join(',') });
-      (videoRes.items || []).forEach((video: any) => {
+      const videoItems = videoRes.items || [];
+      const channelIds = Array.from(new Set(videoItems.map((v: any) => v?.snippet?.channelId).filter(Boolean))).slice(0, 50);
+      const channelCountryMap = new Map<string, string>();
+      if (channelIds.length) {
+        try {
+          const channelRes = await youtubeFetch('channels', { id: channelIds.join(','), part: 'snippet' });
+          (channelRes.items || []).forEach((ch: any) => channelCountryMap.set(String(ch?.id || ''), String(ch?.snippet?.country || '').toUpperCase()));
+        } catch (channelErr) {
+          console.warn('Không lấy được country của channel cho keyword auto-switch:', channelErr);
+        }
+      }
+
+      videoItems.forEach((video: any) => {
         const views = Number(video?.statistics?.viewCount || 0);
         const likes = Number(video?.statistics?.likeCount || 0);
-        const popularityBonus = Math.min(8, Math.log10(Math.max(10, views)) * 0.7 + (likes / Math.max(1, views)) * 15);
-        buildKeywordPhrasesFromTitle(video?.snippet?.title || '', baseKeyword).forEach((phrase, idx) => addKeyword(phrase, 'title', popularityBonus - idx * 0.08, views));
-        (video?.snippet?.tags || []).slice(0, 14).forEach((tag: string, idx: number) => addKeyword(tag, 'tag', popularityBonus - idx * 0.07, views));
+        const publishedMs = new Date(video?.snippet?.publishedAt || Date.now()).getTime();
+        const ageHours = Math.max(1, (Date.now() - publishedMs) / 3600000);
+        const vph = views / ageHours;
+        const likeRate = views > 0 ? (likes / views) * 100 : 0;
+        const title = String(video?.snippet?.title || '');
+        const channelCountry = channelCountryMap.get(String(video?.snippet?.channelId || '')) || '';
+        const localHit = channelCountry && channelCountry === regionCode ? 1 : 0;
+        const popularityBonus = Math.min(10, Math.log10(Math.max(10, views)) * 0.45 + Math.log10(Math.max(1, vph)) * 1.1 + likeRate * 0.35 + localHit * 0.8);
+        buildKeywordPhrasesFromTitle(title, baseKeyword).forEach((phrase, idx) => addKeyword(phrase, 'title', popularityBonus - idx * 0.08, views, vph, likeRate, title, localHit));
+        (video?.snippet?.tags || []).slice(0, 18).forEach((tag: string, idx: number) => addKeyword(tag, 'tag', popularityBonus - idx * 0.07, views, vph, likeRate, title, localHit));
       });
     }
 
@@ -4853,11 +5005,21 @@ JSON mẫu:
       autocomplete.slice(0, 20).forEach((suggestion, idx) => addKeyword(suggestion, 'autocomplete', Math.max(0, 3 - idx * 0.2)));
     }
 
-    const sourceWeight = (source: string) => source === 'base' ? 5 : source === 'title' ? 4 : source === 'tag' ? 3 : 2;
-    return Array.from(relatedMap.values())
-      .sort((a, b) => sourceWeight(b.source) - sourceWeight(a.source) || b.hits - a.hits || b.score - a.score || b.views - a.views)
-      .map(item => item.text)
-      .slice(0, 24);
+    const sourceWeight = (source: string) => source === 'base' ? 5 : source === 'tag' ? 4 : source === 'title' ? 3 : 2;
+    const rawCandidates = Array.from(relatedMap.values())
+      .sort((a, b) => b.localHits - a.localHits || b.hits - a.hits || b.maxVph - a.maxVph || b.totalViews - a.totalViews || sourceWeight(b.source) - sourceWeight(a.source) || b.score - a.score)
+      .slice(0, 45);
+
+    const aiRanked = await rankYoutubeV3KeywordCandidatesWithAI(baseKeyword, regionCode, publishedAfter, rawCandidates);
+    if (aiRanked.length) return aiRanked.slice(0, 24);
+
+    return rawCandidates.slice(0, 24).map((item, idx) => {
+      const isMain = idx === 0 || normalizeHunterKeyword(item.text) === normalizeHunterKeyword(baseKeyword);
+      const trendSignal = Math.min(10, Math.log10(Math.max(1, item.maxVph + 1)) * 1.35 + Math.min(2.5, item.hits * 0.35));
+      const evidenceScore = isMain ? 10 : Math.max(4.5, Math.min(9.8, item.relevance / 12 + trendSignal / 3));
+      const competition = item.hits >= 5 ? 'Cao' : item.hits >= 3 ? 'Trung bình' : 'Thấp';
+      return { text: item.text, competition, score: isMain ? '10/10' : `${evidenceScore.toFixed(1)}/10`, status: 'idle' as const };
+    });
   };
 
 
@@ -4948,7 +5110,9 @@ JSON mẫu:
     }
 
     if (!isAutoHunt && !hunterConfig.autoNiche) {
-      const ideas = await fetchRealKeywordIdeas(rawKeyword);
+      const keywordRegion = getPrimaryHunterRegion(hunterConfig);
+      const keywordPublishedAfter = getPublishedAfterDate(hunterConfig.deepDrillSmallTrend ? 'month' : (hunterConfig.publishedAfter || 'month'));
+      const ideas = await fetchRealKeywordIdeas(rawKeyword, keywordRegion, keywordPublishedAfter);
       setKeywordIdeas(ideas);
     } else {
       // Auto-switch sẽ tự tạo danh sách một lần ở nhánh dưới, tránh gọi trùng API/quota.
@@ -4991,13 +5155,28 @@ JSON mẫu:
               ? `Đang mở rộng từ khóa bằng dữ liệu thật YouTube API V3 tại ${regionName}...`
               : `Chưa đủ ${STOP_LIMIT} kênh tại khu vực đã chọn. Đang bổ sung từ khóa tại ${regionName}...`);
 
-            const relatedKeywords = await fetchYoutubeV3RelatedKeywordsForAutoSwitch(localizedKeyword || rawKeyword, currentRegion, publishedAfter);
+            const relatedIdeas = await fetchYoutubeV3RelatedKeywordsForAutoSwitch(localizedKeyword || rawKeyword, currentRegion, publishedAfter);
+            const relatedKeywords = relatedIdeas.map(item => item.text);
             const allRegionKeywords = Array.from(new Set([...baseKeywords, ...relatedKeywords].map(k => String(k || '').trim()).filter(Boolean)));
             const limit = regionStep.selected ? (regionIndex === 0 ? 24 : 16) : 6;
             scanKeywords = allRegionKeywords.slice(0, limit);
 
             if (!primaryKeywordIdeasSet && currentRegion === primaryRegion) {
-              setKeywordIdeas(buildKeywordIdeasForAutoSwitch(scanKeywords, localizedKeyword || rawKeyword));
+              const primaryIdeas: KeywordIdea[] = [];
+              const seenPrimary = new Set<string>();
+              for (const keyword of baseKeywords) {
+                const key = normalizeHunterKeyword(keyword);
+                if (!key || seenPrimary.has(key)) continue;
+                seenPrimary.add(key);
+                primaryIdeas.push({ text: keyword, competition: 'Trung bình', score: '10/10', status: 'idle' });
+              }
+              for (const idea of relatedIdeas) {
+                const key = normalizeHunterKeyword(idea.text);
+                if (!key || seenPrimary.has(key)) continue;
+                seenPrimary.add(key);
+                primaryIdeas.push(idea);
+              }
+              setKeywordIdeas(primaryIdeas.slice(0, 20));
               primaryKeywordIdeasSet = true;
             }
           } else {
