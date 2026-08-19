@@ -196,14 +196,24 @@ const DEFAULT_CONFIG: YouTubeConfig = {
   regions: ['VN'],
   region: 'VN',
   publishedAfter: 'month',
-  maxVideos: 30,
+  maxVideos: 100,
   minSub: 0,
-  maxSub: 100000,
+  maxSub: 1000000,
   minVideo: 1,
-  maxVideo: 1000,
+  maxVideo: 10000,
   minViews: 10000,
   autoNiche: true,
-  deepDrillSmallTrend: false,
+  deepDrillSmallTrend: true,
+};
+
+const NICHE_SETTINGS_STORAGE_KEY = 'youtube_niche_research_settings';
+const DEFAULT_NICHE_SETTINGS = {
+  region: 'VN',
+  time: 'month',
+  videoCount: 100,
+  minSub: 0,
+  maxSub: 250000,
+  displayKeywordLimit: 50 as string | number,
 };
 
 const REGIONS = [
@@ -1184,11 +1194,12 @@ export default function App() {
   const [spyResult, setSpyResult] = useState<SpyResult | null>(null);
   // --- Niche Research State ---
   const [nicheInput, setNicheInput] = useState('');
-  const [nicheRegion, setNicheRegion] = useState('VN');
-  const [nicheTime, setNicheTime] = useState('month');
-  const [nicheVideoCount, setNicheVideoCount] = useState(20);
-  const [nicheMinSub, setNicheMinSub] = useState(0);
-  const [nicheMaxSub, setNicheMaxSub] = useState(250000);
+  const [nicheRegion, setNicheRegion] = useState(DEFAULT_NICHE_SETTINGS.region);
+  const [nicheTime, setNicheTime] = useState(DEFAULT_NICHE_SETTINGS.time);
+  const [nicheVideoCount, setNicheVideoCount] = useState(DEFAULT_NICHE_SETTINGS.videoCount);
+  const [nicheMinSub, setNicheMinSub] = useState(DEFAULT_NICHE_SETTINGS.minSub);
+  const [nicheMaxSub, setNicheMaxSub] = useState(DEFAULT_NICHE_SETTINGS.maxSub);
+  const [nicheSettingsReady, setNicheSettingsReady] = useState(false);
 
   const SUB_RANGE_MIN = 0;
   const SUB_RANGE_MAX = 10000000;
@@ -1236,7 +1247,7 @@ export default function App() {
 
   const subRangeLeftPercent = Math.max(0, Math.min(100, (nicheMinSub / SUB_RANGE_MAX) * 100));
   const subRangeRightPercent = Math.max(0, Math.min(100, (nicheMaxSub / SUB_RANGE_MAX) * 100));
-  const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(50);
+  const [displayKeywordLimit, setDisplayKeywordLimit] = useState<string | number>(DEFAULT_NICHE_SETTINGS.displayKeywordLimit);
   const [nicheSearchMode, setNicheSearchMode] = useState('related'); 
   const [nicheVideoType, setNicheVideoType] = useState('all'); 
   const [nicheSortBy, setNicheSortBy] = useState('relevance');
@@ -1340,6 +1351,41 @@ export default function App() {
       }
     }
 
+    const savedNicheSettings = localStorage.getItem(NICHE_SETTINGS_STORAGE_KEY);
+    if (savedNicheSettings) {
+      try {
+        const parsed = JSON.parse(savedNicheSettings);
+        const allowedRegion = REGIONS.some(item => item.code === String(parsed?.region || '').toUpperCase());
+        const allowedTimes = new Set(['day', 'week', '2weeks', 'month', '3months', 'year']);
+        const rawCount = Number(parsed?.videoCount);
+        const safeCount = Number.isFinite(rawCount)
+          ? Math.max(10, Math.min(100, Math.round(rawCount / 10) * 10))
+          : DEFAULT_NICHE_SETTINGS.videoCount;
+        const rawMinSub = Number(parsed?.minSub);
+        const rawMaxSub = Number(parsed?.maxSub);
+        const safeMinSub = Number.isFinite(rawMinSub)
+          ? Math.max(SUB_RANGE_MIN, Math.min(SUB_RANGE_MAX - 1, Math.floor(rawMinSub)))
+          : DEFAULT_NICHE_SETTINGS.minSub;
+        const safeMaxSub = Number.isFinite(rawMaxSub)
+          ? Math.max(safeMinSub + 1, Math.min(SUB_RANGE_MAX, Math.floor(rawMaxSub)))
+          : DEFAULT_NICHE_SETTINGS.maxSub;
+        const rawKeywordLimit = parsed?.displayKeywordLimit;
+        const safeKeywordLimit = rawKeywordLimit === 'all' || [10, 50, 100].includes(Number(rawKeywordLimit))
+          ? (rawKeywordLimit === 'all' ? 'all' : Number(rawKeywordLimit))
+          : DEFAULT_NICHE_SETTINGS.displayKeywordLimit;
+
+        setNicheRegion(allowedRegion ? String(parsed.region).toUpperCase() : DEFAULT_NICHE_SETTINGS.region);
+        setNicheTime(allowedTimes.has(String(parsed?.time || '')) ? String(parsed.time) : DEFAULT_NICHE_SETTINGS.time);
+        setNicheVideoCount(safeCount);
+        setNicheMinSub(safeMinSub);
+        setNicheMaxSub(safeMaxSub);
+        setDisplayKeywordLimit(safeKeywordLimit);
+      } catch (error) {
+        console.warn('Không đọc được cài đặt Tìm ngách đã lưu:', error);
+      }
+    }
+    setNicheSettingsReady(true);
+
     const savedNicheHistory = localStorage.getItem('youtube_niche_history');
     if (savedNicheHistory) setNicheHistory(JSON.parse(savedNicheHistory));
 
@@ -1437,6 +1483,24 @@ export default function App() {
     exhaustedKeysRef.current = [];
     setExhaustedKeys([]);
   }, []);
+
+  // Giữ lại tính năng lưu thông số của mục TÌM NGÁCH YOUTUBE.
+  // Khi bấm LÀM MỚI, key này sẽ bị xóa và giao diện trở về bộ mặc định trong DEFAULT_NICHE_SETTINGS.
+  useEffect(() => {
+    if (!nicheSettingsReady) return;
+    try {
+      localStorage.setItem(NICHE_SETTINGS_STORAGE_KEY, JSON.stringify({
+        region: nicheRegion,
+        time: nicheTime,
+        videoCount: nicheVideoCount,
+        minSub: nicheMinSub,
+        maxSub: nicheMaxSub,
+        displayKeywordLimit,
+      }));
+    } catch (error) {
+      console.warn('Không lưu được cài đặt Tìm ngách:', error);
+    }
+  }, [nicheSettingsReady, nicheRegion, nicheTime, nicheVideoCount, nicheMinSub, nicheMaxSub, displayKeywordLimit]);
 
   useEffect(() => {
     localStorage.setItem('youtube_gemini_api_key', geminiApiKey);
@@ -1947,10 +2011,10 @@ export default function App() {
 
   const normalizeHunterFilterConfig = (cfg: YouTubeConfig): YouTubeConfig => {
     const minSub = Math.max(0, parseRangeNumber(cfg.minSub, 0));
-    const maxSubRaw = Math.max(1, parseRangeNumber(cfg.maxSub, 100000));
+    const maxSubRaw = Math.max(1, parseRangeNumber(cfg.maxSub, DEFAULT_CONFIG.maxSub));
     const maxSub = Math.max(maxSubRaw, minSub + 1);
     const minVideo = Math.max(0, parseRangeNumber(cfg.minVideo, 1));
-    const maxVideoRaw = Math.max(1, parseRangeNumber(cfg.maxVideo, 1000));
+    const maxVideoRaw = Math.max(1, parseRangeNumber(cfg.maxVideo, DEFAULT_CONFIG.maxVideo));
     const maxVideo = Math.max(maxVideoRaw, minVideo + 1);
 
     const allowedRegions = new Set(REGIONS.map(item => item.code));
@@ -1975,8 +2039,8 @@ export default function App() {
       maxSub,
       minVideo,
       maxVideo,
-      maxVideos: Math.max(1, parseRangeNumber(cfg.maxVideos, 30)),
-      minViews: Math.max(0, parseRangeNumber(cfg.minViews, 0)),
+      maxVideos: Math.max(1, parseRangeNumber(cfg.maxVideos, DEFAULT_CONFIG.maxVideos)),
+      minViews: Math.max(0, parseRangeNumber(cfg.minViews, DEFAULT_CONFIG.minViews)),
     };
   };
 
@@ -5200,42 +5264,65 @@ Trong đó id phải đúng với candidate đã cung cấp.`;
                 : `Đang quét ${regionStage}: ${shownKeyword}... (${resultsRef.current.length}/${STOP_LIMIT})${regionTag}`
           );
 
-          const searchRes = await youtubeFetch('search', {
+          // Số lượng quét cho phép tới 100. YouTube search.list chỉ trả tối đa 50 item/lần,
+          // nên khi người dùng chọn > 50 sẽ lấy thêm trang 2 và tiếp tục chia batch videos/channels 50 ID.
+          const targetSearchCount = Math.max(1, Math.min(100, Math.floor(hunterConfig.maxVideos || DEFAULT_CONFIG.maxVideos)));
+          const searchParams: any = {
             part: 'snippet',
             type: 'video',
             q: searchKeyword,
             regionCode: currentRegion,
             relevanceLanguage: regionCfg.relevanceLanguage,
-            maxResults: hunterConfig.deepDrillSmallTrend ? 50 : Math.min(Math.max(hunterConfig.maxVideos, 20), 50),
+            maxResults: Math.min(50, targetSearchCount),
             order: 'viewCount',
             publishedAfter
-          });
+          };
 
-        if (!searchRes.items?.length) continue;
+          const searchRes = await youtubeFetch('search', searchParams);
+          let searchItems = Array.isArray(searchRes.items) ? [...searchRes.items] : [];
 
-        const videoIds = searchRes.items
+          if (targetSearchCount > 50 && searchRes.nextPageToken && searchItems.length < targetSearchCount) {
+            const secondSearchRes = await youtubeFetch('search', {
+              ...searchParams,
+              maxResults: Math.min(50, targetSearchCount - 50),
+              pageToken: searchRes.nextPageToken,
+            });
+            if (Array.isArray(secondSearchRes.items)) {
+              searchItems = [...searchItems, ...secondSearchRes.items];
+            }
+          }
+
+        if (!searchItems.length) continue;
+
+        const videoIds = Array.from(new Set(searchItems
           .map((item: any) => item?.id?.videoId)
-          .filter(Boolean)
-          .slice(0, 50);
+          .filter(Boolean)))
+          .slice(0, targetSearchCount);
 
-        const videoRes = await youtubeFetch('videos', {
-          part: 'snippet,statistics,contentDetails',
-          id: videoIds.join(',')
-        });
+        let videos: any[] = [];
+        for (let batchStart = 0; batchStart < videoIds.length; batchStart += 50) {
+          const batchIds = videoIds.slice(batchStart, batchStart + 50);
+          const videoRes = await youtubeFetch('videos', {
+            part: 'snippet,statistics,contentDetails',
+            id: batchIds.join(',')
+          });
+          if (Array.isArray(videoRes.items)) videos = [...videos, ...videoRes.items];
+        }
 
-        const videos = videoRes.items || [];
         const channelIds = [...new Set(videos.map((v: any) => v.snippet.channelId))]
           .filter((id: any) => !addedChannelIds.has(String(id)) && !resultsRef.current.some(r => r.id === id));
 
         if (channelIds.length === 0) continue;
 
-        const channelRes = await youtubeFetch('channels', {
-          part: 'snippet,statistics,contentDetails',
-          id: channelIds.join(','),
-        });
-
         const channelMap = new Map();
-        (channelRes.items || []).forEach((channel: any) => channelMap.set(channel.id, channel));
+        for (let batchStart = 0; batchStart < channelIds.length; batchStart += 50) {
+          const batchIds = channelIds.slice(batchStart, batchStart + 50);
+          const channelRes = await youtubeFetch('channels', {
+            part: 'snippet,statistics,contentDetails',
+            id: batchIds.join(','),
+          });
+          (channelRes.items || []).forEach((channel: any) => channelMap.set(channel.id, channel));
+        }
 
         const candidates = videos
           .map((video: any) => {
@@ -5731,11 +5818,25 @@ ${topKeywordsStr}`;
     triggerConfirm('Khôi phục cài đặt', 'Khôi phục cài đặt về mặc định? (Giữ lại API Keys)', () => {
       const currentKeys = config.apiKeys;
       setConfig({ ...DEFAULT_CONFIG, apiKeys: currentKeys });
+
+      // TÌM NGÁCH YOUTUBE: trả đúng về bộ mặc định trong ảnh.
+      // Không xóa lịch sử phân tích/ngách; chỉ xóa cài đặt đang nhớ và kết quả đang hiển thị.
+      setNicheInput('');
+      setNicheRegion(DEFAULT_NICHE_SETTINGS.region);
+      setNicheTime(DEFAULT_NICHE_SETTINGS.time);
+      setNicheVideoCount(DEFAULT_NICHE_SETTINGS.videoCount);
+      setNicheMinSub(DEFAULT_NICHE_SETTINGS.minSub);
+      setNicheMaxSub(DEFAULT_NICHE_SETTINGS.maxSub);
+      setDisplayKeywordLimit(DEFAULT_NICHE_SETTINGS.displayKeywordLimit);
+      setNicheResults(null);
+
       setResults([]);
       resultsRef.current = [];
       localStorage.removeItem('youtube_hunter_config');
       localStorage.removeItem('youtube_hunter_results');
-      setStatus('Đã khôi phục cài đặt mặc định (API Key vẫn được giữ).');
+      localStorage.removeItem(NICHE_SETTINGS_STORAGE_KEY);
+      localStorage.removeItem('youtube_last_niche_keyword');
+      setStatus('Đã khôi phục cài đặt mặc định (API Key và lịch sử đã lưu vẫn được giữ).');
     });
   };
 
@@ -7526,12 +7627,12 @@ Quy tắc:
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100000</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1000000</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100</div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Lượt xem tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">10000</div></div>
                     </div>
                   </div>
@@ -7771,7 +7872,7 @@ Quy tắc:
                         inputMode="numeric"
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxSub}
-                        onChange={(e) => updateHunterFilters({ maxSub: parseRangeNumber(e.target.value, 100000) })}
+                        onChange={(e) => updateHunterFilters({ maxSub: parseRangeNumber(e.target.value, DEFAULT_CONFIG.maxSub) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-maxvideos flex items-center gap-2">
@@ -7780,7 +7881,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideos}
-                        onChange={(e) => updateHunterFilters({ maxVideos: parseRangeNumber(e.target.value, 30) })}
+                        onChange={(e) => updateHunterFilters({ maxVideos: parseRangeNumber(e.target.value, DEFAULT_CONFIG.maxVideos) })}
                       />
                     </div>
                   </div>
@@ -7802,7 +7903,7 @@ Quy tắc:
                         type="number" 
                         className="vtw-main-input w-2/3 border border-[#999] bg-white h-7 px-2"
                         value={config.maxVideo}
-                        onChange={(e) => updateHunterFilters({ maxVideo: parseRangeNumber(e.target.value, 1000) })}
+                        onChange={(e) => updateHunterFilters({ maxVideo: parseRangeNumber(e.target.value, DEFAULT_CONFIG.maxVideo) })}
                       />
                     </div>
                     <div className="vtw-field-row vtw-row-minviews flex items-center gap-2">
