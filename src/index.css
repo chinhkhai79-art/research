@@ -5016,7 +5016,8 @@
   }
   .vtw-mobile-bottom-nav ~ .vtw-toast-overlay,
   .vtw-toast-overlay {
-    bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+    top: max(6px, env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
   }
   .fixed[title="Lên đầu trang"] {
     bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;

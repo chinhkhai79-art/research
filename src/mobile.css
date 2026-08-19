@@ -2023,16 +2023,17 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * PATCH 1/6 — TOAST NOTIFICATION (mọi viewport)
  *
- * Hiển thị giữa trên màn hình, max-width 480px, auto-dismiss 3s.
+ * Hiển thị sát mép trên màn hình để không che hàng tab/tác vụ, auto-dismiss 3s.
  * Không stack — mỗi thông báo mới thay thế cái cũ (xử lý trong App.tsx).
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 .vtw-toast-overlay {
   position: fixed;
-  top: 60px;
+  top: max(6px, env(safe-area-inset-top, 0px));
+  bottom: auto;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: 30000;
   pointer-events: none;
   max-width: 92vw;
   width: max-content;
@@ -2053,7 +2054,7 @@
   font-size: 12px;
   line-height: 1.35;
   font-weight: 600;
-  max-width: 480px;
+  max-width: 560px;
 }
 
 .vtw-toast-icon { font-size: 14px; flex: 0 0 auto; }
@@ -2062,9 +2063,7 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
 }
 .vtw-toast-close {
   flex: 0 0 auto;
@@ -2090,14 +2089,25 @@
 
 @media (max-width: 768px) {
   .vtw-toast-overlay {
-    top: 50%;
-    transform: translate(-50%, -50%);
-    max-width: 88vw;
+    top: max(6px, env(safe-area-inset-top, 0px));
+    bottom: auto;
+    transform: translateX(-50%);
+    max-width: 94vw;
   }
-  .vtw-toast-box { font-size: 11px; padding: 9px 12px; }
+  .vtw-toast-box {
+    font-size: 11px;
+    padding: 8px 11px;
+    max-width: 94vw;
+  }
+  .vtw-toast-text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
   @keyframes vtwToastSlide {
-    from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); }
-    to   { opacity: 1; transform: translate(-50%, -50%); }
+    from { opacity: 0; transform: translate(-50%, -8px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
   }
 }
 

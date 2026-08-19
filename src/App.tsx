@@ -1130,15 +1130,47 @@ export default function App() {
   }, []);
 
   const [status, setStatus] = useState('Sẵn sàng.');
+
+  // Chỉ hiển thị trạng thái thân thiện ra giao diện người dùng.
+  // Chi tiết kỹ thuật (YouTube V3, Gemini, API key, model, quota...) vẫn được xử lý nội bộ
+  // nhưng không đưa lên toast/footer để tránh rối và lộ thông tin không cần thiết.
+  const getPublicStatusMessage = (message: string) => {
+    const text = String(message || '').trim();
+    if (!text) return '';
+
+    const hasTechnicalDetail = /(youtube|gemini|\bapi\b|\bkey\b|model|quota|v3)/i.test(text);
+    if (!hasTechnicalDetail) return text;
+
+    if (/đã chọn key/i.test(text)) {
+      return 'Đã chọn. Bấm PHÂN TÍCH NGAY để chạy phân tích.';
+    }
+    if (/đã cập nhật api|đã lưu cấu hình|đã thêm .*key|đã xóa .*key|cập nhật cấu hình/i.test(text)) {
+      return 'Đã cập nhật cài đặt.';
+    }
+    if (/đang|đang chuyển|đang dùng|đang lấy|đang quét|đang kiểm tra|đang lọc|đang xếp hạng|gọi .*phân tích/i.test(text)) {
+      return 'Hệ thống đang phân tích...';
+    }
+    if (/vui lòng nhập|chưa có key|chưa cấu hình|không có key hợp lệ/i.test(text)) {
+      return 'Vui lòng kiểm tra phần Cài đặt trước khi tiếp tục.';
+    }
+    if (/lỗi|không gọi được|không lấy được|sai|hết hạn|thất bại/i.test(text)) {
+      return 'Hệ thống gặp lỗi. Vui lòng kiểm tra cài đặt và thử lại.';
+    }
+    if (/thành công|hoàn tất|đã .*xong|hoạt động tốt|dùng được|đã lấy dữ liệu|đã cập nhật/i.test(text)) {
+      return 'Hệ thống đã xử lý xong.';
+    }
+
+    return 'Hệ thống đang xử lý...';
+  };
+
   // === TOAST NOTIFICATION ===
-  // Mirror các thông báo từ setStatus thành toast nổi giữa màn hình (3s auto-dismiss).
-  // Không stack - mỗi message mới sẽ thay thế cái cũ.
+  // Toast nằm sát mép trên, không che các tab tác vụ. Không stack - message mới thay message cũ.
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   useEffect(() => {
     // Bỏ qua message ban đầu "Sẵn sàng." và các message rỗng
     if (!status || status === 'Sẵn sàng.') return;
-    setToastMsg(status);
+    setToastMsg(getPublicStatusMessage(status));
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 3000);
     return () => {
@@ -11035,7 +11067,7 @@ Quy tắc:
         <div className="flex-1 min-w-0 pr-2">
           <div className="vtw-status-log flex items-start gap-1.5 bg-blue-50 px-2 py-1 rounded border border-blue-100 max-w-full">
             <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
-            <span className="font-medium text-blue-700 whitespace-normal break-words leading-snug">{status}</span>
+            <span className="font-medium text-blue-700 whitespace-normal break-words leading-snug">{getPublicStatusMessage(status)}</span>
           </div>
         </div>
         <div className="vtw-quota-box ml-auto shrink-0 flex items-center gap-2 justify-end">
@@ -11620,7 +11652,7 @@ Quy tắc:
 
       {/* === Mobile/responsive CSS đã được tách ra ./mobile.css (import trong main.tsx) === */}
 
-      {/* === TOAST NOTIFICATION giữa màn hình — auto-dismiss 3s, không stack === */}
+      {/* === TOAST NOTIFICATION trên cùng — auto-dismiss 3s, không stack === */}
       {toastMsg && (
         <div className="vtw-toast-overlay" aria-live="polite" role="status">
           <div className="vtw-toast-box">
