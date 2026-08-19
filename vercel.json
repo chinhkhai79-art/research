@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci --cache /tmp/npm-cache --prefer-online --no-audit --no-fund",
-  "buildCommand": "npm run build",
+  "installCommand": "corepack enable && corepack prepare pnpm@10.34.0 --activate && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm run build",
   "headers": [
     {
       "source": "/admin-settings.html",
