@@ -1131,9 +1131,9 @@ export default function App() {
 
   const [status, setStatus] = useState('Sẵn sàng.');
 
-  // Chỉ hiển thị trạng thái thân thiện ra giao diện người dùng.
-  // Chi tiết kỹ thuật (YouTube V3, Gemini, API key, model, quota...) vẫn được xử lý nội bộ
-  // nhưng không đưa lên toast/footer để tránh rối và lộ thông tin không cần thiết.
+  // Thông báo ngoài giao diện chỉ ẩn tên dịch vụ/kỹ thuật thừa (YouTube V3, Gemini AI, endpoint...).
+  // Vẫn GIỮ các thông tin vận hành mà người dùng cần theo dõi: Key số mấy, Model đang chạy
+  // và trạng thái Quota. Không bao giờ hiển thị giá trị API key thật/masked key trên toast/footer.
   const getPublicStatusMessage = (message: string) => {
     const text = String(message || '').trim();
     if (!text) return '';
@@ -1141,26 +1141,83 @@ export default function App() {
     const hasTechnicalDetail = /(youtube|gemini|\bapi\b|\bkey\b|model|quota|v3)/i.test(text);
     if (!hasTechnicalDetail) return text;
 
-    if (/đã chọn key/i.test(text)) {
-      return 'Đã chọn. Bấm PHÂN TÍCH NGAY để chạy phân tích.';
+    // Các thao tác cấu hình: không lộ nội dung key.
+    if (/đã chọn key\s*:/i.test(text)) {
+      return 'Đã chọn Key. Bấm PHÂN TÍCH NGAY để chạy phân tích.';
     }
     if (/đã cập nhật api|đã lưu cấu hình|đã thêm .*key|đã xóa .*key|cập nhật cấu hình/i.test(text)) {
       return 'Đã cập nhật cài đặt.';
     }
-    if (/đang|đang chuyển|đang dùng|đang lấy|đang quét|đang kiểm tra|đang lọc|đang xếp hạng|gọi .*phân tích/i.test(text)) {
-      return 'Hệ thống đang phân tích...';
+
+    // Lấy số thứ tự key, tuyệt đối không lấy chuỗi key thật phía sau dấu hai chấm.
+    const keyMatch = text.match(/\bkey\s*#\s*(\d+)(?:\s*\/\s*(\d+)(?!\.))?/i);
+    const keyPart = keyMatch
+      ? `Key #${keyMatch[1]}${keyMatch[2] ? `/${keyMatch[2]}` : ''}`
+      : '';
+
+    // Nhận diện model theo chính danh sách model của ứng dụng để không nhầm dấu chấm
+    // trong version (3.5/3.7) hoặc nhầm phần Key #x/y thành tên model.
+    const normalizedText = text.toLowerCase();
+    const knownModel = [...GEMINI_MODELS]
+      .sort((a, b) => b.name.split(' — ')[0].length - a.name.split(' — ')[0].length)
+      .find(model => {
+        const shortName = model.name.split(' — ')[0].trim().toLowerCase();
+        return normalizedText.includes(model.id.toLowerCase())
+          || normalizedText.includes(model.name.toLowerCase())
+          || normalizedText.includes(shortName);
+      });
+    const modelName = knownModel ? knownModel.name.split(' — ')[0].trim() : '';
+    const modelPart = modelName ? `Model: ${modelName}` : '';
+
+    // Quota chỉ hiển thị trạng thái cần thiết. Số quota đã dùng vẫn luôn hiện ở footer riêng.
+    const quotaExhausted = /hết\s*(?:dữ liệu\s*api\s*hôm nay|quota)|quota[^.!?]*(?:hết|vượt)|resource[_ -]?exhausted|rate[_ -]?limit|daily[_ -]?limit|\b429\b/i.test(text);
+    const quotaPart = quotaExhausted ? 'Quota: hết/giới hạn' : '';
+
+    const detailParts = [keyPart, modelPart, quotaPart].filter(Boolean);
+    const details = detailParts.length ? ` • ${detailParts.join(' • ')}` : '';
+
+    // Check model/key: giữ số key + model và kết quả check.
+    const usableMatch = text.match(/dùng được với\s*(\d+)\s*\/\s*(\d+)\s*key/i);
+    if (/đang check|đang kiểm tra/i.test(text)) {
+      return `Hệ thống đang kiểm tra...${details}`;
     }
-    if (/vui lòng nhập|chưa có key|chưa cấu hình|không có key hợp lệ/i.test(text)) {
-      return 'Vui lòng kiểm tra phần Cài đặt trước khi tiếp tục.';
+    if (usableMatch) {
+      return `Hệ thống đã kiểm tra • ${usableMatch[1]}/${usableMatch[2]} Key dùng được${modelPart ? ` • ${modelPart}` : ''}.`;
     }
-    if (/lỗi|không gọi được|không lấy được|sai|hết hạn|thất bại/i.test(text)) {
-      return 'Hệ thống gặp lỗi. Vui lòng kiểm tra cài đặt và thử lại.';
-    }
-    if (/thành công|hoàn tất|đã .*xong|hoạt động tốt|dùng được|đã lấy dữ liệu|đã cập nhật/i.test(text)) {
-      return 'Hệ thống đã xử lý xong.';
+    if (/chưa có key dùng được/i.test(text)) {
+      return `Chưa có Key dùng được${modelPart ? ` • ${modelPart}` : ''}.`;
     }
 
-    return 'Hệ thống đang xử lý...';
+    // Trạng thái xoay key/model và quota.
+    if (/đang(?:\s+tự động)?\s+chuyển|đang thử model dự phòng/i.test(text)) {
+      const action = /model dự phòng/i.test(text) ? 'Đang thử model dự phòng...' : 'Đang chuyển Key...';
+      return `${action}${details}`;
+    }
+    if (/đang dùng/i.test(text) && keyPart) {
+      return `Hệ thống đang phân tích...${details}`;
+    }
+
+    if (/hoạt động tốt|thành công|dùng được/i.test(text)) {
+      return `Hệ thống hoạt động tốt.${details}`;
+    }
+
+    if (/vui lòng nhập|chưa có key|chưa cấu hình|không có key hợp lệ/i.test(text)) {
+      return `Vui lòng kiểm tra phần Cài đặt trước khi tiếp tục.${details}`;
+    }
+
+    if (/lỗi|không gọi được|không lấy được|sai|hết hạn|thất bại/i.test(text)) {
+      return `Hệ thống gặp lỗi.${details || ' Vui lòng kiểm tra cài đặt và thử lại.'}`;
+    }
+
+    if (/đang|đang lấy|đang quét|đang lọc|đang xếp hạng|gọi .*phân tích/i.test(text)) {
+      return `Hệ thống đang phân tích...${details}`;
+    }
+
+    if (/hoàn tất|đã .*xong|đã lấy dữ liệu|đã cập nhật/i.test(text)) {
+      return `Hệ thống đã xử lý xong.${details}`;
+    }
+
+    return `Hệ thống đang xử lý...${details}`;
   };
 
   // === TOAST NOTIFICATION ===
