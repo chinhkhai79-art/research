@@ -196,7 +196,7 @@ const DEFAULT_CONFIG: YouTubeConfig = {
   regions: ['VN'],
   region: 'VN',
   publishedAfter: 'month',
-  maxVideos: 100,
+  maxVideos: 30,
   minSub: 0,
   maxSub: 1000000,
   minVideo: 1,
@@ -7717,7 +7717,7 @@ Quy tắc:
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">0</div></div>
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Đăng ký tối đa:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1000000</div></div>
-                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">100</div></div>
+                      <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Số lượng quét:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">30</div></div>
                     </div>
                     <div className="space-y-2 border-l border-[#ccc] pl-4">
                       <div className="flex items-center gap-2"><div className="w-1/3 text-right text-[11px] font-bold text-[#2c3e50]">Video tối thiểu:</div><div className="w-2/3 border border-[#999] bg-white h-7 px-2 flex items-center">1</div></div>
