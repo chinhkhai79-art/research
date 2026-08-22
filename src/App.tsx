@@ -210,7 +210,7 @@ const NICHE_SETTINGS_STORAGE_KEY = 'youtube_niche_research_settings';
 const DEFAULT_NICHE_SETTINGS = {
   region: 'VN',
   time: 'month',
-  videoCount: 100,
+  videoCount: 50,
   minSub: 0,
   maxSub: 250000,
   displayKeywordLimit: 50 as string | number,
