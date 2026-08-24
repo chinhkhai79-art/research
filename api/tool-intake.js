@@ -8,6 +8,7 @@ import {
   deleteCampaign,
   deleteEntry,
   findEntryByEmail,
+  findEntryByPhone,
   getCampaignById,
   getCampaignBySlug,
   listCampaigns,
@@ -61,9 +62,40 @@ function text(value, max = 500) {
   return String(value ?? '').replace(/\0/g, '').trim().slice(0, max);
 }
 
-function email(value) {
+const EMAIL_DOMAIN_CORRECTIONS = new Map([
+  ['gmai.com', 'gmail.com'], ['gmial.com', 'gmail.com'], ['gmail.co', 'gmail.com'],
+  ['gmail.con', 'gmail.com'], ['gmail.cm', 'gmail.com'], ['gmail.om', 'gmail.com'],
+  ['googlemai.com', 'googlemail.com'], ['googlemail.co', 'googlemail.com'],
+  ['outlok.com', 'outlook.com'], ['outlook.co', 'outlook.com'], ['outlook.con', 'outlook.com'],
+  ['hotmai.com', 'hotmail.com'], ['hotmal.com', 'hotmail.com'], ['hotmail.co', 'hotmail.com'],
+  ['hotmail.con', 'hotmail.com'], ['yaho.com', 'yahoo.com'], ['yhoo.com', 'yahoo.com'],
+  ['yahoo.co', 'yahoo.com'], ['yahoo.con', 'yahoo.com'], ['icloud.co', 'icloud.com'],
+  ['icloud.con', 'icloud.com'], ['iclod.com', 'icloud.com']
+]);
+
+function validateEmail(value) {
   const clean = text(value, 190).toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) ? clean : '';
+  const invalid = 'Email không hợp lệ. Hãy nhập đầy đủ, ví dụ: tenban@gmail.com.';
+  const parts = clean.split('@');
+  if (parts.length !== 2) return { value: '', error: invalid };
+  const [local, domain] = parts;
+  if (!local || local.length > 64 || local.startsWith('.') || local.endsWith('.') || local.includes('..')) {
+    return { value: '', error: invalid };
+  }
+  if (!/^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+$/i.test(local) || !domain || domain.length > 253 || !domain.includes('.')) {
+    return { value: '', error: invalid };
+  }
+  const labels = domain.split('.');
+  if (labels.some(label => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))) {
+    return { value: '', error: invalid };
+  }
+  const tld = labels[labels.length - 1];
+  if (!/^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i.test(tld)) return { value: '', error: invalid };
+  const correction = EMAIL_DOMAIN_CORRECTIONS.get(domain);
+  if (correction) {
+    return { value: '', error: `Bạn có nhập nhầm đuôi email “@${domain}”? Vui lòng dùng “@${correction}”.` };
+  }
+  return { value: clean, error: '' };
 }
 
 function phone(value) {
@@ -239,34 +271,52 @@ async function handleRegister(req, res) {
   if (!campaign.isActive) return res.status(410).json({ success: false, error: 'Link nhận tool đang tạm dừng.' });
 
   const fullName = text(req.body?.fullName, 150);
-  const cleanEmail = email(req.body?.email);
+  const checkedEmail = validateEmail(req.body?.email);
+  const cleanEmail = checkedEmail.value;
   const cleanPhone = phone(req.body?.phone);
   const zalo = zaloGroupUrl(req.body?.zalo);
   const useCase = text(req.body?.useCase, 1000);
   if (fullName.length < 2) return res.status(400).json({ success: false, error: 'Vui lòng nhập đầy đủ họ tên.' });
-  if (!cleanEmail) return res.status(400).json({ success: false, error: 'Email không hợp lệ.' });
+  if (!cleanEmail) return res.status(400).json({ success: false, error: checkedEmail.error });
   if (!validVietnamPhone(cleanPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Hãy nhập đúng số di động Việt Nam gồm 10 số.' });
   if (!zalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo không hợp lệ. Link phải có dạng https://zalo.me/g/xxxxxxxx.' });
 
-  const existing = await findEntryByEmail(campaign.id, cleanEmail);
-  if (existing) {
-    return res.status(200).json({
-      success: true,
-      duplicate: true,
-      message: 'Email này đã đăng ký nâng cấp PRO trước đó.'
+  const [existingEmail, existingPhone] = await Promise.all([
+    findEntryByEmail(campaign.id, cleanEmail),
+    findEntryByPhone(campaign.id, cleanPhone)
+  ]);
+  if (existingEmail || existingPhone) {
+    const both = existingEmail && existingPhone;
+    const error = both
+      ? 'Email và số điện thoại này đã đăng ký trước đó. Vui lòng kiểm tra lại thông tin.'
+      : existingEmail
+        ? 'Email này đã đăng ký trước đó. Vui lòng dùng email khác hoặc liên hệ admin.'
+        : 'Số điện thoại này đã đăng ký trước đó. Vui lòng dùng số khác hoặc liên hệ admin.';
+    return res.status(409).json({
+      success: false,
+      code: both ? 'DUPLICATE_EMAIL_PHONE' : (existingEmail ? 'DUPLICATE_EMAIL' : 'DUPLICATE_PHONE'),
+      error
     });
   }
   const ipHash = crypto.createHash('sha256').update(`${requestIp(req)}:${process.env.ADMIN_SECRET || 'tool-intake'}`).digest('hex');
-  const entry = await createEntry({
-    campaignId: campaign.id,
-    fullName,
-    email: cleanEmail,
-    phone: cleanPhone,
-    zalo,
-    useCase,
-    ipHash,
-    userAgent: text(req.headers['user-agent'], 500)
-  });
+  let entry;
+  try {
+    entry = await createEntry({
+      campaignId: campaign.id,
+      fullName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      zalo,
+      useCase,
+      ipHash,
+      userAgent: text(req.headers['user-agent'], 500)
+    });
+  } catch (error) {
+    if (/23505|duplicate key|tool_intake_entries_campaign_(?:email|phone)_uq/i.test(String(error?.message || ''))) {
+      return res.status(409).json({ success: false, code: 'DUPLICATE_REGISTRATION', error: 'Email hoặc số điện thoại này đã đăng ký trước đó.' });
+    }
+    throw error;
+  }
   return res.status(201).json({
     success: true,
     message: campaign.successMessage || 'Đăng ký thành công. Hệ thống đã tiếp nhận thông tin của bạn.',
@@ -324,11 +374,12 @@ async function handleAdmin(req, res, action) {
   if (action === 'update-entry' && req.method === 'POST') {
     const status = ENTRY_STATUSES.has(req.body?.status) ? req.body.status : undefined;
     const updatedName = req.body?.fullName === undefined ? undefined : text(req.body.fullName, 150);
-    const updatedEmail = req.body?.email === undefined ? undefined : email(req.body.email);
+    const checkedEmail = req.body?.email === undefined ? undefined : validateEmail(req.body.email);
+    const updatedEmail = checkedEmail === undefined ? undefined : checkedEmail.value;
     const updatedPhone = req.body?.phone === undefined ? undefined : phone(req.body.phone);
     const updatedZalo = req.body?.zalo === undefined ? undefined : zaloGroupUrl(req.body.zalo);
     if (updatedName !== undefined && updatedName.length < 2) return res.status(400).json({ success: false, error: 'Họ và tên không hợp lệ.' });
-    if (updatedEmail !== undefined && !updatedEmail) return res.status(400).json({ success: false, error: 'Email không hợp lệ.' });
+    if (updatedEmail !== undefined && !updatedEmail) return res.status(400).json({ success: false, error: checkedEmail.error });
     if (updatedPhone !== undefined && !validVietnamPhone(updatedPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ.' });
     if (updatedZalo !== undefined && !updatedZalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo phải có dạng https://zalo.me/g/xxxxxxxx.' });
     const entry = await updateEntry(text(req.body?.id, 80), {

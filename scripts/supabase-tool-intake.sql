@@ -65,6 +65,8 @@ create table if not exists public.tool_intake_entries (
 
 create unique index if not exists tool_intake_entries_campaign_email_uq
   on public.tool_intake_entries (campaign_id, lower(email));
+create unique index if not exists tool_intake_entries_campaign_phone_uq
+  on public.tool_intake_entries (campaign_id, phone);
 create index if not exists tool_intake_entries_campaign_created_idx
   on public.tool_intake_entries (campaign_id, created_at desc);
 create index if not exists tool_intake_entries_status_idx
@@ -95,13 +97,29 @@ set button_label = 'Đăng ký nâng cấp PRO',
     end,
     updated_at = now();
 
+alter table public.tool_intake_entries
+  drop constraint if exists tool_intake_entries_email_format_ck,
+  drop constraint if exists tool_intake_entries_email_domain_typo_ck;
+
+alter table public.tool_intake_entries
+  add constraint tool_intake_entries_email_format_ck check (
+    length(email) between 6 and 190
+    and email ~* '^[A-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:[.][A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$'
+    and split_part(email, '@', 1) !~ '^[.]|[.]$'
+    and position('..' in email) = 0
+    and reverse(split_part(reverse(split_part(email, '@', 2)), '.', 1)) ~* '^(?:[A-Z]{2,63}|XN--[A-Z0-9-]{2,59})$'
+  ),
+  add constraint tool_intake_entries_email_domain_typo_ck check (
+    lower(split_part(email, '@', 2)) not in (
+      'gmai.com','gmial.com','gmail.co','gmail.con','gmail.cm','gmail.om',
+      'googlemai.com','googlemail.co','outlok.com','outlook.co','outlook.con',
+      'hotmai.com','hotmal.com','hotmail.co','hotmail.con','yaho.com','yhoo.com',
+      'yahoo.co','yahoo.con','icloud.co','icloud.con','iclod.com'
+    )
+  );
+
 do $$
 begin
-  if not exists (select 1 from pg_constraint where conname = 'tool_intake_entries_email_format_ck') then
-    alter table public.tool_intake_entries
-      add constraint tool_intake_entries_email_format_ck
-      check (email ~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$');
-  end if;
   if not exists (select 1 from pg_constraint where conname = 'tool_intake_entries_phone_vn_ck') then
     alter table public.tool_intake_entries
       add constraint tool_intake_entries_phone_vn_ck

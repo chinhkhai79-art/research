@@ -55,7 +55,8 @@ globalThis.fetch = async (url, options = {}) => {
     if (method === 'GET') {
       const campaignId = target.searchParams.get('campaign_id')?.replace(/^eq\./, '');
       const wantedEmail = target.searchParams.get('email')?.replace(/^eq\./, '');
-      return jsonResponse(entries.filter(row => (!campaignId || String(row.campaign_id) === campaignId) && (!wantedEmail || row.email === wantedEmail)));
+      const wantedPhone = target.searchParams.get('phone')?.replace(/^eq\./, '');
+      return jsonResponse(entries.filter(row => (!campaignId || String(row.campaign_id) === campaignId) && (!wantedEmail || row.email === wantedEmail) && (!wantedPhone || row.phone === wantedPhone)));
     }
     if (method === 'POST') {
       const body = JSON.parse(options.body || '{}');
@@ -103,6 +104,22 @@ const invalidResult = await invoke({
   body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'sai-email', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
 });
 assert.equal(invalidResult.statusCode, 400);
+assert.match(invalidResult.body.error, /tenban@gmail\.com/);
+
+const missingMailboxResult = await invoke({
+  method: 'POST',
+  query: { action: 'register' },
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: '@gmail.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+});
+assert.equal(missingMailboxResult.statusCode, 400);
+
+const mistypedDomainResult = await invoke({
+  method: 'POST',
+  query: { action: 'register' },
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@gmai.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+});
+assert.equal(mistypedDomainResult.statusCode, 400);
+assert.match(mistypedDomainResult.body.error, /@gmail\.com/);
 
 const invalidPhoneResult = await invoke({
   method: 'POST',
@@ -134,8 +151,18 @@ const duplicateResult = await invoke({
   query: { action: 'register' },
   body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
 });
-assert.equal(duplicateResult.statusCode, 200);
-assert.equal(duplicateResult.body.duplicate, true);
+assert.equal(duplicateResult.statusCode, 409);
+assert.equal(duplicateResult.body.code, 'DUPLICATE_EMAIL_PHONE');
+assert.match(duplicateResult.body.error, /Email và số điện thoại/);
+
+const duplicatePhoneResult = await invoke({
+  method: 'POST',
+  query: { action: 'register' },
+  body: { slug: 'nhan-tubekey', fullName: 'Trần Văn B', email: 'other@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+});
+assert.equal(duplicatePhoneResult.statusCode, 409);
+assert.equal(duplicatePhoneResult.body.code, 'DUPLICATE_PHONE');
+assert.match(duplicatePhoneResult.body.error, /Số điện thoại này đã đăng ký/);
 
 const unauthorized = await invoke({ query: { action: 'campaigns' } });
 assert.equal(unauthorized.statusCode, 401);
@@ -153,4 +180,4 @@ assert.equal(exportResult.headers['content-type'], 'application/vnd.openxmlforma
 assert.equal(Buffer.isBuffer(exportResult.body), true);
 assert.equal(exportResult.body.subarray(0, 2).toString('ascii'), 'PK');
 
-console.log('tool-intake tests passed: direct public URL, strict validation, registration, duplicate handling, admin auth/counts and XLSX export.');
+console.log('tool-intake tests passed: strict validation, duplicate email/phone notices, registration, admin auth/counts and XLSX export.');
