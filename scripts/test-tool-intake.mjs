@@ -93,28 +93,46 @@ async function invoke({ method = 'GET', query = {}, body = {}, headers = {} } = 
 const publicResult = await invoke({ query: { action: 'public-campaign', slug: 'nhan-tubekey' } });
 assert.equal(publicResult.statusCode, 200);
 assert.equal(publicResult.body.campaign.title, 'Đăng ký nhận TubeKey');
+assert.equal(publicResult.body.campaign.buttonLabel, 'Đăng ký nâng cấp PRO');
+assert.equal(publicResult.body.campaign.publicUrl, 'https://www.tubekey.vn/nhan-tubekey');
 assert.equal('toolUrl' in publicResult.body.campaign, false, 'Public campaign must not expose the tool URL.');
 
 const invalidResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'sai-email', phone: '0900000000' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'sai-email', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
 });
 assert.equal(invalidResult.statusCode, 400);
+
+const invalidPhoneResult = await invoke({
+  method: 'POST',
+  query: { action: 'register' },
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'phone@example.com', phone: '0123456789', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+});
+assert.equal(invalidPhoneResult.statusCode, 400);
+
+const invalidZaloResult = await invoke({
+  method: 'POST',
+  query: { action: 'register' },
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/0900000000' }
+});
+assert.equal(invalidZaloResult.statusCode, 400);
 
 const registerResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: '0900000000' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
 });
 assert.equal(registerResult.statusCode, 201);
 assert.equal(registerResult.body.success, true);
 assert.equal(entries.length, 1);
+assert.equal(entries[0].phone, '0900000000');
+assert.equal(entries[0].zalo, 'https://zalo.me/g/stmbujxgboawdcem8wjk');
 
 const duplicateResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
 });
 assert.equal(duplicateResult.statusCode, 200);
 assert.equal(duplicateResult.body.duplicate, true);
@@ -126,5 +144,13 @@ const adminCampaigns = await invoke({ query: { action: 'campaigns' }, headers: {
 assert.equal(adminCampaigns.statusCode, 200);
 assert.equal(adminCampaigns.body.campaigns[0].totalEntries, 1);
 
-console.log('tool-intake tests passed: public privacy, validation, registration, duplicate handling, admin auth and counts.');
+const exportResult = await invoke({
+  query: { action: 'export', campaignId: '1' },
+  headers: { 'x-admin-secret': 'test-admin-secret' }
+});
+assert.equal(exportResult.statusCode, 200);
+assert.equal(exportResult.headers['content-type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+assert.equal(Buffer.isBuffer(exportResult.body), true);
+assert.equal(exportResult.body.subarray(0, 2).toString('ascii'), 'PK');
 
+console.log('tool-intake tests passed: direct public URL, strict validation, registration, duplicate handling, admin auth/counts and XLSX export.');

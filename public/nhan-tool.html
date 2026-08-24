@@ -6,12 +6,12 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>Đăng ký nhận tool - TubeKey</title>
+  <title>Đăng ký nâng cấp PRO - TubeKey</title>
   <style>
     :root{--navy:#123b61;--blue:#168ed1;--orange:#f37a1f;--ink:#163047;--muted:#63778b;--line:#dbe6ef;--bg:#edf4f9;--ok:#14875b;--err:#c83e4d}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Arial,sans-serif;color:var(--ink);background:var(--bg)}
     body{background:radial-gradient(circle at 14% 4%,rgba(36,164,222,.18),transparent 30%),radial-gradient(circle at 90% 94%,rgba(243,122,31,.13),transparent 34%),var(--bg)}
-    .page{width:min(760px,calc(100% - 28px));margin:0 auto;padding:34px 0 50px}.brand{display:flex;justify-content:center;align-items:center;gap:10px;color:var(--navy);font-size:20px;font-weight:900;margin-bottom:22px}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--blue),#18b5da);color:#fff;box-shadow:0 12px 26px rgba(22,142,209,.25)}
+    .page{width:min(760px,calc(100% - 28px));margin:0 auto;padding:34px 0 50px}.brand{display:flex;justify-content:center;align-items:center;gap:10px;color:var(--navy);font-size:20px;font-weight:900;margin-bottom:22px}.brand-mark{display:grid;place-items:center;width:42px;height:42px;overflow:hidden}.brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
     .shell{display:block;background:#fff;border:1px solid rgba(190,210,226,.85);border-radius:28px;overflow:hidden;box-shadow:0 24px 65px rgba(25,55,82,.13)}
     .form-wrap{padding:38px}.form-head{text-align:center;margin:0 0 28px}.form-title{font-size:30px;line-height:1.25;margin:0 0 9px;color:var(--navy)}.form-sub{color:var(--muted);font-size:15px;margin:0;line-height:1.55;white-space:pre-line}.field{margin-bottom:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field label{display:block;font-size:14px;font-weight:800;margin-bottom:7px}.required{color:var(--orange)}input{width:100%;border:1px solid var(--line);border-radius:13px;padding:13px 14px;background:#fbfdff;color:var(--ink);font:inherit;outline:none;transition:.2s}input:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(22,142,209,.11);background:#fff}.hp{position:absolute!important;left:-9999px!important;opacity:0!important;pointer-events:none!important}
     .submit{width:100%;border:0;border-radius:14px;padding:14px 18px;background:linear-gradient(135deg,var(--orange),#ff9a32);color:#fff;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 12px 25px rgba(243,122,31,.25);transition:.2s}.submit:hover{transform:translateY(-1px)}.submit:disabled{opacity:.65;cursor:wait;transform:none}
@@ -23,31 +23,30 @@
 </head>
 <body>
   <main class="page">
-    <div class="brand"><span class="brand-mark">TK</span><span>TubeKey.vn</span></div>
-    <section id="loading" class="shell loading"><div><div class="spinner"></div><b>Đang tải biểu mẫu nhận tool...</b></div></section>
+    <div class="brand"><span class="brand-mark"><img src="/icon-192x192.png" alt="" aria-hidden="true" /></span><span>TubeKey.vn</span></div>
+    <section id="loading" class="shell loading"><div><div class="spinner"></div><b>Đang tải biểu mẫu đăng ký PRO...</b></div></section>
     <section id="unavailable" class="shell unavailable hidden"><div><h2>Link chưa sẵn sàng</h2><p id="unavailableText">Không tải được biểu mẫu này.</p></div></section>
     <section id="content" class="shell hidden">
       <div class="form-wrap">
         <div id="formArea">
           <header class="form-head">
-            <h1 id="campaignTitle" class="form-title">Đăng ký nhận tool</h1>
-            <p id="campaignDescription" class="form-sub">Điền thông tin để nhận tool.</p>
+            <h1 id="campaignTitle" class="form-title">Đăng ký nâng cấp PRO</h1>
+            <p id="campaignDescription" class="form-sub">Điền đúng thông tin tài khoản để admin kiểm tra.</p>
           </header>
           <div id="notice" class="notice" role="alert" aria-live="polite"></div>
           <form id="intakeForm" novalidate>
             <input class="hp" id="website" name="website" tabindex="-1" autocomplete="off" />
             <div class="field"><label for="fullName">Họ và tên <span class="required">*</span></label><input id="fullName" name="fullName" autocomplete="name" maxlength="150" required placeholder="Ví dụ: Nguyễn Văn A" /></div>
             <div class="grid">
-              <div class="field" id="phoneField"><label for="phone">Số điện thoại <span id="phoneRequired" class="required">*</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="09xxxxxxxx" /></div>
+              <div class="field" id="phoneField"><label for="phone">Số điện thoại <span id="phoneRequired" class="required">*</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="16" required placeholder="Ví dụ: 0349996320" /></div>
               <div class="field"><label for="email">Email <span class="required">*</span></label><input id="email" name="email" type="email" autocomplete="email" maxlength="190" required placeholder="ban@gmail.com" /></div>
             </div>
-            <div class="field"><label for="zalo">Nhóm Zalo <span id="zaloRequired" class="required hidden">*</span></label><input id="zalo" name="zalo" autocomplete="off" maxlength="200" placeholder="Link hoặc tên nhóm Zalo" /></div>
-            <button id="submitBtn" class="submit" type="submit">Đăng ký nhận tool</button>
+            <div class="field"><label for="zalo">Link nhóm Zalo <span id="zaloRequired" class="required">*</span></label><input id="zalo" name="zalo" type="url" inputmode="url" autocomplete="url" maxlength="200" required placeholder="https://zalo.me/g/stmbujxgboawdcem8wjk" /></div>
+            <button id="submitBtn" class="submit" type="submit">Đăng ký nâng cấp PRO</button>
           </form>
         </div>
         <div id="successArea" class="success hidden">
           <div class="success-icon">✓</div><h2>Đăng ký thành công!</h2><p id="successMessage"></p>
-          <a id="toolButton" class="tool-button hidden" href="#" target="_blank" rel="noopener">Mở tool ngay →</a>
         </div>
       </div>
     </section>
@@ -59,9 +58,13 @@
       function $(id){return document.getElementById(id)}
       function setHidden(id,hidden){$(id).classList.toggle('hidden',!!hidden)}
       function showNotice(message,type){var el=$('notice');el.textContent=message||'';el.className='notice show '+(type||'error')}
-      function slugFromLocation(){var q=new URLSearchParams(location.search).get('slug');if(q)return q;var parts=location.pathname.split('/').filter(Boolean);return parts[0]==='nhan-tool'&&parts[1]?decodeURIComponent(parts[1]):''}
+      function slugFromLocation(){var q=new URLSearchParams(location.search).get('slug');if(q)return q;var parts=location.pathname.split('/').filter(Boolean);if(parts[0]==='nhan-tool'&&parts[1])return decodeURIComponent(parts[1]);return parts.length===1?decodeURIComponent(parts[0]):''}
       async function jsonFetch(url,options){var res=await fetch(url,options||{});var data=await res.json().catch(function(){return{}});if(!res.ok||data.success===false)throw new Error(data.error||'Không xử lý được yêu cầu.');return data}
-      function renderCampaign(campaign){state.campaign=campaign;$('campaignTitle').textContent=campaign.title||'Đăng ký nhận tool';$('campaignDescription').textContent=campaign.description||'Điền thông tin để hệ thống tiếp nhận yêu cầu của bạn.';$('submitBtn').textContent=campaign.buttonLabel||'Đăng ký nhận tool';$('phone').required=!!campaign.requirePhone;setHidden('phoneRequired',!campaign.requirePhone);$('zalo').required=!!campaign.requireZalo;setHidden('zaloRequired',!campaign.requireZalo);document.title=(campaign.title||'Đăng ký nhận tool')+' - TubeKey';setHidden('loading',true);setHidden('content',false)}
+      function normalizePhone(value){var digits=String(value||'').replace(/\D/g,'');if(digits.length===11&&digits.indexOf('84')===0)digits='0'+digits.slice(2);return digits}
+      function validPhone(value){return /^0(?:3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-46-9])\d{7}$/.test(value)}
+      function validZaloGroup(value){return /^https:\/\/zalo\.me\/g\/[A-Za-z0-9_-]{8,80}\/?$/.test(String(value||'').trim())}
+      function validateForm(){var name=$('fullName').value.trim();var cleanPhone=normalizePhone($('phone').value);var cleanEmail=$('email').value.trim();var zalo=$('zalo').value.trim();if(name.length<2){showNotice('Vui lòng nhập đầy đủ họ và tên.','error');$('fullName').focus();return false}$('phone').value=cleanPhone;if(!validPhone(cleanPhone)){showNotice('Số điện thoại không hợp lệ. Hãy nhập đúng số di động Việt Nam gồm 10 số.','error');$('phone').focus();return false}if(!cleanEmail||!$('email').checkValidity()){showNotice('Email không hợp lệ. Vui lòng kiểm tra lại.','error');$('email').focus();return false}if(!validZaloGroup(zalo)){showNotice('Link nhóm Zalo không hợp lệ. Link phải có dạng https://zalo.me/g/xxxxxxxx','error');$('zalo').focus();return false}return true}
+      function renderCampaign(campaign){state.campaign=campaign;$('campaignTitle').textContent=campaign.title||'Đăng ký nâng cấp PRO';$('campaignDescription').textContent=campaign.description||'Điền đúng thông tin tài khoản để admin kiểm tra.';var label=campaign.buttonLabel||'';$('submitBtn').textContent=!label||label==='Đăng ký nhận tool'?'Đăng ký nâng cấp PRO':label;$('phone').required=true;setHidden('phoneRequired',false);$('zalo').required=true;setHidden('zaloRequired',false);document.title=(campaign.title||'Đăng ký nâng cấp PRO')+' - TubeKey';setHidden('loading',true);setHidden('content',false)}
       async function load(){
         state.slug=slugFromLocation();
         if(!state.slug){$('unavailableText').textContent='Đường dẫn nhận tool không hợp lệ.';setHidden('loading',true);setHidden('unavailable',false);return}
@@ -70,17 +73,16 @@
           renderCampaign(data.campaign);
         }catch(error){
           var localPreview=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&new URLSearchParams(location.search).get('preview')==='1';
-          if(localPreview)return renderCampaign({title:'Đăng ký nhận TubeKey',description:'Điền đúng thông tin để nhận quyền truy cập công cụ nghiên cứu từ khóa YouTube.',buttonLabel:'Đăng ký nhận tool',requirePhone:true,requireZalo:false});
+          if(localPreview)return renderCampaign({title:'Đăng ký nâng cấp TubeKey PRO',description:'Điền đúng số điện thoại, email và link nhóm Zalo để admin kiểm tra.',buttonLabel:'Đăng ký nâng cấp PRO',requirePhone:true,requireZalo:true});
           $('unavailableText').textContent=error.message||'Không tải được biểu mẫu này.';setHidden('loading',true);setHidden('unavailable',false)
         }
       }
       $('intakeForm').addEventListener('submit',async function(event){
-        event.preventDefault();var form=event.currentTarget;if(!form.reportValidity())return;var button=$('submitBtn');button.disabled=true;var old=button.textContent;button.textContent='Đang gửi thông tin...';$('notice').className='notice';
+        event.preventDefault();if(!validateForm())return;var button=$('submitBtn');button.disabled=true;var old=button.textContent;button.textContent='Đang gửi thông tin...';$('notice').className='notice';
         try{
           var payload={slug:state.slug,fullName:$('fullName').value.trim(),email:$('email').value.trim(),phone:$('phone').value.trim(),zalo:$('zalo').value.trim(),useCase:'',website:$('website').value};
           var data=await jsonFetch('/api/tool-intake?action=register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
           $('successMessage').textContent=[data.message,data.emailWarning].filter(Boolean).join(' ');setHidden('formArea',true);setHidden('successArea',false);
-          if(data.toolUrl){$('toolButton').href=data.toolUrl;setHidden('toolButton',false)}
           window.scrollTo({top:0,behavior:'smooth'});
         }catch(error){showNotice(error.message||'Không gửi được thông tin.','error');button.disabled=false;button.textContent=old}
       });

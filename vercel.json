@@ -2,9 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "corepack prepare pnpm@10.34.0 --activate && corepack pnpm --version && corepack pnpm install --no-frozen-lockfile --reporter=append-only",
   "buildCommand": "corepack pnpm run build",
-  "rewrites": [
+  "redirects": [
     {
       "source": "/nhan-tool/:slug",
+      "destination": "/:slug",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/:slug([a-z0-9][a-z0-9-]{0,79})",
       "destination": "/nhan-tool.html?slug=:slug"
     }
   ],

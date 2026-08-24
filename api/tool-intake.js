@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { isSupabaseConfigured } from '../lib/supabaseAdmin.js';
 import { sendGenericEmail } from '../lib/mailer.js';
+import { buildToolIntakeXlsx } from '../lib/toolIntakeXlsx.js';
 import {
   addEmailLog,
   createEntry,
@@ -19,8 +20,8 @@ import {
 const rateBuckets = globalThis.__toolIntakeRateBuckets || new Map();
 globalThis.__toolIntakeRateBuckets = rateBuckets;
 const PUBLIC_ACTIONS = new Set(['public-campaign', 'register']);
-const DELIVERY_MODES = new Set(['manual', 'show_link', 'email_link']);
 const ENTRY_STATUSES = new Set(['new', 'granted', 'sent', 'rejected']);
+const RESERVED_SLUGS = new Set(['api', 'admin', 'pay', 'nhan-tool', 'assets', 'favicon', 'login']);
 
 function setCors(req, res) {
   const origin = String(req.headers.origin || '');
@@ -66,7 +67,26 @@ function email(value) {
 }
 
 function phone(value) {
-  return text(value, 30).replace(/[^0-9+]/g, '');
+  let digits = text(value, 30).replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('84')) digits = `0${digits.slice(2)}`;
+  return digits;
+}
+
+function validVietnamPhone(value) {
+  return /^0(?:3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-46-9])\d{7}$/.test(String(value || ''));
+}
+
+function zaloGroupUrl(value) {
+  const raw = text(value, 200);
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:' || parsed.hostname.toLowerCase() !== 'zalo.me' || parsed.search || parsed.hash) return '';
+    const match = parsed.pathname.match(/^\/g\/([A-Za-z0-9_-]{8,80})\/?$/);
+    return match ? `https://zalo.me/g/${match[1]}` : '';
+  } catch {
+    return '';
+  }
 }
 
 function slugify(value) {
@@ -132,11 +152,13 @@ function publicCampaign(campaign, req) {
     slug: campaign.slug,
     title: campaign.title || campaign.name,
     description: campaign.description,
-    buttonLabel: campaign.buttonLabel || 'Đăng ký nhận tool',
+    buttonLabel: campaign.buttonLabel === 'Đăng ký nhận tool'
+      ? 'Đăng ký nâng cấp PRO'
+      : (campaign.buttonLabel || 'Đăng ký nâng cấp PRO'),
     requirePhone: campaign.requirePhone,
     requireZalo: campaign.requireZalo,
     active: campaign.isActive,
-    publicUrl: `${baseUrl(req)}/nhan-tool/${encodeURIComponent(campaign.slug)}`
+    publicUrl: `${baseUrl(req)}/${encodeURIComponent(campaign.slug)}`
   };
 }
 
@@ -219,20 +241,19 @@ async function handleRegister(req, res) {
   const fullName = text(req.body?.fullName, 150);
   const cleanEmail = email(req.body?.email);
   const cleanPhone = phone(req.body?.phone);
-  const zalo = text(req.body?.zalo, 200);
+  const zalo = zaloGroupUrl(req.body?.zalo);
   const useCase = text(req.body?.useCase, 1000);
   if (fullName.length < 2) return res.status(400).json({ success: false, error: 'Vui lòng nhập đầy đủ họ tên.' });
   if (!cleanEmail) return res.status(400).json({ success: false, error: 'Email không hợp lệ.' });
-  if (campaign.requirePhone && !/^(?:\+?84|0)[0-9]{8,10}$/.test(cleanPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ.' });
-  if (campaign.requireZalo && zalo.length < 5) return res.status(400).json({ success: false, error: 'Vui lòng nhập Zalo.' });
+  if (!validVietnamPhone(cleanPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Hãy nhập đúng số di động Việt Nam gồm 10 số.' });
+  if (!zalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo không hợp lệ. Link phải có dạng https://zalo.me/g/xxxxxxxx.' });
 
   const existing = await findEntryByEmail(campaign.id, cleanEmail);
   if (existing) {
     return res.status(200).json({
       success: true,
       duplicate: true,
-      message: 'Email này đã đăng ký nhận tool trước đó.',
-      toolUrl: campaign.deliveryMode === 'show_link' ? campaign.toolUrl : ''
+      message: 'Email này đã đăng ký nâng cấp PRO trước đó.'
     });
   }
   const ipHash = crypto.createHash('sha256').update(`${requestIp(req)}:${process.env.ADMIN_SECRET || 'tool-intake'}`).digest('hex');
@@ -246,14 +267,10 @@ async function handleRegister(req, res) {
     ipHash,
     userAgent: text(req.headers['user-agent'], 500)
   });
-  let emailResult = null;
-  if (campaign.deliveryMode === 'email_link' && campaign.toolUrl) emailResult = await sendToolEmail(entry, campaign);
   return res.status(201).json({
     success: true,
     message: campaign.successMessage || 'Đăng ký thành công. Hệ thống đã tiếp nhận thông tin của bạn.',
-    toolUrl: campaign.deliveryMode === 'show_link' ? campaign.toolUrl : '',
-    emailSent: emailResult ? emailResult.success : false,
-    emailWarning: emailResult && !emailResult.success ? 'Đã lưu đăng ký nhưng email chưa gửi được. Admin sẽ xử lý lại.' : ''
+    entryId: entry.id
   });
 }
 
@@ -266,10 +283,9 @@ async function handleAdmin(req, res, action) {
     const name = text(req.body?.name, 150);
     const campaignSlug = slugify(req.body?.slug || name);
     if (!name || !campaignSlug) return res.status(400).json({ success: false, error: 'Cần nhập tên chiến dịch và đường dẫn.' });
-    const deliveryMode = DELIVERY_MODES.has(req.body?.deliveryMode) ? req.body.deliveryMode : 'manual';
-    const toolUrl = text(req.body?.toolUrl, 1000);
-    if (toolUrl && !/^https?:\/\//i.test(toolUrl)) return res.status(400).json({ success: false, error: 'Link tool phải bắt đầu bằng http:// hoặc https://.' });
-    if (deliveryMode !== 'manual' && !toolUrl) return res.status(400).json({ success: false, error: 'Cách giao tool đã chọn cần một link tool hợp lệ.' });
+    if (RESERVED_SLUGS.has(campaignSlug)) return res.status(400).json({ success: false, error: 'Đường dẫn này thuộc hệ thống. Vui lòng chọn đường dẫn khác.' });
+    const deliveryMode = 'manual';
+    const toolUrl = '';
     const campaign = await saveCampaign({
       id: text(req.body?.id, 80) || undefined,
       name,
@@ -281,12 +297,12 @@ async function handleAdmin(req, res, action) {
       deliveryMode,
       emailSubject: text(req.body?.emailSubject, 300),
       emailHtml: String(req.body?.emailHtml || '').slice(0, 50000),
-      buttonLabel: text(req.body?.buttonLabel, 80) || 'Đăng ký nhận tool',
-      requirePhone: bool(req.body?.requirePhone, true),
-      requireZalo: bool(req.body?.requireZalo, false),
+      buttonLabel: text(req.body?.buttonLabel, 80) || 'Đăng ký nâng cấp PRO',
+      requirePhone: true,
+      requireZalo: true,
       isActive: bool(req.body?.isActive, true)
     });
-    return res.status(200).json({ success: true, message: 'Đã lưu link nhận tool.', campaign });
+    return res.status(200).json({ success: true, message: 'Đã lưu link đăng ký nâng cấp PRO.', campaign });
   }
   if (action === 'toggle-campaign' && req.method === 'POST') {
     const campaign = await getCampaignById(text(req.body?.id, 80));
@@ -307,11 +323,19 @@ async function handleAdmin(req, res, action) {
   }
   if (action === 'update-entry' && req.method === 'POST') {
     const status = ENTRY_STATUSES.has(req.body?.status) ? req.body.status : undefined;
+    const updatedName = req.body?.fullName === undefined ? undefined : text(req.body.fullName, 150);
+    const updatedEmail = req.body?.email === undefined ? undefined : email(req.body.email);
+    const updatedPhone = req.body?.phone === undefined ? undefined : phone(req.body.phone);
+    const updatedZalo = req.body?.zalo === undefined ? undefined : zaloGroupUrl(req.body.zalo);
+    if (updatedName !== undefined && updatedName.length < 2) return res.status(400).json({ success: false, error: 'Họ và tên không hợp lệ.' });
+    if (updatedEmail !== undefined && !updatedEmail) return res.status(400).json({ success: false, error: 'Email không hợp lệ.' });
+    if (updatedPhone !== undefined && !validVietnamPhone(updatedPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ.' });
+    if (updatedZalo !== undefined && !updatedZalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo phải có dạng https://zalo.me/g/xxxxxxxx.' });
     const entry = await updateEntry(text(req.body?.id, 80), {
-      fullName: req.body?.fullName === undefined ? undefined : text(req.body.fullName, 150),
-      email: req.body?.email === undefined ? undefined : email(req.body.email),
-      phone: req.body?.phone === undefined ? undefined : phone(req.body.phone),
-      zalo: req.body?.zalo === undefined ? undefined : text(req.body.zalo, 200),
+      fullName: updatedName,
+      email: updatedEmail,
+      phone: updatedPhone,
+      zalo: updatedZalo,
       useCase: req.body?.useCase === undefined ? undefined : text(req.body.useCase, 1000),
       status,
       linkedUid: req.body?.linkedUid === undefined ? undefined : text(req.body.linkedUid, 160),
@@ -349,17 +373,12 @@ async function handleAdmin(req, res, action) {
     const campaign = await getCampaignById(text(req.query?.campaignId, 80));
     if (!campaign) return res.status(404).json({ success: false, error: 'Không tìm thấy chiến dịch.' });
     const entries = await listEntries(campaign.id, 5000);
-    const safeCell = value => {
-      let clean = String(value ?? '').replace(/[\r\n]+/g, ' ');
-      if (/^[=+\-@]/.test(clean)) clean = `'${clean}`;
-      return `"${clean.replace(/"/g, '""')}"`;
-    };
-    const rows = [['STT','Họ tên','Email','Số điện thoại','Zalo','Mục đích','Trạng thái','Email tool','Ngày đăng ký']];
-    entries.forEach((item, index) => rows.push([index + 1, item.fullName, item.email, item.phone, item.zalo, item.useCase, item.status, item.emailStatus, item.createdAt]));
-    const csv = '\uFEFF' + rows.map(row => row.map(safeCell).join(',')).join('\r\n');
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="nhan-tool-${campaign.slug}.csv"`);
-    return res.status(200).send(csv);
+    const publicUrl = `${baseUrl(req)}/${encodeURIComponent(campaign.slug)}`;
+    const workbook = await buildToolIntakeXlsx({ campaign, entries, publicUrl });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="dang-ky-pro-${campaign.slug}.xlsx"`);
+    res.setHeader('Content-Length', String(workbook.length));
+    return res.status(200).send(workbook);
   }
   return res.status(400).json({ success: false, error: 'Action link nhận tool không hợp lệ.' });
 }
