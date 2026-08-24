@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "corepack prepare pnpm@10.34.0 --activate && corepack pnpm --version && corepack pnpm install --no-frozen-lockfile --reporter=append-only",
   "buildCommand": "corepack pnpm run build",
+  "rewrites": [
+    {
+      "source": "/nhan-tool/:slug",
+      "destination": "/nhan-tool.html?slug=:slug"
+    }
+  ],
   "headers": [
     {
       "source": "/admin-settings.html",
@@ -18,6 +24,24 @@
         {
           "key": "Cache-Control",
           "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/admin-intake-panel.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/nhan-tool.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
         }
       ]
     },

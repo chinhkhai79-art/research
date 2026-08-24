@@ -154,6 +154,7 @@
 
       <div class="tabs">
       <button id="tabAccounts" class="tab active" type="button" onclick="showAdminPanel('accounts')">Quản lý tài khoản</button>
+      <button id="tabIntake" class="tab" type="button" onclick="showAdminPanel('intake')">Link nhận tool</button>
       <button id="tabSettings" class="tab" type="button" onclick="showAdminPanel('settings')">Thanh toán & SMTP</button>
       <button id="tabEmail" class="tab" type="button" onclick="showAdminPanel('email')">Mẫu email</button>
       <button id="tabKeepalive" class="tab" type="button" onclick="showAdminPanel('keepalive')">Giữ Supabase hoạt động</button>
@@ -161,6 +162,9 @@
 
     <div id="accountsCard" class="frame-card">
       <iframe id="accountsFrame" scrolling="no" data-src="/admin-account-panel.html?v=86" title="Quản lý tài khoản" onload="handleFrameLoad(this, 'accounts')"></iframe>
+    </div>
+    <div id="intakeCard" class="frame-card hidden">
+      <iframe id="intakeFrame" scrolling="no" data-src="/admin-intake-panel.html?v=87" title="Link nhận tool" onload="handleFrameLoad(this, 'intake')"></iframe>
     </div>
     <div id="settingsCard" class="frame-card hidden">
       <iframe id="settingsFrame" scrolling="no" data-src="/admin-settings-panel.html?v=86" title="Thanh toán và SMTP" onload="handleFrameLoad(this, 'settings')"></iframe>
@@ -367,6 +371,7 @@
     }
     function syncSharedSecretToFrames(){
       syncSharedSecretToFrame(document.getElementById('accountsFrame'));
+      syncSharedSecretToFrame(document.getElementById('intakeFrame'));
       syncSharedSecretToFrame(document.getElementById('settingsFrame'));
       syncSharedSecretToFrame(document.getElementById('emailFrame'));
       syncSharedSecretToFrame(document.getElementById('keepaliveFrame'));
@@ -376,13 +381,15 @@
       var isSettings = !document.getElementById('settingsCard').classList.contains('hidden');
       var isEmail = !document.getElementById('emailCard').classList.contains('hidden');
       var isKeepalive = !document.getElementById('keepaliveCard').classList.contains('hidden');
-      var frame = isKeepalive ? document.getElementById('keepaliveFrame') : (isEmail ? document.getElementById('emailFrame') : (isSettings ? document.getElementById('settingsFrame') : document.getElementById('accountsFrame')));
+      var isIntake = !document.getElementById('intakeCard').classList.contains('hidden');
+      var frame = isKeepalive ? document.getElementById('keepaliveFrame') : (isEmail ? document.getElementById('emailFrame') : (isSettings ? document.getElementById('settingsFrame') : (isIntake ? document.getElementById('intakeFrame') : document.getElementById('accountsFrame'))));
       try {
         var win = frame.contentWindow;
         if (isKeepalive && typeof win.loadStatus === 'function') win.loadStatus(true);
         else if (isEmail && typeof win.load === 'function') win.load();
         else if (isSettings && typeof win.loadConfig === 'function') win.loadConfig();
-        else if (!isSettings && !isEmail && !isKeepalive && typeof win.loadUsers === 'function') win.loadUsers(win.currentUsersPage || 1, true);
+        else if (isIntake && typeof win.loadCampaigns === 'function') win.loadCampaigns(true);
+        else if (!isSettings && !isEmail && !isKeepalive && !isIntake && typeof win.loadUsers === 'function') win.loadUsers(win.currentUsersPage || 1, true);
       } catch (_) {}
       setTimeout(function(){ resizeFrame(frame); }, 600);
     }
@@ -475,7 +482,7 @@
         if (ev.origin !== location.origin) return;
         var data = ev.data || {};
         if (data.type !== 'ADMIN_PANEL_HEIGHT') return;
-        var frames = [document.getElementById('accountsFrame'), document.getElementById('settingsFrame'), document.getElementById('emailFrame'), document.getElementById('keepaliveFrame')];
+        var frames = [document.getElementById('accountsFrame'), document.getElementById('intakeFrame'), document.getElementById('settingsFrame'), document.getElementById('emailFrame'), document.getElementById('keepaliveFrame')];
         for (var i = 0; i < frames.length; i++) {
           var frame = frames[i];
           if (!frame || frame.contentWindow !== ev.source) continue;
@@ -492,19 +499,24 @@
       var isSettings = name === 'settings';
       var isEmail = name === 'email';
       var isKeepalive = name === 'keepalive';
-      document.getElementById('accountsCard').classList.toggle('hidden', isSettings || isEmail || isKeepalive);
+      var isIntake = name === 'intake';
+      document.getElementById('accountsCard').classList.toggle('hidden', isSettings || isEmail || isKeepalive || isIntake);
+      document.getElementById('intakeCard').classList.toggle('hidden', !isIntake);
       document.getElementById('settingsCard').classList.toggle('hidden', !isSettings);
       document.getElementById('emailCard').classList.toggle('hidden', !isEmail);
       document.getElementById('keepaliveCard').classList.toggle('hidden', !isKeepalive);
-      document.getElementById('tabAccounts').classList.toggle('active', !isSettings && !isEmail && !isKeepalive);
+      document.getElementById('tabAccounts').classList.toggle('active', !isSettings && !isEmail && !isKeepalive && !isIntake);
+      document.getElementById('tabIntake').classList.toggle('active', isIntake);
       document.getElementById('tabSettings').classList.toggle('active', isSettings);
       document.getElementById('tabEmail').classList.toggle('active', isEmail);
       document.getElementById('tabKeepalive').classList.toggle('active', isKeepalive);
       var sf = document.getElementById('settingsFrame');
       var ef = document.getElementById('emailFrame');
       var kf = document.getElementById('keepaliveFrame');
+      var inf = document.getElementById('intakeFrame');
       var af = document.getElementById('accountsFrame');
-      if (!isSettings && !isEmail && !isKeepalive && !af.getAttribute('src')) af.setAttribute('src', af.dataset.src);
+      if (!isSettings && !isEmail && !isKeepalive && !isIntake && !af.getAttribute('src')) af.setAttribute('src', af.dataset.src);
+      if (isIntake && !inf.getAttribute('src')) inf.setAttribute('src', inf.dataset.src);
       if (isSettings && !sf.getAttribute('src')) sf.setAttribute('src', sf.dataset.src);
       if (isEmail && !ef.getAttribute('src')) ef.setAttribute('src', ef.dataset.src);
       if (isKeepalive && !kf.getAttribute('src')) kf.setAttribute('src', kf.dataset.src);
@@ -512,12 +524,13 @@
       if (isSettings) history.replaceState(null, '', location.pathname + location.search + '#settings');
       else if (isEmail) history.replaceState(null, '', location.pathname + location.search + '#email');
       else if (isKeepalive) history.replaceState(null, '', location.pathname + location.search + '#keepalive');
+      else if (isIntake) history.replaceState(null, '', location.pathname + location.search + '#intake');
       else history.replaceState(null, '', location.pathname + location.search);
-      [af, sf, ef, kf].forEach(function(f){
+      [af, inf, sf, ef, kf].forEach(function(f){
         if (f && f.closest && f.closest('.hidden')) f.style.height = '0px';
       });
       setTimeout(function(){
-        resizeFrame(isKeepalive ? kf : (isEmail ? ef : (isSettings ? sf : af)));
+        resizeFrame(isKeepalive ? kf : (isEmail ? ef : (isSettings ? sf : (isIntake ? inf : af))));
       }, 250);
     }
     function showAdminMain(){
@@ -529,7 +542,8 @@
       if (logoutBtn) logoutBtn.classList.remove('hidden');
       saveSharedSecret(ADMIN_LOGIN_PASSWORD);
       loadGuideSettings();
-      if (location.hash === '#settings') showAdminPanel('settings');
+      if (location.hash === '#intake') showAdminPanel('intake');
+      else if (location.hash === '#settings') showAdminPanel('settings');
       else if (location.hash === '#email') showAdminPanel('email');
       else if (location.hash === '#keepalive') showAdminPanel('keepalive');
       else showAdminPanel('accounts');
@@ -564,7 +578,7 @@
     function doAdminLogout(){
       clearAdminStoredCredentials();
       clearAdminSession();
-      ['accountsFrame','settingsFrame','emailFrame','keepaliveFrame'].forEach(function(id){ var f=document.getElementById(id); if(f) f.removeAttribute('src'); });
+      ['accountsFrame','intakeFrame','settingsFrame','emailFrame','keepaliveFrame'].forEach(function(id){ var f=document.getElementById(id); if(f) f.removeAttribute('src'); });
       showAdminLogin();
     }
     window.addEventListener('load', function(){
