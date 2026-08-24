@@ -1,5 +1,7 @@
+import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import ExcelJS from 'exceljs';
 import { buildToolIntakeXlsx } from '../lib/toolIntakeXlsx.js';
 
 const output = path.resolve(process.argv[2] || 'tool-intake-sample.xlsx');
@@ -32,6 +34,13 @@ const buffer = await buildToolIntakeXlsx({
     }
   ]
 });
+
+const verificationWorkbook = new ExcelJS.Workbook();
+await verificationWorkbook.xlsx.load(buffer);
+const verificationSheet = verificationWorkbook.worksheets[0];
+assert.equal(verificationSheet.getCell('I5').value?.toISOString(), '2026-08-24T10:42:46.000Z');
+assert.equal(verificationSheet.getCell('J5').value?.toISOString(), '2026-08-24T10:42:46.000Z');
+assert.equal(verificationSheet.getCell('J6').value?.toISOString(), '2026-08-24T10:42:46.000Z');
 
 await fs.mkdir(path.dirname(output), { recursive: true });
 await fs.writeFile(output, buffer);
