@@ -367,7 +367,9 @@ async function handleAdmin(req, res, action) {
   if (action === 'entries' && req.method === 'GET') {
     const campaignId = text(req.query?.campaignId, 80);
     const q = text(req.query?.q, 200).toLowerCase();
+    const status = text(req.query?.status, 32).toLowerCase();
     let entries = await listEntries(campaignId);
+    if (status === 'new' || status === 'granted') entries = entries.filter(item => String(item.status || 'new').toLowerCase() === status);
     if (q) entries = entries.filter(item => [item.fullName, item.email, item.phone, item.zalo, item.useCase, item.status].join(' ').toLowerCase().includes(q));
     return res.status(200).json({ success: true, entries, total: entries.length });
   }
