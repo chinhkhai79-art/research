@@ -121,7 +121,7 @@ function zaloGroupUrl(value) {
   if (!raw) return '';
   try {
     const parsed = new URL(raw);
-    if (parsed.protocol !== 'https:' || parsed.hostname.toLowerCase() !== 'zalo.me' || parsed.search || parsed.hash) return '';
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.hostname.toLowerCase() !== 'zalo.me' || parsed.search || parsed.hash) return '';
     const match = parsed.pathname.match(/^\/g\/([A-Za-z0-9_-]{8,80})\/?$/);
     return match ? `https://zalo.me/g/${match[1]}` : '';
   } catch {
@@ -287,7 +287,7 @@ async function handleRegister(req, res) {
   if (fullName.length < 2) return res.status(400).json({ success: false, error: 'Vui lòng nhập đầy đủ họ tên.' });
   if (!cleanEmail) return res.status(400).json({ success: false, error: checkedEmail.error });
   if (!validInternationalPhone(cleanPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Có thể nhập số Việt Nam hoặc số quốc tế 7–15 chữ số, nên kèm mã quốc gia khi ở ngoài Việt Nam.' });
-  if (!zalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo không hợp lệ. Link phải có dạng https://zalo.me/g/xxxxxxxx.' });
+  if (!zalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo không hợp lệ. Link phải có dạng http://zalo.me/g/xxxxxxxx.' });
 
   const [existingEmail, existingPhone] = await Promise.all([
     findEntryByEmail(campaign.id, cleanEmail),
@@ -391,7 +391,7 @@ async function handleAdmin(req, res, action) {
     if (updatedName !== undefined && updatedName.length < 2) return res.status(400).json({ success: false, error: 'Họ và tên không hợp lệ.' });
     if (updatedEmail !== undefined && !updatedEmail) return res.status(400).json({ success: false, error: checkedEmail.error });
     if (updatedPhone !== undefined && !validInternationalPhone(updatedPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Có thể nhập số Việt Nam hoặc số quốc tế 7–15 chữ số.' });
-    if (updatedZalo !== undefined && !updatedZalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo phải có dạng https://zalo.me/g/xxxxxxxx.' });
+    if (updatedZalo !== undefined && !updatedZalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo phải có dạng http://zalo.me/g/xxxxxxxx.' });
     const entry = await updateEntry(text(req.body?.id, 80), {
       fullName: updatedName,
       email: updatedEmail,

@@ -14,7 +14,7 @@ const buffer = await buildToolIntakeXlsx({
       fullName: 'Khai Le',
       phone: '0349996320',
       email: 'chinhkhai79@gmail.com',
-      zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk',
+      zalo: 'https://zalo.me/g/xxxxxxxx',
       status: 'granted',
       grantMessage: 'Đã nâng cấp GÓI 3 THÁNG; hết hạn 24/11/2026 10:42:46',
       linkedUid: 'sample-user-uid',

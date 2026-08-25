@@ -101,7 +101,7 @@ assert.equal('toolUrl' in publicResult.body.campaign, false, 'Public campaign mu
 const invalidResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'sai-email', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'sai-email', phone: '0900000000', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(invalidResult.statusCode, 400);
 assert.match(invalidResult.body.error, /tenban@gmail\.com/);
@@ -109,14 +109,14 @@ assert.match(invalidResult.body.error, /tenban@gmail\.com/);
 const missingMailboxResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: '@gmail.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: '@gmail.com', phone: '0900000000', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(missingMailboxResult.statusCode, 400);
 
 const mistypedDomainResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@gmai.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@gmai.com', phone: '0900000000', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(mistypedDomainResult.statusCode, 400);
 assert.match(mistypedDomainResult.body.error, /@gmail\.com/);
@@ -124,7 +124,7 @@ assert.match(mistypedDomainResult.body.error, /@gmail\.com/);
 const invalidPhoneResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'phone@example.com', phone: '0123456789', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'phone@example.com', phone: '0123456789', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(invalidPhoneResult.statusCode, 400);
 
@@ -138,18 +138,18 @@ assert.equal(invalidZaloResult.statusCode, 400);
 const registerResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(registerResult.statusCode, 201);
 assert.equal(registerResult.body.success, true);
 assert.equal(entries.length, 1);
 assert.equal(entries[0].phone, '0900000000');
-assert.equal(entries[0].zalo, 'https://zalo.me/g/stmbujxgboawdcem8wjk');
+assert.equal(entries[0].zalo, 'https://zalo.me/g/xxxxxxxx');
 
 const duplicateResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Nguyễn Văn A', email: 'user@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(duplicateResult.statusCode, 409);
 assert.equal(duplicateResult.body.code, 'DUPLICATE_EMAIL_PHONE');
@@ -158,7 +158,7 @@ assert.match(duplicateResult.body.error, /Email và số điện thoại/);
 const duplicatePhoneResult = await invoke({
   method: 'POST',
   query: { action: 'register' },
-  body: { slug: 'nhan-tubekey', fullName: 'Trần Văn B', email: 'other@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/stmbujxgboawdcem8wjk' }
+  body: { slug: 'nhan-tubekey', fullName: 'Trần Văn B', email: 'other@example.com', phone: '0900000000', zalo: 'https://zalo.me/g/xxxxxxxx' }
 });
 assert.equal(duplicatePhoneResult.statusCode, 409);
 assert.equal(duplicatePhoneResult.body.code, 'DUPLICATE_PHONE');
