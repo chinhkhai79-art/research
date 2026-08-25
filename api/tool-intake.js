@@ -99,13 +99,21 @@ function validateEmail(value) {
 }
 
 function phone(value) {
-  let digits = text(value, 30).replace(/\D/g, '');
-  if (digits.length === 11 && digits.startsWith('84')) digits = `0${digits.slice(2)}`;
+  const raw = text(value, 40).trim();
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  // Canonicalize Vietnam numbers for compatibility with registrations already stored as 0xxxxxxxxx.
+  if ((raw.startsWith('+84') || raw.startsWith('0084')) && digits.length === 11 && digits.startsWith('84')) {
+    return `0${digits.slice(2)}`;
+  }
+  if (raw.startsWith('+')) return `+${digits}`;
+  if (raw.startsWith('00') && digits.length > 2) return `+${digits.slice(2)}`;
   return digits;
 }
 
-function validVietnamPhone(value) {
-  return /^0(?:3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-46-9])\d{7}$/.test(String(value || ''));
+function validInternationalPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15 && !/^(\d)\1+$/.test(digits);
 }
 
 function zaloGroupUrl(value) {
@@ -278,7 +286,7 @@ async function handleRegister(req, res) {
   const useCase = text(req.body?.useCase, 1000);
   if (fullName.length < 2) return res.status(400).json({ success: false, error: 'Vui lòng nhập đầy đủ họ tên.' });
   if (!cleanEmail) return res.status(400).json({ success: false, error: checkedEmail.error });
-  if (!validVietnamPhone(cleanPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Hãy nhập đúng số di động Việt Nam gồm 10 số.' });
+  if (!validInternationalPhone(cleanPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Có thể nhập số Việt Nam hoặc số quốc tế 7–15 chữ số, nên kèm mã quốc gia khi ở ngoài Việt Nam.' });
   if (!zalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo không hợp lệ. Link phải có dạng https://zalo.me/g/xxxxxxxx.' });
 
   const [existingEmail, existingPhone] = await Promise.all([
@@ -382,7 +390,7 @@ async function handleAdmin(req, res, action) {
     const updatedZalo = req.body?.zalo === undefined ? undefined : zaloGroupUrl(req.body.zalo);
     if (updatedName !== undefined && updatedName.length < 2) return res.status(400).json({ success: false, error: 'Họ và tên không hợp lệ.' });
     if (updatedEmail !== undefined && !updatedEmail) return res.status(400).json({ success: false, error: checkedEmail.error });
-    if (updatedPhone !== undefined && !validVietnamPhone(updatedPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ.' });
+    if (updatedPhone !== undefined && !validInternationalPhone(updatedPhone)) return res.status(400).json({ success: false, error: 'Số điện thoại không hợp lệ. Có thể nhập số Việt Nam hoặc số quốc tế 7–15 chữ số.' });
     if (updatedZalo !== undefined && !updatedZalo) return res.status(400).json({ success: false, error: 'Link nhóm Zalo phải có dạng https://zalo.me/g/xxxxxxxx.' });
     const entry = await updateEntry(text(req.body?.id, 80), {
       fullName: updatedName,
