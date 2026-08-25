@@ -40,3 +40,10 @@ Ba bảng mới chỉ cấp quyền cho `service_role`; `anon` và `authenticate
 
 Lưu ý: lệnh TypeScript tổng của repository vẫn báo các lỗi cũ trong `App.tsx` và `firebase.ts`; các file đó không thay đổi trong bản cập nhật này. Build production vẫn hoàn tất thành công.
 
+
+
+## v98
+- Số điện thoại chấp nhận Việt Nam và quốc tế.
+- Cho phép định dạng +mã quốc gia, 00 mã quốc gia, khoảng trắng/gạch/ngoặc; chuẩn hóa trước khi lưu.
+- Kiểm tra 7–15 chữ số theo giới hạn số quốc tế, không còn ép số Việt Nam 10 số.
+- XLSX giữ số điện thoại dạng text để không mất dấu + hoặc số 0 đầu.
