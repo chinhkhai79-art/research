@@ -22,3 +22,62 @@
     animation: shake 0.2s ease-in-out 0s 2;
   }
 }
+
+/* PATCH v101 — TÌM NGÁCH YOUTUBE: co giãn theo chiều cao laptop, không để cài đặt sidebar bị footer che */
+@media (min-width: 1101px) {
+  html body .vtw-niche-layout,
+  html body .vtw-niche-layout.flex {
+    height: calc(100dvh - 176px) !important;
+    max-height: calc(100dvh - 176px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  html body .vtw-niche-sidebar {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-gutter: stable !important;
+  }
+  html body .vtw-niche-sidebar > div:first-child { flex: 0 0 auto !important; }
+  html body .vtw-niche-sidebar > div:last-child {
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    min-height: auto !important;
+    padding-bottom: 18px !important;
+  }
+  html body .vtw-niche-sidebar::-webkit-scrollbar { width: 7px !important; }
+  html body .vtw-niche-sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,.05) !important; }
+  html body .vtw-niche-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(148,163,184,.55) !important;
+    border-radius: 999px !important;
+  }
+  html body .vtw-niche-content {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    padding-bottom: 42px !important;
+  }
+}
+@media (min-width: 1101px) and (max-height: 850px) {
+  html body .vtw-niche-layout,
+  html body .vtw-niche-layout.flex {
+    height: calc(100dvh - 170px) !important;
+    max-height: calc(100dvh - 170px) !important;
+  }
+  html body .vtw-niche-sidebar > div:first-child {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+  html body .vtw-niche-sidebar > div:first-child .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px !important; }
+  html body .vtw-niche-sidebar > div:first-child .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 6px !important; }
+  html body .vtw-niche-sidebar > div:first-child button[class*="py-3"] {
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+  }
+  html body .vtw-niche-sidebar nav button {
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+  }
+}
