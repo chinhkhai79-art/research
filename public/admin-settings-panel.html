@@ -409,6 +409,13 @@
       const code = select.value;
       if (code) setVal('bankName', code);
     }
+    function selectedBankMeta(){
+      const select = $('bankSelect');
+      const opt = select && select.options ? select.options[select.selectedIndex] : null;
+      const code = String((select && select.value) || val('bankName') || '').trim().toUpperCase();
+      const bin = String((opt && opt.dataset && opt.dataset.bin) || '').trim();
+      return { code, bin };
+    }
 
     function createPlanRow(id){
       const p = PLAN_DEFAULTS[id];
@@ -485,8 +492,11 @@
       const bankAccount = val('bankAccount').trim();
       if (!bankAccount) throw new Error('Vui lòng nhập số tài khoản.');
       if (!/^[A-Za-z0-9]+$/.test(bankAccount)) throw new Error('Số tài khoản chỉ được gồm chữ và số, không có khoảng trắng hoặc ký tự đặc biệt.');
+      const bank = selectedBankMeta();
       return { payment: {
-        sepaySecret: val('sepaySecret'), bankOwner: val('bankOwner'), bankName: val('bankName'), bankAccount,
+        sepaySecret: val('sepaySecret'), bankOwner: val('bankOwner'),
+        bankName: bank.code || val('bankName'), bankCode: bank.code || val('bankName'),
+        bankId: bank.bin || '', bankBin: bank.bin || '', bankAccount,
         paymentPrefix: val('paymentPrefix'), baseUrl: normalizeBaseUrl(val('baseUrl') || currentOrigin()), webhookUrl: val('webhookUrl')
       }};
     }

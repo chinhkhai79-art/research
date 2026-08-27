@@ -9,7 +9,14 @@ function datePartsVN(){
 }
 function makeOrderBase(prefix){ return (safe(prefix)||'TUBEKEY').toUpperCase().replace(/[^A-Z0-9]/g,'') + datePartsVN(); }
 function isAlreadyExistsError(err){ const msg = String(err?.message || err || '').toLowerCase(); return msg.includes('409') || msg.includes('duplicate key') || msg.includes('already exists') || msg.includes('already_exist') || msg.includes('payments_pkey'); }
-function qrUrl(payment, amount, orderCode){ return `https://img.vietqr.io/image/${encodeURIComponent(payment.bankId || payment.bankCode || '970416')}-${encodeURIComponent(payment.accountNo || payment.bankAccount)}-compact2.png?amount=${encodeURIComponent(amount)}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(payment.accountName || payment.bankOwner || '')}`; }
+function qrUrl(payment, amount, orderCode){
+  const bankId = safe(payment.bankId || payment.bankBin);
+  const accountNo = safe(payment.accountNo || payment.bankAccount);
+  const accountName = safe(payment.accountName || payment.bankOwner);
+  if (!/^\d{6}$/.test(bankId)) throw new Error('Cấu hình ngân hàng chưa có BIN VietQR hợp lệ. Vui lòng lưu lại ngân hàng trong Admin.');
+  if (!accountNo) throw new Error('Cấu hình thanh toán chưa có số tài khoản.');
+  return `https://img.vietqr.io/image/${encodeURIComponent(bankId)}-${encodeURIComponent(accountNo)}-compact2.png?amount=${encodeURIComponent(amount)}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(accountName)}`;
+}
 
 export default async function handler(req,res){
   if(cors(req,res)) return;

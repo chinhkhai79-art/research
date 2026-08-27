@@ -455,12 +455,12 @@ if (LEGACY_HOSTS.has(location.hostname.toLowerCase())) {
 }
 
 const DEFAULT_PAYMENT = {
-  bankId:'970416',
-  bankCode:'ACB',
-  bankName:'ACB',
-  accountNo:'LOCSPAY000339358',
-  accountNumber:'LOCSPAY000339358',
-  accountName:'NGUYEN VAN THE',
+  bankId:'',
+  bankCode:'',
+  bankName:'',
+  accountNo:'',
+  accountNumber:'',
+  accountName:'',
   transferPrefix:'TUBEKEY'
 };
 
@@ -527,7 +527,7 @@ function normalizeReturnUrl(v){
 function bankId(v){
   v = clean(v);
   if (/^\d{6}$/.test(v)) return v;
-  return BANK_CODE_MAP[v.toUpperCase().replace(/\s+/g,'')] || v || '970416';
+  return BANK_CODE_MAP[v.toUpperCase().replace(/\s+/g,'')] || (/^\d{6}$/.test(v) ? v : '');
 }
 function formatVnd(n){
   n = Number(n || 0);
@@ -555,7 +555,7 @@ function normalizePlanId(id){
 function normalizePayment(raw){
   raw = raw && typeof raw === 'object' ? raw : {};
   const p = raw.payment && typeof raw.payment === 'object' ? raw.payment : raw;
-  const code = clean(p.bankCode || p.bankName || p.bank || 'ACB');
+  const code = clean(p.bankCode || p.bankName || p.bank || '');
   const bId = bankId(p.bankId || p.bankBin || p.bankCode || p.bankName || p.bank || code);
   let acc = cleanAccount(p.accountNo || p.accountNumber || p.bankAccount || p.account || p.stk || DEFAULT_PAYMENT.accountNo);
   let owner = clean(p.accountName || p.accountOwner || p.beneficiaryName || p.ownerName || DEFAULT_PAYMENT.accountName);
@@ -564,7 +564,7 @@ function normalizePayment(raw){
     bankId:bId,
     bankBin:bId,
     bankCode:code,
-    bankName:clean(p.bankName || p.bank || code || 'ACB'),
+    bankName:clean(p.bankName || p.bank || code || ''),
     accountNo:acc,
     accountNumber:acc,
     accountName:owner,
@@ -639,7 +639,7 @@ function renderPayment(apiQr){
   document.getElementById('planName').textContent = String(plan.name || '').replace(/premium/gi,'PRO').toUpperCase();
   document.getElementById('contentText').textContent = currentContent || '---';
   const emailEl = document.getElementById('emailText'); if (emailEl) emailEl.textContent = currentEmail || '---';
-  document.getElementById('bankText').textContent = payment.bankName || payment.bankCode || 'ACB';
+  document.getElementById('bankText').textContent = payment.bankName || payment.bankCode || '---';
   document.getElementById('accountText').textContent = payment.accountNo || '---';
   document.getElementById('accountNameText').textContent = payment.accountName || '---';
 
@@ -649,14 +649,16 @@ function renderPayment(apiQr){
 }
 async function loadConfigFast(){
   try {
-    const res = await fetchWithTimeout('/api/payment-config', { cache:'no-store' }, 1400);
+    const res = await fetchWithTimeout('/api/payment-config', { cache:'no-store' }, 5000);
     const data = await safeJson(res);
+    if (!res.ok || data.success === false) throw new Error(data.error || 'Không tải được cấu hình thanh toán.');
     payment = normalizePayment(data);
     plans = normalizePlans(data);
     renderPlans();
     if (currentContent) renderPayment(data.qrUrl || data.qrImageUrl);
   } catch(e) {
-    console.warn('payment-config fallback:', e.message || e);
+    console.error('payment-config error:', e.message || e);
+    setMsg('<span class="err">⚠️ Không tải được cấu hình thanh toán hiện tại. Vui lòng tải lại trang hoặc liên hệ hỗ trợ.</span>');
   }
 }
 async function createPayment(planId){
